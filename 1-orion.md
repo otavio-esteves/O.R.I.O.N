@@ -43,7 +43,8 @@ semântica de cancelamento e terminalidade do Cortex;
 
 contrato IPC Voice ↔ Core v1;
 OrionCoreGatewayService;
-regras de bind/rebind quando :voice existe e main está morto;
+regras de bind/rebind quando :voice/:voice_session existem e main está morto;
+separação entre voice control plane leve e voice session pesada;
 
 Command / Event / Query boundaries;
 persistência transacional de eventos;
@@ -363,12 +364,17 @@ ReminderReconciler
 worker reconciliation.
 ```
 
-Após retorno de Force Stop, quando a API disponível permitir detectar a condição:
+Após retorno de Force Stop, a detecção segue política explícita:
 
 ```text
+API 35+
+→ usar ApplicationStartInfo.wasForceStopped()
+  como sinal primário de primeira inicialização após Force Stop;
+
 registrar lastForceStopDetected;
 
-reconstruir PendingIntents/reminders a partir do banco;
+reconstruir PendingIntents/reminders/jobs/callbacks
+a partir das fontes persistentes de verdade;
 
 revalidar capabilities;
 
@@ -376,6 +382,18 @@ recalcular OrionHealth;
 
 não tratar o período parado como falha de consistência do Core.
 ```
+
+`ApplicationExitInfo` continua sendo entrada de diagnóstico de encerramentos anteriores, mas:
+
+```text
+REASON_USER_REQUESTED
+ou outro exit reason isolado
+
+NÃO é prova suficiente, por si só,
+de que ocorreu Force Stop.
+```
+
+Em Android 15/API 35+, a entrada no estado stopped cancela `PendingIntent`s do pacote; por isso a recuperação pós-Force-Stop deve reconstruir os artefatos de scheduling a partir do banco e das configurações persistentes.
 
 Quando o Android/OEM colocar o app em background `RESTRICTED`:
 
@@ -452,7 +470,7 @@ Nenhum mecanismo do O.R.I.O.N. tentará contornar restrições de sistema por co
 
 25. Mudança arquitetural futura exige ADR.
 
-26. :voice comunica-se com o Core apenas por contrato IPC versionado.
+26. :voice e :voice_session comunicam-se com o Core apenas por contrato IPC versionado.
 
 27. Confirmação de ação é vinculada ao payload normalizado exato.
 
@@ -485,7 +503,7 @@ ANDROID / ONE UI
       ├── notification actions
       ├── app/deep links permitidos
       ├── system callbacks
-      └── :voice / system assistant
+      └── :voice / :voice_session / system assistant
               │
               ▼
        INGRESS COORDINATOR
@@ -591,6 +609,50 @@ last-exit diagnostics.
 
 **Somente o main process abre o Room principal.**
 
+### 6.1.1. MULTIPROCESS BOOTSTRAP
+
+`Application.onCreate()` e inicializadores Android podem executar em mais de um processo do mesmo aplicativo.
+
+Portanto, antes de inicializar infraestrutura, o app deve resolver explicitamente:
+
+```text
+OrionProcessRole
+
+MAIN
+AI
+VOICE_CONTROL
+VOICE_SESSION
+```
+
+Componente obrigatório desde Foundation:
+
+```text
+OrionProcessBootstrapper
+```
+
+Regras:
+
+```text
+MAIN
+→ pode inicializar Room, DataStore, repositories, scheduler, recovery, ingress e DI do Core;
+
+AI
+→ inicialização mínima do Cortex/JNI/IPC;
+→ nunca inicializa Room, DataStore de negócio, repositories ou scheduler;
+
+VOICE_CONTROL
+→ inicialização mínima do control plane de voz e IPC;
+→ nunca inicializa Room/repositories/Policy/Cortex;
+
+VOICE_SESSION
+→ inicialização sob demanda do pipeline de sessão/áudio;
+→ nunca inicializa Room/repositories/Policy/Cortex.
+```
+
+Inicializadores automáticos de bibliotecas devem ser auditados para garantir que não abram infraestrutura de `MAIN` em processos auxiliares.
+
+Nenhum grafo DI compartilhado pode, por efeito colateral, violar ownership de processo.
+
 ### OrionCoreGatewayService
 
 Endpoint interno usado por processos auxiliares para entregar requests ao Core.
@@ -604,36 +666,62 @@ bind explícito por ComponentName;
 
 somente callers do próprio UID/package;
 
-nenhum acesso direto a Repository por :voice;
+nenhum acesso direto a Repository por :voice/:voice_session;
 
 toda request mutável entra pelo IngressCoordinator.
 ```
 
-## 6.2. PROCESSO `:voice`
+## 6.2. PROCESSO `:voice` — VOICE CONTROL PLANE
 
-Responsável por:
+Responsável por permanecer leve e coordenar a entrada de voz:
 
 ```text
-VoiceInteractionService;
+OrionVoiceInteractionService quando System Assistant estiver habilitado;
 
-VoiceInteractionSession quando aplicável;
+controle de sessão;
 
-sessão de voz;
+KWS/wake word de baixo custo quando habilitada e qualificada;
 
-wake word quando habilitada;
-
-VAD/KWS de baixo custo;
-
-ponte de áudio;
-
-VoiceCoreClient;
+VoiceCoreClient para eventos leves/control plane;
 
 serialização dos Voice DTOs;
 
-rebind ao Core quando necessário.
+rebind ao Core quando necessário;
+
+criação/coordenação do processo de sessão sob demanda.
 ```
 
-Não pode:
+O `VoiceInteractionService` selecionado pelo usuário deve permanecer tão leve quanto possível.
+
+Operações pesadas de interação de voz não pertencem ao processo mantido vivo pelo framework.
+
+## 6.2.1. PROCESSO `:voice_session` — HEAVY VOICE SESSION
+
+Responsável, sob demanda, por:
+
+```text
+VoiceInteractionSessionService quando System Assistant estiver habilitado;
+
+VoiceInteractionSession;
+
+sessão ativa de voz;
+
+ponte/buffers de áudio;
+
+VAD de sessão;
+
+STT;
+
+TTS/session presentation quando aplicável;
+
+VoiceCoreClient;
+
+serialização dos Voice DTOs.
+```
+
+O processo `:voice_session` é descartável e não precisa permanecer vivo fora de uma interação ativa.
+
+Tanto `:voice` quanto `:voice_session` não podem:
 
 ```text
 abrir Room;
@@ -653,7 +741,7 @@ executar Policy Engine;
 considerar transcrição parcial como Command executável.
 ```
 
-Quando `:voice` estiver vivo e `main` estiver morto:
+Quando `:voice` ou `:voice_session` estiver vivo e `main` estiver morto:
 
 ```text
 VoiceCoreClient
@@ -680,8 +768,11 @@ a request não executa mutação externa.
 Se o Core não puder ser iniciado:
 
 ```text
-:voice degrada a sessão de forma segura.
+:voice / :voice_session
+degrada a sessão de forma segura.
 ```
+
+Morte de `:voice_session` encerra apenas a sessão pesada correspondente; o Core e o control plane permanecem independentes.
 
 ## 6.3. PROCESSO `:ai`
 
@@ -750,6 +841,16 @@ android.voice_interaction
 
 `BIND_VOICE_INTERACTION` é obrigatório.
 
+O `OrionVoiceInteractionService` deve ser um **control plane leve**.
+
+A implementação de `VoiceInteractionSessionService`/`VoiceInteractionSession` e operações pesadas de sessão deve usar processo separado, inicialmente:
+
+```text
+:voice_session
+```
+
+Essa separação é requisito da baseline e deve ser validada na CompatibilityProfile da Fase 10.
+
 Componentes internos não herdam essa exposição.
 
 ---
@@ -783,19 +884,19 @@ opções de geração.
 
 Não recebe authority para ações Android.
 
-## `:voice`
+## `:voice` / `:voice_session`
 
-Recebe apenas o necessário para:
+Recebem apenas o necessário para o papel de voz correspondente:
 
 ```text
-captura;
-sessão;
-reconhecimento;
-síntese;
-comunicação IPC.
+:voice
+→ control plane leve, KWS qualificado, coordenação e IPC;
+
+:voice_session
+→ captura/sessão/reconhecimento/síntese e IPC sob demanda.
 ```
 
-Não recebe authority sobre estado de negócio.
+Nenhum dos processos recebe authority sobre estado de negócio.
 
 Regras gerais:
 
@@ -826,7 +927,7 @@ payloads são validados antes do uso;
 
 :ai nunca recebe capability token para executar Android APIs;
 
-:voice nunca recebe authority de policy ou business state.
+:voice / :voice_session nunca recebem authority de policy ou business state.
 ```
 
 ---
@@ -865,7 +966,7 @@ Nunca:
 Fluxo de voz:
 
 ```text
-:voice
+:voice / :voice_session
   ↓
 VoiceCoreClient
   ↓
@@ -883,10 +984,10 @@ Room
 Nunca:
 
 ```text
-:voice → Repository
-:voice → Room
-:voice → ActionExecutor
-:voice → Skill mutável diretamente
+:voice / :voice_session → Repository
+:voice / :voice_session → Room
+:voice / :voice_session → ActionExecutor
+:voice / :voice_session → Skill mutável diretamente
 ```
 
 ---
@@ -1035,6 +1136,40 @@ Possui retenção maior.
 ---
 
 # 13. DOMAIN EVENT OUTBOX
+
+Componente/política transversal obrigatório:
+
+```text
+DurablePayloadPolicy
+```
+
+Aplicável a:
+
+```text
+Domain Event Outbox;
+Ingress durable queue;
+Action payloads persistidos;
+outros envelopes genéricos futuros.
+```
+
+Payloads duráveis seguem política de minimização e sensibilidade:
+
+```text
+preferir IDs/referências a copiar conteúdo;
+
+persistir apenas o mínimo necessário para replay/publicação;
+
+classificar payloadSensitivity;
+
+SENSITIVE/SECRET persistido
+→ usar envelope criptográfico versionado definido pela política de dados;
+
+SECRET
+→ nunca entrar em log, diagnóstico ou evento em conteúdo bruto
+   quando uma referência persistente for suficiente.
+```
+
+`DomainEventOutboxEntity` deve possuir metadata suficiente para aplicar essa política, incluindo `schemaVersion` e classificação de sensibilidade do payload quando houver conteúdo persistido.
 
 Quando uma alteração de banco e um evento persistente fizerem parte da mesma unidade lógica:
 
@@ -1342,7 +1477,7 @@ main
  ↓
 getProtocolInfo()
  ↓
-:ai / :voice
+:ai / :voice / :voice_session
  ↓
 version + capabilities
  ↓
@@ -1364,7 +1499,7 @@ O `IPC Protocol v1` é protocolo comum aos boundaries internos relevantes.
 Componentes:
 
 ```text
-:voice
+:voice / :voice_session
   VoiceCoreClient
        │
        ▼
@@ -1469,7 +1604,7 @@ major/minor negotiation;
 MAX_INLINE_IPC_PAYLOAD.
 ```
 
-Se callback de `:voice` morrer:
+Se callback de `:voice` ou `:voice_session` morrer:
 
 ```text
 a resposta oral pode ser perdida;
@@ -1740,23 +1875,40 @@ Nunca reconstruir automaticamente uma ação externa com base apenas no texto pa
 
 ## 31.1. MORTE DO PROCESSO `:voice`
 
-Ao morrer:
+Ao morrer o control plane:
 
 ```text
-voice subsystem = UNAVAILABLE/RECOVERING conforme contexto;
-
-sessões efêmeras = encerradas;
+voice control subsystem = UNAVAILABLE/RECOVERING conforme contexto;
 
 callbacks Binder = removidos;
 
 Core permanece funcional;
+
+:voice_session ativo pode ser encerrado/degradado conforme lifecycle;
 
 nenhuma memória/tarefa persistida é perdida;
 
 nenhuma ActionRequest é recriada
 a partir de áudio/transcrição parcial;
 
-rebind ocorre somente quando nova sessão de voz exigir.
+rebind ocorre somente quando nova interação de voz exigir.
+```
+
+## 31.2. MORTE DO PROCESSO `:voice_session`
+
+Ao morrer a sessão pesada:
+
+```text
+sessão efêmera = encerrada;
+
+buffers/callbacks de sessão = descartados;
+
+:voice control plane pode permanecer saudável;
+
+Core permanece funcional;
+
+nenhuma ActionRequest é recriada
+a partir de transcript/áudio parcial.
 ```
 
 Se uma ação já tiver sido persistida no main:
@@ -1764,7 +1916,8 @@ Se uma ação já tiver sido persistida no main:
 ```text
 seu recovery segue Action Outbox;
 
-não depende da sobrevivência de :voice.
+não depende da sobrevivência de :voice
+nem de :voice_session.
 ```
 
 ---
@@ -2374,7 +2527,7 @@ BroadcastReceiver;
 
 notification action;
 
-:voice;
+:voice / :voice_session;
 
 app/deep link permitido;
 
@@ -2432,6 +2585,7 @@ schemaVersion
 source
 type
 payload
+payloadSensitivity
 receivedAt
 priority
 idempotencyKey
@@ -2451,6 +2605,24 @@ CONSUMED
 REJECTED
 EXPIRED
 FAILED
+```
+
+Política de payload do ingresso:
+
+```text
+minimizar conteúdo persistido;
+
+preferir referência/ID a blob textual;
+
+SENSITIVE/SECRET
+→ usar envelope criptográfico versionado;
+
+payload temporário grande
+→ usar storage privado referenciado,
+   com lifetime/cleanup explícitos;
+
+SECRET
+→ nunca entrar em logs/diagnostics.
 ```
 
 Garantias:
@@ -2860,14 +3032,39 @@ executionToken
 
 é persistido.
 
-Pode existir lease temporal para detectar executor morto.
-
-Expiração de lease:
+Quando houver lease temporal persistida para detectar executor morto, ela deve ser vinculada à sessão de boot:
 
 ```text
+leaseBootSessionId
+leaseStartedElapsedRealtime
+leaseExpiresElapsedRealtime
+leaseWallStartedAt   // apenas auditoria/diagnóstico
+```
+
+Semântica obrigatória:
+
+```text
+mesmo BootSessionId
+→ monotonic clock pode decidir validade/expiração da lease;
+
+BootSessionId diferente após reboot
+→ lease antiga é considerada abandonada/inválida;
+
+lease abandonada/inválida
 NÃO significa
 que o efeito externo não ocorreu.
 ```
+
+Após process death/reboot, a continuação depende exclusivamente da `RecoveryStrategy`/`SideEffectClass`:
+
+```text
+RETRY_SAFE
+VERIFY_THEN_RETRY
+UNKNOWN
+MANUAL_REVIEW
+```
+
+Nunca converter reboot em autorização para retry cego.
 
 ---
 
@@ -3811,10 +4008,24 @@ Repositories;
 
 Cortex;
 
-Policy Engine.
+Policy Engine;
+
+STT pesado;
+
+buffers/UI de sessão pesada.
 ```
 
-Comunicação de negócio ocorre por:
+A sessão pesada pertence a:
+
+```text
+OrionVoiceInteractionSessionService
++
+OrionVoiceInteractionSession
++
+processo :voice_session
+```
+
+Comunicação de negócio de ambos os processos ocorre por:
 
 ```text
 VoiceCoreClient
@@ -4560,7 +4771,7 @@ data/database/repositories.
 
 Main process pode usar DI Android compatível.
 
-`:ai` e `:voice`:
+`:ai`, `:voice` e `:voice_session`:
 
 ```text
 composition roots mínimos e explícitos.
@@ -4800,6 +5011,8 @@ matar :ai;
 
 matar :voice;
 
+matar :voice_session;
+
 matar durante inferência;
 
 matar durante streaming;
@@ -4820,15 +5033,15 @@ antes de event publish;
 matar durante ReminderReconcile;
 
 matar main
-e iniciar sessão via :voice;
+e iniciar sessão via :voice/:voice_session;
 
-matar :voice
+matar :voice ou :voice_session
 durante bind ao Core;
 
-matar :voice
+matar :voice ou :voice_session
 após submitUtterance;
 
-matar :voice
+matar :voice ou :voice_session
 com confirmação pendente;
 
 matar main
@@ -4900,7 +5113,7 @@ Voice ↔ Core major mismatch;
 
 Voice ↔ Core minor negotiation;
 
-:voice bind com main morto;
+:voice/:voice_session bind com main morto;
 
 CoreReadiness RECOVERING
 → QUEUED_DURING_RECOVERY;
@@ -5382,7 +5595,7 @@ VoiceInteractionService estável;
 
 Core funciona sem role;
 
-:voice consegue bind ao Core
+:voice/:voice_session conseguem bind ao Core
 quando main está morto
 e Android permite iniciar pacote;
 
@@ -5393,7 +5606,7 @@ VoiceInteractionService protegido por
 BIND_VOICE_INTERACTION;
 
 Core permanece funcional
-se :voice morrer;
+se :voice ou :voice_session morrer;
 
 voz não reconstrói ação
 a partir de transcript parcial.
@@ -5859,6 +6072,10 @@ session state;
 
 VoiceCoreClient;
 
+:voice control plane;
+
+:voice_session on-demand session;
+
 OrionCoreGatewayService integration;
 
 request/response terminality;
@@ -5875,7 +6092,11 @@ VoiceInteractionService;
 
 VoiceInteractionSession;
 
+VoiceInteractionSessionService;
+
 :voice;
+
+:voice_session;
 
 manifest contract;
 
@@ -6063,7 +6284,7 @@ shell arbitrário;
 
 comandos gerados pelo LLM;
 
-Room em :ai ou :voice;
+Room em :ai, :voice ou :voice_session;
 
 microfone clandestino no boot;
 
@@ -6103,7 +6324,7 @@ payload de ActionRequest confirmada;
 permitir ingresso mutável
 contornar Startup Barrier;
 
-permitir que :voice
+permitir que :voice ou :voice_session
 execute business state diretamente;
 
 reiniciar :ai indefinidamente
@@ -6124,7 +6345,7 @@ INV-002
 :ai não executa Android Skill.
 
 INV-003
-:voice não altera estado de negócio diretamente.
+:voice / :voice_session não alteram estado de negócio diretamente.
 
 INV-004
 Toda ação mutável relevante possui ActionRequest.
@@ -6190,7 +6411,7 @@ Nenhum ingresso mutável executa side effect
 enquanto Startup Barrier bloquear o Core.
 
 INV-024
-:voice comunica comandos ao Core somente por IPC
+:voice / :voice_session comunicam comandos ao Core somente por IPC
 versionado e nunca acessa estado de negócio diretamente.
 
 INV-025
@@ -6224,6 +6445,22 @@ authorization/recovery/idempotency.
 INV-032
 Performance target de hardware não substitui
 compatibility target da API Android.
+
+INV-033
+Bootstrap de processo auxiliar não inicializa
+infraestrutura de ownership exclusivo do main.
+
+INV-034
+VoiceInteractionService permanece leve; sessão pesada
+de System Assistant usa processo separado do control plane.
+
+INV-035
+Payload durável genérico de ingress/outbox respeita
+minimização, classificação de sensibilidade e criptografia.
+
+INV-036
+Lease persistida baseada em relógio monotônico somente
+é válida dentro do BootSessionId que a criou.
 ```
 
 ---
@@ -6259,7 +6496,7 @@ nova política de scheduling;
 
 nova política de voice lifecycle;
 
-como :voice acorda/conversa com main;
+como os processos de voz acordam/conversam com main;
 
 como requests de voz aguardam recovery;
 
@@ -6674,6 +6911,7 @@ Hardening final:
 V3.2 pre-hardening
 :voice definido como processo,
 sem Core IPC completamente normatizado
+e sem separação explícita entre control plane e sessão pesada
 
 V3.2 FINAL
 VoiceCore IPC v1
@@ -6958,6 +7196,19 @@ mudança estrutural nova
 → ADR obrigatório.
 ```
 
+Precedência normativa de ADR:
+
+```text
+um ADR aceito pode superseder
+a baseline apenas nas decisões/cláusulas
+que declarar explicitamente alteradas;
+
+todo o restante da Arquitetura V3.2
+e do Plano Mestre permanece normativo.
+```
+
+ADR não funciona como autorização genérica para ignorar a baseline.
+
 Formato:
 
 ```text
@@ -7003,7 +7254,7 @@ Isso encerra a fase de arquitetura aberta e inicia a fase de engenharia controla
 A V3.2 FINAL somente poderá ser considerada implementada de acordo com a arquitetura quando todas as respostas abaixo forem **SIM**:
 
 ```text
-[ ] :voice consegue falar com main
+[ ] :voice e :voice_session conseguem falar com main
     por IPC v1 sem tocar Room.
 
 [ ] main morto pode ser reconstruído
@@ -7051,6 +7302,22 @@ A V3.2 FINAL somente poderá ser considerada implementada de acordo com a arquit
 
 [ ] API 37 é testada separadamente
     para compatibilidade quando aplicável.
+
+[ ] bootstrap multiprocesso impede
+    Room/DataStore/repositories do Core
+    em :ai/:voice/:voice_session.
+
+[ ] VoiceInteractionService permanece leve
+    e a sessão pesada usa :voice_session.
+
+[ ] payloads duráveis de ingress/outbox
+    obedecem minimização/sensitivity/encryption.
+
+[ ] execution lease monotônica
+    é vinculada ao BootSessionId.
+
+[ ] API 35+ usa ApplicationStartInfo.wasForceStopped()
+    para reconciliação pós-Force-Stop.
 ```
 
 ---

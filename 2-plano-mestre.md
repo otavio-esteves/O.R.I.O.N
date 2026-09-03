@@ -16,7 +16,7 @@
 
 **Status do plano:** FINAL / ENGINEERING BASELINE / Implementation-Ready
 
-**Revisão V1.2:** fechamento da baseline de engenharia com semântica explícita de processos Android, abstração de tempo, política de idempotência, envelope criptográfico versionado, orçamento agregado de memória por aplicativo, correção da ordem inicial de PRs, migration real do Model Registry e hardening de release para R8/JNI/AIDL/symbolication. Mantém todos os hardenings da V1.1 para toolchain, compatibilidade nativa, limites de memória do Android 17/API 37, ownership de execução, retry/dead-letter, retenção, upgrade, segurança criptográfica, importação de modelos e qualificação antecipada de voz.
+**Revisão V1.2:** fechamento da baseline de engenharia com semântica explícita de processos Android, abstração de tempo, política de idempotência, envelope criptográfico versionado, orçamento agregado de memória por aplicativo, correção da ordem inicial de PRs, migration real do Model Registry e hardening de release para R8/JNI/AIDL/symbolication. Mantém todos os hardenings da V1.1 para toolchain, compatibilidade nativa, limites de memória do Android 17/API 37, ownership de execução, retry/dead-letter, retenção, upgrade, segurança criptográfica, importação de modelos e qualificação antecipada de voz. O hardening pré-primeiro-commit acrescenta bootstrap multiprocesso explícito, separação `:voice`/`:voice_session`, proteção de payloads duráveis genéricos, leases vinculadas a `BootSessionId`, detecção pós-Force-Stop por `ApplicationStartInfo.wasForceStopped()` em API 35+ e precedência normativa explícita de ADR.
 
 ---
 
@@ -855,6 +855,8 @@ IdempotencyMode
 
 IdempotencyKeyPolicy
 
+DurablePayloadPolicy
+
 OrionClock
 
 BootSessionId
@@ -966,6 +968,53 @@ ActionEngine
 
 Ainda que inicialmente retornem estados simplificados.
 
+## 7.4.1. Multiprocess Bootstrap
+
+Criar desde Foundation:
+
+```text
+OrionProcessRole
+OrionProcessBootstrapper
+```
+
+Roles iniciais:
+
+```text
+MAIN
+AI
+VOICE_CONTROL
+VOICE_SESSION
+```
+
+O bootstrap deve executar antes da criação de infraestrutura de ownership específico.
+
+Regras:
+
+```text
+MAIN
+→ Room/DataStore/repositories/scheduler/recovery/ingress;
+
+AI
+→ Cortex/JNI/IPC mínimo;
+
+VOICE_CONTROL
+→ control plane de voz/IPC mínimo;
+
+VOICE_SESSION
+→ pipeline de sessão/áudio sob demanda.
+```
+
+Auditar inicializadores automáticos de bibliotecas e DI para garantir:
+
+```text
+:ai/:voice/:voice_session
+↛ Room
+↛ repositories
+↛ scheduler/recovery do Core.
+```
+
+Adicionar teste/instrumentação de bootstrap por processo.
+
 ---
 
 # 7.5. IPC contract
@@ -1062,6 +1111,10 @@ Sem conteúdo sensível.
 
 [ ] OrionClock/BootSessionId tests;
 
+[ ] OrionProcessBootstrapper por processo;
+
+[ ] processos auxiliares não inicializam Room/repositories/scheduler do Core;
+
 [ ] app recreation;
 
 [ ] process recreation básico.
@@ -1150,6 +1203,25 @@ Criar testes concorrentes desde esta fase.
 ---
 
 # 8.3. Domain Event Outbox
+
+Aplicar `DurablePayloadPolicy` aos eventos persistidos:
+
+```text
+minimização por padrão;
+
+preferir IDs/referências;
+
+schemaVersion;
+
+payloadSensitivity;
+
+SENSITIVE/SECRET
+→ envelope criptográfico versionado;
+
+SECRET
+→ nunca em log/diagnóstico e nunca em conteúdo bruto
+   quando uma referência for suficiente.
+```
 
 Implementar atomicamente:
 
@@ -1244,13 +1316,30 @@ executionId;
 
 claimedBy;
 
-leaseStartedAt;
+leaseBootSessionId;
 
-leaseExpiresAt;
+leaseStartedElapsedRealtime;
+
+leaseExpiresElapsedRealtime;
+
+leaseWallStartedAt; // auditoria/diagnóstico
 
 attempt;
 
 heartbeat/renewal quando necessário.
+```
+
+Semântica:
+
+```text
+lease monotônica só é interpretável
+quando leaseBootSessionId == BootSessionId atual;
+
+reboot
+→ lease anterior abandonada/inválida;
+
+lease inválida
+≠ prova de side effect não executado.
 ```
 
 Recovery deve conseguir distinguir:
@@ -1332,6 +1421,23 @@ Implementar:
 
 ```text
 IngressEnvelopeEntity
+```
+
+O envelope deve carregar `payloadSensitivity` e obedecer `DurablePayloadPolicy`:
+
+```text
+minimizar conteúdo;
+
+preferir ID/referência;
+
+SENSITIVE/SECRET
+→ envelope criptográfico versionado;
+
+payload grande temporário
+→ arquivo privado referenciado + cleanup/TTL explícitos;
+
+SECRET
+→ nunca em logs/diagnostics.
 ```
 
 com:
@@ -1605,6 +1711,12 @@ nenhuma destructive migration em produção.
 [ ] IngressQueue funcional;
 
 [ ] IdempotencyKeyPolicy funcional;
+
+[ ] DurablePayloadPolicy funcional para ingress/outbox;
+
+[ ] SENSITIVE/SECRET durable payload encryption/minimization testados;
+
+[ ] execution lease monotônica vinculada a BootSessionId;
 
 [ ] replay seguro e IDEMPOTENCY_CONFLICT testados;
 
@@ -2023,7 +2135,24 @@ native failure;
 
 user/system kill;
 
-Force Stop quando detectável.
+Force Stop por sinal de startup em API 35+;
+
+exit reasons para diagnóstico complementar.
+```
+
+Em API 35+, usar:
+
+```text
+ApplicationStartInfo.wasForceStopped()
+```
+
+como sinal primário da primeira inicialização após Force Stop.
+
+Não inferir Force Stop apenas de:
+
+```text
+ApplicationExitInfo.REASON_USER_REQUESTED
+ou outro exit reason isolado.
 ```
 
 ---
@@ -2032,15 +2161,20 @@ Force Stop quando detectável.
 
 O sistema não tentará contornar Force Stop.
 
-Após nova inicialização permitida:
+Em Android 15/API 35+, a entrada no estado stopped cancela `PendingIntent`s do pacote.
+
+Na primeira inicialização posterior permitida:
 
 ```text
-recovery
-+
-ReminderReconciler
-+
-worker reconciliation.
+ApplicationStartInfo.wasForceStopped() == true
+→ registrar lastForceStopDetected
+→ RecoveryCoordinator
+→ ReminderReconciler
+→ worker/job/callback reconciliation
+→ reconstrução dos PendingIntents a partir do banco.
 ```
+
+`ApplicationExitInfo` permanece diagnóstico complementar e não é usado sozinho como prova de Force Stop.
 
 ---
 
@@ -2977,24 +3111,43 @@ A voz começa somente pelo modo mais seguro.
 
 ---
 
-# 15.1. Processo `:voice`
+# 15.1. Processos de voz
 
-Criar processo dedicado privado do aplicativo:
+Criar dois papéis de processo desde o início da implementação de voz:
 
 ```text
 android:process=":voice"
+→ VOICE_CONTROL
+→ control plane leve
+
+android:process=":voice_session"
+→ VOICE_SESSION
+→ pipeline pesado sob demanda
 ```
 
 Semântica obrigatória:
 
 ```text
-:voice NÃO significa android:isolatedProcess="true".
+:voice e :voice_session
+NÃO significam android:isolatedProcess="true".
 
 Qualquer adoção futura de isolatedProcess exige ADR e nova qualificação de IPC,
 permissões, lifecycle e acesso aos recursos necessários.
 ```
 
-Não carregar:
+`VOICE_CONTROL` deve permanecer leve.
+
+`VOICE_SESSION` concentra:
+
+```text
+record/buffers de áudio;
+VAD de sessão;
+STT;
+TTS/session presentation;
+VoiceCoreClient da sessão.
+```
+
+Nenhum dos dois carrega:
 
 ```text
 Room;
@@ -3050,6 +3203,10 @@ isFinalTranscript=false
 ```text
 push button
 ↓
+:voice control plane
+↓
+:voice_session sob demanda
+↓
 record
 ↓
 VAD
@@ -3064,7 +3221,9 @@ Core
 ↓
 response
 ↓
-TTS.
+TTS
+↓
+encerrar/reter sessão conforme lifecycle permitido.
 ```
 
 ---
@@ -3084,7 +3243,7 @@ Android TextToSpeech.
 Teste obrigatório:
 
 ```text
-:voice vivo
+:voice ou :voice_session vivo
 +
 main morto
 ↓
@@ -3120,7 +3279,11 @@ execução segura.
 
 [ ] partial transcript não executa;
 
-[ ] voice death não derruba Core;
+[ ] :voice death não derruba Core;
+
+[ ] :voice_session death não derruba Core/control plane;
+
+[ ] bootstrap dos processos de voz não abre Room/repositories;
 
 [ ] Core funciona sem voz.
 ```
@@ -3153,12 +3316,13 @@ degradar para push-to-talk.
 
 ---
 
-# 16.2. VoiceInteractionService
+# 16.2. VoiceInteractionService + Session Service
 
-Criar:
+Criar no control plane:
 
 ```text
 OrionVoiceInteractionService
+process = :voice
 ```
 
 Manifest:
@@ -3170,7 +3334,20 @@ permission=
 android.permission.BIND_VOICE_INTERACTION
 ```
 
-Intent filter mínimo exigido.
+Intent filter/meta-data mínimos exigidos.
+
+O `OrionVoiceInteractionService` deve permanecer tão leve quanto possível.
+
+Criar a sessão pesada em processo separado:
+
+```text
+OrionVoiceInteractionSessionService
+process = :voice_session
+
+OrionVoiceInteractionSession
+```
+
+STT, buffers de áudio, UI/session presentation e demais operações pesadas de interação devem permanecer fora do processo `:voice` mantido pelo framework.
 
 ---
 
@@ -3205,13 +3382,15 @@ Executar suíte específica na API Android suportada pelo release.
 
 [ ] role revoke;
 
-[ ] VoiceInteractionService;
+[ ] VoiceInteractionService leve em :voice;
+
+[ ] VoiceInteractionSessionService/session em :voice_session;
 
 [ ] BIND_VOICE_INTERACTION;
 
 [ ] no unauthorized binder access;
 
-[ ] :voice/main recovery;
+[ ] :voice/:voice_session/main recovery;
 
 [ ] Core permanece independente do role.
 ```
@@ -3421,7 +3600,7 @@ PR-000
 Repository bootstrap + Gradle wrapper + ToolchainProfile
 
 PR-001
-Module skeleton + CI baseline + native compatibility checks
+Module skeleton + CI baseline + OrionProcessRole/OrionProcessBootstrapper + native compatibility checks
 
 PR-002
 Core model + Command/Event/Query contracts
@@ -3685,6 +3864,12 @@ Nenhuma issue é DONE sem:
 
 [ ] security boundary considerado quando IPC/Intent;
 
+[ ] bootstrap multiprocesso considerado quando componente/processo foi tocado;
+
+[ ] payload durável genérico possui sensitivity/minimization/encryption quando aplicável;
+
+[ ] lease monotônica persistida está vinculada a BootSessionId quando aplicável;
+
 [ ] testes verdes.
 ```
 
@@ -3915,7 +4100,16 @@ INV-026
 INV-020
 ```
 
-Ao final, todos os INV-001–INV-032 devem possuir pelo menos um teste ou mecanismo verificável de review.
+## Hardening transversal F1/F2/F4/F9-F10
+
+```text
+INV-033
+INV-034
+INV-035
+INV-036
+```
+
+Ao final, todos os INV-001–INV-036 devem possuir pelo menos um teste ou mecanismo verificável de review.
 
 ---
 
@@ -4188,7 +4382,7 @@ Não declarar V1 operacional enquanto não houver:
 
 [ ] dependency/license report gerado;
 
-[ ] invariantes INV-001–INV-032 verificados.
+[ ] invariantes INV-001–INV-036 verificados.
 ```
 
 System Assistant pode ser requisito da versão pretendida, mas wake word continua condicionado ao gate físico.
@@ -4536,6 +4730,17 @@ ENGINEERING BASELINE
 ```
 
 A baseline está congelada para implementação.
+
+Precedência de ADR a partir do primeiro commit:
+
+```text
+ADR aceito
+→ supersede somente as decisões/cláusulas
+  que declarar explicitamente alteradas;
+
+Arquitetura V3.2 + Plano V1.2
+→ continuam normativos em todo o restante.
+```
 
 Classificação de mudanças a partir do primeiro commit:
 
