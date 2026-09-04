@@ -43,6 +43,10 @@ RUN yes | android sdk install \
     && test -f "${ANDROID_HOME}/platforms/android-${ANDROID_PLATFORM}/android.jar" \
     && test -x "${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}/aapt2"
 
+ENV ANDROID_USER_HOME=/tmp/.android
+
+RUN install -d -m 1777 "${ANDROID_USER_HOME}"
+
 WORKDIR /workspace
 
 ENTRYPOINT ["./gradlew"]

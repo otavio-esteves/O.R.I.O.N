@@ -8,4 +8,7 @@ services:
       - .:/workspace
     environment:
       ANDROID_HOME: /opt/android-sdk
+      ANDROID_USER_HOME: /tmp/.android
       ANDROID_SDK_ROOT: /opt/android-sdk
+      HOME: /tmp
+      JAVA_TOOL_OPTIONS: -Duser.home=/tmp

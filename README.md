@@ -32,6 +32,17 @@ and `make check`.
 The F0 benchmark harness and its versioned profile contract live under `benchmark/`.
 Run `make benchmark-validate` to validate committed evidence and the negative fixtures.
 
+The initial Foundation skeleton contains the Android application in `:app` and the
+process-bootstrap contract in `:core:common`. Build both APK variants and execute all
+unit, lint, benchmark, native-compatibility, and module-boundary gates with:
+
+```bash
+docker compose run --rm android-build check assembleDebug assembleRelease
+```
+
+The GitHub Actions baseline runs this same Compose flow. Android device installation
+and runtime validation remain host/physical-device responsibilities.
+
 ```text
 source -> Docker build/check/APK -> Linux host + ADB -> physical Android device
 ```

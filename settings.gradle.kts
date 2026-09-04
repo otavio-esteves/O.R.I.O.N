@@ -15,3 +15,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "orion"
+
+include(":app")
+include(":core:common")
