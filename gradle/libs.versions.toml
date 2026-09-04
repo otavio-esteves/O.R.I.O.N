@@ -1,0 +1,14 @@
+[versions]
+agp = "9.4.0"
+kotlin = "2.4.10"
+compile-sdk = "37"
+target-sdk = "37"
+min-sdk = "31"
+ndk = "29.0.14206865"
+cmake = "4.0.2"
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
