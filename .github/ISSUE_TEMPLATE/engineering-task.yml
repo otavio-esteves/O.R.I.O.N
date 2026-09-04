@@ -1,0 +1,78 @@
+name: Engineering task
+description: Define one bounded O.R.I.O.N. implementation or engineering change.
+title: "[ORION-ID] "
+body:
+  - type: input
+    id: orion_id
+    attributes:
+      label: ORION ID
+      description: Use the identifier assigned by the Master Plan or project backlog.
+      placeholder: ORION-FND-002
+    validations:
+      required: true
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: State the single verifiable outcome of this task.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide only the background needed to execute the task.
+  - type: textarea
+    id: files_modules_allowed
+    attributes:
+      label: Files / modules allowed
+      description: Bound the implementation surface.
+    validations:
+      required: true
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Contracts
+      description: List affected architecture or implementation contracts, or state None.
+    validations:
+      required: true
+  - type: textarea
+    id: invariants
+    attributes:
+      label: Invariants
+      description: List applicable INV-xxx identifiers, or state None.
+    validations:
+      required: true
+  - type: textarea
+    id: required_tests
+    attributes:
+      label: Required tests
+      description: List the checks that must prove the change.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: Define objective completion conditions.
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: State adjacent work that must remain untouched.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies_blockers
+    attributes:
+      label: Dependencies / blockers
+      description: List prerequisites or known blockers, or state None.
+  - type: textarea
+    id: evidence_required
+    attributes:
+      label: Evidence required
+      description: Identify logs, reports, profiles, screenshots, or command results required for review.
+    validations:
+      required: true

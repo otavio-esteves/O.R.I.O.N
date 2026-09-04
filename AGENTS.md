@@ -367,6 +367,34 @@ Avoid broad changes such as:
 
 Break them into independently verifiable work.
 
+### 6.2. Branch and review flow
+
+Normal development follows:
+
+```text
+issue
+→ dedicated branch
+→ implementation
+→ relevant tests
+→ pull request
+→ required CI green
+→ merge
+```
+
+- An issue is a bounded unit of work and its work-package fields from section 5 are
+  the execution contract for humans and coding agents such as Codex.
+- Each branch has one primary responsibility. Do not mix unrelated features,
+  refactors, documentation, or fixes.
+- Keep each pull request small enough for objective review and include the tests
+  relevant to its change.
+- Passing required CI is a precondition for merge. Direct pushes to `main` are not
+  the normal development workflow.
+- Architectural changes require explicit justification and an ADR whenever section
+  1.1 applies.
+
+Repository contribution templates and the required GitHub `main` protection are
+described in `CONTRIBUTING.md`.
+
 ---
 
 ## 7. Repository and phase discipline
