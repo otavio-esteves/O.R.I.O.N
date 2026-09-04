@@ -13,7 +13,13 @@ ENV ANDROID_HOME=/opt/android-sdk \
     PATH=/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:${PATH}
 
 RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl unzip git ca-certificates \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      git \
+      libjson-validator-perl \
+      perl \
+      unzip \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" /tmp/android-cli \

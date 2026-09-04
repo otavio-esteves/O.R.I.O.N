@@ -12,6 +12,8 @@ shift
 [ "$1" = "--" ] || usage
 shift
 
+[ ! -e "$output" ] || { echo "$output already exists; refusing to overwrite benchmark evidence" >&2; exit 73; }
+
 required_vars='PROFILE_ID ENVIRONMENT ANDROID_RUNTIME_EVIDENCE DEVICE_MANUFACTURER DEVICE_MODEL SOC RAM_MIB ANDROID_BUILD API_LEVEL APP_BUILD_ID COMMIT_SHA BUILD_VARIANT KIND CANDIDATE ARTIFACT_SHA256 QUANTIZATION INFERENCE_BACKEND THREADS CONTEXT_TOKENS GENERATED_TOKENS LOAD_TIME_MS FIRST_TOKEN_MS TOKENS_PER_SECOND RSS_BASELINE_KIB PEAK_RSS_KIB RSS_AFTER_UNLOAD_KIB BATTERY_START_PERCENT BATTERY_END_PERCENT INITIAL_TEMPERATURE_C THERMAL_STATUS'
 for suffix in $required_vars; do
     value=$(printenv "ORION_BENCH_${suffix}" || true)
@@ -36,7 +38,7 @@ for suffix in $decimal_vars; do
     case "$value" in *[!0-9.]*|'') echo "ORION_BENCH_${suffix} must be an unsigned number" >&2; exit 64;; esac
 done
 
-case "$ORION_BENCH_KIND" in LLM|STT) ;; *) echo 'ORION_BENCH_KIND must be LLM or STT' >&2; exit 64;; esac
+case "$ORION_BENCH_KIND" in LLM|STT|TTS) ;; *) echo 'ORION_BENCH_KIND must be LLM, STT, or TTS' >&2; exit 64;; esac
 case "$ORION_BENCH_ENVIRONMENT" in CONTAINER|HOST|ANDROID_EMULATOR|PHYSICAL_DEVICE) ;; *) echo 'invalid ORION_BENCH_ENVIRONMENT' >&2; exit 64;; esac
 case "$ORION_BENCH_ANDROID_RUNTIME_EVIDENCE" in DEFINITIVE|NON_DEFINITIVE) ;; *) echo 'invalid ORION_BENCH_ANDROID_RUNTIME_EVIDENCE' >&2; exit 64;; esac
 if [ "$ORION_BENCH_ANDROID_RUNTIME_EVIDENCE" = DEFINITIVE ] && [ "$ORION_BENCH_ENVIRONMENT" != PHYSICAL_DEVICE ]; then
@@ -57,9 +59,20 @@ set -e
 finished=$(date +%s%3N)
 duration=$((finished - started))
 recorded_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-if [ "$command_status" -eq 0 ]; then result=PASS; exit_reason=NORMAL; else result=FAIL; exit_reason=COMMAND_EXIT_$command_status; fi
+if [ "$command_status" -eq 0 ]; then
+    execution_result=PASS
+    exit_reason=NORMAL
+else
+    execution_result=FAIL
+    exit_reason=COMMAND_EXIT_$command_status
+fi
 
 mkdir -p "$(dirname "$output")"
+temporary=$(mktemp "${output}.tmp.XXXXXX")
+cleanup() {
+    [ -z "${temporary:-}" ] || rm -f "$temporary"
+}
+trap cleanup EXIT HUP INT TERM
 sed \
     -e "s|@PROFILE_ID@|$ORION_BENCH_PROFILE_ID|g" \
     -e "s|@RECORDED_AT@|$recorded_at|g" \
@@ -94,8 +107,20 @@ sed \
     -e "s|@INITIAL_TEMPERATURE_C@|$ORION_BENCH_INITIAL_TEMPERATURE_C|g" \
     -e "s|@THERMAL_STATUS@|$ORION_BENCH_THERMAL_STATUS|g" \
     -e "s|@EXIT_REASON@|$exit_reason|g" \
-    -e "s|@RESULT@|$result|g" \
-    benchmark/schema/benchmark-profile.template.json > "$output"
+    -e "s|@EXECUTION_RESULT@|$execution_result|g" \
+    benchmark/schema/benchmark-profile.template.json > "$temporary"
+
+perl scripts/benchmark/validate-profiles.pl "$temporary"
+
+# GNU mv -n performs the same-filesystem rename without replacing evidence that
+# may have appeared since the initial collision check. A remaining temporary
+# file means promotion was refused.
+mv -n "$temporary" "$output"
+if [ -e "$temporary" ]; then
+    echo "$output already exists; refusing to overwrite benchmark evidence" >&2
+    exit 73
+fi
+temporary=
 
 echo "wrote $output"
 exit "$command_status"

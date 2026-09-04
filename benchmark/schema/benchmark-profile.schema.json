@@ -1,12 +1,12 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://orion.local/schemas/benchmark-profile-v1.json",
-  "title": "O.R.I.O.N. BenchmarkProfile V1",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://orion.local/schemas/benchmark-profile-v2.json",
+  "title": "O.R.I.O.N. BenchmarkProfile V2",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "profileId", "toolchainProfileId", "recordedAt", "environment", "device", "app", "workload", "measurements", "termination"],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "profileId": { "type": "string", "minLength": 1 },
     "toolchainProfileId": { "type": "string", "minLength": 1 },
     "recordedAt": { "type": "string", "format": "date-time" },
@@ -53,7 +53,7 @@
       "additionalProperties": false,
       "required": ["kind", "candidate", "artifactSha256", "quantization", "inferenceBackend", "threads", "contextTokens", "generatedTokens"],
       "properties": {
-        "kind": { "enum": ["LLM", "STT"] },
+        "kind": { "enum": ["LLM", "STT", "TTS"] },
         "candidate": { "type": "string", "minLength": 1 },
         "artifactSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "quantization": { "type": "string", "minLength": 1 },
@@ -84,11 +84,34 @@
     "termination": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["exitReason", "result"],
+      "required": ["exitReason", "executionResult", "qualificationResult", "qualificationCriteriaId"],
       "properties": {
         "exitReason": { "type": "string", "minLength": 1 },
-        "result": { "enum": ["PASS", "FAIL", "INCONCLUSIVE"] }
-      }
+        "executionResult": { "enum": ["PASS", "FAIL"] },
+        "qualificationResult": { "enum": ["PASS", "FAIL", "NOT_EVALUATED"] },
+        "qualificationCriteriaId": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "null" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "executionResult": { "const": "FAIL" } } },
+          "then": {
+            "properties": {
+              "qualificationResult": { "const": "NOT_EVALUATED" },
+              "qualificationCriteriaId": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "qualificationResult": { "const": "NOT_EVALUATED" } } },
+          "then": { "properties": { "qualificationCriteriaId": { "type": "null" } } },
+          "else": { "properties": { "qualificationCriteriaId": { "type": "string", "minLength": 1 } } }
+        }
+      ]
     }
   }
 }

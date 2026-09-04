@@ -1,11 +1,19 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "gate": "NATIVE_COMPATIBILITY_GATE",
   "status": "NOT_APPLICABLE_NO_NATIVE_ARTIFACTS",
   "reason": "No native artifacts are part of the current repository baseline.",
+  "activationIssue": "ORION-FND-001",
   "requiredChecksWhenApplicable": [
     "ELF_16_KIB_ALIGNMENT",
-    "APK_PACKAGING_ALIGNMENT",
-    "LOAD_ON_COMPATIBLE_DEVICE_OR_EMULATOR"
-  ]
+    "APK_AAB_PACKAGING",
+    "LOAD_TEST",
+    "ABI_COMPATIBILITY"
+  ],
+  "checkResults": {
+    "ELF_16_KIB_ALIGNMENT": "NOT_RUN",
+    "APK_AAB_PACKAGING": "NOT_RUN",
+    "LOAD_TEST": "NOT_RUN",
+    "ABI_COMPATIBILITY": "NOT_RUN"
+  }
 }

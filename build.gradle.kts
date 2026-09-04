@@ -18,7 +18,7 @@ val validateBenchmarkProfiles = tasks.register<Exec>("validateBenchmarkProfiles"
     group = "verification"
     description = "Validates committed O.R.I.O.N. benchmark profiles."
     val profiles = fileTree("benchmark/profiles") { include("*.json") }
-    inputs.files(profiles)
+    inputs.files(profiles, "benchmark/schema/benchmark-profile.schema.json")
     inputs.property("profileOverride", benchmarkProfileOverride.orElse(""))
     commandLine("perl", "scripts/benchmark/validate-profiles.pl")
     args(benchmarkProfileOverride.orNull?.let(::listOf) ?: profiles.files.sorted().map(File::getPath))
@@ -26,11 +26,14 @@ val validateBenchmarkProfiles = tasks.register<Exec>("validateBenchmarkProfiles"
 
 val testBenchmarkProfileValidation = tasks.register<Exec>("testBenchmarkProfileValidation") {
     group = "verification"
-    description = "Proves invalid benchmark profiles are rejected deterministically."
-    val invalidProfiles = fileTree("benchmark/testdata") { include("invalid-*.json") }
-    inputs.files(invalidProfiles)
-    commandLine("perl", "scripts/benchmark/validate-profiles.pl", "--expect-invalid")
-    args(invalidProfiles.files.sorted().map(File::getPath))
+    description = "Proves valid and invalid benchmark profile states against the canonical schema."
+    inputs.files(
+        fileTree("benchmark/testdata") { include("valid-*.json", "invalid-*.json") },
+        "benchmark/schema/benchmark-profile.schema.json",
+        "scripts/benchmark/test-profile-validation.sh",
+        "scripts/benchmark/validate-profiles.pl",
+    )
+    commandLine("sh", "scripts/benchmark/test-profile-validation.sh")
 }
 
 val testBenchmarkRecorder = tasks.register<Exec>("testBenchmarkRecorder") {
@@ -40,6 +43,7 @@ val testBenchmarkRecorder = tasks.register<Exec>("testBenchmarkRecorder") {
         "scripts/benchmark/record-profile.sh",
         "scripts/benchmark/test-record-profile.sh",
         "scripts/benchmark/validate-profiles.pl",
+        "benchmark/schema/benchmark-profile.schema.json",
         "benchmark/schema/benchmark-profile.template.json",
     )
     commandLine("sh", "scripts/benchmark/test-record-profile.sh")
@@ -59,11 +63,23 @@ val validateNativeCompatibilityGate = tasks.register<Exec>("validateNativeCompat
     )
 }
 
+val testNativeCompatibilityGate = tasks.register<Exec>("testNativeCompatibilityGate") {
+    group = "verification"
+    description = "Proves native artifacts cannot retain the not-applicable gate state."
+    inputs.files(
+        "docs/compatibility/native-compatibility-gate.json",
+        "scripts/benchmark/test-native-gate.sh",
+        "scripts/benchmark/validate-native-gate.pl",
+    )
+    commandLine("sh", "scripts/benchmark/test-native-gate.sh")
+}
+
 tasks.named("check") {
     dependsOn(
         validateBenchmarkProfiles,
         testBenchmarkProfileValidation,
         testBenchmarkRecorder,
         validateNativeCompatibilityGate,
+        testNativeCompatibilityGate,
     )
 }

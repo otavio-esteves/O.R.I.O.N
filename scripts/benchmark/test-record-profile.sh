@@ -37,12 +37,56 @@ export ORION_BENCH_THERMAL_STATUS=NONE
 
 scripts/benchmark/record-profile.sh "$test_dir/valid.json" -- true
 perl scripts/benchmark/validate-profiles.pl "$test_dir/valid.json"
+perl -MJSON::PP -e '
+    local $/; my $p = decode_json(<>);
+    die "execution result was not PASS\n" unless $p->{termination}{executionResult} eq "PASS";
+    die "recorder qualified a candidate implicitly\n" unless $p->{termination}{qualificationResult} eq "NOT_EVALUATED";
+    die "unevaluated profile has criteria\n" if defined $p->{termination}{qualificationCriteriaId};
+' "$test_dir/valid.json"
+
+valid_hash=$(sha256sum "$test_dir/valid.json" | awk '{print $1}')
+if scripts/benchmark/record-profile.sh "$test_dir/valid.json" -- true 2>/dev/null; then
+    echo 'existing benchmark evidence was overwritten' >&2
+    exit 1
+fi
+[ "$(sha256sum "$test_dir/valid.json" | awk '{print $1}')" = "$valid_hash" ] || {
+    echo 'existing benchmark evidence changed after a collision' >&2
+    exit 1
+}
+
+ORION_BENCH_TOKENS_PER_SECOND=1..2
+export ORION_BENCH_TOKENS_PER_SECOND
+if scripts/benchmark/record-profile.sh "$test_dir/invalid.json" -- true 2>/dev/null; then
+    echo 'schema-invalid generated profile was accepted' >&2
+    exit 1
+fi
+[ ! -e "$test_dir/invalid.json" ] || {
+    echo 'schema-invalid generated profile was promoted' >&2
+    exit 1
+}
+ORION_BENCH_TOKENS_PER_SECOND=5.5
+export ORION_BENCH_TOKENS_PER_SECOND
+
+if scripts/benchmark/record-profile.sh "$test_dir/execution-failed.json" -- false 2>/dev/null; then
+    echo 'failed benchmark command returned success' >&2
+    exit 1
+fi
+perl scripts/benchmark/validate-profiles.pl "$test_dir/execution-failed.json"
+perl -MJSON::PP -e '
+    local $/; my $p = decode_json(<>);
+    die "execution failure was not recorded\n" unless $p->{termination}{executionResult} eq "FAIL";
+    die "failed execution was qualified\n" unless $p->{termination}{qualificationResult} eq "NOT_EVALUATED";
+' "$test_dir/execution-failed.json"
 
 export ORION_BENCH_ANDROID_RUNTIME_EVIDENCE=DEFINITIVE
 if scripts/benchmark/record-profile.sh "$test_dir/non-physical-definitive.json" -- true 2>/dev/null; then
     echo 'non-physical runtime evidence was accepted as definitive' >&2
     exit 1
 fi
+[ ! -e "$test_dir/non-physical-definitive.json" ] || {
+    echo 'invalid environment profile was published' >&2
+    exit 1
+}
 export ORION_BENCH_ANDROID_RUNTIME_EVIDENCE=NON_DEFINITIVE
 
 ORION_BENCH_PROFILE_ID='$(touch '"$test_dir"'/injection)'

@@ -16,4 +16,4 @@ toolchain:
 	docker compose run --rm android-build toolchainInfo
 
 benchmark-validate:
-	docker compose run --rm android-build validateBenchmarkProfiles testBenchmarkProfileValidation testBenchmarkRecorder validateNativeCompatibilityGate
+	docker compose run --rm android-build validateBenchmarkProfiles testBenchmarkProfileValidation testBenchmarkRecorder validateNativeCompatibilityGate testNativeCompatibilityGate

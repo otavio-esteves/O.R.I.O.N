@@ -48,3 +48,6 @@ Building the image downloads the Android SDK and records acceptance of its licen
 The initial ABI is `arm64-v8a`. Once native artifacts enter the repository, the F0
 gate must verify 16 KiB ELF alignment and packaging before they can be qualified.
 Until then the gate is `NOT_APPLICABLE_NO_NATIVE_ARTIFACTS`, not `PASS`.
+The gate validator scans native sources, build markers, libraries, and generated
+APK/AAB contents, so the first direct or transitive native artifact makes that state
+invalid and activates the tracked `ORION-FND-001` work.

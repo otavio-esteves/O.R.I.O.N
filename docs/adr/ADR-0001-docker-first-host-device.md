@@ -86,7 +86,8 @@ container, a Docker-local service, or development-host connectivity at runtime.
 
 ## Migration
 
-Existing Docker build commands remain unchanged. BenchmarkProfile V1 gains explicit
-environment, commit, build variant, backend, and initial-temperature metadata before
-any real evidence is promoted. Future CI reuses the Compose/Gradle entry points and
-adds a separately governed physical-device stage.
+Existing Docker build commands remain unchanged. The BenchmarkProfile contract
+records environment, commit, build variant, backend, initial temperature, and
+separate execution and qualification outcomes before any real evidence is promoted.
+Future CI reuses the Compose/Gradle entry points and adds a separately governed
+physical-device stage.

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "profileId": "invalid_definitive_container",
   "toolchainProfileId": "orion_toolchain_2026_09_03_01",
   "recordedAt": "2026-09-03T12:00:00Z",
@@ -8,5 +8,5 @@
   "app": { "buildId": "test", "commitSha": "0000000000000000000000000000000000000000", "buildVariant": "benchmark" },
   "workload": { "kind": "LLM", "candidate": "test", "artifactSha256": "0000000000000000000000000000000000000000000000000000000000000000", "quantization": "Q4", "inferenceBackend": "CPU", "threads": 2, "contextTokens": 2048, "generatedTokens": 1 },
   "measurements": { "commandDurationMs": 1, "loadTimeMs": 1, "firstTokenLatencyMs": 1, "tokensPerSecond": 1, "rssBaselineKiB": 1, "peakRssKiB": 1, "rssAfterUnloadKiB": 1, "batteryStartPercent": 1, "batteryEndPercent": 1, "initialTemperatureC": 30, "thermalStatus": "NONE" },
-  "termination": { "exitReason": "NORMAL", "result": "PASS" }
+  "termination": { "exitReason": "NORMAL", "executionResult": "PASS", "qualificationResult": "NOT_EVALUATED", "qualificationCriteriaId": null }
 }
