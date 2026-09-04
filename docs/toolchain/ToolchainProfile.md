@@ -7,6 +7,7 @@ change requires a new profile and re-execution of affected qualification checks.
 
 | Component | Pinned value |
 | --- | --- |
+| Docker base image | `eclipse-temurin:17-jdk-jammy@sha256:400014962ad7224461f945bb1cc3d7d5a1927ce15b8245b72d9cedcda554cd2a` |
 | `minSdk` | 31 |
 | `targetSdk` | 37 |
 | `compileSdk` | 37 |
@@ -35,7 +36,10 @@ docker compose run --rm android-build check
 ```
 
 Docker is the build boundary. Device access remains on the host: use host `adb` for
-the Galaxy S21 and pass APK artifacts produced under the mounted workspace.
+the Galaxy S21 and pass APK artifacts produced under the mounted workspace. Docker
+does not receive ADB/USB access by default and is never an application runtime
+dependency. See `docs/adr/ADR-0001-docker-first-host-device.md` for the normative
+development-environment boundary.
 
 Building the image downloads the Android SDK and records acceptance of its licenses.
 

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "gate": "NATIVE_COMPATIBILITY_GATE",
+  "status": "NOT_APPLICABLE_NO_NATIVE_ARTIFACTS",
+  "reason": "No native artifacts are part of the current repository baseline.",
+  "requiredChecksWhenApplicable": [
+    "ELF_16_KIB_ALIGNMENT",
+    "APK_PACKAGING_ALIGNMENT",
+    "LOAD_ON_COMPATIBLE_DEVICE_OR_EMULATOR"
+  ]
+}

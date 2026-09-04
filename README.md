@@ -2,9 +2,21 @@
 
 Operational Reasoning & Intelligent Orchestration Network.
 
-The project is bootstrapped with a Docker-first Android toolchain. Docker is required
-for canonical command-line builds; Android Studio may be used as an editor, and host
-`adb` remains responsible for physical-device communication.
+## Development environments
+
+Docker is the canonical, reproducible environment for build and automation: Gradle,
+JDK, Android SDK/NDK, compilation, unit tests, lint, static analysis, compatibility
+checks, and APK/AAB generation run there whenever technically applicable.
+
+The Linux host owns Android Studio, `adb`, USB/device communication, installation,
+interactive debugging, logcat, profiling, traces, and other host-integrated tools.
+ADB and USB are deliberately not passed into the build container by default.
+
+An Android physical device is the source of truth for runtime behavior, hardware
+benchmarks, audio, local AI, memory, battery, thermal behavior, background execution,
+recovery, and long-running stability. Container, desktop JVM, or emulator results are
+not definitive evidence for those properties. The normative workflow and evidence
+rules are recorded in [ADR-0001](docs/adr/ADR-0001-docker-first-host-device.md).
 
 ## Bootstrap
 
@@ -16,6 +28,13 @@ docker compose run --rm android-build check
 
 Equivalent convenience targets are available as `make docker-build`, `make toolchain`,
 and `make check`.
+
+The F0 benchmark harness and its versioned profile contract live under `benchmark/`.
+Run `make benchmark-validate` to validate committed evidence and the negative fixtures.
+
+```text
+source -> Docker build/check/APK -> Linux host + ADB -> physical Android device
+```
 
 The first image build downloads the pinned Android SDK, NDK, and CMake packages and
 therefore can take several minutes and several gigabytes. See

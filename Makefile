@@ -1,4 +1,4 @@
-.PHONY: docker-build build test check toolchain
+.PHONY: docker-build build test check toolchain benchmark-validate
 
 docker-build:
 	docker compose build android-build
@@ -14,3 +14,6 @@ check:
 
 toolchain:
 	docker compose run --rm android-build toolchainInfo
+
+benchmark-validate:
+	docker compose run --rm android-build validateBenchmarkProfiles testBenchmarkProfileValidation testBenchmarkRecorder validateNativeCompatibilityGate

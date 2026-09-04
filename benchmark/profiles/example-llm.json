@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "profileId": "orion_benchmark_example_llm_001",
+  "toolchainProfileId": "orion_toolchain_2026_09_03_01",
+  "recordedAt": "2026-09-03T12:00:00Z",
+  "environment": {
+    "kind": "CONTAINER",
+    "androidRuntimeEvidence": "NON_DEFINITIVE"
+  },
+  "device": {
+    "manufacturer": "Samsung",
+    "model": "Galaxy S21",
+    "soc": "example-only",
+    "ramMiB": 8192,
+    "androidBuild": "example-only",
+    "apiLevel": 31
+  },
+  "app": {
+    "buildId": "example-only",
+    "commitSha": "0000000000000000000000000000000000000000",
+    "buildVariant": "example-only"
+  },
+  "workload": {
+    "kind": "LLM",
+    "candidate": "example-model-1b-q4",
+    "artifactSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "quantization": "Q4",
+    "inferenceBackend": "example-only",
+    "threads": 2,
+    "contextTokens": 2048,
+    "generatedTokens": 128
+  },
+  "measurements": {
+    "commandDurationMs": 0,
+    "loadTimeMs": 0,
+    "firstTokenLatencyMs": 0,
+    "tokensPerSecond": 0,
+    "rssBaselineKiB": 0,
+    "peakRssKiB": 0,
+    "rssAfterUnloadKiB": 0,
+    "batteryStartPercent": 0,
+    "batteryEndPercent": 0,
+    "initialTemperatureC": 0,
+    "thermalStatus": "NOT_MEASURED_EXAMPLE"
+  },
+  "termination": { "exitReason": "NOT_EXECUTED_EXAMPLE", "result": "INCONCLUSIVE" }
+}

@@ -373,6 +373,21 @@ Break them into independently verifiable work.
 
 The implementation sequence is authoritative.
 
+### 7.0. Development environment boundary
+
+Follow `docs/adr/ADR-0001-docker-first-host-device.md`:
+
+- Docker is the canonical environment for reproducible build, hardware-independent
+  validation, native compilation, packaging, and equivalent future CI tasks.
+- The Linux host owns Android Studio, ADB, USB, installation, interactive debugging,
+  logcat, profiling, process inspection, and traces.
+- A physical Android device is the source of truth for runtime and hardware behavior.
+- Do not pass ADB/USB into Docker by default and do not add any runtime dependency on
+  Docker to the APK/AAB.
+- Evidence must identify its execution environment. Android runtime or hardware
+  evidence is definitive only when captured on `PHYSICAL_DEVICE`, unless a normative
+  test plan explicitly defines a narrower exception.
+
 ### F0 — qualification
 
 Focus on evidence:

@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orion.local/schemas/benchmark-profile-v1.json",
+  "title": "O.R.I.O.N. BenchmarkProfile V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "profileId", "toolchainProfileId", "recordedAt", "environment", "device", "app", "workload", "measurements", "termination"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "profileId": { "type": "string", "minLength": 1 },
+    "toolchainProfileId": { "type": "string", "minLength": 1 },
+    "recordedAt": { "type": "string", "format": "date-time" },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "androidRuntimeEvidence"],
+      "properties": {
+        "kind": { "enum": ["CONTAINER", "HOST", "ANDROID_EMULATOR", "PHYSICAL_DEVICE"] },
+        "androidRuntimeEvidence": { "enum": ["DEFINITIVE", "NON_DEFINITIVE"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "androidRuntimeEvidence": { "const": "DEFINITIVE" } } },
+          "then": { "properties": { "kind": { "const": "PHYSICAL_DEVICE" } } }
+        }
+      ]
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manufacturer", "model", "soc", "ramMiB", "androidBuild", "apiLevel"],
+      "properties": {
+        "manufacturer": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "soc": { "type": "string", "minLength": 1 },
+        "ramMiB": { "type": "integer", "minimum": 1 },
+        "androidBuild": { "type": "string", "minLength": 1 },
+        "apiLevel": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "app": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["buildId", "commitSha", "buildVariant"],
+      "properties": {
+        "buildId": { "type": "string", "minLength": 1 },
+        "commitSha": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+        "buildVariant": { "type": "string", "minLength": 1 }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "candidate", "artifactSha256", "quantization", "inferenceBackend", "threads", "contextTokens", "generatedTokens"],
+      "properties": {
+        "kind": { "enum": ["LLM", "STT"] },
+        "candidate": { "type": "string", "minLength": 1 },
+        "artifactSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "quantization": { "type": "string", "minLength": 1 },
+        "inferenceBackend": { "type": "string", "minLength": 1 },
+        "threads": { "type": "integer", "minimum": 1 },
+        "contextTokens": { "type": "integer", "minimum": 0 },
+        "generatedTokens": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commandDurationMs", "loadTimeMs", "firstTokenLatencyMs", "tokensPerSecond", "rssBaselineKiB", "peakRssKiB", "rssAfterUnloadKiB", "batteryStartPercent", "batteryEndPercent", "initialTemperatureC", "thermalStatus"],
+      "properties": {
+        "commandDurationMs": { "type": "integer", "minimum": 0 },
+        "loadTimeMs": { "type": "integer", "minimum": 0 },
+        "firstTokenLatencyMs": { "type": "integer", "minimum": 0 },
+        "tokensPerSecond": { "type": "number", "minimum": 0 },
+        "rssBaselineKiB": { "type": "integer", "minimum": 0 },
+        "peakRssKiB": { "type": "integer", "minimum": 0 },
+        "rssAfterUnloadKiB": { "type": "integer", "minimum": 0 },
+        "batteryStartPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "batteryEndPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "initialTemperatureC": { "type": "number", "minimum": 0 },
+        "thermalStatus": { "type": "string", "minLength": 1 }
+      }
+    },
+    "termination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exitReason", "result"],
+      "properties": {
+        "exitReason": { "type": "string", "minLength": 1 },
+        "result": { "enum": ["PASS", "FAIL", "INCONCLUSIVE"] }
+      }
+    }
+  }
+}

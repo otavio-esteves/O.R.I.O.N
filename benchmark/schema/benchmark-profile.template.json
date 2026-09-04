@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "profileId": "@PROFILE_ID@",
+  "toolchainProfileId": "orion_toolchain_2026_09_03_01",
+  "recordedAt": "@RECORDED_AT@",
+  "environment": { "kind": "@ENVIRONMENT@", "androidRuntimeEvidence": "@ANDROID_RUNTIME_EVIDENCE@" },
+  "device": { "manufacturer": "@DEVICE_MANUFACTURER@", "model": "@DEVICE_MODEL@", "soc": "@SOC@", "ramMiB": @RAM_MIB@, "androidBuild": "@ANDROID_BUILD@", "apiLevel": @API_LEVEL@ },
+  "app": { "buildId": "@APP_BUILD_ID@", "commitSha": "@COMMIT_SHA@", "buildVariant": "@BUILD_VARIANT@" },
+  "workload": { "kind": "@KIND@", "candidate": "@CANDIDATE@", "artifactSha256": "@ARTIFACT_SHA256@", "quantization": "@QUANTIZATION@", "inferenceBackend": "@INFERENCE_BACKEND@", "threads": @THREADS@, "contextTokens": @CONTEXT_TOKENS@, "generatedTokens": @GENERATED_TOKENS@ },
+  "measurements": { "commandDurationMs": @COMMAND_DURATION_MS@, "loadTimeMs": @LOAD_TIME_MS@, "firstTokenLatencyMs": @FIRST_TOKEN_MS@, "tokensPerSecond": @TOKENS_PER_SECOND@, "rssBaselineKiB": @RSS_BASELINE_KIB@, "peakRssKiB": @PEAK_RSS_KIB@, "rssAfterUnloadKiB": @RSS_AFTER_UNLOAD_KIB@, "batteryStartPercent": @BATTERY_START_PERCENT@, "batteryEndPercent": @BATTERY_END_PERCENT@, "initialTemperatureC": @INITIAL_TEMPERATURE_C@, "thermalStatus": "@THERMAL_STATUS@" },
+  "termination": { "exitReason": "@EXIT_REASON@", "result": "@RESULT@" }
+}
