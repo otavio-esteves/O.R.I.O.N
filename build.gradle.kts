@@ -16,14 +16,20 @@ val benchmarkProfileOverride = providers.gradleProperty("orionBenchmarkProfile")
 
 val verifyModuleBoundaries = tasks.register<Exec>("verifyModuleBoundaries") {
     group = "verification"
-    description = "Rejects missing modules, forbidden app dependencies, and Gradle project cycles."
+    description = "Rejects missing modules, forbidden dependencies, and Gradle project cycles."
     inputs.files(
         "settings.gradle.kts",
-        "app/build.gradle.kts",
-        "core/common/build.gradle.kts",
+        subprojects.map { it.buildFile },
         "scripts/validate-module-boundaries.pl",
     )
     commandLine("perl", "scripts/validate-module-boundaries.pl")
+}
+
+val testModuleBoundaries = tasks.register<Exec>("testModuleBoundaries") {
+    group = "verification"
+    description = "Tests the foundation inventory and direct/transitive dependency boundaries."
+    inputs.files("scripts/validate-module-boundaries.pl", "scripts/test-module-boundaries.pl")
+    commandLine("perl", "scripts/test-module-boundaries.pl")
 }
 
 val validateBenchmarkProfiles = tasks.register<Exec>("validateBenchmarkProfiles") {
@@ -91,6 +97,7 @@ val testNativeCompatibilityGate = tasks.register<Exec>("testNativeCompatibilityG
 tasks.named("check") {
     dependsOn(
         verifyModuleBoundaries,
+        testModuleBoundaries,
         validateBenchmarkProfiles,
         testBenchmarkProfileValidation,
         testBenchmarkRecorder,
