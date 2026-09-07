@@ -10,3 +10,7 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
     }
 }
+
+dependencies {
+    testImplementation(libs.junit4)
+}
