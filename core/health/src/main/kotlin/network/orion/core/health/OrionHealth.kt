@@ -9,6 +9,8 @@ enum class OrionHealthStatus {
     UNAVAILABLE,
     HEALTHY,
     DEGRADED,
+    RECOVERING,
+    FAILED,
 }
 
 /**
@@ -18,6 +20,11 @@ enum class OrionHealthStatus {
  * persists the snapshot nor reads a platform clock. Detailed diagnostics, recovery
  * orchestration and subsystem-specific health are intentionally outside this F1
  * foundation contract.
+ *
+ * STARTING is UNAVAILABLE, RECOVERING is RECOVERING, READY is HEALTHY,
+ * DEGRADED_SAFE is DEGRADED and BLOCKED is FAILED. FAILED describes central
+ * invariants not being guaranteed; it does not imply permanent failure or rule
+ * out safe reads. Health classification never grants action authority.
  */
 data class OrionHealth(
     val readiness: CoreReadiness,
@@ -29,11 +36,10 @@ data class OrionHealth(
     }
 
     private fun OrionHealthStatus.isConsistentWith(readiness: CoreReadiness): Boolean = when (readiness) {
-        CoreReadiness.STARTING,
-        CoreReadiness.RECOVERING,
-        -> this == OrionHealthStatus.UNAVAILABLE
-
+        CoreReadiness.STARTING -> this == OrionHealthStatus.UNAVAILABLE
+        CoreReadiness.RECOVERING -> this == OrionHealthStatus.RECOVERING
         CoreReadiness.READY -> this == OrionHealthStatus.HEALTHY
-        CoreReadiness.DEGRADED -> this == OrionHealthStatus.DEGRADED
+        CoreReadiness.DEGRADED_SAFE -> this == OrionHealthStatus.DEGRADED
+        CoreReadiness.BLOCKED -> this == OrionHealthStatus.FAILED
     }
 }
