@@ -10,3 +10,9 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
     }
 }
+
+dependencies {
+    api(project(":core:exitinfo"))
+
+    testImplementation(libs.junit4)
+}
