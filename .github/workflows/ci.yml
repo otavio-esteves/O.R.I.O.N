@@ -17,4 +17,4 @@ jobs:
       - name: Build canonical Android environment
         run: env UID="$(id -u)" GID="$(id -g)" docker compose build android-build
       - name: Check and assemble application
-        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build check assembleDebug assembleRelease
+        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest --max-workers=2
