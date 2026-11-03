@@ -1,7 +1,8 @@
 # F1 — Foundation: relatório de gate
 
-Estado: requisitos F1 implementados e verificados localmente. CI obrigatório é
-acompanhado nas PRs abaixo; integração em main depende do fluxo de revisão/merge.
+Estado: requisitos F1 implementados e verificados localmente. Pacotes #9–#16
+revisados sem achados bloqueadores e integrados em main com CI obrigatório aprovado;
+a consolidação deste relatório está no #17.
 Não declara F0_PASS, TRANSACTION_CORE_READY ou resiliência operacional.
 
 ## Matriz de aceitação
@@ -57,7 +58,6 @@ ambiente, a repetição passou. Isso não foi classificado como ANR do O.R.I.O.N
 - Native LOAD_TEST físico arm64/16 KiB; gate nativo global permanece PENDING.
 - Qualificação física de BOOT_COUNT, reboot, deep sleep e relógios conforme FND-005.
 - Transações/outboxes/idempotência persistida/criptografia F2 e recovery F4.
-- Revisão e integração dos PRs no fluxo obrigatório; nenhum merge direto em main.
 
 ## Resultados finais
 
@@ -95,8 +95,11 @@ código Android qualificado. Resultados intermediários estão em FND-009 a 015.
 
 ## PRs e CI
 
-Integrar na ordem abaixo. Cada PR tem o check obrigatório `docker-build-and-check`;
-o estado atual do CI é visível nos links, sem presumir integração em main.
+Os pacotes #9–#16 foram integrados na ordem abaixo. Cada branch foi sincronizada
+com main e teve o check obrigatório `docker-build-and-check` aprovado no head
+integrado. A comparação com as árvores revisadas confirmou que a sincronização
+não alterou arquivos. As revisões estão registradas nos PRs; não houve bypass
+administrativo. O #17 consolida o relatório e passa pelo mesmo fluxo obrigatório.
 
 | Ordem | Pacote | PR |
 | --- | --- | --- |
@@ -108,7 +111,8 @@ o estado atual do CI é visível nos links, sem presumir integração em main.
 | 6 | FND-010 storage/health/log | [#14](https://github.com/otavio-esteves/O.R.I.O.N/pull/14) |
 | 7 | FND-011 bootstrap/UI + FND-013 native | [#15](https://github.com/otavio-esteves/O.R.I.O.N/pull/15) |
 | 8 | FND-015 signing debug | [#16](https://github.com/otavio-esteves/O.R.I.O.N/pull/16) |
+| 9 | FND-014 consolidação e gate | [#17](https://github.com/otavio-esteves/O.R.I.O.N/pull/17) |
 
 A PR de consolidação FND-014 acrescenta este relatório e o APK de instrumentação ao
-comando CI. O gate técnico de branch deve ser distinguido de revisão/merge, F0
-física e autorização para desenvolver fases posteriores.
+comando CI. A revisão/integração não substitui F0 física nem autoriza automaticamente
+o desenvolvimento de fases posteriores. As pendências de hardware permanecem acima.

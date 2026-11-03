@@ -42,4 +42,6 @@ Comando canônico aprovado (2608 tarefas), 124 testes JVM/25 suites sem falhas, 
 com zero erros e nove avisos explícitos não suprimidos. Harness final passou em
 13 execuções Android; após reinstalação estável, mais quatro testes passaram. JSONs
 registram ambiente, APK/AAB hashes, assinatura pública e equivalência de source trees.
-CI é acompanhado nas PRs encadeadas e na consolidação. Este pacote não faz merge.
+Pacotes #9–#16 revisados e integrados pelo fluxo obrigatório, com CI aprovado após
+sincronização de cada branch com main e sem bypass administrativo. O #17 consolida
+o relatório; resultados físicos pendentes permanecem separados da integração.
