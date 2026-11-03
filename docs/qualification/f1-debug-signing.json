@@ -1,0 +1,8 @@
+{
+  "consistentAcrossContainers": true,
+  "apkAndTestCertificateMatchesPersistedKey": true,
+  "publicDebugCertificateSha256": "d3295b297f5f622504dffd56fb524874554b0a1aea179b685ff7e15cf745b3dc",
+  "databaseFileInodePreservedOnReinstall": true,
+  "postUpdateRuntimeTests": 4,
+  "result": "PASS"
+}

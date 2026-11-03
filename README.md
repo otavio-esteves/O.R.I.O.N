@@ -32,12 +32,17 @@ and `make check`.
 The F0 benchmark harness and its versioned profile contract live under `benchmark/`.
 Run `make benchmark-validate` to validate committed evidence and the negative fixtures.
 
-The initial Foundation skeleton contains the Android application in `:app` and the
-process-bootstrap contract in `:core:common`. Build both APK variants and execute all
+The Foundation now includes shared contracts, a main-only Room/DataStore bootstrap,
+structured technical logging, health aggregation, and Compose Home/Diagnostics/Settings.
+AI, voice, mutable ingress and action execution remain unavailable until their later
+implementation phases. The Room v1 schema contains technical metadata only; future
+business schemas require explicit migrations.
+
+Build both APK variants, the release AAB, and the instrumentation APK, and execute
 unit, lint, benchmark, native-compatibility, and module-boundary gates with:
 
 ```bash
-docker compose run --rm android-build check assembleDebug assembleRelease
+docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest --max-workers=2
 ```
 
 The GitHub Actions baseline runs this same Compose flow. Android device installation
@@ -54,6 +59,28 @@ therefore can take several minutes and several gigabytes. See
 If Docker reports permission denied for `/var/run/docker.sock`, grant the current
 user access to the daemon according to the host installation, then restart the
 session. Do not run the build with `sudo`, because that creates root-owned artifacts.
+
+## Foundation Android validation
+
+After the Docker build, run the host harness against an explicit device serial:
+
+```bash
+python3 scripts/android/verify-foundation-runtime.py \
+  --serial emulator-5554 --environment ANDROID_EMULATOR \
+  --evidence-dir /tmp/orion-f1-runtime
+```
+
+The host SDK's `adb` must be on PATH; otherwise pass `--adb /path/to/platform-tools/adb`.
+For physical-device evidence, specify its serial and `--environment PHYSICAL_DEVICE`.
+The harness installs debug/test APKs, checks navigation and Activity recreation,
+verifies storage/IPC ownership in all auxiliary processes, kills the background app,
+and tests allowed return after Force Stop. It records APK hashes, environment,
+Android build/API, page size and results. It does not qualify recovery of business
+side effects or 24/7 operation.
+
+The native gate is active for Compose/DataStore transitive libraries. `check`
+verifies ELF/ABI/APK/AAB packaging, including negative fixtures; physical arm64
+load remains a separate qualification. See the [Foundation gate report](docs/qualification/F1-FoundationGate.md).
 
 Compose preserves its default debug keystore in the project-scoped
 `orion-android-user` volume. Keep that volume to update installed debug APKs across

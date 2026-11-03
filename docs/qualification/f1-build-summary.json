@@ -1,0 +1,22 @@
+{
+  "environment": "CONTAINER",
+  "toolchainProfile": "orion_toolchain_f1_native_2026_11_03",
+  "jvmSuites": 25,
+  "jvmTests": 124,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "artifactSha256": {
+    "app-debug.apk": "b4c20d081c3b7da2735f2a5db2116f8a8528622437b938585b2688feb1eb6c2b",
+    "app-release-unsigned.apk": "1cc107939dd092ab41efd0255872f99ed5ca9d83ab7923f775cb96d137d3cb55",
+    "app-debug-androidTest.apk": "588ab512a1e697857dfbf59f3784aed9244a422846e06afc90c5f0f98bbc1386",
+    "app-release.aab": "1d232a5569fbcedad5ca1efbef4856638917a7cc2051699b176a578c2c56accf"
+  },
+  "nativeGate": "PENDING",
+  "physicalLoadTest": "NOT_RUN",
+  "canonicalCommand": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest --max-workers=2",
+  "canonicalTasks": 2608,
+  "canonicalResult": "PASS",
+  "appLintErrors": 0,
+  "appLintWarnings": 9
+}
