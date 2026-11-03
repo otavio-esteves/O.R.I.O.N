@@ -60,3 +60,13 @@ actions/capabilities. Após corrigir um erro de compilação no teste, nova roda
 `:core:actions:testDebugUnitTest :core:actions:lint :core:model:testDebugUnitTest
 :core:model:lint` passou: 78 tarefas, nove executadas. `HOST`: diff/whitespace revisados.
 Validação integrada final será registrada no relatório F1, sem presumir CI remoto.
+
+Revisão de coerência: metadata mutável RETRY_SAFE exige modo NATURAL ou KEYED;
+NONE e VERIFY_THEN_RETRY não justificam repetição sem verificação. READ_ONLY não
+é bloqueado por essa restrição. Isso elimina uma contradição declarativa, sem
+conceder retry nem provar que a implementação futura de idempotência é correta.
+O teste red reproduziu a aceitação da combinação inválida antes da correção.
+A rodada green de coerência passou em `CONTAINER`: testes e lint de metadata,
+71 tarefas, 16 executadas e 55 UP-TO-DATE. O teste red havia falhado por aceitar
+RETRY_SAFE mutável com NONE/VERIFY_THEN_RETRY; agora os oito casos inválidos são
+rejeitados e os modos NATURAL/KEYED permanecem representáveis.

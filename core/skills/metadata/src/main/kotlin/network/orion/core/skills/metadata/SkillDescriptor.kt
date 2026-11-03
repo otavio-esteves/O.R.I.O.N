@@ -31,6 +31,10 @@ data class SkillDescriptor(
         require(requiredPermissions.all { it.isNotBlank() && it == it.trim() }) {
             "Permission identifiers must not be blank or padded."
         }
+        require(sideEffectClass == SideEffectClass.READ_ONLY || recoveryStrategy != RecoveryStrategy.RETRY_SAFE ||
+            idempotencyMode == IdempotencyMode.NATURAL || idempotencyMode == IdempotencyMode.KEYED) {
+            "Mutable retry-safe Skills require declared natural or keyed idempotency."
+        }
         require((authorizationLevel != AuthorizationLevel.DESTRUCTIVE &&
             sideEffectClass != SideEffectClass.DESTRUCTIVE) || confirmationPolicy == ConfirmationPolicy.ALWAYS) {
             "Destructive Skills require mandatory confirmation."
