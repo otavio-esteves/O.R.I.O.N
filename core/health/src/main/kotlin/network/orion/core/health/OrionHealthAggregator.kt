@@ -6,7 +6,7 @@ import java.util.Collections
 /** Includes configuration separately so a successful database open cannot mask config failure. */
 enum class OrionSubsystem {
     DATABASE, CONFIGURATION, SCHEDULER, REMINDERS, ACTION_OUTBOX, EVENT_OUTBOX,
-    VOICE, CORTEX, PERMISSIONS, NOTIFICATIONS, RESOURCES,
+    VOICE, CORTEX, PERMISSIONS, NOTIFICATIONS, RESOURCES, EXIT_MONITOR,
 }
 
 class OrionHealthReport internal constructor(

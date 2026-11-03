@@ -6,7 +6,7 @@ import network.orion.core.time.WallClock
 
 // Closed vocabularies intentionally exclude arbitrary messages, exceptions and payloads.
 enum class OrionLogComponent { BOOTSTRAP, STORAGE, RECOVERY }
-enum class OrionLogEvent { STARTING, STORAGE_READY, CORE_READY, CORE_BLOCKED }
+enum class OrionLogEvent { STARTING, STORAGE_READY, CORE_READY, CORE_DEGRADED, CORE_BLOCKED }
 enum class OrionLogSeverity { INFO, WARN, ERROR }
 
 data class OrionLogRecord(

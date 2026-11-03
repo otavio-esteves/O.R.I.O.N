@@ -23,7 +23,7 @@ change requires a new profile and re-execution of affected qualification checks.
 | Initial ABI | `arm64-v8a` |
 
 Native dependency versions and commit SHAs are intentionally absent until the F0
-benchmark harness selects candidates. No native dependency is part of this baseline.
+benchmark harness selects candidates. The initial baseline had no native dependency; the Foundation extension below records transitive native artifacts.
 
 ## Docker contract
 
@@ -47,7 +47,7 @@ Building the image downloads the Android SDK and records acceptance of its licen
 
 The initial ABI is `arm64-v8a`. Once native artifacts enter the repository, the F0
 gate must verify 16 KiB ELF alignment and packaging before they can be qualified.
-Until then the gate is `NOT_APPLICABLE_NO_NATIVE_ARTIFACTS`, not `PASS`.
+The initial gate was `NOT_APPLICABLE_NO_NATIVE_ARTIFACTS`, not `PASS`; it is now activated as described below.
 The gate validator scans native sources, build markers, libraries, and generated
 APK/AAB contents, so the first direct or transitive native artifact makes that state
 invalid and activates the tracked `ORION-FND-001` work.
@@ -61,3 +61,16 @@ coroutines 1.10.2, Activity Compose 1.13.0 and AndroidX Test 1.7.0 / ext.junit
 Affected build, lint, unit and Android test suites must be re-executed; results
 are recorded in the Foundation gate report. This adds no compiler/SDK upgrade, Docker image change or runtime host dependency.
 Transitive native libraries are inspected by the compatibility gate before closure.
+
+### Native activation
+
+Compose graphics-path and DataStore package native libraries. Release APK/AAB are
+restricted to arm64-v8a; debug additionally packages x86_64 for emulator checks.
+`scripts/benchmark/check-native-packages.sh` uses the pinned NDK's llvm-readelf and
+SDK Build Tools 36.0.0 zipalign; the release bundle configuration is checked via
+AGP's bundled protobuf contract. Physical load evidence remains a separate gate.
+
+Native extension profile: `orion_toolchain_f1_native_2026_11_03`.
+The image preserves the SDK/NDK executable set and normalizes owner-only executable
+files for non-root Compose users. No version change or root-owned workspace build.
+Native compilation/inspection and the integrated gates are re-executed with this image.
