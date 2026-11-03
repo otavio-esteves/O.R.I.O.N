@@ -13,9 +13,10 @@ Required qualification areas include background restrictions, foreground service
 microphone access, exact alarms, VoiceInteractionService, ApplicationExitInfo,
 memory-limit behavior, process pressure, and native 16 KiB compatibility.
 
-The current native gate is recorded in `native-compatibility-gate.json`. It remains
-`NOT_APPLICABLE_NO_NATIVE_ARTIFACTS` until a native dependency is introduced. That
-state is not a compatibility pass. The validator scans the repository for native
+The current native gate is recorded in `native-compatibility-gate.json`. It is now `PENDING`: Compose graphics-path and DataStore bring transitive native
+libraries. The former `NOT_APPLICABLE_NO_NATIVE_ARTIFACTS` state no longer applies.
+Static ELF/ABI/APK/AAB checks run as part of `check`. Physical load qualification
+is tracked separately and must not be replaced by x86_64 emulator evidence. The validator scans the repository for native
 source/build markers and native libraries, and inspects generated APK/AAB packages
 for transitive `.so` files. If one appears while the gate retains that state,
 validation fails and `ORION-FND-001` must activate the real gate.

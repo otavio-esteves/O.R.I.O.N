@@ -1,3 +1,5 @@
+import java.util.zip.ZipFile
+
 plugins {
     base
     alias(libs.plugins.ksp) apply false
@@ -106,3 +108,61 @@ tasks.named("check") {
         testNativeCompatibilityGate,
     )
 }
+
+
+val releaseBundleArtifact = layout.projectDirectory.file("app/build/outputs/bundle/release/app-release.aab").asFile
+abstract class OrionVerifyBundlePageAlignment : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val bundleFile: RegularFileProperty
+
+    @TaskAction
+    fun verify() {
+        ZipFile(bundleFile.get().asFile).use { archive ->
+            val config = archive.getInputStream(checkNotNull(archive.getEntry("BundleConfig.pb"))).use {
+                com.android.bundle.Config.BundleConfig.parseFrom(it)
+            }
+            val native = config.optimizations.uncompressNativeLibraries
+            check(native.enabled && native.alignment.name == "PAGE_ALIGNMENT_16K") {
+                "Release bundle must request uncompressed native libraries with 16 KiB page alignment."
+            }
+        }
+        logger.lifecycle("Release AAB native page alignment: PASS")
+    }
+}
+
+val verifyBundlePageAlignment = tasks.register<OrionVerifyBundlePageAlignment>("verifyBundlePageAlignment") {
+    group = "verification"
+    description = "Checks that release AAB requests 16 KiB native library page alignment."
+    dependsOn(":app:bundleRelease")
+    bundleFile.set(releaseBundleArtifact)
+}
+
+val verifyNativePackageArtifacts = tasks.register<Exec>("verifyNativePackageArtifacts") {
+    group = "verification"
+    description = "Checks native ELF alignment, ABI and packaging in debug/release APK and release AAB."
+    dependsOn(":app:assembleDebug", ":app:assembleRelease", ":app:bundleRelease")
+    inputs.files(
+        "scripts/benchmark/check-native-packages.sh",
+        "app/build/outputs/apk/debug/app-debug.apk",
+        "app/build/outputs/apk/release/app-release-unsigned.apk",
+        releaseBundleArtifact,
+    )
+    environment("ORION_NDK_VERSION", libs.versions.ndk.get())
+    commandLine("sh", "scripts/benchmark/check-native-packages.sh",
+        "app/build/outputs/apk/debug/app-debug.apk",
+        "app/build/outputs/apk/release/app-release-unsigned.apk",
+        releaseBundleArtifact.path)
+}
+
+tasks.named("check") { dependsOn(verifyBundlePageAlignment, verifyNativePackageArtifacts) }
+
+val testNativePackageArtifacts = tasks.register<Exec>("testNativePackageArtifacts") {
+    group = "verification"
+    description = "Rejects 4 KiB ELF, unaligned APK and invalid ABI fixtures using the pinned NDK."
+    inputs.files("scripts/benchmark/check-native-packages.sh", "scripts/benchmark/test-native-packages.sh")
+    environment("ORION_NDK_VERSION", libs.versions.ndk.get())
+    commandLine("sh", "scripts/benchmark/test-native-packages.sh")
+}
+
+tasks.named("check") { dependsOn(testNativePackageArtifacts) }

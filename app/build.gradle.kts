@@ -5,6 +5,7 @@ plugins {
 
 android {
     namespace = "network.orion.app"
+    ndkVersion = libs.versions.ndk.get()
     compileSdk = libs.versions.compile.sdk.get().toInt()
 
     defaultConfig {

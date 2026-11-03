@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "gate": "NATIVE_COMPATIBILITY_GATE",
-  "status": "NOT_APPLICABLE_NO_NATIVE_ARTIFACTS",
-  "reason": "No native artifacts are part of the current repository baseline.",
+  "status": "PENDING",
+  "reason": "Compose graphics-path and DataStore introduce transitive native libraries. Physical arm64 load qualification remains pending; static checks run in Docker.",
   "activationIssue": "ORION-FND-001",
   "requiredChecksWhenApplicable": [
     "ELF_16_KIB_ALIGNMENT",
@@ -11,9 +11,9 @@
     "ABI_COMPATIBILITY"
   ],
   "checkResults": {
-    "ELF_16_KIB_ALIGNMENT": "NOT_RUN",
-    "APK_AAB_PACKAGING": "NOT_RUN",
+    "ELF_16_KIB_ALIGNMENT": "PASS",
+    "APK_AAB_PACKAGING": "PASS",
     "LOAD_TEST": "NOT_RUN",
-    "ABI_COMPATIBILITY": "NOT_RUN"
+    "ABI_COMPATIBILITY": "PASS"
   }
 }

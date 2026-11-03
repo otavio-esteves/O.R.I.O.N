@@ -43,6 +43,11 @@ RUN yes | android sdk install \
     && test -f "${ANDROID_HOME}/platforms/android-${ANDROID_PLATFORM}/android.jar" \
     && test -x "${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}/aapt2"
 
+# The Android CLI may install SDK/NDK executables as owner-only executable.
+# Builds run as the host UID, so preserve the executable set while making those
+# public toolchain binaries executable by non-root build users as well.
+RUN find "${ANDROID_HOME}" -type f -perm -100 ! -perm -111 -exec chmod a+x {} +
+
 ENV ANDROID_USER_HOME=/tmp/.android
 
 RUN install -d -m 1777 "${ANDROID_USER_HOME}"
