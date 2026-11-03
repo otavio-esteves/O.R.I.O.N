@@ -10,3 +10,8 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
     }
 }
+
+dependencies {
+    api(project(":core:time"))
+    testImplementation(libs.junit4)
+}
