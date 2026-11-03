@@ -74,3 +74,11 @@ Native extension profile: `orion_toolchain_f1_native_2026_11_03`.
 The image preserves the SDK/NDK executable set and normalizes owner-only executable
 files for non-root Compose users. No version change or root-owned workspace build.
 Native compilation/inspection and the integrated gates are re-executed with this image.
+
+### Persistent debug signing
+
+Compose mounts the project-scoped `orion-android-user` volume at ANDROID_USER_HOME
+(/tmp/.android). Default debug signing survives disposable build containers, so
+host `adb install -r` does not rotate certificates between builds. No private key
+is stored in Git or used for release signing. Older ephemeral-key APKs require
+explicit developer handling; tooling never uninstalls them automatically.
