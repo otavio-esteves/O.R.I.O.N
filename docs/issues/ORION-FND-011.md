@@ -8,7 +8,7 @@ Plano Mestre §§7.4.1, 7.6–7.9; ADR-0001.
 
 ## FILES ALLOWED
 `app`, `feature/home`, `feature/diagnostics`, `feature/settings`, `scripts/android`,
-`core/common` (negação tipada de ownership), `core/health` (estado do exit monitor), `data/database/build.gradle.kts` (API exposta),
+`core/observability` (evento CORE_DEGRADED), `core/common` (negação tipada de ownership), `core/health` (estado do exit monitor), `data/database/build.gradle.kts` (API exposta),
 catálogo de dependências apenas se necessário, e esta documentação.
 
 ## CONTRACTS / INVARIANTS
@@ -79,3 +79,15 @@ morte de background e após Force Stop/retorno permitido, testes repetidos passa
 A primeira tentativa do harness encontrou ANR de startup do System UI, registrado
 antes da instalação do app; a repetição sem esse diálogo passou. Nenhum ANR do app
 foi observado. Evidência final após auditoria adicional constará no gate F1.
+
+Revisão final de observabilidade: startup DEGRADED_SAFE registra CORE_DEGRADED/WARN,
+em vez de CORE_READY/INFO. Testes JVM cobrem as duas saídas seguras e rejeitam emissão
+de ready para STARTING/RECOVERING/BLOCKED. É uma correção do diagnóstico existente,
+sem mudança de policy, readiness, execução ou persistência.
+
+A revisão final também aplica ProtocolInfo e a medição do Parcel completo aos
+probes debug: major incompatível é recusado, minor negocia a base comum, mensagens
+inline acima de 256 KiB são recusadas e o reply inclui schemaVersion. O probe não
+aceita argumentos livres. O teste Android envia major incompatível e payload
+oversized antes de uma consulta compatível com minor diferente e verifica ausência
+de respostas inválidas. Isso qualifica o helper debug, não o transporte de produção.

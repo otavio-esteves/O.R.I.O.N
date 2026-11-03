@@ -98,7 +98,9 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             // Mutable ingress/actions remain UNAVAILABLE even after safe reads open.
             check(!governor.canRunInference())
             publish(states, clock.wallNow())
-            logger.record(correlation, OrionLogComponent.RECOVERY, OrionLogEvent.CORE_READY, OrionLogSeverity.INFO)
+            val event = readyLogEvent(health.value.core.readiness)
+            logger.record(correlation, OrionLogComponent.RECOVERY, event,
+                if (event == OrionLogEvent.CORE_DEGRADED) OrionLogSeverity.WARN else OrionLogSeverity.INFO)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {

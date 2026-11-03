@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import network.orion.core.health.*
+import network.orion.core.ipc.InlineIpcPayloadPolicy
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -85,17 +86,33 @@ class FoundationRuntimeTest {
             "OrionVoiceSessionBootstrapProbeService" to "VOICE_SESSION",
         )) {
             val reply = CountDownLatch(1)
+            val invalidReply = CountDownLatch(1)
             var evidence: Bundle? = null
             val receiver = Messenger(Handler(Looper.getMainLooper()) { message ->
-                evidence = message.data
+                evidence = message.data.apply {
+                    putInt("protocolMajor", message.arg1)
+                    putInt("protocolMinor", message.arg2)
+                }
                 reply.countDown()
+                true
+            })
+            val rejectedReceiver = Messenger(Handler(Looper.getMainLooper()) {
+                invalidReply.countDown()
                 true
             })
             val connection = object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName, binder: IBinder) {
-                    val request = Message.obtain(null, 1, 1, 0)
+                    val remote = Messenger(binder)
+                    remote.send(Message.obtain(null, 1, 2, 0).apply { replyTo = rejectedReceiver })
+                    remote.send(Message.obtain(null, 1, 1, 0).apply {
+                        replyTo = rejectedReceiver
+                        data = Bundle().apply {
+                            putByteArray("unsupported", ByteArray(InlineIpcPayloadPolicy.MAX_INLINE_IPC_PAYLOAD_BYTES + 1))
+                        }
+                    })
+                    val request = Message.obtain(null, 1, 1, 1)
                     request.replyTo = receiver
-                    Messenger(binder).send(request)
+                    remote.send(request)
                 }
                 override fun onServiceDisconnected(name: ComponentName) = Unit
             }
@@ -104,6 +121,10 @@ class FoundationRuntimeTest {
             try {
                 assertTrue("No bootstrap evidence for $expectedRole", reply.await(20, TimeUnit.SECONDS))
                 val result = checkNotNull(evidence)
+                assertFalse("Invalid protocol/payload received a report", invalidReply.await(1, TimeUnit.SECONDS))
+                assertEquals(1, result.getInt("schemaVersion"))
+                assertEquals(1, result.getInt("protocolMajor"))
+                assertEquals(0, result.getInt("protocolMinor"))
                 assertEquals(expectedRole, result.getString("role"))
                 assertFalse(result.getBoolean("mainGraphCreated"))
                 assertTrue(result.getBoolean("databaseDenied"))

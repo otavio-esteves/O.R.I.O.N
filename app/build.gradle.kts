@@ -28,6 +28,8 @@ android {
 }
 
 dependencies {
+    debugImplementation(project(":core:ipc"))
+    testImplementation(libs.junit4)
     implementation(project(":core:common"))
     implementation(project(":core:health"))
     implementation(project(":core:time"))
