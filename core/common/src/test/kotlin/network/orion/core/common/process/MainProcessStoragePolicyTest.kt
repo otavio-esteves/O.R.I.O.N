@@ -11,9 +11,14 @@ class MainProcessStoragePolicyTest {
                     if (role == OrionProcessRole.MAIN && unlocked && !deviceProtected) {
                         MainProcessStoragePolicy.requireAccess(role, unlocked, deviceProtected)
                     } else {
-                        assertThrows(IllegalStateException::class.java) {
+                        val denial = assertThrows(OrionStorageAccessDeniedException::class.java) {
                             MainProcessStoragePolicy.requireAccess(role, unlocked, deviceProtected)
                         }
+                        org.junit.Assert.assertEquals(
+                            if (role != OrionProcessRole.MAIN) StorageAccessDeniedReason.NON_MAIN_PROCESS
+                            else StorageAccessDeniedReason.CREDENTIAL_STORAGE_UNAVAILABLE,
+                            denial.reason,
+                        )
                     }
                 }
             }

@@ -3,8 +3,11 @@
     <application
         android:name=".OrionApplication"
         android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/orion_data_extraction_rules"
         android:label="O.R.I.O.N."
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Orion">
         <activity
             android:name=".MainActivity"
             android:exported="true">
