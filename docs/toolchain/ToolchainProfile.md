@@ -51,3 +51,13 @@ Until then the gate is `NOT_APPLICABLE_NO_NATIVE_ARTIFACTS`, not `PASS`.
 The gate validator scans native sources, build markers, libraries, and generated
 APK/AAB contents, so the first direct or transitive native artifact makes that state
 invalid and activates the tracked `ORION-FND-001` work.
+
+## Foundation storage extension — 2026-11-03
+
+Extension ID: `orion_toolchain_f1_storage_2026_11_03` (base profile unchanged).
+KSP 2.3.10 processes Kotlin Room schemas. Room 2.8.5, DataStore 1.3.0,
+coroutines 1.10.2, Activity Compose 1.13.0 and AndroidX Test 1.7.0 / ext.junit
+1.3.0 are pinned in the catalog. Compose UI artifacts follow the existing BOM.
+Affected build, lint, unit and Android test suites must be re-executed; results
+are recorded in the Foundation gate report. This adds no compiler/SDK upgrade, Docker image change or runtime host dependency.
+Transitive native libraries are inspected by the compatibility gate before closure.
