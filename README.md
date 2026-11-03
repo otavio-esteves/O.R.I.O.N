@@ -54,3 +54,9 @@ therefore can take several minutes and several gigabytes. See
 If Docker reports permission denied for `/var/run/docker.sock`, grant the current
 user access to the daemon according to the host installation, then restart the
 session. Do not run the build with `sudo`, because that creates root-owned artifacts.
+
+Compose preserves its default debug keystore in the project-scoped
+`orion-android-user` volume. Keep that volume to update installed debug APKs across
+builds. APKs signed with a previously lost ephemeral key cannot be updated with a
+new key; the harness reports the Android error and does not uninstall or erase data.
+Release signing is not configured by this development volume.

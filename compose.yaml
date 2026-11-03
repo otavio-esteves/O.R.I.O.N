@@ -6,9 +6,13 @@ services:
     working_dir: /workspace
     volumes:
       - .:/workspace
+      - orion-android-user:/tmp/.android
     environment:
       ANDROID_HOME: /opt/android-sdk
       ANDROID_USER_HOME: /tmp/.android
       ANDROID_SDK_ROOT: /opt/android-sdk
       HOME: /tmp
       JAVA_TOOL_OPTIONS: -Duser.home=/tmp
+
+volumes:
+  orion-android-user:

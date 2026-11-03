@@ -30,7 +30,10 @@ def main():
 
     def adb(*command, check=True):
         result = subprocess.run([args.adb, '-s', args.serial, *command], capture_output=True,
-                                text=True, timeout=180, check=check)
+                                text=True, timeout=180, check=False)
+        if check and result.returncode:
+            raise RuntimeError('ADB command failed: ' + ' '.join(command[:3]) + '\n' +
+                               result.stdout.strip() + '\n' + result.stderr.strip())
         return result.stdout.strip()
 
     emulated = adb('shell', 'getprop', 'ro.kernel.qemu') == '1'
