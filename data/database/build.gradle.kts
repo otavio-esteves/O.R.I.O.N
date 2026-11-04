@@ -14,8 +14,15 @@ android {
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
+// Both variants export the same versioned schema. Avoid concurrent writes to its JSON file.
+tasks.matching { it.name == "kspReleaseKotlin" }.configureEach {
+    mustRunAfter("kspDebugKotlin")
+}
+
 dependencies {
     implementation(project(":core:common"))
+    api(project(":core:actions"))
+    api(project(":core:model"))
     api(libs.room.runtime)
     ksp(libs.room.compiler)
 }

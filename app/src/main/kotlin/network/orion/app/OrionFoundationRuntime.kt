@@ -94,8 +94,9 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 emptyList()
             }
             governor = UnavailableResourceGovernor(exits)
-            // No domain tables, pending actions, reminders or workers exist in F1.
-            // Mutable ingress/actions remain UNAVAILABLE even after safe reads open.
+            // F2 action storage exists, but execution/recovery is not wired yet.
+            // Mutable ingress/actions remain UNAVAILABLE even after safe reads open;
+            // opening storage never resumes a pending or uncertain external effect.
             check(!governor.canRunInference())
             publish(states, clock.wallNow())
             val event = readyLogEvent(health.value.core.readiness)

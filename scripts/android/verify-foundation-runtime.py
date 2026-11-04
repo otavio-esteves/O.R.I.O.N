@@ -12,6 +12,13 @@ import time
 import xml.etree.ElementTree as ET
 
 
+def terminate_debug_main(adb, process_id):
+    """Inject process death under the debuggable package UID; never Force Stop or root."""
+    if not re.fullmatch(r'[1-9][0-9]*', process_id):
+        raise RuntimeError('Expected exactly one positive main process ID.')
+    adb('shell', 'run-as', 'network.orion', 'kill', '-9', process_id)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--serial', required=True)
@@ -106,7 +113,9 @@ def main():
             raise RuntimeError('Main process is absent before recreation test.')
         adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
         time.sleep(1)
-        adb('shell', 'am', 'kill', 'network.orion')
+        if pid() != before:
+            raise RuntimeError('Main process changed before controlled termination.')
+        terminate_debug_main(adb, before)
         deadline = time.monotonic() + 15
         while pid() and time.monotonic() < deadline:
             time.sleep(0.5)
@@ -117,7 +126,9 @@ def main():
         if not after or before == after:
             raise RuntimeError('Main process was not recreated.')
         find_text('Contrato IPC: 1.0')
-        report['checks']['process_recreation_and_navigation'] = {'result': 'PASS', 'beforePid': before, 'afterPid': after}
+        report['checks']['process_recreation_and_navigation'] = {
+            'result': 'PASS', 'beforePid': before, 'afterPid': after, 'terminationMethod': 'RUN_AS_SIGKILL',
+        }
         instrument('after_process_recreation', runtime_only=True)
         adb('shell', 'am', 'force-stop', 'network.orion')
         time.sleep(1)

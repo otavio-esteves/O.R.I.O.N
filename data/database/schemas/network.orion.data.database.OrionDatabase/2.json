@@ -1,0 +1,383 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "58767cce5330b0cef70c2e5371088090",
+    "entities": [
+      {
+        "tableName": "orion_storage_metadata",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `formatVersion` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "formatVersion",
+            "columnName": "formatVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "orion_action_requests",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`actionId` TEXT NOT NULL, `skill` TEXT NOT NULL, `argumentSchemaVersion` INTEGER NOT NULL, `argumentsEnvelope` BLOB NOT NULL, `targetEnvelope` BLOB NOT NULL, `payloadSensitivity` TEXT NOT NULL, `authorizationLevel` TEXT NOT NULL, `sideEffectClass` TEXT NOT NULL, `recoveryStrategy` TEXT NOT NULL, `idempotencyMode` TEXT NOT NULL, `policyVersion` TEXT NOT NULL, `status` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `idempotencyScope` TEXT NOT NULL, `idempotencyKey` TEXT NOT NULL, `idempotencyKeyIssuer` TEXT NOT NULL, `canonicalPayloadSchemaVersion` INTEGER NOT NULL, `idempotencyRetainUntil` INTEGER NOT NULL, `correlationId` TEXT NOT NULL, `requiresConfirmation` INTEGER NOT NULL, `normalizedPayloadHash` TEXT NOT NULL, `confirmationFingerprint` TEXT NOT NULL, `version` INTEGER NOT NULL, `attemptCount` INTEGER NOT NULL, `lastError` TEXT, `confirmedAt` INTEGER, `confirmationExpiresAt` INTEGER, `confirmedPayloadHash` TEXT, `policyVersionAtConfirmation` TEXT, `payloadLockedAt` INTEGER, `executionStartedAt` INTEGER, `executedAt` INTEGER, `executionToken` TEXT, `executionId` TEXT, `claimedBy` TEXT, `leaseBootSessionId` INTEGER, `leaseStartedElapsedRealtime` INTEGER, `leaseExpiresElapsedRealtime` INTEGER, `leaseWallStartedAt` INTEGER, PRIMARY KEY(`actionId`))",
+        "fields": [
+          {
+            "fieldPath": "actionId",
+            "columnName": "actionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "skill",
+            "columnName": "skill",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "argumentSchemaVersion",
+            "columnName": "argumentSchemaVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "argumentsEnvelope",
+            "columnName": "argumentsEnvelope",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetEnvelope",
+            "columnName": "targetEnvelope",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "payloadSensitivity",
+            "columnName": "payloadSensitivity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "authorizationLevel",
+            "columnName": "authorizationLevel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sideEffectClass",
+            "columnName": "sideEffectClass",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recoveryStrategy",
+            "columnName": "recoveryStrategy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idempotencyMode",
+            "columnName": "idempotencyMode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "policyVersion",
+            "columnName": "policyVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idempotencyScope",
+            "columnName": "idempotencyScope",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idempotencyKey",
+            "columnName": "idempotencyKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idempotencyKeyIssuer",
+            "columnName": "idempotencyKeyIssuer",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canonicalPayloadSchemaVersion",
+            "columnName": "canonicalPayloadSchemaVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idempotencyRetainUntil",
+            "columnName": "idempotencyRetainUntil",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "correlationId",
+            "columnName": "correlationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "requiresConfirmation",
+            "columnName": "requiresConfirmation",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizedPayloadHash",
+            "columnName": "normalizedPayloadHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confirmationFingerprint",
+            "columnName": "confirmationFingerprint",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attemptCount",
+            "columnName": "attemptCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastError",
+            "columnName": "lastError",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "confirmedAt",
+            "columnName": "confirmedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "confirmationExpiresAt",
+            "columnName": "confirmationExpiresAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "confirmedPayloadHash",
+            "columnName": "confirmedPayloadHash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "policyVersionAtConfirmation",
+            "columnName": "policyVersionAtConfirmation",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "payloadLockedAt",
+            "columnName": "payloadLockedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "executionStartedAt",
+            "columnName": "executionStartedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "executedAt",
+            "columnName": "executedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "executionToken",
+            "columnName": "executionToken",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "executionId",
+            "columnName": "executionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "claimedBy",
+            "columnName": "claimedBy",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "leaseBootSessionId",
+            "columnName": "leaseBootSessionId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "leaseStartedElapsedRealtime",
+            "columnName": "leaseStartedElapsedRealtime",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "leaseExpiresElapsedRealtime",
+            "columnName": "leaseExpiresElapsedRealtime",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "leaseWallStartedAt",
+            "columnName": "leaseWallStartedAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "actionId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_orion_action_requests_idempotencyScope_idempotencyKey",
+            "unique": true,
+            "columnNames": [
+              "idempotencyScope",
+              "idempotencyKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_orion_action_requests_idempotencyScope_idempotencyKey` ON `${TABLE_NAME}` (`idempotencyScope`, `idempotencyKey`)"
+          },
+          {
+            "name": "index_orion_action_requests_status_updatedAt",
+            "unique": false,
+            "columnNames": [
+              "status",
+              "updatedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_orion_action_requests_status_updatedAt` ON `${TABLE_NAME}` (`status`, `updatedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "orion_action_audit",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`auditId` TEXT NOT NULL, `actionId` TEXT NOT NULL, `actionVersion` INTEGER NOT NULL, `fromStatus` TEXT, `toStatus` TEXT NOT NULL, `occurredAt` INTEGER NOT NULL, `correlationId` TEXT NOT NULL, PRIMARY KEY(`auditId`), FOREIGN KEY(`actionId`) REFERENCES `orion_action_requests`(`actionId`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "auditId",
+            "columnName": "auditId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "actionId",
+            "columnName": "actionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "actionVersion",
+            "columnName": "actionVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fromStatus",
+            "columnName": "fromStatus",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "toStatus",
+            "columnName": "toStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "occurredAt",
+            "columnName": "occurredAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "correlationId",
+            "columnName": "correlationId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "auditId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_orion_action_audit_actionId",
+            "unique": false,
+            "columnNames": [
+              "actionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_orion_action_audit_actionId` ON `${TABLE_NAME}` (`actionId`)"
+          },
+          {
+            "name": "index_orion_action_audit_actionId_actionVersion",
+            "unique": true,
+            "columnNames": [
+              "actionId",
+              "actionVersion"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_orion_action_audit_actionId_actionVersion` ON `${TABLE_NAME}` (`actionId`, `actionVersion`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "orion_action_requests",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "actionId"
+            ],
+            "referencedColumns": [
+              "actionId"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '58767cce5330b0cef70c2e5371088090')"
+    ]
+  }
+}
