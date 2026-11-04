@@ -43,6 +43,7 @@ dependencies {
     implementation(project(":core:actions"))
     implementation(project(":core:model"))
     implementation(project(":core:resources"))
+    implementation(project(":core:security"))
     implementation(project(":core:exitinfo"))
     implementation(project(":data:database"))
     implementation(project(":data:datastore"))

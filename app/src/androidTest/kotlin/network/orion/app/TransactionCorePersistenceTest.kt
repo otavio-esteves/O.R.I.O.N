@@ -72,6 +72,34 @@ class TransactionCorePersistenceTest {
         }
     }
 
+    @Test fun keyProvisioningEmptinessProofIncludesEveryEncryptedTable() {
+        val sql = database.openHelper.writableDatabase
+        assertFalse(database.records().hasEncryptedRecords())
+        val records = listOf(
+            "orion_tasks" to { val task = task(); database.tasks().createWithEvent(task, event(task.taskId)); Unit },
+            "orion_reminders" to {
+                val id = uuid()
+                database.records().createReminderWithEvent(ReminderEntity(id, byteArrayOf(1), Sensitivity.SECRET,
+                    500, "UTC", 100, 100), event(id, "REMINDER_CREATED"))
+            },
+            "orion_memories" to {
+                val id = uuid()
+                database.records().createMemoryWithClaimsAndEvent(MemoryEntity(id, byteArrayOf(1), Sensitivity.SECRET,
+                    MemoryOrigin.USER_DECLARED, 1.0, true, 100, 100), emptyList(), event(id, "MEMORY_CREATED"))
+            },
+            "orion_ingress_envelopes" to { database.ingress().enqueue(ingress()); Unit },
+            "orion_action_requests" to { insertOldAction(sql, uuid(), "UNKNOWN") },
+        )
+        records.forEach { (table, insert) ->
+            database.runInTransaction {
+                insert()
+                assertTrue(table, database.records().hasEncryptedRecords())
+                sql.execSQL("DELETE FROM $table")
+            }
+            assertFalse(table, database.records().hasEncryptedRecords())
+        }
+    }
+
     @Test fun upgradeFromOneTraversesBothExplicitMigrations() {
         migrations.createDatabase(upgradeName, 1).use {
             it.execSQL("INSERT INTO orion_storage_metadata(id, formatVersion) VALUES(1, 1)")

@@ -7,6 +7,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStoreFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,7 +18,7 @@ import kotlinx.coroutines.flow.first
 import network.orion.core.common.process.MainProcessStoragePolicy
 import network.orion.core.common.process.OrionProcessRole
 
-data class OrionPreferencesSnapshot(val formatVersion: Int)
+data class OrionPreferencesSnapshot(val formatVersion: Int, val fieldKeyProvisioningAttempted: Boolean = false)
 
 /** One instance per main-process graph/file. No business preferences are written in F1. */
 class OrionPreferencesStore private constructor(
@@ -24,9 +26,15 @@ class OrionPreferencesStore private constructor(
     private val scope: CoroutineScope,
 ) : AutoCloseable {
     suspend fun read(): OrionPreferencesSnapshot {
-        val version = store.data.first()[intPreferencesKey("orion_config_format_version")] ?: 1
+        val values = store.data.first()
+        val version = values[intPreferencesKey("orion_config_format_version")] ?: 1
         check(version == 1) { "Unsupported configuration format." }
-        return OrionPreferencesSnapshot(version)
+        return OrionPreferencesSnapshot(version, values[booleanPreferencesKey("orion_field_key_provisioning_attempted")] ?: false)
+    }
+
+    /** Durable intent: never clear this marker as a response to a missing key. */
+    suspend fun markFieldKeyProvisioningAttempted() {
+        store.edit { it[booleanPreferencesKey("orion_field_key_provisioning_attempted")] = true }
     }
 
     override fun close() { scope.cancel() }

@@ -17,6 +17,7 @@ dependencies {
     implementation(project(":core:common"))
 
     testImplementation(libs.junit4)
+    testImplementation(libs.coroutines.android)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.junit)

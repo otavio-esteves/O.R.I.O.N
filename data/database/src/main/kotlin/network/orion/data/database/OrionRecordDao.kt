@@ -10,6 +10,13 @@ import network.orion.core.model.Sensitivity
 /** F2 encrypted records only; semantic memory and scheduler implementations remain later phases. */
 @Dao
 abstract class OrionRecordDao {
+    /** Every authoritative encrypted table, including retained terminal envelopes. */
+    @Query("""SELECT (EXISTS(SELECT 1 FROM orion_action_requests) OR
+        EXISTS(SELECT 1 FROM orion_tasks) OR EXISTS(SELECT 1 FROM orion_reminders) OR
+        EXISTS(SELECT 1 FROM orion_memories) OR EXISTS(SELECT 1 FROM orion_memory_claims) OR
+        EXISTS(SELECT 1 FROM orion_ingress_envelopes))""")
+    abstract fun hasEncryptedRecords(): Boolean
+
     @Query("SELECT * FROM orion_reminders WHERE reminderId = :id")
     abstract fun reminder(id: String): ReminderEntity?
 

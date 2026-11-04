@@ -20,6 +20,7 @@ import network.orion.core.model.UnavailableCapabilityRegistry
 import network.orion.core.observability.*
 import network.orion.core.recovery.RecoveryCoordinator
 import network.orion.core.resources.UnavailableResourceGovernor
+import network.orion.core.security.*
 import network.orion.core.time.AndroidOrionClock
 import network.orion.data.database.OrionDatabase
 import network.orion.data.database.OrionDatabaseFactory
@@ -81,6 +82,20 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             val config = preferences ?: OrionPreferencesStore.open(app).also { preferences = it }
             configurationFormatVersion = config.read().formatVersion
             states[OrionSubsystem.CONFIGURATION] = OrionHealthStatus.HEALTHY
+            stage = OrionSubsystem.FIELD_KEYS
+            val keys = AndroidKeystoreFieldKeyProvider.open(app)
+            val keyState = FirstInstallFieldKeys(keys,
+                attempted = { config.read().fieldKeyProvisioningAttempted },
+                markAttempted = { config.markFieldKeyProvisioningAttempted() },
+                provisionIfStorageEmpty = {
+                    var result: FieldKeyLifecycleResult? = null
+                    db.runInTransaction {
+                        if (!db.records().hasEncryptedRecords()) result = keys.provisionNewInstallation()
+                    }
+                    result
+                }).initialize()
+            states[OrionSubsystem.FIELD_KEYS] = if (keyState == FieldKeyInitialization.READY)
+                OrionHealthStatus.HEALTHY else OrionHealthStatus.FAILED
             logger.record(correlation, OrionLogComponent.STORAGE, OrionLogEvent.STORAGE_READY, OrionLogSeverity.INFO)
             val exits = try {
                 AndroidApplicationExitMonitor(app).recentExits().also {
