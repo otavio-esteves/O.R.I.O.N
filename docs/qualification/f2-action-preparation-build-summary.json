@@ -1,0 +1,93 @@
+{
+  "environment": "CONTAINER",
+  "toolchainProfile": "orion_toolchain_f1_native_2026_11_03",
+  "canonicalCommand": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest --max-workers=2",
+  "canonicalResult": "PASS",
+  "canonicalTasks": 2625,
+  "executedTasks": 2072,
+  "fromCacheTasks": 553,
+  "jvmSuites": 29,
+  "jvm": {
+    "tests": 160,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "appLintErrors": 0,
+  "appLintWarnings": 10,
+  "changedLibraryLintIssues": {
+    "core/actions": 0,
+    "core/security": 0,
+    "data/database": 0,
+    "data/actions": 0
+  },
+  "moduleBoundaryCases": 36,
+  "artifactSha256": {
+    "app-debug.apk": "3888562af35e36a41914ffad6570e82b80eb4dd18f46ecd822992f4279e4c849",
+    "app-release-unsigned.apk": "9c405399af893fc7a37c82d2b8908f5e62a73844b07a93426a4c7fed8ed76522",
+    "app-debug-androidTest.apk": "b7b556be0e7ebf36d40f8baac6d46561d8c072882b40224b0146af6f6a965b7f",
+    "app-release.aab": "b6e71d9739757ea1d77a4eec6906f57be24f29783a8a9d78a667124b12b71690"
+  },
+  "nativeGate": "PENDING",
+  "physicalLoadTest": "NOT_RUN",
+  "buildSourceSnapshot": {
+    "algorithm": "SHA-256 of sorted path UTF-8 + NUL + raw file SHA-256; Git tracked/untracked nonignored files under selected roots",
+    "sourceRoots": [
+      ".github",
+      "ai",
+      "app",
+      "benchmark",
+      "core",
+      "data",
+      "feature",
+      "gradle",
+      "scheduler",
+      "scripts",
+      "skills",
+      "voice"
+    ],
+    "sourceRootFiles": [
+      ".dockerignore",
+      ".gitignore",
+      "Dockerfile",
+      "Makefile",
+      "build.gradle.kts",
+      "compose.yaml",
+      "gradle.properties",
+      "gradlew",
+      "gradlew.bat",
+      "settings.gradle.kts"
+    ],
+    "sourceTreeSha256": "9633b518f0cbcc0bcf12a15ce016f9e03151de24e4a6b3652310c8e85d975abc",
+    "sourceFileCount": 210,
+    "sourceCommit": "1afdce7195a219ffd5d3f7e88aa3c733d10ac976",
+    "workingTreeDirty": true
+  },
+  "validatedSourceSnapshot": {
+    "sourceCommit": "4f61c95326dbd042e43d6a4c54f6d590a08416cb",
+    "workingTreeDirty": true,
+    "sourceTreeSha256": "215ce8a9a822bc0e9227e20a8c22e9c0d7ee412b726ff5bc536148c1cc3a4132",
+    "sourceFileCount": 211
+  },
+  "postBuildHostOnlyChanges": [
+    ".github/workflows/ci.yml",
+    ".gitignore",
+    "scripts/android/verify-foundation-runtime.py",
+    "scripts/android/test_foundation_runtime_harness.py"
+  ],
+  "buildSourceTreeMatchesWhenHostOnlyChangesExcluded": true,
+  "hostChecks": {
+    "harnessContractTests": 3,
+    "harnessContractResult": "PASS",
+    "workflowActionlint": "PASS"
+  },
+  "androidChecks": {
+    "environment": "ANDROID_EMULATOR",
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "initialTests": 29,
+    "runtimeTestsAfterProcessDeath": 4,
+    "runtimeTestsAfterForceStopReturn": 4,
+    "result": "PASS"
+  },
+  "phaseGate": "F2_IN_PROGRESS"
+}

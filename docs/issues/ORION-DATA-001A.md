@@ -72,7 +72,11 @@ Docker Compose, sem execução no dispositivo e sem alegação de evidência fí
   aprovados. No `HOST`, revisão de código/escopo e whitespace dos quatro arquivos
   novos aprovados.
 
-Sem commit, publicação remota ou integração em main nesta entrega. CI remoto e
+Entrega inicial preparada sem commit, publicação remota ou integração em main. CI remoto e
 revisão de PR continuam obrigatórios antes de merge. Schema transacional e seus
 testes de migração são o próximo pacote de implementação; este contrato não
 substitui os gates de segurança/persistência ou a qualificação física pendente.
+
+Atualização da rodada seguinte: contrato commitado em `09f1d0c` e branch renomeada
+para `feat/orion-data-foundation`. Os contratos de confirmação/criptografia e o
+store transacional foram acrescentados em pacotes separados, sem habilitar executor.

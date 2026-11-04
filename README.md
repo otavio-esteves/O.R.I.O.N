@@ -35,8 +35,11 @@ Run `make benchmark-validate` to validate committed evidence and the negative fi
 The Foundation now includes shared contracts, a main-only Room/DataStore bootstrap,
 structured technical logging, health aggregation, and Compose Home/Diagnostics/Settings.
 AI, voice, mutable ingress and action execution remain unavailable until their later
-implementation phases. The Room v1 schema contains technical metadata only; future
-business schemas require explicit migrations.
+implementation phases. Room v2 adds ActionRequest/audit storage through an explicit
+v1-to-v2 migration, preserving technical metadata. The encrypted preparation adapter
+can register, read, confirm and cancel requests in isolated tests; it is not wired
+to application commands. Execution, production Keystore wrapping and operational
+recovery remain gated. See `docs/issues/ORION-DATA-001B.md` through `ORION-DATA-004.md`.
 
 Build both APK variants, the release AAB, and the instrumentation APK, and execute
 unit, lint, benchmark, native-compatibility, and module-boundary gates with:
@@ -73,10 +76,20 @@ python3 scripts/android/verify-foundation-runtime.py \
 The host SDK's `adb` must be on PATH; otherwise pass `--adb /path/to/platform-tools/adb`.
 For physical-device evidence, specify its serial and `--environment PHYSICAL_DEVICE`.
 The harness installs debug/test APKs, checks navigation and Activity recreation,
-verifies storage/IPC ownership in all auxiliary processes, kills the background app,
+verifies storage/IPC ownership in all auxiliary processes, injects main-process
+death with `run-as`/SIGKILL under the debug app UID,
 and tests allowed return after Force Stop. It records APK hashes, environment,
 Android build/API, page size and results. It does not qualify recovery of business
 side effects or 24/7 operation.
+
+The host harness contract tests run without ADB or a device:
+
+```bash
+python3 scripts/android/test_foundation_runtime_harness.py
+```
+
+Action preparation, migration and encrypted-storage evidence is recorded in the
+[F2 increment report](docs/qualification/F2-ActionPreparation.md). F2 remains in progress.
 
 The native gate is active for Compose/DataStore transitive libraries. `check`
 verifies ELF/ABI/APK/AAB packaging, including negative fixtures; physical arm64

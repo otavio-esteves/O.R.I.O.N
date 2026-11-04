@@ -1,0 +1,38 @@
+{
+  "environment": "ANDROID_EMULATOR",
+  "androidRuntimeEvidence": "NON_DEFINITIVE",
+  "apiLevel": "35",
+  "manufacturer": "unknown",
+  "model": "Android SDK built for x86_64",
+  "abi": "x86_64",
+  "toolchainProfile": "orion_toolchain_f1_native_2026_11_03",
+  "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+  "pageSize": "4096",
+  "commit": "1afdce7195a219ffd5d3f7e88aa3c733d10ac976",
+  "workingTreeDirty": true,
+  "artifactSha256": {
+    "app-debug.apk": "3888562af35e36a41914ffad6570e82b80eb4dd18f46ecd822992f4279e4c849",
+    "app-debug-androidTest.apk": "b7b556be0e7ebf36d40f8baac6d46561d8c072882b40224b0146af6f6a965b7f"
+  },
+  "checks": {
+    "initial_instrumentation": {
+      "result": "PASS",
+      "tests": 29
+    },
+    "process_recreation_and_navigation": {
+      "result": "PASS",
+      "beforePid": "2942",
+      "afterPid": "3036",
+      "terminationMethod": "RUN_AS_SIGKILL"
+    },
+    "after_process_recreation": {
+      "result": "PASS",
+      "tests": 4
+    },
+    "after_allowed_force_stop_return": {
+      "result": "PASS",
+      "tests": 4
+    }
+  },
+  "result": "PASS"
+}
