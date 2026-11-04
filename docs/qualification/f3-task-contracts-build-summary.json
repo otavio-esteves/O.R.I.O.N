@@ -1,0 +1,81 @@
+{
+  "recordedAtUtc": "2026-11-04T23:09:18.085975+00:00",
+  "environment": "CONTAINER",
+  "result": "PASS",
+  "baseAtLocalValidation": "19efeeb5d7de754d916e27c48cfa807c6fc10d58",
+  "branch": "feat/orion-f3-task-contracts",
+  "sourceSha256": {
+    "core/commands/src/main/kotlin/network/orion/core/commands/tasks/CreateTask.kt": "6c2870beb5607c190bea1fc9ad93206c89f267a94dfa12e68d1148c479248b4e",
+    "core/commands/src/main/kotlin/network/orion/core/commands/tasks/OrionCreateTaskPreparer.kt": "c943eeb5c6ccde76762339e31392343080b418200d91e83dd848db05e056c348",
+    "core/commands/src/test/kotlin/network/orion/core/commands/tasks/CreateTaskPreparationTest.kt": "a4f47b3d0aba27780c88e2447f257d1055fcce9b5f627d88deb3d38249b9a898",
+    "core/skills/metadata/src/main/kotlin/network/orion/core/skills/metadata/tasks/OrionCreateTaskDescriptor.kt": "e9d96649ef8642df173b37543c68adf64233ddc669424ecaf07cdb73ddd319e3",
+    "core/skills/metadata/src/test/kotlin/network/orion/core/skills/metadata/tasks/OrionCreateTaskDescriptorTest.kt": "4c812cef67411ddc94ee794960b2b7463ae871f000c067c247182f40129261ba"
+  },
+  "command": "docker compose -p orion -f /tmp/orion-f3-task-contracts/compose.yaml run --rm -v /home/otavio/Projects/O.R.I.O.N/.gradle:/workspace/.gradle android-build --project-cache-dir /tmp/orion-f3-project-cache :core:commands:testDebugUnitTest :core:skills:metadata:testDebugUnitTest :core:commands:lint :core:skills:metadata:lint :core:commands:assemble :core:skills:metadata:assemble verifyModuleBoundaries testModuleBoundaries --max-workers=2",
+  "duration": "3m 2s",
+  "tasks": {
+    "total": 179,
+    "executed": 115,
+    "fromCache": 64
+  },
+  "unitTests": {
+    "total": 21,
+    "new": 16,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "module": "core/commands",
+        "name": "network.orion.core.commands.tasks.CreateTaskPreparationTest",
+        "tests": 14
+      },
+      {
+        "module": "core/commands",
+        "name": "network.orion.core.commands.CommandContractTest",
+        "tests": 2
+      },
+      {
+        "module": "core/skills/metadata",
+        "name": "network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptorTest",
+        "tests": 2
+      },
+      {
+        "module": "core/skills/metadata",
+        "name": "network.orion.core.skills.metadata.SkillDescriptorTest",
+        "tests": 3
+      }
+    ]
+  },
+  "lint": "NO_ISSUES",
+  "moduleBoundaries": "PASS",
+  "moduleBoundaryNegativeFixtures": {
+    "assertions": 36,
+    "result": "PASS"
+  },
+  "artifactSha256": {
+    "core/commands/build/outputs/aar/commands-release.aar": "14f90050d32fbf1158ae1a71662a6cd00ede8475478a53cf4f4cab24e5826acb",
+    "core/commands/build/outputs/aar/commands-debug.aar": "60b472876006f94a4699832b9969fa059e7dca60aa6098410059e3881503dc9e",
+    "core/skills/metadata/build/outputs/aar/metadata-release.aar": "e04bd3bfff7e488e565787568552cd9c1fd2544a2d821377b56d6c04cfc061e6",
+    "core/skills/metadata/build/outputs/aar/metadata-debug.aar": "a5fb5caa4c500efe4f81a871590f6db6d5d978e6fb878122063357777f7c5543"
+  },
+  "dependenciesAdded": false,
+  "databaseSchemaChanged": false,
+  "runtimeMutationEnabled": false,
+  "reviews": {
+    "independentReadOnlyAgents": 2,
+    "remainingBlockers": 0,
+    "primaryReview": "PASS"
+  },
+  "physicalQualification": {
+    "status": "DEFERRED_BY_USER",
+    "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/23"
+  },
+  "mergePrerequisites": [
+    "Integrate reviewed F2 PR #21",
+    "Required CI on final rebased PR head"
+  ],
+  "deterministicAgentReady": false,
+  "integrationBaseCommit": "d785f4fc4b4ed504c20334981ed1b44d9e2a9249",
+  "sourceUnchangedAfterRebase": true
+}
