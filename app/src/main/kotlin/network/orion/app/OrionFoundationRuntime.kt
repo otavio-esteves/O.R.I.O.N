@@ -125,7 +125,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         } catch (_: Exception) {
             states[stage] = OrionHealthStatus.FAILED
             publish(states)
-            logger.record(correlation, OrionLogComponent.RECOVERY, OrionLogEvent.CORE_BLOCKED, OrionLogSeverity.ERROR)
+            logger.record(correlation, OrionLogComponent.RECOVERY,
+                failedRecoveryLogEvent(health.value.core.readiness), OrionLogSeverity.ERROR)
         }
         health.value.core.readiness
     } }
