@@ -14,5 +14,6 @@ android {
 dependencies {
     api(project(":core:model"))
     api(project(":core:time"))
+    api(project(":core:skills:metadata"))
     testImplementation(libs.junit4)
 }
