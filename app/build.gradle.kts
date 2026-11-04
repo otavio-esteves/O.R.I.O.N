@@ -63,6 +63,8 @@ dependencies {
     androidTestImplementation(project(":data:repository"))
     androidTestImplementation(project(":data:events"))
     androidTestImplementation(project(":data:tasks"))
+    androidTestImplementation(project(":data:reminders"))
+    androidTestImplementation(project(":data:memory"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.runtime)
 }
