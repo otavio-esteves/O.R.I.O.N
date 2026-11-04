@@ -37,10 +37,13 @@ structured technical logging, health aggregation, and Compose Home/Diagnostics/S
 Room v3 adds transactional domain records, a reference-only Event Outbox, durable
 ingress and bounded retention through explicit 1→2→3 migrations. Encrypted action
 preparation, guarded execution ownership, conservative abandoned-action recovery,
-Keystore-wrapped versioned data keys, and gated transactional ingress are implemented
-as isolated infrastructure. Product commands, Skill execution, complete operational
-recovery and production key provisioning remain gated. AI and voice remain unavailable.
-See the [F2 increment and remaining gates](docs/qualification/F2-TransactionCoreIncrement.md).
+Keystore-wrapped versioned data keys, and gated transactional ingress are implemented.
+MAIN startup provisions keys only after an empty-storage proof and a durable attempt
+marker. Reminder/memory adapters provide encrypted reads, CAS mutations, transactional
+supersession and claim deletion. Large ingress content has a bounded encrypted private
+file path with TTL. Product commands, Skill execution and complete F4 operational
+recovery remain gated. AI and voice remain unavailable. See the
+[F2 storage completion and remaining qualification](docs/qualification/F2-StorageCompletion.md).
 
 Build both APK variants, the release AAB, and the instrumentation APKs, and execute
 unit, lint, benchmark, native-compatibility, and module-boundary gates with:
@@ -88,6 +91,7 @@ The host harness contract tests run without ADB or a device:
 ```bash
 python3 scripts/android/test_foundation_runtime_harness.py
 python3 scripts/android/test_transaction_process_death_harness.py
+python3 scripts/android/test_installed_upgrade_harness.py
 ```
 
 Action preparation, migration and encrypted-storage evidence is recorded in the
@@ -119,3 +123,30 @@ For physical evidence, use the explicit device serial and `--environment PHYSICA
 The Keystore instrumentation APK is built by CI; running its
 `network.orion.core.security.test/androidx.test.runner.AndroidJUnitRunner` on a device
 is a separate host responsibility. Emulator evidence does not qualify S21/OEM hardware.
+
+## Installed upgrade validation
+
+The debug candidate is versionCode 2. The host recorder installs a prior APK/test APK,
+seeds synthetic state, replaces both with the candidate using `adb install -r`, and
+verifies encrypted records, original keys, queues, pending actions and UNKNOWN state.
+It never uninstalls, clears data or falls back to forced downgrade. Use a dedicated
+target whose installed version is no newer than the previous APK:
+
+```bash
+python3 scripts/android/verify-installed-upgrade.py \
+  --serial emulator-5582 --environment ANDROID_EMULATOR \
+  --adb /path/to/platform-tools/adb \
+  --previous-apk /path/to/baseline/app-debug.apk \
+  --previous-test-apk /path/to/baseline/app-debug-androidTest.apk \
+  --evidence-dir /tmp/orion-f2-installed-upgrade
+```
+
+The baseline test APK must include `UpgradePersistenceTest`. For the schema-3 baseline
+at `d7a2301`, copy that test source into a detached baseline checkout and build with
+the canonical image and the same project debug-keystore volume. Keep the baseline
+source identity, fixture hash and artifact hashes with the evidence. Real scheduler
+artifacts and full recovery/reconciliation upgrades are a separate F4 qualification.
+When sharing the Gradle user cache across checkouts, give the baseline a separate
+project cache with `--project-cache-dir /tmp/orion-baseline-project-cache` so its
+incremental output history cannot overwrite the candidate's history.
+Run builds sequentially when sharing the Gradle user cache across containers.

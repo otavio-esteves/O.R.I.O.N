@@ -1,0 +1,29 @@
+{
+  "result": "FAIL",
+  "environment": "ANDROID_EMULATOR",
+  "fixtureId": "f0ff4756-82cb-48b1-a5ea-0f4cb688cb95",
+  "artifactSha256": {
+    "previous": "a72147964aac0d1aa13c1c69a19ca6e4b751c48765df27eafee1e986b44fcd2d",
+    "previousTest": "141d53cee8a157a8a1e85997cfaf24ab7b05fe0ca981177f3f85dcf7a4640b67",
+    "candidate": "60a8664816657f2c15e98fe765fddebf6c5aa791b79cb6adb09ae7fe5cd79ca2",
+    "candidateTest": "ca98e4addc3d1701611517da3929e4d30b5f729508653c1f73898fdbdf6460ac"
+  },
+  "checks": {
+    "seed_prior_installation": "PASS"
+  },
+  "commit": "7ccb93dcdc7f1bce22d155ee71cddea600cce4a5",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "scripts/android/verify-installed-upgrade.py": "44ffb201547a44494a9f308a6cbb8bd80b9b3c40b6a64421251812308ea1cd59",
+    "app/src/androidTest/kotlin/network/orion/app/UpgradePersistenceTest.kt": "a6a53a8ba4f0c1f28d46bed3929738315ac31d897fe8065f7fbb6a20eba18dc7"
+  },
+  "androidRuntimeEvidence": "NON_DEFINITIVE",
+  "apiLevel": "35",
+  "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+  "abi": "x86_64",
+  "pageSize": "4096",
+  "previousVersionCode": 1,
+  "candidateVersionCode": 2,
+  "failureType": "RuntimeError",
+  "failure": "Upgrade instrumentation did not pass exactly one test."
+}

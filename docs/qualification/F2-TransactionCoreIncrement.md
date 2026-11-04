@@ -3,6 +3,11 @@
 Estado: incremento implementado e validado localmente. F2 permanece aberta; este
 incremento não declara TRANSACTION_CORE_READY nem recovery operacional completo.
 
+Atualização posterior: provisionamento MAIN, adapters completos de lembretes/memória,
+arquivos privados temporários e infraestrutura de upgrade instalado foram tratados
+no [complemento de armazenamento](F2-StorageCompletion.md). As evidências e limitações
+abaixo descrevem a rodada original, anterior a esse complemento.
+
 ## Escopo entregue
 
 - Provider MAIN de data keys, protegidas por wrapping AES-GCM Android Keystore,
