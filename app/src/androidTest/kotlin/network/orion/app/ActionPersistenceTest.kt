@@ -40,9 +40,9 @@ class ActionPersistenceTest {
         context.deleteDatabase(migrationName)
     }
 
-    @Test fun freshDatabaseHasVersionTwoAndPreservesTechnicalFormat() {
+    @Test fun freshDatabaseHasVersionThreeAndPreservesTechnicalFormat() {
         database.verifyStructure()
-        assertEquals(2, database.openHelper.readableDatabase.version)
+        assertEquals(3, database.openHelper.readableDatabase.version)
         assertEquals(1, database.metadata().formatVersion())
         assertEquals(1, database.metadata().rowCount())
     }
@@ -58,10 +58,10 @@ class ActionPersistenceTest {
             }
         }
         val upgraded = Room.databaseBuilder(context, OrionDatabase::class.java, migrationName)
-            .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2).build()
+            .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2, OrionDatabaseMigrations.MIGRATION_2_3).build()
         try {
             upgraded.verifyStructure()
-            assertEquals(2, upgraded.openHelper.readableDatabase.version)
+            assertEquals(3, upgraded.openHelper.readableDatabase.version)
             assertNull(upgraded.actions().find(UUID.randomUUID().toString()))
         } finally { upgraded.close() }
     }
@@ -239,7 +239,7 @@ class ActionPersistenceTest {
     }
 
     private fun openDatabase(): OrionDatabase = Room.databaseBuilder(context, OrionDatabase::class.java, name)
-        .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2)
+        .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2, OrionDatabaseMigrations.MIGRATION_2_3)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 db.execSQL("INSERT INTO orion_storage_metadata(id, formatVersion) VALUES(1, 1)")

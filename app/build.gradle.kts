@@ -59,6 +59,9 @@ dependencies {
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.room.testing)
     androidTestImplementation(project(":data:actions"))
+    androidTestImplementation(project(":data:repository"))
+    androidTestImplementation(project(":data:events"))
+    androidTestImplementation(project(":data:tasks"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.runtime)
 }
