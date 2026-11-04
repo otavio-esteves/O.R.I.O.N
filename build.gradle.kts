@@ -82,7 +82,9 @@ val validateNativeCompatibilityGate = tasks.register<Exec>("validateNativeCompat
         "scripts/benchmark/validate-native-gate.pl",
         "docs/compatibility/native-compatibility-gate.json",
     )
-    dependsOn(":app:assembleDebug", ":app:assembleRelease")
+    // The validator scans every existing APK/AAB, so never race a package writer.
+    dependsOn(":app:assembleDebug", ":app:assembleRelease", ":app:bundleRelease")
+    mustRunAfter(":app:assembleDebugAndroidTest", ":core:security:assembleDebugAndroidTest")
 }
 
 val testNativeCompatibilityGate = tasks.register<Exec>("testNativeCompatibilityGate") {
@@ -94,7 +96,9 @@ val testNativeCompatibilityGate = tasks.register<Exec>("testNativeCompatibilityG
         "scripts/benchmark/validate-native-gate.pl",
     )
     commandLine("sh", "scripts/benchmark/test-native-gate.sh")
-    dependsOn(":app:assembleDebug", ":app:assembleRelease")
+    // The validator scans every existing APK/AAB, so never race a package writer.
+    dependsOn(":app:assembleDebug", ":app:assembleRelease", ":app:bundleRelease")
+    mustRunAfter(":app:assembleDebugAndroidTest", ":core:security:assembleDebugAndroidTest")
 }
 
 tasks.named("check") {
