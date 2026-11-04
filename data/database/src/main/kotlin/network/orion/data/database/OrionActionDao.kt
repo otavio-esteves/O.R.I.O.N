@@ -6,6 +6,10 @@ import androidx.room.Query
 import androidx.room.Transaction
 import network.orion.core.actions.ActionStateMachine
 import network.orion.core.actions.ActionStatus
+import network.orion.core.actions.ActionExecutionLease
+import network.orion.core.actions.ActionLeaseStatus
+import network.orion.core.time.BootSessionId
+import network.orion.core.time.MonotonicInstant
 import java.util.UUID
 
 enum class ActionRegistration { INSERTED, DEDUP, IDEMPOTENCY_CONFLICT, ACTION_ID_CONFLICT }
@@ -27,6 +31,30 @@ abstract class OrionActionDao {
 
     @Query("SELECT * FROM orion_action_audit WHERE actionId = :actionId ORDER BY actionVersion")
     abstract fun auditFor(actionId: String): List<ActionAuditEntity>
+
+    @Query("SELECT * FROM orion_action_requests WHERE status = 'RUNNING' AND actionId > :afterActionId ORDER BY actionId LIMIT :limit")
+    abstract fun runningActions(limit: Int, afterActionId: String): List<ActionRequestEntity>
+
+    @Query("""UPDATE orion_action_requests SET status = 'RUNNING', updatedAt = :at, version = version + 1,
+        attemptCount = attemptCount + 1, executionId = :executionId, executionToken = :executionId,
+        claimedBy = :claimedBy, executionStartedAt = :at, leaseWallStartedAt = :at,
+        leaseBootSessionId = :bootSessionId, leaseStartedElapsedRealtime = :startedElapsed,
+        leaseExpiresElapsedRealtime = :expiresElapsed
+        WHERE actionId = :actionId AND version = :expectedVersion AND status = 'CONFIRMED'""")
+    protected abstract fun updateClaim(actionId: String, expectedVersion: Long, executionId: String,
+        claimedBy: String, bootSessionId: Int, startedElapsed: Long, expiresElapsed: Long, at: Long): Int
+
+    @Query("""UPDATE orion_action_requests SET status = :toStatus, updatedAt = :at, version = version + 1,
+        executedAt = CASE WHEN :toStatus IN ('SUCCEEDED','FAILED') THEN :at ELSE NULL END
+        WHERE actionId = :actionId AND version = :expectedVersion AND status = 'RUNNING'
+        AND executionId = :executionId""")
+    protected abstract fun updateExecutionStatus(actionId: String, expectedVersion: Long,
+        executionId: String?, toStatus: ActionStatus, at: Long): Int
+
+    @Query("""UPDATE orion_action_requests SET status = :toStatus, updatedAt = :at, version = version + 1
+        WHERE actionId = :actionId AND version = :expectedVersion AND status = 'RUNNING'""")
+    protected abstract fun updateAbandonedStatus(actionId: String, expectedVersion: Long,
+        toStatus: ActionStatus, at: Long): Int
 
     @Insert
     protected abstract fun insertAction(action: ActionRequestEntity)
@@ -116,6 +144,74 @@ abstract class OrionActionDao {
         }
         insertAudit(audit)
         return ActionMutation.APPLIED
+    }
+
+    /** Trusted adapter must revalidate policy, capability, permission and the exact decrypted binding first. */
+    @Transaction
+    open fun claimConfirmed(actionId: String, expectedVersion: Long, payloadHash: String, fingerprint: String,
+        policyVersion: String, executionId: String, claimedBy: String, bootSessionId: Int,
+        startedElapsed: Long, expiresElapsed: Long, at: Long, audit: ActionAuditEntity): ActionMutation {
+        require(expectedVersion >= 0 && expectedVersion < Long.MAX_VALUE)
+        requireUuid(executionId)
+        ActionExecutionLease(UUID.fromString(executionId), claimedBy, BootSessionId(bootSessionId), startedElapsed, expiresElapsed)
+        val current = find(actionId) ?: return ActionMutation.NOT_FOUND
+        if (current.version != expectedVersion || current.status != ActionStatus.CONFIRMED) return ActionMutation.CONFLICT
+        require(current.attemptCount >= 0 && current.attemptCount < Int.MAX_VALUE)
+        require(current.normalizedPayloadHash == payloadHash && current.confirmedPayloadHash == payloadHash &&
+            current.confirmationFingerprint == fingerprint && current.policyVersion == policyVersion &&
+            current.policyVersionAtConfirmation == policyVersion && current.confirmedAt != null &&
+            current.confirmedAt <= at && current.payloadLockedAt == current.confirmedAt &&
+            (current.confirmationExpiresAt == null || at < current.confirmationExpiresAt))
+        requireAudit(current, audit, ActionStatus.CONFIRMED, ActionStatus.RUNNING, expectedVersion + 1, at)
+        if (updateClaim(actionId, expectedVersion, executionId, claimedBy, bootSessionId, startedElapsed, expiresElapsed, at) == 0) {
+            return ActionMutation.CONFLICT
+        }
+        insertAudit(audit)
+        return ActionMutation.APPLIED
+    }
+
+    /** A late callback from an expired/previous-boot execution cannot overwrite recovery. */
+    @Transaction
+    open fun finishExecution(actionId: String, expectedVersion: Long, executionId: String,
+        bootSessionId: Int, nowElapsed: Long, toStatus: ActionStatus, at: Long, audit: ActionAuditEntity): ActionMutation {
+        require(expectedVersion >= 0 && expectedVersion < Long.MAX_VALUE)
+        require(toStatus == ActionStatus.SUCCEEDED || toStatus == ActionStatus.FAILED ||
+            toStatus == ActionStatus.UNKNOWN || toStatus == ActionStatus.MANUAL_REVIEW)
+        val current = find(actionId) ?: return ActionMutation.NOT_FOUND
+        if (current.version != expectedVersion || current.status != ActionStatus.RUNNING || current.executionId != executionId) {
+            return ActionMutation.CONFLICT
+        }
+        if (lease(current)?.statusAt(MonotonicInstant(BootSessionId(bootSessionId), nowElapsed)) != ActionLeaseStatus.ACTIVE) {
+            return ActionMutation.CONFLICT
+        }
+        requireAudit(current, audit, ActionStatus.RUNNING, toStatus, expectedVersion + 1, at)
+        if (updateExecutionStatus(actionId, expectedVersion, executionId, toStatus, at) == 0) return ActionMutation.CONFLICT
+        insertAudit(audit)
+        return ActionMutation.APPLIED
+    }
+
+    /** Conservative recovery never authorizes retry and retains the original ownership evidence. */
+    @Transaction
+    open fun recoverAbandoned(actionId: String, expectedVersion: Long, currentBootSessionId: Int?, currentElapsed: Long,
+        toStatus: ActionStatus, at: Long, audit: ActionAuditEntity): ActionMutation {
+        require(expectedVersion >= 0 && expectedVersion < Long.MAX_VALUE)
+        require(toStatus == ActionStatus.UNKNOWN || toStatus == ActionStatus.MANUAL_REVIEW)
+        val current = find(actionId) ?: return ActionMutation.NOT_FOUND
+        if (current.version != expectedVersion || current.status != ActionStatus.RUNNING) return ActionMutation.CONFLICT
+        if (lease(current)?.statusAt(MonotonicInstant(currentBootSessionId?.let(::BootSessionId), currentElapsed)) == ActionLeaseStatus.ACTIVE) {
+            return ActionMutation.CONFLICT
+        }
+        requireAudit(current, audit, ActionStatus.RUNNING, toStatus, expectedVersion + 1, at)
+        if (updateAbandonedStatus(actionId, expectedVersion, toStatus, at) == 0) return ActionMutation.CONFLICT
+        insertAudit(audit)
+        return ActionMutation.APPLIED
+    }
+
+    private fun lease(action: ActionRequestEntity): ActionExecutionLease? {
+        return try { ActionExecutionLease(UUID.fromString(action.executionId ?: return null), action.claimedBy ?: return null,
+            BootSessionId(action.leaseBootSessionId ?: return null), action.leaseStartedElapsedRealtime ?: return null,
+            action.leaseExpiresElapsedRealtime ?: return null)
+        } catch (_: IllegalArgumentException) { null }
     }
 
     private fun requireAudit(action: ActionRequestEntity, audit: ActionAuditEntity, from: ActionStatus?,

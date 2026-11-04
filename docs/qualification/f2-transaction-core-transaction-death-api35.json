@@ -1,0 +1,27 @@
+{
+  "result": "PASS",
+  "environment": "ANDROID_EMULATOR",
+  "fixtureId": "cc2f7528-d457-4440-adf5-a935ca9eda54",
+  "terminationMethod": "RUN_AS_SIGKILL",
+  "checks": {
+    "kill_during_room_transaction": "PASS",
+    "committed_present_uncommitted_absent": "PASS"
+  },
+  "commit": "64499a72cb3abc92d1cf602488c8794c02f00965",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "app/src/androidTest/kotlin/network/orion/app/TransactionProcessDeathTest.kt": "93d653d52ee5207d837ddf18617d97200cd60aa5fc091ba501b89d7d7d63845e",
+    "scripts/android/verify-transaction-process-death.py": "ca40ae38b5dc553f8a062bd2dfb4d3c786caef4efc7c89ae08525fb0d27b8bec"
+  },
+  "artifactSha256": {
+    "app-debug.apk": "39b1a6383cc731f17ddf0bcb6e92b012a75a4cbac6dd2aa09e8d8bafc48c07f9",
+    "app-debug-androidTest.apk": "3570853e156341662a76791ae3ced385dc4912906cdc871d747e72a3642193f2"
+  },
+  "androidRuntimeEvidence": "NON_DEFINITIVE",
+  "apiLevel": "35",
+  "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+  "abi": "x86_64",
+  "pageSize": "4096",
+  "beforePid": "2815",
+  "afterPid": "2866"
+}

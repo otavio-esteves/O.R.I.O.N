@@ -25,7 +25,8 @@ fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, on
         for ((subsystem, status) in report.subsystems) {
             Text("${subsystem.name}: $status", style = MaterialTheme.typography.bodyMedium)
         }
-        if (report.core.readiness == CoreReadiness.BLOCKED) {
+        if (report.core.readiness == CoreReadiness.BLOCKED ||
+            report.subsystems[OrionSubsystem.FIELD_KEYS] == OrionHealthStatus.FAILED) {
             Button(onClick = onRetry) { Text("Tentar novamente") }
         }
     }

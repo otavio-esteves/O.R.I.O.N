@@ -30,10 +30,11 @@ class FoundationRuntimeTest {
         val report = withTimeout(30_000) { runtime.health.first { it.core.readiness.isStartupBarrierOpen } }
         assertEquals(OrionHealthStatus.HEALTHY, report.subsystems[OrionSubsystem.DATABASE])
         assertEquals(OrionHealthStatus.HEALTHY, report.subsystems[OrionSubsystem.CONFIGURATION])
+        assertEquals(OrionHealthStatus.HEALTHY, report.subsystems[OrionSubsystem.FIELD_KEYS])
         assertEquals(OrionHealthStatus.UNAVAILABLE, report.subsystems[OrionSubsystem.CORTEX])
         assertEquals(OrionHealthStatus.UNAVAILABLE, report.subsystems[OrionSubsystem.VOICE])
         assertEquals(1, runtime.databaseFormatVersion)
-        assertEquals(2, runtime.databaseSchemaVersion)
+        assertEquals(3, runtime.databaseSchemaVersion)
         assertEquals(1, runtime.configurationFormatVersion)
         assertNotNull(report.lastRecovery)
     }

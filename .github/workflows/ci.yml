@@ -15,8 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check host ADB harness contract without a device
-        run: python3 scripts/android/test_foundation_runtime_harness.py
+        run: |
+          python3 scripts/android/test_foundation_runtime_harness.py
+          python3 scripts/android/test_transaction_process_death_harness.py
+          python3 scripts/android/test_installed_upgrade_harness.py
       - name: Build canonical Android environment
         run: env UID="$(id -u)" GID="$(id -g)" docker compose build android-build
       - name: Check and assemble application
-        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest --max-workers=2
+        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2

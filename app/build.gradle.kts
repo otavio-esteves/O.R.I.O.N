@@ -13,8 +13,8 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
 
     buildTypes {
@@ -43,9 +43,11 @@ dependencies {
     implementation(project(":core:actions"))
     implementation(project(":core:model"))
     implementation(project(":core:resources"))
+    implementation(project(":core:security"))
     implementation(project(":core:exitinfo"))
     implementation(project(":data:database"))
     implementation(project(":data:datastore"))
+    implementation(project(":data:repository"))
     implementation(project(":feature:home"))
     implementation(project(":feature:diagnostics"))
     implementation(project(":feature:settings"))
@@ -59,6 +61,11 @@ dependencies {
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.room.testing)
     androidTestImplementation(project(":data:actions"))
+    androidTestImplementation(project(":data:repository"))
+    androidTestImplementation(project(":data:events"))
+    androidTestImplementation(project(":data:tasks"))
+    androidTestImplementation(project(":data:reminders"))
+    androidTestImplementation(project(":data:memory"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.runtime)
 }

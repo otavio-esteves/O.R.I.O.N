@@ -1,0 +1,610 @@
+{
+  "recordedAtUtc": "2026-11-04T11:00:39.575589+00:00",
+  "environment": "CONTAINER",
+  "result": "PASS",
+  "branch": "feat/orion-f2-transaction-core",
+  "baseCommit": "64499a72cb3abc92d1cf602488c8794c02f00965",
+  "workingTreeDirty": true,
+  "command": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2",
+  "exitCode": 0,
+  "tasks": {
+    "total": 2706,
+    "executed": 203,
+    "fromCache": 19,
+    "upToDate": 2484
+  },
+  "duration": "5m 37s",
+  "jvm": {
+    "variant": "debug",
+    "tests": 196,
+    "suites": 34,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "results": [
+      {
+        "suite": "network.orion.app.CoreReadyLogEventTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.actions.ActionConfirmationBindingTest",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.actions.ActionExecutionLeaseTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.actions.ActionStateMachineTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.actions.IdempotencyKeyPolicyTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.actions.UnavailableActionEngineTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.commands.CommandContractTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.common.process.MainProcessStoragePolicyTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.common.process.OrionProcessBootstrapperTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.common.process.OrionProcessRoleTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.events.OrionEventTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.health.CoreReadinessTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.health.OrionHealthAggregatorTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.health.OrionHealthTest",
+        "tests": 50,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.ingress.DurableIngressCoordinatorTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.ingress.FoundationIngressCoordinatorTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.ipc.IpcBoundaryPolicyTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.ipc.ProtocolInfoTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.model.CapabilityTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.model.ModelVocabularyTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.model.OrionIntentTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.observability.OrionLoggerTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.queries.QueryContractTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.recovery.OrderedRecoveryCoordinatorTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.resources.UnavailableResourceGovernorTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.security.DurableFieldKeyProviderTest",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.security.DurablePayloadPolicyTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.security.FieldEnvelopeCodecTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.security.OrionFieldEncryptionTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.skills.metadata.SkillDescriptorTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.time.AndroidOrionClockTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.core.time.OrionClockTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.data.events.EventRetryPolicyTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "network.orion.voice.ipc.VoiceCoreClientTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 10,
+    "issues": [
+      {
+        "module": "app",
+        "id": "AndroidGradlePluginVersion",
+        "severity": "Warning"
+      },
+      {
+        "module": "app",
+        "id": "AndroidGradlePluginVersion",
+        "severity": "Warning"
+      },
+      {
+        "module": "app",
+        "id": "AndroidGradlePluginVersion",
+        "severity": "Warning"
+      },
+      {
+        "module": "app",
+        "id": "GradleDependency",
+        "severity": "Warning"
+      },
+      {
+        "module": "app",
+        "id": "NewerVersionAvailable",
+        "severity": "Warning"
+      },
+      {
+        "module": "app",
+        "id": "NewerVersionAvailable",
+        "severity": "Warning"
+      },
+      {
+        "module": "app",
+        "id": "NewerVersionAvailable",
+        "severity": "Warning"
+      },
+      {
+        "module": "app",
+        "id": "NewerVersionAvailable",
+        "severity": "Warning"
+      },
+      {
+        "module": "app",
+        "id": "ChromeOsAbiSupport",
+        "severity": "Warning"
+      },
+      {
+        "module": "app",
+        "id": "MissingApplicationIcon",
+        "severity": "Warning"
+      }
+    ]
+  },
+  "host": {
+    "foundationHarnessTests": 3,
+    "transactionDeathHarnessTests": 3,
+    "actionlint": "PASS",
+    "gitDiffCheck": "PASS"
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "evidence": "NON_DEFINITIVE",
+    "api": 35,
+    "abi": "x86_64",
+    "pageSize": 4096,
+    "avdRamMiB": 1536,
+    "appInitial": 61,
+    "appAfterProcessRecreation": 4,
+    "appAfterAllowedForceStopReturn": 4,
+    "keystore": 4,
+    "transactionDeathVerification": 1,
+    "completedExecutions": 74,
+    "transactionDeath": "RUN_AS_SIGKILL during open Room transaction; committed baseline survived; uncommitted mutation absent; new PID",
+    "initialAttempt": "61 cases passed, then navigation blocked by System UI ANR dialog; preserved as separate failed report. System Close app action used and complete harness repeated successfully."
+  },
+  "native": {
+    "staticChecks": "PASS",
+    "negativeFixtures": "PASS",
+    "globalGate": "PENDING",
+    "physicalLoadTest": "NOT_RUN"
+  },
+  "releaseExportedComponents": [
+    {
+      "type": "activity",
+      "name": "network.orion.app.MainActivity",
+      "permission": null
+    },
+    {
+      "type": "receiver",
+      "name": "androidx.profileinstaller.ProfileInstallReceiver",
+      "permission": "android.permission.DUMP"
+    }
+  ],
+  "artifactsSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "39b1a6383cc731f17ddf0bcb6e92b012a75a4cbac6dd2aa09e8d8bafc48c07f9",
+    "app/build/outputs/apk/release/app-release-unsigned.apk": "97b8d4aa59063ab0ada53b88c86e9c17180ecef707a9597fe4b3603701c3f295",
+    "app/build/outputs/bundle/release/app-release.aab": "b20ee1a01c72b9baef2f3c9a1b5aabc7a63dd5fbcc4629dc6aaef59319a14e71",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "3570853e156341662a76791ae3ced385dc4912906cdc871d747e72a3642193f2",
+    "core/security/build/outputs/apk/androidTest/debug/security-debug-androidTest.apk": "4a42e8fd39914db1b6df62f32a8e7d7c85ffcfcb3fb3d996cbbbe1d105c2c565"
+  },
+  "sourceSnapshot": {
+    "scope": "source/config/host scripts; excludes documentation and benchmark evidence",
+    "aggregateSha256": "576ce13d2d819217311497b21c1dbe61920756bb0262bc0d802270bb3213d050",
+    "files": {
+      ".github/ISSUE_TEMPLATE/engineering-task.yml": "e6cb0e83ddddc1d1cb888b6cb623cbf338833d7ecdec94184654c45a814bcad4",
+      ".github/workflows/ci.yml": "8c420097dd5cc6bc8f3fbb339332bc3c3d2ca0f8806e8642a4ef68669b5a88e3",
+      "Dockerfile": "c1ace3e527f8783376c3ebf3385ec9c9f4645ad376eb4af6e9d849fd265cfc44",
+      "Makefile": "a3d85922f0ccfdd234af3fae8582fd69afdc9335dc83ebea34bf8784f13d97c5",
+      "ai/api/build.gradle.kts": "176fb67926180154f89cb54bb8b61eafb5b04e4d85b864b0741f363a1030873e",
+      "ai/api/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "app/build.gradle.kts": "03083928e3358fef4355d39bfad4c0517926e9661d6a97251cfaf01401173f62",
+      "app/src/androidTest/kotlin/network/orion/app/ActionExecutionOwnershipTest.kt": "3c34d00a10228b2a661a7f1f4859cf1cc37201c68935a17a658bd0220d2cd4c2",
+      "app/src/androidTest/kotlin/network/orion/app/ActionPersistenceTest.kt": "afd2ddb0b5feca400b234b1646279a493a7db85e69d1572dd6ac2e34b3e76728",
+      "app/src/androidTest/kotlin/network/orion/app/DurableIngressStoreTest.kt": "f8176d5485e35dc5affac5667d1b777be94d8bb104dec7b49b8125cd4d1287b8",
+      "app/src/androidTest/kotlin/network/orion/app/EncryptedActionStoreTest.kt": "2f1e2b5a62755082be63f338a3386f0196ff4b7dbe80bec8c2616b738e03612b",
+      "app/src/androidTest/kotlin/network/orion/app/FoundationNavigationTest.kt": "23fa7400bba6a16b3a31b60175913576362b5994759f0b955f034e4b2a355328",
+      "app/src/androidTest/kotlin/network/orion/app/FoundationRuntimeTest.kt": "61ba3d87ca9fdf27b07f8a8949dd38005547eb4a4f65692d685f34fd39a921a3",
+      "app/src/androidTest/kotlin/network/orion/app/TransactionCorePersistenceTest.kt": "32b3fe968be05bd9eeaa1d8288da33d66cbaa74da18822a92480f333d7219711",
+      "app/src/androidTest/kotlin/network/orion/app/TransactionProcessDeathTest.kt": "93d653d52ee5207d837ddf18617d97200cd60aa5fc091ba501b89d7d7d63845e",
+      "app/src/debug/AndroidManifest.xml": "317257229048668e8fcc156775ef416fd7e6b5e7ef013461b792895b78069d25",
+      "app/src/debug/kotlin/network/orion/app/testing/OrionBootstrapProbeService.kt": "04d56175974750edf5a6a70ed609afd9029c49ac88d0fc935d4805b13f96ec8f",
+      "app/src/main/AndroidManifest.xml": "27324ed212c5522dcd21581ca7ee2521d1b087db3e6476fbe12b067ea025c588",
+      "app/src/main/kotlin/network/orion/app/CoreReadyLogEvent.kt": "7050f1b47dfdbe313b1d4dba25c9af8b66c0408fcf22552e355513c2615ee6d6",
+      "app/src/main/kotlin/network/orion/app/MainActivity.kt": "b650e03010a0cbcfa73f425b608379f1b66f19cb8a6a93016feda2426db3ff3c",
+      "app/src/main/kotlin/network/orion/app/OrionApplication.kt": "0c7fb2e91fd4d06574ed0894126269621e0bfd29809060a0a285829a136f6c60",
+      "app/src/main/kotlin/network/orion/app/OrionFoundationRuntime.kt": "b112ed3e883e13d9a583c8a3a5ca439d928f604d2852d7dea8cc8db1383d8b2b",
+      "app/src/main/res/values/styles.xml": "12a2f7c73b0bd18429e18a838a7b7fabe31d2c41882c4a8b1da34113c8416704",
+      "app/src/main/res/xml/orion_data_extraction_rules.xml": "cb029b35db0e976c087100424e16e14a6256b46962398887520e51508c3b5842",
+      "app/src/test/kotlin/network/orion/app/CoreReadyLogEventTest.kt": "5b72fd029d9179645575af0099c3ecc7747fe4d5b3ae789fad721383d9666e18",
+      "build.gradle.kts": "02dc22cde3038ae00d47c1a1a2b661e883508fa0c2bdad03f3d5f5f6d29235a9",
+      "compose.yaml": "efbc84804df4643b3d73ccf62351196d0131387606956a137c1a8b12c109917a",
+      "core/actions/build.gradle.kts": "e19243fbe5cdd692afc241a1292790677ffd4cd9142ce4ba46131277b6e9fdba",
+      "core/actions/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/actions/src/main/kotlin/network/orion/core/actions/ActionConfirmationBinding.kt": "2a9ea801f0828a98e964924fe4959421849cafd4ca6b90f0b5834260676f4190",
+      "core/actions/src/main/kotlin/network/orion/core/actions/ActionEngine.kt": "b3c56959c23222dd6e45ccc6438fb233ec8c0222691425312979c5dea855cbdb",
+      "core/actions/src/main/kotlin/network/orion/core/actions/ActionExecutionAuthority.kt": "77e038449edc131b353e218a3da26d17b28fc87844040b570342da003cfd41a7",
+      "core/actions/src/main/kotlin/network/orion/core/actions/ActionExecutionLease.kt": "d9f767b2aedc22c78b8c735cd71d81c3198c3780967f7ce5287bb4bd923f2d31",
+      "core/actions/src/main/kotlin/network/orion/core/actions/ActionStateMachine.kt": "57a89f3d40ab6a9814873a8663920c08bf479f70ccf1f6518ac35f80a0013b93",
+      "core/actions/src/main/kotlin/network/orion/core/actions/ActionStatus.kt": "1b42326c934b521bd97623cea0bfef83a05b9c03eca73366033559e0204e74f5",
+      "core/actions/src/main/kotlin/network/orion/core/actions/IdempotencyKeyPolicy.kt": "17b2babe61857aeb2ad9c4c6c864a2001004e8e66a45504a00d5466b59406856",
+      "core/actions/src/test/kotlin/network/orion/core/actions/ActionConfirmationBindingTest.kt": "1285fa9eceffe8607fde79894a809102c56d91ed29475f1d3a4ce29282baeed7",
+      "core/actions/src/test/kotlin/network/orion/core/actions/ActionExecutionLeaseTest.kt": "7b25706bc2242f46c4886905e576f6cbfb08c3f5e19076e49d112b09536c2820",
+      "core/actions/src/test/kotlin/network/orion/core/actions/ActionStateMachineTest.kt": "fc90511d5cd50ae83786f457472f76580566ae2214369854f9773d4d2323192d",
+      "core/actions/src/test/kotlin/network/orion/core/actions/IdempotencyKeyPolicyTest.kt": "a9816cabc0e76eaeb0136728a0cec2543b06817f267e01a50615ffff4e9b4346",
+      "core/actions/src/test/kotlin/network/orion/core/actions/UnavailableActionEngineTest.kt": "6c1e6da45a07b6b8307e5d1180698e2d4c81cd186c35bdac713390c4ab2559ad",
+      "core/commands/build.gradle.kts": "cedcd4ffc8d27fc418647604a3c1cbcf523955bd30aa2575190a09067905625f",
+      "core/commands/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/commands/src/main/kotlin/network/orion/core/commands/Command.kt": "66af0cc61ebd539bf01f864fcad85a52a55b64f33e762374b4249a5fd7a29e62",
+      "core/commands/src/main/kotlin/network/orion/core/commands/CommandDispatcher.kt": "22fc14d75244ff38be250bf1c1609bb8e79b46f29cf4ae7aa087dc34a22b1c48",
+      "core/commands/src/test/kotlin/network/orion/core/commands/CommandContractTest.kt": "c7e8121af5a896059e0cc4d3e6e4f267d34f4b8c2cde52c79363b2a78bb660ba",
+      "core/common/build.gradle.kts": "f291979ba15ff33dcfcd4224fa40d508afaf62c7a4a914fe1b4b0e6d2397da4a",
+      "core/common/src/main/AndroidManifest.xml": "daa0fb1f32ba7ea85a07ef6302ab3d58c3407d7fd2aa03ec132cb9e38e8d9849",
+      "core/common/src/main/kotlin/network/orion/core/common/process/MainProcessStoragePolicy.kt": "353709edf77e5ccbb22a67d8687c10d51bbcbe7e30e7318fd5d1ba375da0c47e",
+      "core/common/src/main/kotlin/network/orion/core/common/process/OrionProcessBootstrapper.kt": "a3294459d51ea8d2d0d2265e722a60782b138a0edb7cd1e65eda5ab94921defe",
+      "core/common/src/main/kotlin/network/orion/core/common/process/OrionProcessRole.kt": "494280fb1f2f4626bda4e9bec41f19d3bb6b36aef9b69e93bbcb983389cdb21c",
+      "core/common/src/test/kotlin/network/orion/core/common/process/MainProcessStoragePolicyTest.kt": "bbba6acfc9c863c0d1593e5050879ad20258ae0b7182dd85d215f0dd0cfa7fe0",
+      "core/common/src/test/kotlin/network/orion/core/common/process/OrionProcessBootstrapperTest.kt": "bed98a2459f43d5cbbbef31854439084bbeb1e66e2aa0e38f18018be29e177d7",
+      "core/common/src/test/kotlin/network/orion/core/common/process/OrionProcessRoleTest.kt": "d92ebf2256b6a2927e0df8d12e39d8b9ae6e575265660ad439703432e9b4cd97",
+      "core/events/build.gradle.kts": "f629c7b5e12584cd7ed008cec1ac3a0b419eea65f0b766067f8afa6fc0dad5fe",
+      "core/events/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/events/src/main/kotlin/network/orion/core/events/DomainEventPublisher.kt": "dc8622e9d85fab838ac50e3f731c526a1ca60aae2f7fa44e5bab1c86a5507919",
+      "core/events/src/main/kotlin/network/orion/core/events/EventPersistence.kt": "bf03e5c7abc5e2376eca8b981cc21648fef4568e7facf9b9b7f57cf09c8c8960",
+      "core/events/src/main/kotlin/network/orion/core/events/OrionEvent.kt": "c40e6a15ef763d028fe75a3aa24379911c8e649e0baab29d2275b74b4c9f130b",
+      "core/events/src/test/kotlin/network/orion/core/events/OrionEventTest.kt": "c6513cc1ec0d2acec6724b64ee536f2f667b833f6a46c6f0137dfec5f7444b47",
+      "core/exitinfo/build.gradle.kts": "932c6279562f04bf1703a230292f904e9614e92eb0216b3d4a30c178681f7c96",
+      "core/exitinfo/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/exitinfo/src/main/kotlin/network/orion/core/exitinfo/ApplicationExitMonitor.kt": "bc22b10bfa0e4406c69808b5b6e8fa800d2f1168926c54743f062ed7b8811afc",
+      "core/health/build.gradle.kts": "8618982e892a1c356159e9bb15b577df308810b83f87a8a23c9897fe6214371d",
+      "core/health/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/health/src/main/kotlin/network/orion/core/health/CoreReadiness.kt": "87ca324ceaf218744399b1969f6a343826030ecf57e583215eebb6bdb047eefa",
+      "core/health/src/main/kotlin/network/orion/core/health/OrionHealth.kt": "8f4f04c556b4f62904ff660b78dcc559fc762fdb89549f450cded90e2054e034",
+      "core/health/src/main/kotlin/network/orion/core/health/OrionHealthAggregator.kt": "cc764f3f6d8febe0d9c37eec9836abdae0cdb1b6c8c29febc1c0fed1b68bcbc8",
+      "core/health/src/test/kotlin/network/orion/core/health/CoreReadinessTest.kt": "e45868ef74e31485ce32a22985830769cfe18f932a22f27ce797db6f82fb0774",
+      "core/health/src/test/kotlin/network/orion/core/health/OrionHealthAggregatorTest.kt": "49abe6312f5006ffa625b5e7aca6406c0af7dabbde2ecc19b3357f1ff1dc0a99",
+      "core/health/src/test/kotlin/network/orion/core/health/OrionHealthTest.kt": "a987479dae90af7264411a99ab603c84ef2881c3b3f1f7b93658aeb12757a272",
+      "core/ingress/build.gradle.kts": "6fb6ff6578010fbc46c59c26c55735144b168b304d52261540e7a163e9d80724",
+      "core/ingress/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/ingress/src/main/kotlin/network/orion/core/ingress/DurableIngressCoordinator.kt": "ac357386468e82ec9a6155b23ac4590bb8a4d09b6bd0840253d2a4716f9961fc",
+      "core/ingress/src/main/kotlin/network/orion/core/ingress/IngressCoordinator.kt": "a96b6c619e74d2d517fe5c82699de67e1f597af8ea6c9c2f153cd6a9e431b44b",
+      "core/ingress/src/main/kotlin/network/orion/core/ingress/StartupBarrier.kt": "62f52428059ba460ee61e8455a360cfd7c9bf0c8605677ae2745e71e2a693161",
+      "core/ingress/src/test/kotlin/network/orion/core/ingress/DurableIngressCoordinatorTest.kt": "77695a7fb016b1ed4cf00839960aedecf80d2651ebc061eae668ffe09ba692e1",
+      "core/ingress/src/test/kotlin/network/orion/core/ingress/FoundationIngressCoordinatorTest.kt": "866608a12086ef296bf30f498872e869b7d8928a5ba2b03a18c89665ab0279e5",
+      "core/ipc/build.gradle.kts": "42a78d9faef38bcdcc25d12754792407fd9180ee7c9d5f34247c59325fb618b6",
+      "core/ipc/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/ipc/src/main/kotlin/network/orion/core/ipc/IpcBoundaryPolicy.kt": "994a2f6b6463615ffbdd07089c228b6191600d64eed7d05639e9e9f7ea52cbd4",
+      "core/ipc/src/main/kotlin/network/orion/core/ipc/ProtocolInfo.kt": "6aafdc006483c2868e5878208b899d473c03dbda727774756ae89f66d76465a2",
+      "core/ipc/src/test/kotlin/network/orion/core/ipc/IpcBoundaryPolicyTest.kt": "9993661f18c840209f838a5186b21e646396956899dc67b82568113976302252",
+      "core/ipc/src/test/kotlin/network/orion/core/ipc/ProtocolInfoTest.kt": "02f271fea29c33e616e4d8cfd58a8740fd6d9182c0f62107bbbc505879051bcc",
+      "core/model/build.gradle.kts": "861a37d8cf29a250d2351a5875a21344647a6a7e476cff14b4c5424bc0150a5c",
+      "core/model/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/model/src/main/kotlin/network/orion/core/model/AgentState.kt": "e20e52ef39cfce8b07140ebcf210f78c351941455c43f92096ae2855fffccdfb",
+      "core/model/src/main/kotlin/network/orion/core/model/AuthorizationLevel.kt": "99d4d334fd5323a0ec2e42e9567bbbecc50ba8ac0c3c83e8e61ccf1d7f07dfe0",
+      "core/model/src/main/kotlin/network/orion/core/model/Capability.kt": "0c7cea83a0cfce4a9b0913ba98cb1abb6cd4d0ab8239cd995555801b8e82a616",
+      "core/model/src/main/kotlin/network/orion/core/model/ErrorCategory.kt": "020bb27a4a381ce674a859cb0022dedb1b45737befa4b06a38d281ad8bde1294",
+      "core/model/src/main/kotlin/network/orion/core/model/IdempotencyMode.kt": "aff96b19e1a0dd93e4f4f5f99bec8d499c15c3719144bc990ec66ee9ff896d9e",
+      "core/model/src/main/kotlin/network/orion/core/model/OrionIntent.kt": "272faaa00df5b87dc88e6faacaf7a235a5bb9c097d5027d54876895689d8e538",
+      "core/model/src/main/kotlin/network/orion/core/model/RecoveryStrategy.kt": "fabf4dd844b07f323e02c46a975980aab22186f614652b536aa6fa202e11c024",
+      "core/model/src/main/kotlin/network/orion/core/model/Sensitivity.kt": "f875a3b4c4de1c14cd59cccb72213bf59e234e54381f3cef1581c2a9faddf186",
+      "core/model/src/main/kotlin/network/orion/core/model/SideEffectClass.kt": "2611f7ea79c64031eea68019bfc44bd8b20623b7636180d5bd5c584c3aef771f",
+      "core/model/src/test/kotlin/network/orion/core/model/CapabilityTest.kt": "8dc7d7fae14e466ae0a7b7f8e1a2a2cfceb8b50abe6b9510220b6764b325f13e",
+      "core/model/src/test/kotlin/network/orion/core/model/ModelVocabularyTest.kt": "98c6ff0d713bfd37b5b179200149235e21237edf0ccd1771f3b70caa43ce532c",
+      "core/model/src/test/kotlin/network/orion/core/model/OrionIntentTest.kt": "cbfa88f416919c3451ff7d2af0cc0e0a0f26cb49a722981612dfccc4e4d64875",
+      "core/observability/build.gradle.kts": "e9a30e6af8e326ad3a220f4b063da7370bc6b6a8444506e0e5ead8e1da7574a9",
+      "core/observability/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/observability/src/main/kotlin/network/orion/core/observability/OrionLogger.kt": "0a57064fc22b3d579e035b40dc696955ea789751543822de0d52f5e5f79f340f",
+      "core/observability/src/test/kotlin/network/orion/core/observability/OrionLoggerTest.kt": "87dc1b53a3dd5d3451ebb6017f8c13ecb44e0a14113e793d1eccec3f3927b72e",
+      "core/orchestrator/build.gradle.kts": "915eca3af67c7207a077cc09f2d396de9a4c75a1df3afbdeae694e18da963a36",
+      "core/orchestrator/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/policy/build.gradle.kts": "48c6dee9eb1eca4876fdae3592dc67c10c5e2757f91cbafc7b0efa1b822f396c",
+      "core/policy/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/queries/build.gradle.kts": "c9ce2db732b3a4b97480e4061b925a22989bfb8c99b939ec35344b739f66e2bf",
+      "core/queries/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/queries/src/main/kotlin/network/orion/core/queries/Query.kt": "b08d49ac1f813247eacb3c03eaf83d84e15d29b157d1de5f6d555f77d3abda33",
+      "core/queries/src/main/kotlin/network/orion/core/queries/QueryGateway.kt": "9b64ef4e580b2db5e57051c8952965b7b0049c1d2338156624b809ab1399f854",
+      "core/queries/src/test/kotlin/network/orion/core/queries/QueryContractTest.kt": "d34c147070072f3d14232ecaa8abb2309731cb9ab08e0045a6f078d18b20663a",
+      "core/recovery/build.gradle.kts": "6e2fbcb3b2c36f5c1f0ca9434313f7acc4c05f5b8873c2653806adfcf414bbc9",
+      "core/recovery/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/recovery/src/main/kotlin/network/orion/core/recovery/OrderedRecoveryCoordinator.kt": "d771dcd6e33f94f3000fe04c83ccea27237862eb8a79a258e2574b53867f0aee",
+      "core/recovery/src/main/kotlin/network/orion/core/recovery/RecoveryCoordinator.kt": "e1bcb33bec352e9b616fcebe9fbdd5c2fff119cff14ae8d8239e0a6cd1db57e4",
+      "core/recovery/src/test/kotlin/network/orion/core/recovery/OrderedRecoveryCoordinatorTest.kt": "f680f68c3813703fe6f4faa44bf9d027bac73ebbf3ec84d392ed5f13dc34ce26",
+      "core/resources/build.gradle.kts": "d34a178715418c1d0677f0abd904e7f9b053a23cc6a3e8aa7482fcce9dc7cc20",
+      "core/resources/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/resources/src/main/kotlin/network/orion/core/resources/ResourceGovernor.kt": "0537f177a8d649a350ce4447e1ee8d0244558383ec2ae359355b6f35d1553c37",
+      "core/resources/src/test/kotlin/network/orion/core/resources/UnavailableResourceGovernorTest.kt": "07cf1b559e52fb11e701d37a83aeb3808aa67ca6a5edc20183a01c3694f69657",
+      "core/security/build.gradle.kts": "ebd59a4d7f7739a0215a4a83ae65d21a242ed3e74dbb75d20d3c2459c46e3c9c",
+      "core/security/src/androidTest/kotlin/network/orion/core/security/AndroidKeystoreLifecycleTest.kt": "dc18eecc8b086956f0cd3cabf16e5aabd4d3e85b40b086184208c9eb1b00bf73",
+      "core/security/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/security/src/main/kotlin/network/orion/core/security/AndroidKeystoreFieldKeyProvider.kt": "9a689fe7ef12ef1d6e3f8889c9485dbc793104667b23351f031edf70c2df8217",
+      "core/security/src/main/kotlin/network/orion/core/security/DurableFieldKeyProvider.kt": "486346413301ab2ab3be0997617decebd0238ccb8d1f581c2e9bd00e75b2a32d",
+      "core/security/src/main/kotlin/network/orion/core/security/DurablePayloadPolicy.kt": "986cad680dfd2facb73671aae1e5d411e84debcb710af7257eeb6e94003d81ff",
+      "core/security/src/main/kotlin/network/orion/core/security/FieldEnvelope.kt": "8c3e1741825f83d139de3b3e2c9976d6e172b4ccacc2d9ae6ec31e730a61f27d",
+      "core/security/src/main/kotlin/network/orion/core/security/FieldEnvelopeCodec.kt": "211870f1604cc0c6235e294a50f0f5f172a913dc3744e259990af8b8013be2a6",
+      "core/security/src/main/kotlin/network/orion/core/security/FieldKeyProvider.kt": "0a8c41af20088c85176a0bea54233fd0f35d9ae5ea390e6efd805266f740a6c1",
+      "core/security/src/main/kotlin/network/orion/core/security/OrionFieldEncryption.kt": "7c3745e31dbce04009147a052deaa764740cc59e7e7c4fb0af66be85a543367f",
+      "core/security/src/test/kotlin/network/orion/core/security/DurableFieldKeyProviderTest.kt": "bfc97e6b29842db14fea13bf4ae7ec0888937fae034f22948753f86c078d2c1d",
+      "core/security/src/test/kotlin/network/orion/core/security/DurablePayloadPolicyTest.kt": "e0d1651b8e0a5c5b56d2ddf608a4a9f5962b816eff16a02e7a090a7570b2af8d",
+      "core/security/src/test/kotlin/network/orion/core/security/FieldEnvelopeCodecTest.kt": "f89f14ac46e6fe32a8c3c0ee7f0c18a03aea1330188316ffe682c24939c5febe",
+      "core/security/src/test/kotlin/network/orion/core/security/OrionFieldEncryptionTest.kt": "c247cc9a943f1753147e788ffbfc11dda5435cb17678aa6dc2d49ad9a27ff800",
+      "core/skills/metadata/build.gradle.kts": "ae21d6a2228d0ce0948759ca4d5d47d7582da06d9651ddd21b7ac4f54a5a3cd3",
+      "core/skills/metadata/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/skills/metadata/src/main/kotlin/network/orion/core/skills/metadata/SkillDescriptor.kt": "1917bdeb9d6ed17ce5aced82253d4d00aabd1898da577b8c95a87aab15fb731c",
+      "core/skills/metadata/src/test/kotlin/network/orion/core/skills/metadata/SkillDescriptorTest.kt": "8270329e1af41ad797f95bfd21aa118c28ae9be97f058f02460fba27d008761e",
+      "core/time/build.gradle.kts": "44cad1afd226cb6cab98bfa51d37cc24ef808749dbb3234396d9155245325a13",
+      "core/time/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "core/time/src/main/kotlin/network/orion/core/time/AndroidOrionClock.kt": "0ebe934a62d1c4d19fedef832b064ea2851293502e1832f8e6339b804a7206cd",
+      "core/time/src/main/kotlin/network/orion/core/time/BootSessionId.kt": "f9654537529b0c047935dc45603acb86c6ebcaaf46c9f0061b7db1216dda529f",
+      "core/time/src/main/kotlin/network/orion/core/time/MonotonicInstant.kt": "c983ceac2566c58c6dd6b76e52bcb3a871dea9d77b3ce928d37a87ee8d1fc1de",
+      "core/time/src/main/kotlin/network/orion/core/time/OrionClock.kt": "fca352c79180fbc019a5fe9feb6e1069df29f49becbd24c1d7d818658d93710f",
+      "core/time/src/test/kotlin/network/orion/core/time/AndroidOrionClockTest.kt": "67b732f200c7b15d39028c9fb40e34eec2bce51c22c5696f270743b4b0a8d6c2",
+      "core/time/src/test/kotlin/network/orion/core/time/OrionClockTest.kt": "cce1d42488cdf266b6d98053ce1937318282b603887bc89a2a7911c395cc1d8a",
+      "data/actions/build.gradle.kts": "0deada46a6e9bee20f72c2340e35358e369518f4fc0f5092218b4fc54dde4c0b",
+      "data/actions/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "data/actions/src/main/kotlin/network/orion/data/actions/OrionActionExecutionStore.kt": "c8ecb7d23a9295e76fc96e9278acc588689dd5fa1615e19dfa28531c484efecc",
+      "data/actions/src/main/kotlin/network/orion/data/actions/OrionActionStore.kt": "16f4d22439b7846f7ebd4c679a78897bc70e4eba18c594081a6be4b5d67a9659",
+      "data/database/build.gradle.kts": "8c343a5efd28fdfc97a8d410d3c65c57b12b67746530b4892ed1b8cfb6dcea45",
+      "data/database/schemas/network.orion.data.database.OrionDatabase/1.json": "4bb5c66c51f58308de48634cbb54bfc18da120cad70d1b36565f773619a3b091",
+      "data/database/schemas/network.orion.data.database.OrionDatabase/2.json": "b9492ad174df09475011931428f895c0f89cd57b3381c434e7efa019d5f0f7ff",
+      "data/database/schemas/network.orion.data.database.OrionDatabase/3.json": "8604f723c113df3402bc7475b0b34dff1d2247faa771d747ef0c16dda41c2828",
+      "data/database/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "data/database/src/main/kotlin/network/orion/data/database/ActionAuditEntity.kt": "1794dedc15626c2ffc5fa7f004d1863a5a66add0b749a374ad492f1eeaac8e4f",
+      "data/database/src/main/kotlin/network/orion/data/database/ActionRequestEntity.kt": "96a6bdeedcf648309a50a6a81c5e2c8a623cee51a7b42b2c910cb240ff89afa7",
+      "data/database/src/main/kotlin/network/orion/data/database/DomainEventOutboxEntity.kt": "5fa8bff2ffe446dfb90056c09a3e856fd222cb78d613530ca45fef12ec2de7d0",
+      "data/database/src/main/kotlin/network/orion/data/database/DurableRecordValidation.kt": "20aae9b235a6c05d804e2bf31dcd6f12f45206a91168a9f864df7246d3ab31ec",
+      "data/database/src/main/kotlin/network/orion/data/database/IngressEnvelopeEntity.kt": "4ec8bd622f6765dc7cd81bd1dae1c4978b84766c75f1282cfd1d09290ba4a08c",
+      "data/database/src/main/kotlin/network/orion/data/database/OrionActionDao.kt": "da5dd71f4b6fa66619d8c6c18d206c76f29ac0c96f68eb19bcf750c07e8821ef",
+      "data/database/src/main/kotlin/network/orion/data/database/OrionDatabase.kt": "046aa1ef59e9b274d503545205db1cfbf2b0431ae633ad33d138eb5b7d0a96ff",
+      "data/database/src/main/kotlin/network/orion/data/database/OrionDatabaseMigrations.kt": "8918d549142d7f832f7ec4c40164211a1f1d1a79df52778851dc64f13347b4b4",
+      "data/database/src/main/kotlin/network/orion/data/database/OrionEventDao.kt": "17ba72358ab097d8fe5ac67ba3d78d30416694053508eb7fe89bb629bd485881",
+      "data/database/src/main/kotlin/network/orion/data/database/OrionIngressDao.kt": "73b1a3d87e60e295b76022c1e0648edef5d0a1c68e072092b2cba1ea27ea1e11",
+      "data/database/src/main/kotlin/network/orion/data/database/OrionRecordDao.kt": "4def985db5f5e83ed8f8484dafa357f22a68200a82aad24c3a5af6827af82a01",
+      "data/database/src/main/kotlin/network/orion/data/database/OrionRetentionDao.kt": "4684a34196957e0703019369fb47bacc362fce588df7fc002fca464ad8e868a1",
+      "data/database/src/main/kotlin/network/orion/data/database/OrionTaskDao.kt": "103c89e001d274001ab0d9608a37da5c1dc5681374ce41ed9f754075e1a6a0b6",
+      "data/database/src/main/kotlin/network/orion/data/database/TransactionEntities.kt": "d8709da6b7e4cb0ef1d542582b57714d0505a8652f41c4478ed8f03ea3ad0513",
+      "data/datastore/build.gradle.kts": "6e7639ed39df226cd1e47b9a63666db8dd783edb2f3480a346872297ecd5a618",
+      "data/datastore/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "data/datastore/src/main/kotlin/network/orion/data/datastore/OrionPreferencesStore.kt": "ffc6683f96212efedfc385ab1f7c5bc73710c8e52f1e03cf2eae7aa88b4595eb",
+      "data/events/build.gradle.kts": "a8c34413ffc2529efa165573b14c6fac13d8fc01d2ed20be571438e7e00c8646",
+      "data/events/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "data/events/src/main/kotlin/network/orion/data/events/OrionEventDispatcher.kt": "5f5b261324c76d2ed5cb3e101c64363e3399e4863e4c1394a8725290c5442985",
+      "data/events/src/test/kotlin/network/orion/data/events/EventRetryPolicyTest.kt": "30d7179f2f85a4d791a420c40db5af2dbd21ad82f3aa12c42c0d6f0b1ea58401",
+      "data/memory/build.gradle.kts": "6b09eb35ce322fab853cc368ebb457d83f8fb1e83893e83856c6ea6850ab3145",
+      "data/memory/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "data/reminders/build.gradle.kts": "5eb4cdacfe91fcbcfc8965d6ad6bc03073ba7caf0752ba9c2e107a7dfc11322a",
+      "data/reminders/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "data/repository/build.gradle.kts": "5f922afffa8eb744bf2a79b9f8f79d22135ce59d1d635ed4df621b18fec39def",
+      "data/repository/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "data/repository/src/main/kotlin/network/orion/data/repository/OrionDurableIngressStore.kt": "26f2b92bd0e6bc2d8ee3c01334e13da0f015e5fdb25841d39d93f9272aa78435",
+      "data/repository/src/main/kotlin/network/orion/data/repository/OrionRetentionMaintenance.kt": "bf030957bfc9c7aa55c32b439a793b11a72c972b8e7f4e8c3fe3e2dd3f051681",
+      "data/tasks/build.gradle.kts": "ad90762fbe8f1ab02856aab20567442ba38eb25ba26f6cad57af363dbd86042a",
+      "data/tasks/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "data/tasks/src/main/kotlin/network/orion/data/tasks/OrionTaskStore.kt": "0f70e7be9cf039ca7bc4a91f3cd3bf41ba5baade79a4816f358f9b6ff88f1337",
+      "feature/diagnostics/build.gradle.kts": "7004766e820f60ed79ee04000c601059a1ca418896ccaafd1b816e14165e9b44",
+      "feature/diagnostics/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "feature/diagnostics/src/main/kotlin/network/orion/feature/diagnostics/DiagnosticsScreen.kt": "461cd5aa3912931fdb6126ed39f1d126aacbe4cb1725931160e3f65fc4d1ef72",
+      "feature/home/build.gradle.kts": "35729abcb1e1021d271fc38084ea0f7b835acb89e514df92661df818075afa35",
+      "feature/home/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "feature/home/src/main/kotlin/network/orion/feature/home/HomeScreen.kt": "78a24e76a5144f0ec66700b6a57cb84af1a1037db009bec37d60b4f6223c53d2",
+      "feature/settings/build.gradle.kts": "bd424a3b29d3e033a9b75b231068900168c99910353c3f2b02b131cae8acf3ef",
+      "feature/settings/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "feature/settings/src/main/kotlin/network/orion/feature/settings/SettingsScreen.kt": "1535bb45428487dc615ace9845c0e2fde0574dcee66365b9ae1b24f68f772a34",
+      "gradle.properties": "76efb5fa8f706bbf4d3bb3bd8d4d85b00ec2cbd8d09a9d161f5715d778b03a76",
+      "gradle/libs.versions.toml": "e532d350be878433fadde9fe96807ed59864fb3e5d1051ee571ec9b90e095031",
+      "gradle/wrapper/gradle-wrapper.properties": "f34e21a981617b8ab59ecbb41b541b35dcf724e01c246e1c0fc8c5420cb66ec0",
+      "scheduler/build.gradle.kts": "993003a08e3a5f931e3256260933ce91652b500d32dcc99ee6699cdef3d60676",
+      "scheduler/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "scripts/android/test_foundation_runtime_harness.py": "3e5c19e4669553be6eecd6abe659b4e2974878bcdbf4997875a76868fa83e0be",
+      "scripts/android/test_transaction_process_death_harness.py": "85f683ec12a619c0ce7ad0fe01c628d10709843d5b2a1e4600b3a4611a55dd70",
+      "scripts/android/verify-foundation-runtime.py": "d16cafc0b7b9b00d07fd342fa4a917d67a12b4e01a3ff898c6de6dfd7ba8f1a5",
+      "scripts/android/verify-transaction-process-death.py": "ca40ae38b5dc553f8a062bd2dfb4d3c786caef4efc7c89ae08525fb0d27b8bec",
+      "scripts/benchmark/check-native-packages.sh": "2fc7b2e21607eb8c42d581f5e3cfa1f9df814cf7f5df2062f268d059f3624193",
+      "scripts/benchmark/record-profile.sh": "fd172c795e9dea2759b3d8e12305d1a920e8edc748313d57be25d8e412b56aaf",
+      "scripts/benchmark/test-native-gate.sh": "993b85a6d8a2654b1454f13d69e4e762f3572b90d7f9746bb865c141903651cd",
+      "scripts/benchmark/test-native-packages.sh": "abc8e88615c1e21d3bff8be435b4919daccbf4b848fe4d9df936ef35e71377de",
+      "scripts/benchmark/test-profile-validation.sh": "8573c0291f7b6b95c7b4dc59d84714e2dfb1a76bbcf3c2b10bccadfdeece82db",
+      "scripts/benchmark/test-record-profile.sh": "706213e1b9591967c4e43e2aa0f3a514f8a383150431df657b81e809b2102795",
+      "scripts/benchmark/validate-native-gate.pl": "53836ff15d4e3e221e91c3ad14d8273db0978836d544d06e6d909d95f352eafb",
+      "scripts/benchmark/validate-profiles.pl": "6df10af12c5c7fc81cd303b656ec6c30ad456f57fc3f07211f2260af8b3a9e57",
+      "scripts/test-module-boundaries.pl": "ea93c85f193190e190e4cbae7d697343dfa288a25c07925813fc4ce74dabc90c",
+      "scripts/toolchain-info.sh": "8e36ce9bbcb53eb69f82f5dcc18c6bd41fd20af8b8880a752aeeff05803ea2f3",
+      "scripts/validate-module-boundaries.pl": "c668e9e6dc276d30a5743cf3298ca1f3fc02740a4c953e40d037b780ae329bb6",
+      "settings.gradle.kts": "551b8d1ebe1b0a367bb76aaeaacf6b419aa66d3dc40c08bf707da667506eddc9",
+      "skills/api/build.gradle.kts": "0bef6967822a721aa68add12307a6bdbe800a574e83fae1a367b8209df621bd1",
+      "skills/api/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "voice/api/build.gradle.kts": "f83cfc0ab673f70904adf06f81849693df7dbdc494103396378d6b24f9b8e207",
+      "voice/api/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "voice/ipc/build.gradle.kts": "ebef471bc2eab292f81b920dc0a43bcc88198f8ce395efcadb63ae240eee1918",
+      "voice/ipc/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+      "voice/ipc/src/main/kotlin/network/orion/voice/ipc/VoiceCoreClient.kt": "790a6d4abcb44436f564238aa6746b5040149c71bc08a91f2e38de691b907042",
+      "voice/ipc/src/test/kotlin/network/orion/voice/ipc/VoiceCoreClientTest.kt": "ffd58920bc4da6119f18b5414d320472d53933e5f168397d49d2b1ead01bdd0b"
+    }
+  },
+  "sourceUnchangedDuringFinalValidation": true,
+  "remoteCi": "NOT_RUN",
+  "physicalDevice": "NOT_RUN",
+  "transactionCoreReady": false,
+  "globalDevelopmentEstimate": {
+    "rangePercent": [
+      15,
+      20
+    ],
+    "method": "qualitative implementation by phases; F1 implemented, F0 partial, F2 advanced, F3-F12 not implemented as product; not effort-weighted or gate completion"
+  }
+}

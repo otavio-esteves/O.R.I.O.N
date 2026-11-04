@@ -9,3 +9,10 @@ internal fun readyLogEvent(readiness: CoreReadiness): OrionLogEvent = when (read
     CoreReadiness.DEGRADED_SAFE -> OrionLogEvent.CORE_DEGRADED
     else -> error("Core readiness has not completed recovery.")
 }
+
+/** A failed optional subsystem may leave the Core safely degraded rather than blocked. */
+internal fun failedRecoveryLogEvent(readiness: CoreReadiness): OrionLogEvent = when (readiness) {
+    CoreReadiness.DEGRADED_SAFE -> OrionLogEvent.CORE_DEGRADED
+    CoreReadiness.BLOCKED -> OrionLogEvent.CORE_BLOCKED
+    else -> error("Core readiness does not represent a recovery failure.")
+}

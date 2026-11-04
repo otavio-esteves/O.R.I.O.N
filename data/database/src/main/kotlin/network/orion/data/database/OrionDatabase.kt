@@ -27,11 +27,18 @@ interface OrionStorageMetadataDao {
     fun rowCount(): Int
 }
 
-@Database(entities = [OrionStorageMetadata::class, ActionRequestEntity::class, ActionAuditEntity::class],
-    version = 2, exportSchema = true)
+@Database(entities = [OrionStorageMetadata::class, ActionRequestEntity::class, ActionAuditEntity::class,
+    TaskEntity::class, ReminderEntity::class, MemoryEntity::class, MemoryClaimEntity::class,
+    AuditEntity::class, TechnicalEventEntity::class, DomainEventOutboxEntity::class,
+    EventConsumerReceiptEntity::class, IngressEnvelopeEntity::class], version = 3, exportSchema = true)
 abstract class OrionDatabase : RoomDatabase() {
     abstract fun metadata(): OrionStorageMetadataDao
     abstract fun actions(): OrionActionDao
+    abstract fun tasks(): OrionTaskDao
+    abstract fun records(): OrionRecordDao
+    abstract fun events(): OrionEventDao
+    abstract fun ingress(): OrionIngressDao
+    abstract fun retention(): OrionRetentionDao
 
     /** Performs disk I/O: call outside the UI thread. Failure never deletes the database. */
     fun verifyStructure() {
@@ -51,7 +58,7 @@ object OrionDatabaseFactory {
             context.isDeviceProtectedStorage,
         )
         return Room.databaseBuilder(app, OrionDatabase::class.java, "orion.db")
-            .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2)
+            .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2, OrionDatabaseMigrations.MIGRATION_2_3)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     db.execSQL("INSERT INTO orion_storage_metadata (id, formatVersion) VALUES (1, 1)")

@@ -212,7 +212,7 @@ class EncryptedActionStoreTest {
     }
 
     private fun database() = Room.databaseBuilder(context, OrionDatabase::class.java, name)
-        .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2)
+        .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2, OrionDatabaseMigrations.MIGRATION_2_3)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 db.execSQL("INSERT INTO orion_storage_metadata(id, formatVersion) VALUES(1, 1)")

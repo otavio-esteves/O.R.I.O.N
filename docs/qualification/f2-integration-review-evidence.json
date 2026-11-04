@@ -1,0 +1,63 @@
+{
+  "recordedAtUtc": "2026-11-04T23:03:18.071356+00:00",
+  "baseCommit": "19efeeb5d7de754d916e27c48cfa807c6fc10d58",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "app/src/androidTest/kotlin/network/orion/app/ActionExecutionOwnershipTest.kt": "b0990b5eec8ffe92238397fe785a3d7a93a706aaeaec5809d671d24e0839450d",
+    "app/src/androidTest/kotlin/network/orion/app/DomainRecordStoreTest.kt": "649c57eaebe38f0618f7a41de9306facba50bd94af956e79d453c1371f5c3c5b",
+    "app/src/main/kotlin/network/orion/app/CoreReadyLogEvent.kt": "bfd824760feda4e66a38d0b62635d195a07c6076287a3491d77cf760856f090c",
+    "app/src/main/kotlin/network/orion/app/OrionFoundationRuntime.kt": "46a35357d81de4608faa7ea3def9e0803d2c472066ed3d1a4497383f4fddb698",
+    "app/src/test/kotlin/network/orion/app/CoreReadyLogEventTest.kt": "3a80c4d6ffddb0e3b253db259fb1439a9bc32d2f67624a289588dad67b2767af",
+    "core/ingress/src/main/kotlin/network/orion/core/ingress/StartupBarrier.kt": "9cef0a9cfe3206c1072aa8c28c5023ff70c41210b2158dcc51ccaef5aef7ef4c",
+    "core/ingress/src/test/kotlin/network/orion/core/ingress/DurableIngressCoordinatorTest.kt": "baae550e2ba793162b7772a66930cf9f51f2bb93a3c0c818ae3be87d8f1253a5",
+    "data/actions/src/main/kotlin/network/orion/data/actions/OrionActionExecutionStore.kt": "d2f1ea0d23e07ac159c021c654d40c941a2613657b726889f49b966809e7894c",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionRecordDao.kt": "8aea9952da50e42e143415a05c7a383eae335e7a093794cf296620dc47b84090"
+  },
+  "container": {
+    "result": "PASS",
+    "focusedBuildDuration": "6m 1s",
+    "focusedBuildTasks": {
+      "total": 688,
+      "executed": 60,
+      "upToDate": 628
+    },
+    "jvmCasesByModule": {
+      "app": 4,
+      "core/ingress": 9,
+      "core/recovery": 9
+    },
+    "jvmCasesTotal": 22,
+    "recoveryCheck": "PASS",
+    "lintChangedPersistenceModules": "PASS",
+    "moduleBoundaries": "PASS"
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "apiLevel": "35",
+    "build": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+    "abi": "x86_64",
+    "pageSize": "4096",
+    "result": "PASS",
+    "tests": 82,
+    "rawInstrumentationSha256": "60d3798e42ab0ed5b3aa8caeb5729aefca0bfa445939e70f78788e1a0dddb3ab",
+    "setupSystemUiAnrDismissedWithOfficialCloseAction": true,
+    "appDetectorsSuppressed": false
+  },
+  "artifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "cc2bbbb54075ee93cac11ceb14d9ed73e068300afc59c00c10f6073b1078f8a8",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "5a30f452a4ec0bfed7a555087bb9b53eaee387d8ea59b57801ba7011f5d7c9a1"
+  },
+  "physicalQualification": {
+    "status": "DEFERRED_BY_USER",
+    "date": "2026-11-04",
+    "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/23"
+  },
+  "initialRemoteCi": {
+    "head": "19efeeb5d7de754d916e27c48cfa807c6fc10d58",
+    "result": "PASS",
+    "url": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/41928025415"
+  },
+  "finalHeadRequiredCi": "TRACK_PR_21_BEFORE_MERGE",
+  "transactionCoreReady": false
+}
