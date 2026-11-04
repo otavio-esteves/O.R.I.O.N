@@ -2,6 +2,7 @@ package network.orion.data.actions
 
 import java.time.Duration
 import java.util.UUID
+import java.util.concurrent.Callable
 import network.orion.core.actions.*
 import network.orion.core.time.*
 import network.orion.data.database.*
@@ -38,6 +39,15 @@ class OrionActionExecutionStore(
         require(expectedVersion >= 0 && expectedVersion < Long.MAX_VALUE)
         val durationMillis = leaseDuration.toMillis()
         require(durationMillis in 1..MAX_LEASE_MILLIS)
+        // Acquire the writer before sampling authority/time. Waiting for another
+        // SQLite writer must not consume a new lease or preserve expired consent.
+        return database.runInTransaction(Callable {
+            claimInTransaction(actionId, expectedVersion, claimedBy, durationMillis)
+        })
+    }
+
+    private fun claimInTransaction(actionId: UUID, expectedVersion: Long, claimedBy: String,
+        durationMillis: Long): ActionClaimResult {
         val stored = when (val read = actions.read(actionId)) {
             is ActionReadResult.Ready -> read.action
             is ActionReadResult.Blocked -> return ActionClaimResult.Blocked(
@@ -85,6 +95,13 @@ class OrionActionExecutionStore(
         require(expectedVersion >= 0 && expectedVersion < Long.MAX_VALUE)
         require(result == ActionStatus.SUCCEEDED || result == ActionStatus.FAILED || result == ActionStatus.UNKNOWN ||
             result == ActionStatus.MANUAL_REVIEW)
+        return database.runInTransaction(Callable {
+            finishInTransaction(actionId, expectedVersion, executionId, result)
+        })
+    }
+
+    private fun finishInTransaction(actionId: UUID, expectedVersion: Long, executionId: UUID,
+        result: ActionStatus): ActionMutation {
         val entity = database.actions().find(actionId.toString()) ?: return ActionMutation.NOT_FOUND
         val now = clock.monotonicNow()
         val boot = now.bootSessionId ?: return ActionMutation.CONFLICT

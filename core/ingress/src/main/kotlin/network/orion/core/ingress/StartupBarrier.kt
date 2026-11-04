@@ -8,7 +8,7 @@ enum class StartupRecoveryCompletion { RELEASED, BLOCKED, SUPERSEDED }
 class StartupBarrier {
     class RecoveryTicket internal constructor(internal val owner: StartupBarrier, internal val epoch: Long)
     private var epoch = 0L
-    private var open = false
+    @Volatile private var open = false
 
     @Synchronized fun beginRecovery(): RecoveryTicket {
         open = false
@@ -56,7 +56,8 @@ class StartupBarrier {
 
     private fun owns(ticket: RecoveryTicket): Boolean = ticket.owner === this && ticket.epoch == epoch
 
-    @Synchronized fun isOpen(): Boolean = open
+    /** Snapshot only. Reading health/authority inside a DB transaction must not acquire the admission monitor. */
+    fun isOpen(): Boolean = open
 
     /** Gate closure waits for an admitted bounded local transaction to finish. Never run external effects here. */
     @Synchronized fun <T> whileOpen(block: () -> T): T? = if (open) block() else null

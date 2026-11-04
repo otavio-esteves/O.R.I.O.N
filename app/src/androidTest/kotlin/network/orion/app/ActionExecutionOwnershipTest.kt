@@ -2,14 +2,18 @@ package network.orion.app
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import javax.crypto.spec.SecretKeySpec
 import network.orion.core.actions.*
 import network.orion.core.model.*
@@ -62,7 +66,8 @@ class ActionExecutionOwnershipTest {
         OrionActionStore.IDEMPOTENCY_UNIQUE_CONSTRAINT)
 
     @Before fun open() {
-        db = Room.databaseBuilder(context, OrionDatabase::class.java, name).build()
+        db = Room.databaseBuilder(context, OrionDatabase::class.java, name)
+            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING).build()
         store = OrionActionStore(db, OrionFieldEncryption(keys), clock)
         execution = OrionActionExecutionStore(db, store, clock, authority)
     }
@@ -203,7 +208,8 @@ class ActionExecutionOwnershipTest {
         val request = confirmed()
         val claimed = execution.claim(request.actionId, 2, "main", Duration.ofSeconds(10)) as ActionClaimResult.Claimed
         db.close()
-        db = Room.databaseBuilder(context, OrionDatabase::class.java, name).build()
+        db = Room.databaseBuilder(context, OrionDatabase::class.java, name)
+            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING).build()
         store = OrionActionStore(db, OrionFieldEncryption(keys), clock)
         execution = OrionActionExecutionStore(db, store, clock, authority)
         assertEquals(claimed.lease.executionId.toString(), db.actions().find(request.actionId.toString())?.executionId)
@@ -211,6 +217,115 @@ class ActionExecutionOwnershipTest {
         assertEquals(ActionMutation.CONFLICT, execution.finish(request.actionId, claimed.version, claimed.lease.executionId, ActionStatus.SUCCEEDED))
         assertEquals(1, execution.recoverAbandoned().recovered)
         assertEquals(ActionStatus.MANUAL_REVIEW, db.actions().find(request.actionId.toString())?.status)
+    }
+
+    @Test fun confirmationExpiringWhileWaitingForWriterCannotBeClaimed() {
+        val request = confirmed()
+        val result = withContendedWriter(
+            operation = { execution.claim(request.actionId, 2, "main", Duration.ofSeconds(10)) },
+            whileWaiting = {
+                wall = wall.plusSeconds(60)
+                monotonic = MonotonicInstant(BootSessionId(4), 60_100)
+            },
+        )
+        assertEquals(ActionClaimFailure.CONFIRMATION_EXPIRED, (result as ActionClaimResult.Blocked).reason)
+        assertEquals(ActionStatus.CONFIRMED, db.actions().find(request.actionId.toString())?.status)
+        assertEquals(0, db.actions().find(request.actionId.toString())?.attemptCount)
+        assertEquals(3, db.actions().auditFor(request.actionId.toString()).size)
+    }
+
+    @Test fun newLeaseStartsAfterAcquiringWriterInsteadOfBeforeTheWait() {
+        val request = confirmed()
+        val result = withContendedWriter(
+            operation = { execution.claim(request.actionId, 2, "main", Duration.ofMillis(10)) },
+            whileWaiting = {
+                wall = wall.plusSeconds(1)
+                monotonic = MonotonicInstant(BootSessionId(4), 10_000)
+            },
+        ) as ActionClaimResult.Claimed
+        assertEquals(10_000L, result.lease.startedElapsedRealtime)
+        assertEquals(10_010L, result.lease.expiresElapsedRealtime)
+        assertEquals(ActionLeaseStatus.ACTIVE, result.lease.statusAt(clock.monotonicNow()))
+        assertEquals(10_000L, db.actions().find(request.actionId.toString())?.leaseStartedElapsedRealtime)
+    }
+
+    @Test fun permissionRevokedWhileWaitingForWriterBlocksClaim() {
+        val request = confirmed()
+        val result = withContendedWriter(
+            operation = { execution.claim(request.actionId, 2, "main", Duration.ofSeconds(10)) },
+            whileWaiting = { permission = false },
+        )
+        assertEquals(ActionClaimFailure.PERMISSION_DENIED, (result as ActionClaimResult.Blocked).reason)
+        assertEquals(ActionStatus.CONFIRMED, db.actions().find(request.actionId.toString())?.status)
+        assertEquals(3, db.actions().auditFor(request.actionId.toString()).size)
+    }
+
+    @Test fun terminalCallbackWaitingForWriterCannotUseAnExpiredLease() {
+        val request = confirmed()
+        val claim = execution.claim(request.actionId, 2, "main", Duration.ofSeconds(10)) as ActionClaimResult.Claimed
+        val result = withContendedWriter(
+            operation = { execution.finish(request.actionId, claim.version, claim.lease.executionId, ActionStatus.SUCCEEDED) },
+            whileWaiting = {
+                wall = wall.plusSeconds(10)
+                monotonic = MonotonicInstant(BootSessionId(4), 10_100)
+            },
+        )
+        assertEquals(ActionMutation.CONFLICT, result)
+        assertEquals(ActionStatus.RUNNING, db.actions().find(request.actionId.toString())?.status)
+        assertNull(db.actions().find(request.actionId.toString())?.executedAt)
+        assertEquals(4, db.actions().auditFor(request.actionId.toString()).size)
+    }
+
+    /**
+     * Observe BEGIN synchronously before SQLite admits the contending writer.
+     * The existing writer holds its transaction while the test advances clocks
+     * or authority. Both the old DAO transaction and the adapter's outer
+     * transaction reach this checkpoint, so the regression fails deterministically.
+     */
+    private fun <T> withContendedWriter(operation: () -> T, whileWaiting: () -> Unit): T {
+        db.close()
+        val contender = AtomicReference<Thread?>()
+        val admissionRequested = CountDownLatch(1)
+        val continueAdmission = CountDownLatch(1)
+        db = Room.databaseBuilder(context, OrionDatabase::class.java, name)
+            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+            .setQueryCallback({ sql, _ ->
+                if (sql.startsWith("BEGIN") && Thread.currentThread() === contender.get()) {
+                    admissionRequested.countDown()
+                    check(continueAdmission.await(10, TimeUnit.SECONDS))
+                }
+            }, Executor { it.run() })
+            .build()
+        db.openHelper.writableDatabase
+        store = OrionActionStore(db, OrionFieldEncryption(keys), clock)
+        execution = OrionActionExecutionStore(db, store, clock, authority)
+        val writerEntered = CountDownLatch(1)
+        val releaseWriter = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            val writer = pool.submit {
+                db.runInTransaction {
+                    writerEntered.countDown()
+                    check(releaseWriter.await(10, TimeUnit.SECONDS))
+                }
+            }
+            assertTrue("Writer did not acquire its transaction", writerEntered.await(10, TimeUnit.SECONDS))
+            val pending = pool.submit(Callable {
+                contender.set(Thread.currentThread())
+                operation()
+            })
+            assertTrue("Operation did not request its write transaction", admissionRequested.await(10, TimeUnit.SECONDS))
+            assertFalse(pending.isDone)
+            whileWaiting()
+            releaseWriter.countDown()
+            continueAdmission.countDown()
+            writer.get(10, TimeUnit.SECONDS)
+            return pending.get(10, TimeUnit.SECONDS)
+        } finally {
+            releaseWriter.countDown()
+            continueAdmission.countDown()
+            pool.shutdownNow()
+        }
     }
 
     private fun assertBlocked(request: NormalizedActionRequest, reason: ActionClaimFailure) {

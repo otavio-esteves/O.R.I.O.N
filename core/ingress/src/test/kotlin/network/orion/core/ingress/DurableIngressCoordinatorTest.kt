@@ -5,6 +5,7 @@ import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
 import network.orion.core.health.CoreReadiness
 import network.orion.core.model.Sensitivity
 import org.junit.Assert.*
@@ -128,5 +129,41 @@ class DurableIngressCoordinatorTest {
         assertTrue(barrier.isOpen())
         assertEquals(0, coordinator.drain(10))
         assertEquals(1, queue.consumed)
+    }
+
+    @Test fun `writer authority snapshot cannot deadlock ingress holding the admission monitor`() {
+        val barrier = StartupBarrier()
+        assertTrue(barrier.releaseAfterRecovery(barrier.beginRecovery(), CoreReadiness.READY))
+        val writerLock = ReentrantLock()
+        val writerHeld = CountDownLatch(1)
+        val admissionHeld = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(2)
+        try {
+            val writer = executor.submit<Boolean> {
+                writerLock.lockInterruptibly()
+                try {
+                    writerHeld.countDown()
+                    check(admissionHeld.await(5, TimeUnit.SECONDS))
+                    // Represents a fresh authority check after acquiring SQLite's writer.
+                    barrier.isOpen()
+                } finally { writerLock.unlock() }
+            }
+            assertTrue(writerHeld.await(5, TimeUnit.SECONDS))
+            val ingress = executor.submit<Boolean> {
+                barrier.whileOpen {
+                    admissionHeld.countDown()
+                    // Interruptible so a failing regression releases the monitor during cleanup.
+                    writerLock.lockInterruptibly()
+                    try { true } finally { writerLock.unlock() }
+                } ?: false
+            }
+            assertTrue(writer.get(5, TimeUnit.SECONDS))
+            assertTrue(ingress.get(5, TimeUnit.SECONDS))
+            assertTrue(barrier.isOpen())
+        } finally {
+            admissionHeld.countDown()
+            executor.shutdownNow()
+            assertTrue("Test threads must terminate", executor.awaitTermination(5, TimeUnit.SECONDS))
+        }
     }
 }
