@@ -92,6 +92,42 @@ class DomainRecordStoreTest {
         assertEquals(4, db.events().count())
     }
 
+    @Test fun memorySupersessionNeverExtendsClaimValidityAndClosesOpenOrFutureBounds() {
+        val (prior, originalClaims) = memoryWithClaimValidity(listOf(1000L to 1500L, 1000L to 2500L, 1000L to null))
+        val next = UUID.randomUUID()
+        now = Instant.ofEpochMilli(2000)
+        assertTrue(memories().supersede(prior, 0, next, "replacement".toByteArray(), Sensitivity.SECRET,
+            MemoryOrigin.USER_DECLARED, 1.0, emptyList(), UUID.randomUUID()) is MemoryWriteResult.Stored)
+        val closed = db.records().claims(prior.toString()).associateBy { it.claimId }
+        originalClaims.forEach { original ->
+            val claim = closed.getValue(original.claimId)
+            assertEquals(minOf(original.validUntil ?: 2000L, 2000L), claim.validUntil)
+            assertEquals(original.validFrom, claim.validFrom)
+            assertEquals(MemoryStatus.SUPERSEDED, claim.status)
+            assertEquals(1L, claim.version)
+            assertArrayEquals(original.statementEnvelope, claim.statementEnvelope)
+        }
+        assertEquals(1L, db.records().memory(prior.toString())!!.version)
+        assertEquals(prior.toString(), db.records().memory(next.toString())!!.supersedesId)
+        assertEquals(3, db.events().count())
+    }
+
+    @Test fun sameTimestampSupersessionRejectsEmptyClaimIntervalWithoutChangingAnyRecord() {
+        val (prior, originalClaims) = memoryWithClaimValidity(listOf(999L to null, 1000L to null))
+        val next = UUID.randomUUID()
+        assertThrows(IllegalArgumentException::class.java) {
+            memories().supersede(prior, 0, next, "replacement".toByteArray(), Sensitivity.SECRET,
+                MemoryOrigin.USER_DECLARED, 1.0, emptyList(), UUID.randomUUID())
+        }
+        assertNull(db.records().memory(next.toString()))
+        val unchanged = db.records().memory(prior.toString())!!
+        assertEquals(MemoryStatus.ACTIVE, unchanged.status)
+        assertEquals(0L, unchanged.version)
+        assertEquals(1000L, unchanged.updatedAt)
+        assertClaimValidityUnchanged(prior, originalClaims)
+        assertEquals(1, db.events().count())
+    }
+
     @Test fun inferredConfirmationAndSensitivityDowngradeRejectTheWholeWrite() {
         val id = UUID.randomUUID()
         assertThrows(IllegalArgumentException::class.java) {
@@ -107,9 +143,7 @@ class DomainRecordStoreTest {
     }
 
     @Test fun failedSecondSupersessionEventRollsBackReplacementHistoryAndClaims() {
-        val id = UUID.randomUUID()
-        memories().create(id, secret.toByteArray(), Sensitivity.SECRET, MemoryOrigin.USER_DECLARED, 1.0,
-            emptyList(), UUID.randomUUID())
+        val (id, originalClaims) = memoryWithClaimValidity(listOf(1000L to 1500L, 1000L to 2500L, 1000L to null))
         val existing = db.events().due(1000, 10).single()
         val replacement = db.records().memory(id.toString())!!.copy(memoryId = UUID.randomUUID().toString(),
             supersedesId = id.toString(), createdAt = 2000, updatedAt = 2000)
@@ -122,6 +156,8 @@ class DomainRecordStoreTest {
         }
         assertNull(db.records().memory(replacement.memoryId))
         assertEquals(MemoryStatus.ACTIVE, db.records().memory(id.toString())!!.status)
+        assertEquals(0L, db.records().memory(id.toString())!!.version)
+        assertClaimValidityUnchanged(id, originalClaims)
         assertEquals(1, db.events().count())
     }
 
@@ -156,6 +192,38 @@ class DomainRecordStoreTest {
             assertFalse(it.readBytes().toString(Charsets.ISO_8859_1).contains(secret))
         }
         db = open()
+    }
+
+    private fun memoryWithClaimValidity(validity: List<Pair<Long, Long?>>): Pair<UUID, List<MemoryClaimEntity>> {
+        val id = UUID.randomUUID()
+        fun encrypted(context: FieldEncryptionContext) = FieldEnvelopeCodec.encode(
+            (encryption.encrypt(secret.toByteArray(), context) as FieldEncryptionResult.Encrypted).envelope)
+        val claims = validity.map { (from, until) ->
+            val claim = UUID.randomUUID()
+            MemoryClaimEntity(claim.toString(), id.toString(),
+                encrypted(FieldEncryptionContext("memory/$id/claim/$claim", "statement", 1)),
+                Sensitivity.SECRET, MemoryOrigin.USER_DECLARED, 1.0, false, validFrom = from, validUntil = until)
+        }
+        val at = now.toEpochMilli()
+        db.records().createMemoryWithClaimsAndEvent(MemoryEntity(id.toString(),
+            encrypted(FieldEncryptionContext("memory/$id", "content", 1)), Sensitivity.SECRET,
+            MemoryOrigin.USER_DECLARED, 1.0, false, at, at), claims,
+            DomainEventOutboxEntity(UUID.randomUUID().toString(), id.toString(), 0, "MEMORY_CREATED", 1,
+                Sensitivity.SECRET, at, UUID.randomUUID().toString()))
+        return id to claims
+    }
+
+    private fun assertClaimValidityUnchanged(memoryId: UUID, originals: List<MemoryClaimEntity>) {
+        val restored = db.records().claims(memoryId.toString()).associateBy { it.claimId }
+        assertEquals(originals.size, restored.size)
+        originals.forEach { original ->
+            val claim = restored.getValue(original.claimId)
+            assertEquals(original.status, claim.status)
+            assertEquals(original.version, claim.version)
+            assertEquals(original.validFrom, claim.validFrom)
+            assertEquals(original.validUntil, claim.validUntil)
+            assertArrayEquals(original.statementEnvelope, claim.statementEnvelope)
+        }
     }
 
     private fun plaintext(result: FieldDecryptionResult?) = String((result as FieldDecryptionResult.Plaintext).copyBytes())

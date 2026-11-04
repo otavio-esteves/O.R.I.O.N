@@ -56,7 +56,9 @@ abstract class OrionRecordDao {
         WHERE memoryId = :id AND version = :version AND status = 'ACTIVE'""")
     protected abstract fun supersedeMemory(id: String, version: Long, at: Long): Int
 
-    @Query("""UPDATE orion_memory_claims SET status = 'SUPERSEDED', validUntil = :at, version = version + 1
+    @Query("""UPDATE orion_memory_claims SET status = 'SUPERSEDED',
+        validUntil = CASE WHEN validUntil IS NULL OR validUntil > :at THEN :at ELSE validUntil END,
+        version = version + 1
         WHERE memoryId = :id AND status = 'ACTIVE'""")
     protected abstract fun supersedeClaims(id: String, at: Long)
 
@@ -99,7 +101,10 @@ abstract class OrionRecordDao {
         if (current.version != version || current.status != MemoryStatus.ACTIVE) return ActionMutation.CONFLICT
         require(replacement.memoryId != id && replacement.supersedesId == id)
         require(replacement.createdAt >= current.updatedAt)
-        require(claims(id).all { it.status != MemoryStatus.ACTIVE || it.validFrom <= replacement.createdAt })
+        require(claims(id).all { claim ->
+            claim.status != MemoryStatus.ACTIVE ||
+                claim.validFrom < minOf(claim.validUntil ?: replacement.createdAt, replacement.createdAt)
+        }) { "Supersession must preserve nonempty claim validity." }
         requireCreationEvent(id, replacement.createdAt, "MEMORY_SUPERSEDED", current.sensitivity, priorEvent, version + 1)
         check(eventCount() <= 9_998) { "Durable event capacity reached." }
         // Reuse creation validation inside this transaction; supersedesId is set only by this guarded path.
