@@ -47,6 +47,7 @@ dependencies {
     implementation(project(":core:exitinfo"))
     implementation(project(":data:database"))
     implementation(project(":data:datastore"))
+    implementation(project(":data:repository"))
     implementation(project(":feature:home"))
     implementation(project(":feature:diagnostics"))
     implementation(project(":feature:settings"))

@@ -12,6 +12,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:common"))
     api(project(":core:ingress"))
     implementation(project(":core:security"))
     implementation(project(":core:time"))

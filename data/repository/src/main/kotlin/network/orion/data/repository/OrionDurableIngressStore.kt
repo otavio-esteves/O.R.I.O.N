@@ -36,9 +36,16 @@ class OrionDurableIngressStore(
     private val barrier: StartupBarrier,
     private val consumer: LocalIngressConsumer,
 ) : DurableIngressQueue {
-    override fun enqueue(request: DurableIngressRequest): DurableIngressOutcome {
+    override fun enqueue(request: DurableIngressRequest): DurableIngressOutcome = enqueue(request, null, null)
+
+    internal fun enqueueExpiringReference(request: DurableIngressRequest, availableFrom: Long,
+        expiresBy: Long): DurableIngressOutcome = enqueue(request, availableFrom, expiresBy)
+
+    private fun enqueue(request: DurableIngressRequest, availableFrom: Long?, expiresBy: Long?): DurableIngressOutcome {
         val at = clock.wallNow().toEpochMilli()
         val expires = Math.addExact(at, request.lifetimeMillis)
+        require(availableFrom == null || at >= availableFrom) { "Temporary content clock is invalid." }
+        require(expiresBy == null || expires <= expiresBy) { "Ingress would outlive its temporary content." }
         val retain = Math.addExact(at, request.idempotencyRetentionMillis)
         val content = request.copyContent()
         val wire = try {

@@ -25,6 +25,7 @@ import network.orion.core.time.AndroidOrionClock
 import network.orion.data.database.OrionDatabase
 import network.orion.data.database.OrionDatabaseFactory
 import network.orion.data.datastore.OrionPreferencesStore
+import network.orion.data.repository.OrionPrivatePayloadStore
 
 /** Main-only F1 graph. It exposes technical snapshots, never storage handles to the UI. */
 class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCoordinator {
@@ -63,7 +64,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     }
 
     override suspend fun recover(): CoreReadiness = withContext(Dispatchers.IO) { mutex.withLock {
-        if (health.value.core.readiness.isStartupBarrierOpen) return@withLock health.value.core.readiness
+        if (health.value.core.readiness.isStartupBarrierOpen &&
+            health.value.subsystems[OrionSubsystem.FIELD_KEYS] == OrionHealthStatus.HEALTHY) return@withLock health.value.core.readiness
         val correlation = UUID.randomUUID()
         val states = initial.toMutableMap()
         var stage = OrionSubsystem.DATABASE
@@ -90,7 +92,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 provisionIfStorageEmpty = {
                     var result: FieldKeyLifecycleResult? = null
                     db.runInTransaction {
-                        if (!db.records().hasEncryptedRecords()) result = keys.provisionNewInstallation()
+                        if (!db.records().hasEncryptedRecords() && !OrionPrivatePayloadStore.hasArtifacts(app))
+                            result = keys.provisionNewInstallation()
                     }
                     result
                 }).initialize()
