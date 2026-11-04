@@ -13,6 +13,7 @@ android {
 
 dependencies {
     api(project(":core:health"))
+    implementation(project(":core:ingress"))
 
     testImplementation(libs.junit4)
 }
