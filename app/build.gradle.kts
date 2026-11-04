@@ -25,9 +25,13 @@ android {
     buildFeatures {
         compose = true
     }
+
+    sourceSets.getByName("androidTest").assets.directories.add("$rootDir/data/database/schemas")
 }
 
 dependencies {
+    // AGP aligns tests with their target APK. Room's schema serializers require the newer default methods.
+    debugImplementation(libs.serialization.test.runtime)
     debugImplementation(project(":core:ipc"))
     testImplementation(libs.junit4)
     implementation(project(":core:common"))
@@ -53,6 +57,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.room.testing)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.runtime)
 }

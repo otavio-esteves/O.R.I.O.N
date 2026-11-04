@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import network.orion.core.common.process.MainProcessStoragePolicy
 import network.orion.core.common.process.OrionProcessRole
 
-/** Technical format marker only. Business schemas enter through explicit F2 migrations. */
+/** Technical format marker, preserved independently of the Room schema version. */
 @Entity(tableName = "orion_storage_metadata")
 data class OrionStorageMetadata(@PrimaryKey val id: Int, val formatVersion: Int)
 
@@ -27,9 +27,11 @@ interface OrionStorageMetadataDao {
     fun rowCount(): Int
 }
 
-@Database(entities = [OrionStorageMetadata::class], version = 1, exportSchema = true)
+@Database(entities = [OrionStorageMetadata::class, ActionRequestEntity::class, ActionAuditEntity::class],
+    version = 2, exportSchema = true)
 abstract class OrionDatabase : RoomDatabase() {
     abstract fun metadata(): OrionStorageMetadataDao
+    abstract fun actions(): OrionActionDao
 
     /** Performs disk I/O: call outside the UI thread. Failure never deletes the database. */
     fun verifyStructure() {
@@ -49,6 +51,7 @@ object OrionDatabaseFactory {
             context.isDeviceProtectedStorage,
         )
         return Room.databaseBuilder(app, OrionDatabase::class.java, "orion.db")
+            .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     db.execSQL("INSERT INTO orion_storage_metadata (id, formatVersion) VALUES (1, 1)")
