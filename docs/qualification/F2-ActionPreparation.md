@@ -14,8 +14,9 @@ TRANSACTION_CORE_READY, recovery operacional ou qualificação física.
 | DATA-004 | `4c01f2c` | Adapter de argumentos/target cifrados e confirmação ligada ao registro |
 | TEST-001 | `4f61c95` | Injeção de morte do processo debug, testes de segurança do comando e CI |
 
-Branch: `feat/orion-data-foundation`. Commits locais, sem publicação, merge ou
-alegação de CI remoto aprovado. A consolidação acrescenta este relatório e evidências.
+Branch de entrega: `feat/orion-data-foundation`. As evidências abaixo foram
+registradas antes da publicação e integração. O estado de PR, CI obrigatório e
+merge é acompanhado no GitHub; a validação local não substitui esse gate.
 
 O banco preserva metadata formatVersion=1 e evolui schemaVersion=1→2. Ações começam
 em PENDING e usam UNIQUE(scope, key). Replay preserva a primeira ação; divergência
