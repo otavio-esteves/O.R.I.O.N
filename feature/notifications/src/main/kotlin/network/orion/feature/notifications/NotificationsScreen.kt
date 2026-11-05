@@ -19,7 +19,7 @@ import network.orion.core.orchestrator.notifications.*
 
 /** A permission gesture and exact post confirmation are separate user actions. */
 @Composable
-fun NotificationsScreen(gateway:NotificationGateway,recoveryVersion:Instant?=null,
+fun NotificationsScreen(gateway:NotificationGateway,recoveryVersion:Instant?=null,refreshRevision:Long=0,
     onRequestPermission:()->Unit={},onOpenSettings:()->Unit={}) {
     val scope=rememberCoroutineScope()
     var title by remember { mutableStateOf("") };var body by remember { mutableStateOf("") }
@@ -52,6 +52,14 @@ fun NotificationsScreen(gateway:NotificationGateway,recoveryVersion:Instant?=nul
         try { gateway.processPending();reload() } catch(c:CancellationException) { throw c }
         catch(_:Exception) { message="Notificações indisponíveis. Consulte o diagnóstico." }
         finally { work-- }
+    }
+    LaunchedEffect(gateway,refreshRevision) {
+        if(refreshRevision>0) {
+            work++
+            try { reload() } catch(c:CancellationException) { throw c }
+            catch(_:Exception) { message="Notificações indisponíveis. Consulte o diagnóstico." }
+            finally { work-- }
+        }
     }
     LazyColumn(Modifier.fillMaxSize().testTag("orion_notifications").semantics {
         stateDescription=if(busy)"Carregando notificações" else "Notificações atualizadas"

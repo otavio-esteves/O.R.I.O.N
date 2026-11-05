@@ -80,6 +80,7 @@ internal class OrionNotificationRunner(private val db:OrionDatabase,private val 
                 return@OrionOwnedNotificationPoster NotificationPostResult.NOT_INVOKED
             // Last checks are after all DB reads; no open SQLite transaction encloses notify.
             if(!barrier.isOpen()||!poster.permissionGranted()||!freshPolicy())return@OrionOwnedNotificationPoster NotificationPostResult.NOT_INVOKED
+            if(claim.lease.statusAt(clock.monotonicNow())!=ActionLeaseStatus.ACTIVE)return@OrionOwnedNotificationPoster NotificationPostResult.NOT_OWNED
             check(!db.inTransaction())
             poster.post(id,notification)
         })
