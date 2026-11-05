@@ -6,7 +6,7 @@ import androidx.room.Query
 /** Read-only MAIN metadata projection. Mutable writes remain in the owned adapter. */
 @Dao
 abstract class OrionMemoryDao {
-    @Query("SELECT * FROM orion_memories WHERE origin = 'USER_DECLARED' AND userConfirmed = 1 AND (:after IS NULL OR memoryId > :after) ORDER BY memoryId LIMIT :limit")
+    @Query("SELECT * FROM orion_memories WHERE origin = 'USER_DECLARED' AND userConfirmed = 1 AND sensitivity = 'PERSONAL' AND (:after IS NULL OR memoryId > :after) ORDER BY memoryId LIMIT :limit")
     abstract fun page(after: String?, limit: Int): List<MemoryEntity>
     @Query("SELECT * FROM orion_memories WHERE memoryId = :id")
     abstract fun find(id: String): MemoryEntity?

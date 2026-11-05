@@ -17,7 +17,7 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
         return MemoryPage(selected, if (rows.size > request.limit) selected.last().memoryId else null)
     }
 
-    fun find(id: UUID): MemorySummary? = database.memories().find(id.toString())?.takeIf { it.origin == network.orion.data.database.MemoryOrigin.USER_DECLARED && it.userConfirmed }?.let(::select)
+    fun find(id: UUID): MemorySummary? = database.memories().find(id.toString())?.takeIf { it.origin == network.orion.data.database.MemoryOrigin.USER_DECLARED && it.userConfirmed && it.sensitivity == network.orion.core.model.Sensitivity.PERSONAL }?.let(::select)
 
     private fun select(row: network.orion.data.database.MemoryEntity): MemorySummary {
             val id = UUID.fromString(row.memoryId)
