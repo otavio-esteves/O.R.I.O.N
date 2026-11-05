@@ -31,3 +31,13 @@ Actual installed update versionCode2/schema3 to versionCode3/schema4 passed on
 API35/x86_64 emulator, preserving encrypted records, keys, pending and UNKNOWN
 state without replay. [Recorded artifact/component identities](../qualification/f3-timer-installed-upgrade-api35.json).
 This is NON_DEFINITIVE Android evidence and does not close physical/F3/F4 gates.
+
+UI/LIFECYCLE HARDENING: Compose tests use the existing MainActivity test host,
+with no test-manifest/exported component added. Periodic status reads run only
+while the selected LifecycleOwner is STARTED; stop cancels the polling child and
+resume preserves loaded rows/cursor/draft. Polls do not drain ingress. A registry
+regression checks frozen read counts while CREATED, resumed reads while STARTED,
+draft preservation and unchanged explicit queue-drain/list counts. The direct
+lifecycle-runtime-compose dependency is pinned at 2.9.4, already selected transitively
+by the existing Activity Compose 1.13.0; this adds explicit API use, not a baseline
+version upgrade. Runtime execution belongs to the integrating primary agent.

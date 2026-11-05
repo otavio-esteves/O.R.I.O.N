@@ -1,8 +1,10 @@
 package network.orion.app.timers
 
+import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import network.orion.app.MainActivity
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.util.UUID
 import network.orion.core.commands.timers.*
@@ -16,10 +18,12 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class OrionTimerScreenTest {
-    @get:Rule val compose=createComposeRule()
+    @get:Rule val compose=createAndroidComposeRule<MainActivity>()
     @Test fun timerUiShowsExactDurationBeforeSendingSeparateHumanConfirmation() {
         val port=FakeGateway()
-        compose.setContent { MaterialTheme { TimersScreen(port) } }
+        compose.activityRule.scenario.onActivity { activity ->
+            activity.setContent { MaterialTheme { TimersScreen(port) } }
+        }
         compose.waitForIdle()
         compose.onNodeWithText("Título do timer").performTextInput("Preparar café")
         compose.onNodeWithText("Duração em segundos").performTextClearance()
@@ -35,7 +39,9 @@ class OrionTimerScreenTest {
     }
     @Test fun restoredFractionalSecondDurationIsDisplayedExactlyBeforeConsent() {
         val port=FakeGateway().apply { last=CreateTimer(UUID.randomUUID(),"Dose",1,UUID.randomUUID(),UUID.randomUUID()) }
-        compose.setContent { MaterialTheme { TimersScreen(port) } }
+        compose.activityRule.scenario.onActivity { activity ->
+            activity.setContent { MaterialTheme { TimersScreen(port) } }
+        }
         compose.waitForIdle()
         compose.onNodeWithText("Duração: 1 ms").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Duração: 0 segundos").assertDoesNotExist()
