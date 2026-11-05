@@ -11,6 +11,7 @@ import java.util.UUID
 import network.orion.core.commands.notifications.ValidatedPostNotification
 import network.orion.core.orchestrator.notifications.NotificationAvailability
 import network.orion.skills.notifications.NotificationPostResult
+import network.orion.core.time.MonotonicClock
 
 /** Trusted MAIN platform boundary. IDs or a direct instance are never execution authority. */
 internal interface OrionNotificationPoster {
@@ -19,7 +20,7 @@ internal interface OrionNotificationPoster {
     fun post(actionId:UUID,notification:ValidatedPostNotification):NotificationPostResult
 }
 
-internal class OrionAndroidNotificationPoster(context:Context):OrionNotificationPoster {
+internal class OrionAndroidNotificationPoster(context:Context,private val clock:MonotonicClock):OrionNotificationPoster {
     private val app=context.applicationContext
     private val manager=app.getSystemService(NotificationManager::class.java)
     /** MAIN calls this deliberately. Existing user channel choices are preserved by Android. */
@@ -55,14 +56,26 @@ internal class OrionAndroidNotificationPoster(context:Context):OrionNotification
             .setContentTitle(notification.title).setContentText(notification.body)
             .setStyle(Notification.BigTextStyle().bigText(notification.body)).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setPublicVersion(public).setLocalOnly(true).setOnlyAlertOnce(true).setAllowSystemGeneratedContextualActions(false).build()
+        if(availability()!=NotificationAvailability.AVAILABLE)return NotificationPostResult.NOT_INVOKED
         return try {
             service.notify(actionId.toString(),0,platform)
-            val active=service.activeNotifications.singleOrNull { it.tag==actionId.toString()&&it.id==0 }
-            val posted=active?.notification
-            if(posted?.channelId==USER_CHANNEL&&posted.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()==notification.title&&
-                posted.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()==notification.body)NotificationPostResult.POSTED
-            else NotificationPostResult.UNKNOWN
+            // Android may enqueue notification registration asynchronously. A bounded
+            // observation window proves a matching record; it never repeats notify.
+            val start=clock.monotonicNow()
+            for(attempt in 0 until 10) {
+                val age=clock.monotonicNow().elapsedSince(start)?:return NotificationPostResult.UNKNOWN
+                if(age.toMillis()>500)return NotificationPostResult.UNKNOWN
+                val active=service.activeNotifications.singleOrNull { it.tag==actionId.toString()&&it.id==0 }
+                val posted=active?.notification
+                if(posted?.channelId==USER_CHANNEL&&posted.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()==notification.title&&
+                    posted.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()==notification.body)return NotificationPostResult.POSTED
+                if(attempt<9)Thread.sleep(25)
+            }
+            NotificationPostResult.UNKNOWN
+        } catch(interrupted:InterruptedException) {
+            Thread.currentThread().interrupt();NotificationPostResult.UNKNOWN
         } catch(_:Exception) { NotificationPostResult.UNKNOWN }
     }
+
     companion object { const val USER_CHANNEL="orion_user_notifications" }
 }
