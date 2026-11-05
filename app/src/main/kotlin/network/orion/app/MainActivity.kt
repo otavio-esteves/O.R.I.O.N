@@ -24,10 +24,13 @@ import network.orion.feature.activity.ActivityScreen
 import network.orion.app.tasks.OrionTaskAdmissionOwner
 import network.orion.app.reminders.OrionReminderAdmissionOwner
 import network.orion.feature.reminders.RemindersScreen
+import network.orion.app.timers.OrionTimerAdmissionOwner
+import network.orion.feature.timers.TimersScreen
 
 class MainActivity : ComponentActivity() {
     private lateinit var taskChannel: OrionTaskAdmissionOwner.UiChannel
     private lateinit var reminderChannel: OrionReminderAdmissionOwner.UiChannel
+    private lateinit var timerChannel: OrionTimerAdmissionOwner.UiChannel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,6 +42,9 @@ class MainActivity : ComponentActivity() {
         reminderChannel = runtime.reminderAdmissions.openUiChannel()
         reminderChannel.onWindowFocus(hasWindowFocus())
         val reminders = runtime.reminderGateway(reminderChannel)
+        timerChannel = runtime.timerAdmissions.openUiChannel()
+        timerChannel.onWindowFocus(hasWindowFocus())
+        val timers = runtime.timerGateway(timerChannel)
         setContent {
             MaterialTheme {
                 val report by runtime.health.collectAsState()
@@ -78,13 +84,15 @@ class MainActivity : ComponentActivity() {
                     Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).padding(horizontal = 24.dp)) {
                         when (destination) {
                             "Lembretes" -> RemindersScreen(reminders, report.lastRecovery)
+                            "Timers" -> TimersScreen(timers, report.lastRecovery)
                             "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
                             "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, onRetry = { runtime.start() })
                             "Ajustes" -> SettingsScreen(report)
                             else -> HomeScreen(report, onOpenDevice = { destination = "Dispositivo" },
-                                onOpenActivity = { destination = "Atividade" }, onOpenReminders = { destination = "Lembretes" })
+                                onOpenActivity = { destination = "Atividade" }, onOpenReminders = { destination = "Lembretes" },
+                                onOpenTimers = { destination = "Timers" })
                         }
                     }
                 }
@@ -98,11 +106,14 @@ class MainActivity : ComponentActivity() {
         taskChannel.onWindowFocus(hasWindowFocus())
         reminderChannel.onResumed(true)
         reminderChannel.onWindowFocus(hasWindowFocus())
+        timerChannel.onResumed(true)
+        timerChannel.onWindowFocus(hasWindowFocus())
     }
 
     override fun onPause() {
         taskChannel.onResumed(false)
         reminderChannel.onResumed(false)
+        timerChannel.onResumed(false)
         super.onPause()
     }
 
@@ -110,11 +121,13 @@ class MainActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (::taskChannel.isInitialized) taskChannel.onWindowFocus(hasFocus)
         if (::reminderChannel.isInitialized) reminderChannel.onWindowFocus(hasFocus)
+        if (::timerChannel.isInitialized) timerChannel.onWindowFocus(hasFocus)
     }
 
     override fun onDestroy() {
         if (::taskChannel.isInitialized) taskChannel.close()
         if (::reminderChannel.isInitialized) reminderChannel.close()
+        if (::timerChannel.isInitialized) timerChannel.close()
         super.onDestroy()
     }
 }

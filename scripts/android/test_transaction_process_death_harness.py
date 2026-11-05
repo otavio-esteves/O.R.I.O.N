@@ -52,6 +52,13 @@ class TransactionRecorderContractTest(unittest.TestCase):
                              command[command.index("class") + 1])
             self.assertNotIn("network.orion.app.tasks.OrionTaskTransactionProcessDeathTest", command)
 
+    def test_timer_scenario_uses_the_owned_timer_boundary(self):
+        fixture = "00000000-0000-0000-0000-000000000001"
+        for mode in ["prepare", "verify"]:
+            command = RECORDER.instrumentation_command(mode, fixture, "timer")
+            self.assertEqual("network.orion.app.timers.OrionTimerTransactionProcessDeathTest",
+                             command[command.index("class") + 1])
+
 
 if __name__ == "__main__":
     unittest.main()
