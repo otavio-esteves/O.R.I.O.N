@@ -1,5 +1,7 @@
 # ORION-F3-MEMORY-001 — Owned user-declared memory runtime
 
+GitHub issue: <https://github.com/otavio-esteves/O.R.I.O.N/issues/52>.
+
 OBJECTIVE: Implement the basic deterministic Memory scope of F3 with native
 create/list/forget flow through verified MAIN ingress, policy, exact human
 confirmation and owned transactional execution. Architecture §§62–74, 102, 128;
@@ -55,3 +57,9 @@ notifications, scheduler/F4, AI/voice, schema migration, permissions and new pro
 or exported surface. Fixed PERSONAL content is still encrypted, never raw-indexed,
 and all content-bearing diagnostics are redacted. Physical S21 qualification
 remains deferred; this package alone declares no phase or 24/7 gate.
+
+INTEGRATION STATUS: MAIN recovery/barrier/admission/UI wiring is integrated with
+the deterministic domains. Shared candidate validation will cover the memory
+pipeline, ciphertext erasure, fresh-key replay guard and real process-death
+fixture alongside the complete F3 graph. No tests or phase gate are claimed
+complete until those canonical and Android checks finish.

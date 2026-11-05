@@ -51,4 +51,12 @@ class FoundationNavigationTest {
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("orion_timers").assertExists()
     }
+
+    @Test fun userMemoryDestinationRestoresWithExplicitProvenance() {
+        compose.onNodeWithText("Memórias").performScrollTo().performClick()
+        compose.onNodeWithTag("orion_memories").assertExists()
+        compose.onNodeWithText("Guarde uma informação pessoal declarada por você. Nenhuma memória é inferida automaticamente.").assertExists()
+        compose.activityRule.scenario.recreate()
+        compose.onNodeWithTag("orion_memories").assertExists()
+    }
 }

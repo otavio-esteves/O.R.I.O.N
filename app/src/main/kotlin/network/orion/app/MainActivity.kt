@@ -26,11 +26,14 @@ import network.orion.app.reminders.OrionReminderAdmissionOwner
 import network.orion.feature.reminders.RemindersScreen
 import network.orion.app.timers.OrionTimerAdmissionOwner
 import network.orion.feature.timers.TimersScreen
+import network.orion.app.memories.OrionMemoryAdmissionOwner
+import network.orion.feature.memories.MemoriesScreen
 
 class MainActivity : ComponentActivity() {
     private lateinit var taskChannel: OrionTaskAdmissionOwner.UiChannel
     private lateinit var reminderChannel: OrionReminderAdmissionOwner.UiChannel
     private lateinit var timerChannel: OrionTimerAdmissionOwner.UiChannel
+    private lateinit var memoryChannel: OrionMemoryAdmissionOwner.UiChannel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +48,9 @@ class MainActivity : ComponentActivity() {
         timerChannel = runtime.timerAdmissions.openUiChannel()
         timerChannel.onWindowFocus(hasWindowFocus())
         val timers = runtime.timerGateway(timerChannel)
+        memoryChannel = runtime.memoryAdmissions.openUiChannel()
+        memoryChannel.onWindowFocus(hasWindowFocus())
+        val memories = runtime.memoryGateway(memoryChannel)
         setContent {
             MaterialTheme {
                 val report by runtime.health.collectAsState()
@@ -85,6 +91,7 @@ class MainActivity : ComponentActivity() {
                         when (destination) {
                             "Lembretes" -> RemindersScreen(reminders, report.lastRecovery)
                             "Timers" -> TimersScreen(timers, report.lastRecovery)
+                            "Memórias" -> MemoriesScreen(memories, report.lastRecovery)
                             "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
                             "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
@@ -92,7 +99,7 @@ class MainActivity : ComponentActivity() {
                             "Ajustes" -> SettingsScreen(report)
                             else -> HomeScreen(report, onOpenDevice = { destination = "Dispositivo" },
                                 onOpenActivity = { destination = "Atividade" }, onOpenReminders = { destination = "Lembretes" },
-                                onOpenTimers = { destination = "Timers" })
+                                onOpenTimers = { destination = "Timers" }, onOpenMemories = { destination = "Memórias" })
                         }
                     }
                 }
@@ -108,12 +115,15 @@ class MainActivity : ComponentActivity() {
         reminderChannel.onWindowFocus(hasWindowFocus())
         timerChannel.onResumed(true)
         timerChannel.onWindowFocus(hasWindowFocus())
+        memoryChannel.onResumed(true)
+        memoryChannel.onWindowFocus(hasWindowFocus())
     }
 
     override fun onPause() {
         taskChannel.onResumed(false)
         reminderChannel.onResumed(false)
         timerChannel.onResumed(false)
+        memoryChannel.onResumed(false)
         super.onPause()
     }
 
@@ -122,12 +132,14 @@ class MainActivity : ComponentActivity() {
         if (::taskChannel.isInitialized) taskChannel.onWindowFocus(hasFocus)
         if (::reminderChannel.isInitialized) reminderChannel.onWindowFocus(hasFocus)
         if (::timerChannel.isInitialized) timerChannel.onWindowFocus(hasFocus)
+        if (::memoryChannel.isInitialized) memoryChannel.onWindowFocus(hasFocus)
     }
 
     override fun onDestroy() {
         if (::taskChannel.isInitialized) taskChannel.close()
         if (::reminderChannel.isInitialized) reminderChannel.close()
         if (::timerChannel.isInitialized) timerChannel.close()
+        if (::memoryChannel.isInitialized) memoryChannel.close()
         super.onDestroy()
     }
 }

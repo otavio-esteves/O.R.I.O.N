@@ -24,6 +24,8 @@ import network.orion.core.policy.tasks.OrionPolicyEvidence
 import network.orion.app.tasks.*
 import network.orion.app.reminders.*
 import network.orion.app.timers.*
+import network.orion.app.memories.*
+import network.orion.core.skills.metadata.memories.OrionCreateMemoryDescriptor
 import network.orion.core.skills.metadata.timers.OrionCreateTimerDescriptor
 import network.orion.core.policy.reminders.OrionPolicyEvidence as ReminderEvidence
 import network.orion.core.skills.metadata.reminders.OrionCreateReminderDescriptor
@@ -69,9 +71,11 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         private set
     @Volatile internal var timerKernel: OrionTimerKernel? = null
         private set
+    @Volatile internal var memoryKernel: OrionMemoryKernel? = null
+        private set
     val capabilities = CapabilityRegistry { capability ->
         capability in setOf(OrionCreateTaskDescriptor.WRITE_CAPABILITY, OrionCreateReminderDescriptor.WRITE_CAPABILITY,
-            OrionCreateTimerDescriptor.WRITE_CAPABILITY) &&
+            OrionCreateTimerDescriptor.WRITE_CAPABILITY, OrionCreateMemoryDescriptor.WRITE_CAPABILITY) &&
             taskWriteReady && taskStartupBarrier.isOpen() && clock.monotonicNow().bootSessionId != null
     }
     internal fun taskGateway(channel: OrionTaskAdmissionOwner.UiChannel) = OrionTaskUiGateway(channel, { taskKernel }, clock, ::taskOperationFailed)
@@ -79,6 +83,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         OrionReminderUiGateway(channel, { reminderKernel }, clock, ::taskOperationFailed)
     internal fun timerGateway(channel: OrionTimerAdmissionOwner.UiChannel) =
         OrionTimerUiGateway(channel, { timerKernel }, clock, ::taskOperationFailed)
+    internal fun memoryGateway(channel: OrionMemoryAdmissionOwner.UiChannel) =
+        OrionMemoryUiGateway(channel, { memoryKernel }, clock, ::taskOperationFailed)
     // One operational barrier for recovery and every deterministic domain.
     internal val taskStartupBarrier = StartupBarrier()
     internal val taskAdmissions = OrionTaskAdmissionOwner(
@@ -94,6 +100,10 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         devicePresence = { reminderEvidence(presenceEvidence()) },
     )
     internal val timerAdmissions = OrionTimerAdmissionOwner(
+        OrionProcessRole.fromProcessName(app.packageName, android.app.Application.getProcessName()),
+        taskStartupBarrier, ::writeEvidence, ::presenceEvidence,
+    )
+    internal val memoryAdmissions = OrionMemoryAdmissionOwner(
         OrionProcessRole.fromProcessName(app.packageName, android.app.Application.getProcessName()),
         taskStartupBarrier, ::writeEvidence, ::presenceEvidence,
     )
@@ -135,6 +145,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         taskAdmissions.invalidateAdmissions()
         reminderAdmissions.invalidateAdmissions()
         timerAdmissions.invalidateAdmissions()
+        memoryAdmissions.invalidateAdmissions()
         publish(health.value.subsystems.toMutableMap().apply { this[OrionSubsystem.ACTION_OUTBOX] = OrionHealthStatus.FAILED })
     }
 
@@ -144,7 +155,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     }
 
     override suspend fun recover(): CoreReadiness = withContext(Dispatchers.IO) { mutex.withLock {
-        if (taskStartupBarrier.isOpen() && taskKernel != null && reminderKernel != null && timerKernel != null && health.value.core.readiness.isStartupBarrierOpen &&
+        if (taskStartupBarrier.isOpen() && taskKernel != null && reminderKernel != null && timerKernel != null &&
+            memoryKernel != null && health.value.core.readiness.isStartupBarrierOpen &&
             health.value.subsystems[OrionSubsystem.FIELD_KEYS] == OrionHealthStatus.HEALTHY) return@withLock health.value.core.readiness
         val ticket = taskStartupBarrier.beginRecovery()
         taskWriteReady = false
@@ -152,6 +164,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         taskAdmissions.invalidateAdmissions()
         reminderAdmissions.invalidateAdmissions()
         timerAdmissions.invalidateAdmissions()
+        memoryAdmissions.invalidateAdmissions()
         val correlation = UUID.randomUUID()
         val states = initial.toMutableMap()
         var stage = OrionSubsystem.DATABASE
@@ -206,6 +219,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     reminderAdmissions, { health.value.core.readiness }, { taskStorageReady })
                 timerKernel = OrionTimerKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
                     timerAdmissions, { health.value.core.readiness }, { taskStorageReady })
+                memoryKernel = OrionMemoryKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
+                    memoryAdmissions, { health.value.core.readiness }, { taskStorageReady })
                 states[OrionSubsystem.REMINDERS] = OrionHealthStatus.DEGRADED
                 stage = OrionSubsystem.EVENT_OUTBOX
                 // Pending durable facts remain intact: no consumer is registered in this slice.
@@ -227,6 +242,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                         taskKernel?.ingress?.drain(25)
                         reminderKernel?.ingress?.drain(25)
                         timerKernel?.ingress?.drain(25)
+                        memoryKernel?.ingress?.drain(25)
                     }
                     else taskStartupBarrier.abortRecovery(ticket)
                 })

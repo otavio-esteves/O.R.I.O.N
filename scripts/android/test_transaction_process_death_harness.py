@@ -59,6 +59,13 @@ class TransactionRecorderContractTest(unittest.TestCase):
             self.assertEqual("network.orion.app.timers.OrionTimerTransactionProcessDeathTest",
                              command[command.index("class") + 1])
 
+    def test_memory_scenario_uses_the_owned_forget_boundary(self):
+        fixture = "00000000-0000-0000-0000-000000000001"
+        for mode in ["prepare", "verify"]:
+            command = RECORDER.instrumentation_command(mode, fixture, "memory")
+            self.assertEqual("network.orion.app.memories.OrionMemoryTransactionProcessDeathTest",
+                             command[command.index("class") + 1])
+
 
 if __name__ == "__main__":
     unittest.main()
