@@ -14,7 +14,7 @@ class OrionReminderScreenTest {
     private fun ready() {
         compose.waitUntil(10_000) {
             compose.activity.hasWindowFocus() && compose.onAllNodesWithTag("orion_reminders").fetchSemanticsNodes().singleOrNull()?.config
-                ?.getOrNull(SemanticsProperties.StateDescription) == "Lembretes atualizadas"
+                ?.getOrNull(SemanticsProperties.StateDescription) == "Lembretes atualizados"
         }
     }
     private fun within(title: String, tag: String) = hasTestTag(tag) and hasAnyDescendant(hasText(title, substring = true))

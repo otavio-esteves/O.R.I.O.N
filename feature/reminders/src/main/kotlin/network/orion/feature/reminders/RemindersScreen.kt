@@ -60,7 +60,7 @@ fun RemindersScreen(gateway: ReminderGateway, recoveryVersion: Instant? = null) 
         finally { activeWork-- }
     }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize().testTag("orion_reminders").semantics {
-        stateDescription = if (busy) "Carregando lembretes" else "Lembretes atualizadas"
+        stateDescription = if (busy) "Carregando lembretes" else "Lembretes atualizados"
     }) {
         item {
             Text("Lembretes", style = MaterialTheme.typography.headlineSmall)
