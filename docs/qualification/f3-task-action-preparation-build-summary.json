@@ -1,0 +1,64 @@
+{
+  "recordedAtUtc": "2026-11-05T02:39:02.847777+00:00",
+  "workPackage": "ORION-F3-TASK-004",
+  "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/30",
+  "baseCommit": "9668a267a23c02993551bc76115506aeeb8644c3",
+  "sourceSha256": {
+    "app/build.gradle.kts": "45ea21ab80e17a61e5329167bf082abcdb13d3616197e933e91106c742644a1b",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionCreateTaskActionStore.kt": "3370fbe24879eda43c9647cb0e2adc85c8a7a5e7ae1d23f2b0df1bae9c8cc28e",
+    "app/src/androidTest/kotlin/network/orion/app/tasks/OrionCreateTaskActionStoreTest.kt": "7bd79365b401818d33974560dd4b9fa9c3448e799ce5d2d88de216db17823792"
+  },
+  "container": {
+    "result": "PASS",
+    "command": "docker compose run --rm android-build :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lint verifyModuleBoundaries testModuleBoundaries --max-workers=2",
+    "duration": "8m 8s",
+    "tasks": {
+      "total": 1044,
+      "executed": 34,
+      "upToDate": 1010
+    },
+    "unitTests": {
+      "network.orion.app.CoreReadyLogEventTest": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.app.tasks.OrionTaskAdmissionOwnerTest": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "moduleBoundaries": "PASS",
+    "negativeAssertions": 36,
+    "lint": {
+      "errors": 0,
+      "warnings": 10,
+      "warningScope": "unchanged files"
+    },
+    "rawOutputSha256": "63dc92745abf75ee5d1da4069f82c7a630b4626a70326f663b20b0ea0d1d6240"
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "serial": "emulator-5586",
+    "apiLevel": "35",
+    "abi": "x86_64",
+    "tests": 41,
+    "newTests": 11,
+    "result": "PASS",
+    "command": "adb -s emulator-5586 shell am instrument -w -e class network.orion.app.tasks.OrionCreateTaskActionStoreTest,network.orion.app.EncryptedActionStoreTest,network.orion.app.ActionExecutionOwnershipTest network.orion.test/androidx.test.runner.AndroidJUnitRunner",
+    "rawOutputSha256": "845dc513f212c7f28bdb9005e21067414ab66a4c04bde104579374de036cc9ec"
+  },
+  "artifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "5bf393ddb2a628f06ca26fa5816e5be68046eafe85767b9328f7ee5bb136528b",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "e471886fe2a8dd4a69ee7d43abacac8f612951b083c1bb821fbfe0f051b4b656"
+  },
+  "runtimeTaskWritesEnabled": false,
+  "skillExecutionInstalled": false,
+  "schemaOrIpcOrPermissionChanged": false,
+  "physicalQualification": "DEFERRED #23; no hardware/OEM or 24/7 claim",
+  "requiredRemoteCi": "PENDING_PR_HEAD"
+}
