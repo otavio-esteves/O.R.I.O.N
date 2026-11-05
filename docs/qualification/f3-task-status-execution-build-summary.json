@@ -1,0 +1,98 @@
+{
+  "recordedAtUtc": "2026-11-05T03:57:55.892846+00:00",
+  "workPackage": "ORION-F3-TASK-007",
+  "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/36",
+  "baseCommit": "e49edd2444ca8435ac50b079012d3269292d7c73",
+  "sourceSha256": {
+    "app/src/androidTest/kotlin/network/orion/app/tasks/OrionCreateTaskActionStoreTest.kt": "d2b7f7f17c70d0289d1bcb735c6ce3cd840057ec79cd725f47c99151d80f2754",
+    "app/src/androidTest/kotlin/network/orion/app/tasks/OrionCreateTaskRunnerTest.kt": "fd336b6cd60f26d889bd712c146a4d38666c4d75aad653fd1fa63bacae1b3aa8",
+    "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskStatusRunnerTest.kt": "eb2fd0fb079b99e996eb4df81eeccadc14b5b7a42af2cbe216442df205e1b0fb",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionCreateTaskActionStore.kt": "d82f327cf2eb38cc9ddabc1c87da775c185d5c8b2b3288b6b7bb5b98f0efda3e",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionCreateTaskRunner.kt": "be31afc318736641580853698a2fc53f1b096db2d59494eb1117b58f8f0c1d65",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionTaskAdmissionOwner.kt": "e1520834e319abec9feab3fc8ac160b5f316cc338782ec763a6eb3faa9e4e1f9",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionTaskStatusActionStore.kt": "5d3e5e502f4d2152bac0684a69d02d21a2eccdaac26d95ec3d5d51a4f631154e",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionTaskStatusRunner.kt": "d987389725ad4ca97117b30afda867746dbdba12c4a306f208e6b0de71308fe1",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionTaskTransactions.kt": "8544792f7405253d1e08e401160fe476c3d53cf1a19075f80dff81f94622eae9",
+    "app/src/test/kotlin/network/orion/app/tasks/OrionTaskAdmissionOwnerTest.kt": "2d3f57cba3f9e1922c5f730104a14895b24750a0c0e2d7b7764ff0260afa0ae0",
+    "data/tasks/src/main/kotlin/network/orion/data/tasks/OrionOwnedTaskStatusStore.kt": "906ad289a3eb2363a67bb21dcb65870044ed361adf376f386802210205849736",
+    "skills/tasks/src/main/kotlin/network/orion/skills/tasks/OrionTaskStatusSkill.kt": "eae478d32d659a5b3903d7b2d94c7e8387245643d16d75219752c0b32da75f98",
+    "skills/tasks/src/test/kotlin/network/orion/skills/tasks/OrionTaskStatusSkillTest.kt": "365b2ce93086c36e23584ee745572dcc751845985a1c07a29558f69cbd272fcd"
+  },
+  "container": {
+    "result": "PASS",
+    "command": "docker compose run --rm android-build :skills:tasks:testDebugUnitTest :skills:tasks:assemble :skills:tasks:lint :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lint :data:tasks:lint verifyModuleBoundaries testModuleBoundaries --max-workers=2",
+    "duration": "3m 28s",
+    "tasks": {
+      "total": 1287,
+      "executed": 122,
+      "fromCache": 2,
+      "upToDate": 1163
+    },
+    "unitTests": {
+      "network.orion.app.CoreReadyLogEventTest": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.app.tasks.OrionTaskAdmissionOwnerTest": {
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.skills.tasks.OrionTaskStatusSkillTest": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.skills.tasks.OrionCreateTaskSkillTest": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "unitTestsTotal": 28,
+    "lint": {
+      "errors": 0,
+      "skillAndTaskStorageWarnings": 0,
+      "appWarnings": 10,
+      "appWarningScope": "unchanged files"
+    },
+    "moduleBoundaries": "PASS",
+    "negativeAssertions": 36,
+    "rawOutputSha256": "d60c469a936031d56463b82ee6609a3ceeb38612fa0d6735e3764af9294b797d"
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "serial": "emulator-5586",
+    "apiLevel": "35",
+    "abi": "x86_64",
+    "tests": 69,
+    "newStatusCases": 12,
+    "newEnclosingTransactionCases": 3,
+    "result": "PASS",
+    "command": "adb -s emulator-5586 shell am instrument -w -e class network.orion.app.tasks.OrionTaskStatusRunnerTest,network.orion.app.tasks.OrionCreateTaskRunnerTest,network.orion.app.tasks.OrionTaskTransactionProcessDeathTest,network.orion.app.tasks.OrionCreateTaskActionStoreTest,network.orion.app.EncryptedActionStoreTest,network.orion.app.ActionExecutionOwnershipTest network.orion.test/androidx.test.runner.AndroidJUnitRunner",
+    "rawOutputSha256": "9a50b0e643df552825d1f8c16d0aaf13a925b66e5c1642090c6c2f72c12261b3"
+  },
+  "processDeath": {
+    "result": "PASS",
+    "command": "python3 scripts/android/verify-transaction-process-death.py --serial emulator-5586 --environment ANDROID_EMULATOR --adb /home/otavio/Android/Sdk/platform-tools/adb --evidence-dir /tmp/orion-task007-death --scenario task",
+    "beforePid": "3586",
+    "afterPid": "3639",
+    "evidence": "f3-task-status-execution-transaction-death-api35.json"
+  },
+  "artifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "c963b87fe599a5ec85e0c773fcdff41a326430705cbaeb5d88f733ddd4190212",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "7d51f3716fe0b442979fc383e87c52eccdab31ca6deb17601300b555eca7389f",
+    "skills/tasks/build/outputs/aar/tasks-debug.aar": "d448c0a133a9df685e6ac9ca2f1933dd36ffbb8478b231b5b26aaf120f3b8568",
+    "skills/tasks/build/outputs/aar/tasks-release.aar": "a840feb6e4cb6902750f1d844b60cefd37bffaa6a09a676c71f2700b7b1e6f95"
+  },
+  "runtimeStatusMutationEnabled": false,
+  "schemaOrIpcOrPermissionsChanged": false,
+  "physicalQualification": "DEFERRED #23; no hardware/OEM/24-7 claim",
+  "requiredRemoteCi": "PENDING_PR_HEAD"
+}

@@ -4,6 +4,9 @@ import java.util.UUID
 import java.util.concurrent.CancellationException
 import network.orion.core.commands.tasks.CreateTask
 import network.orion.core.commands.tasks.CreateTaskRejection
+import network.orion.core.commands.tasks.CompleteTask
+import network.orion.core.commands.tasks.CancelTask
+import network.orion.core.commands.tasks.TaskStatusRejection
 import network.orion.core.common.process.OrionProcessRole
 import network.orion.core.health.CoreReadiness
 import network.orion.core.ingress.StartupBarrier
@@ -141,5 +144,38 @@ class OrionTaskAdmissionOwnerTest {
             assertFalse(value.toString().contains(input.title))
             assertFalse(value.toString().contains(input.taskId.toString()))
         }
+    }
+
+    @Test fun explicitStatusGesturesRequireFreshBoundMainPolicyAndConfirmation() {
+        openBarrier()
+        val channel = active()
+        val id = UUID.randomUUID(); val key = UUID.randomUUID(); val trace = UUID.randomUUID()
+        val admitted = (channel.captureStatusFromUser(CompleteTask(id, 0, key, trace)) as OrionTaskStatusAdmissionResult.Admitted).request
+        assertTrue(admitted.evaluate() is TaskStatusPolicyDecision.NeedsConfirmation)
+        val cancel = (channel.captureStatusFromUser(CancelTask(id, 0, key, trace)) as OrionTaskStatusAdmissionResult.Admitted).request
+        assertEquals(TaskStatusPolicyReason.INPUT_MISMATCH,
+            (OrionTaskStatusPolicy(admitted.source).evaluate(cancel.change) as TaskStatusPolicyDecision.Denied).reason)
+    }
+
+    @Test fun statusAdmissionCannotReviveAfterPauseOrFocusAba() {
+        openBarrier()
+        val channel = active()
+        val input = CompleteTask(UUID.randomUUID(), 0, UUID.randomUUID(), UUID.randomUUID())
+        val first = (channel.captureStatusFromUser(input) as OrionTaskStatusAdmissionResult.Admitted).request
+        channel.onWindowFocus(false); channel.onWindowFocus(true)
+        assertTrue(first.evaluate() is TaskStatusPolicyDecision.Unavailable)
+        val second = (channel.captureStatusFromUser(input) as OrionTaskStatusAdmissionResult.Admitted).request
+        channel.onResumed(false); channel.onResumed(true)
+        assertTrue(second.evaluate() is TaskStatusPolicyDecision.Unavailable)
+    }
+
+    @Test fun statusCaptureRejectsInvalidVersionAndUnavailableUiOrDevice() {
+        val channel = active()
+        val input = CompleteTask(UUID.randomUUID(), Long.MAX_VALUE, UUID.randomUUID(), UUID.randomUUID())
+        assertEquals(TaskStatusRejection.INVALID_VERSION, (channel.captureStatusFromUser(input) as OrionTaskStatusAdmissionResult.Invalid).reason)
+        presence = OrionPolicyEvidence.UNAVAILABLE
+        assertEquals(OrionTaskStatusAdmissionResult.Unavailable, channel.captureStatusFromUser(input.copy(expectedVersion = 0)))
+        presence = OrionPolicyEvidence.SATISFIED; channel.close()
+        assertEquals(OrionTaskStatusAdmissionResult.Unavailable, channel.captureStatusFromUser(input.copy(expectedVersion = 0)))
     }
 }

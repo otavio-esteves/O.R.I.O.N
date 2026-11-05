@@ -108,6 +108,16 @@ class OrionCreateTaskActionStoreTest {
         assertEquals(0, count("orion_action_requests"))
     }
 
+    @Test fun rejectionInsideIngressMustEscapeWithoutHidingAParentRollback() {
+        val request = admission()
+        available = false
+        assertThrows(OrionTaskTransactionBlocked::class.java) {
+            barrier.whileOpen { db.runInTransaction { preparation.prepare(request) } }
+        }
+        assertEquals(0, count("orion_action_requests"))
+        assertEquals(0, count("orion_action_audit"))
+    }
+
     @Test fun closedOperationalBarrierCannotPrepareOrConfirm() {
         val preview = preview()
         val request = admission()

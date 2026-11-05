@@ -111,6 +111,24 @@ class OrionCreateTaskRunnerTest {
         assertEquals(0, count("orion_tasks"))
     }
 
+    @Test fun rejectedExecutionEscapesToTheOwnerOfAnEnclosingIngressTransaction() {
+        val preview = confirmed()
+        val request = admission()
+        capable = false
+        assertThrows(OrionTaskTransactionBlocked::class.java) {
+            barrier.whileOpen { db.runInTransaction { runner.execute(request, preview) } }
+        }
+        noEffect(preview)
+    }
+
+    @Test fun writerWithoutPriorBarrierAdmissionCannotInvertTheLockOrder() {
+        val preview = confirmed()
+        assertThrows(IllegalStateException::class.java) {
+            db.runInTransaction { runner.execute(admission(), preview) }
+        }
+        noEffect(preview)
+    }
+
     @Test fun forgedSkillContextAndModelMetadataCannotWriteInsideOrOutsideTransaction() {
         val preview = confirmed()
         val skill = OrionCreateTaskSkill(owned)
