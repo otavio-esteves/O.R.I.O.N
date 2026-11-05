@@ -41,8 +41,8 @@ internal sealed interface OrionTaskActionResult {
 }
 
 /**
- * MAIN-owned blocking adapter, off the UI thread. Product wiring must still pass
- * through durable ingress; this package installs no command/Skill dispatcher.
+ * MAIN-owned blocking adapter, off the UI thread, used by the task kernel through
+ * encrypted durable ingress and the actual recovery barrier.
  * The caller captures a NEW actual UI admission when the user confirms a preview.
  * Prepare and confirm are separate from execution; no task/event is written here.
  */
@@ -78,7 +78,12 @@ internal class OrionCreateTaskActionStore(
         }
     }
 
-    fun confirm(admission: OrionCreateTaskAdmission, displayed: OrionTaskActionPreview): OrionTaskActionResult = admittedTransaction {
+    fun confirm(admission: OrionCreateTaskAdmission, displayed: OrionTaskActionPreview): OrionTaskActionResult =
+        confirmWithReceipt(admission, displayed, null)
+
+    /** Non-null receipt was recorded at the original human gesture, never during replay. */
+    fun confirmWithReceipt(admission: OrionCreateTaskAdmission, displayed: OrionTaskActionPreview,
+        originalReceipt: ActionConfirmationSnapshot?): OrionTaskActionResult = admittedTransaction {
         val version = policyVersion(admission)
         val stored = read(displayed.actionId)
         if (stored.version != displayed.version) abort(OrionTaskActionFailure.CONFLICT)
@@ -94,10 +99,14 @@ internal class OrionCreateTaskActionStore(
             displayed.task.idempotencyKey != admission.task.idempotencyKey)
             abort(OrionTaskActionFailure.CONFIRMATION_MISMATCH)
         val receipt = try {
-            binding.recordConfirmation(stored.request, clock.wallNow().plusSeconds(60))
+            originalReceipt ?: binding.recordConfirmation(stored.request, clock.wallNow().plusSeconds(60))
         } catch (_: IllegalArgumentException) {
             abort(OrionTaskActionFailure.CONFIRMATION_STALE)
         }
+        val receiptExpiry = receipt.confirmationExpiresAt
+        if (originalReceipt != null && (receiptExpiry == null ||
+            !receiptExpiry.isAfter(receipt.confirmedAt) || receiptExpiry.isAfter(receipt.confirmedAt.plusSeconds(60))))
+            abort(OrionTaskActionFailure.CONFIRMATION_STALE)
         val confirmed = actions.confirm(displayed.actionId, stored.version, receipt, version)
         if (confirmed.outcome != ActionStoreOutcome.APPLIED) abort(failure(confirmed.outcome))
         OrionTaskActionResult.Ready(preview(admission.task, read(displayed.actionId)))

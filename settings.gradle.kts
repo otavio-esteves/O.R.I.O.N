@@ -52,3 +52,5 @@ include(":scheduler")
 include(":feature:home")
 include(":feature:diagnostics")
 include(":feature:settings")
+
+include(":feature:tasks")

@@ -139,8 +139,48 @@ internal class OrionTaskAdmissionOwner(
             OrionTaskStatusAdmissionResult.Admitted(OrionTaskStatusAdmission(change, source))
         }
 
+        fun captureDismissFromUser(): Boolean = synchronized(this@OrionTaskAdmissionOwner) {
+            active() && role == OrionProcessRole.MAIN && devicePresence() == OrionPolicyEvidence.SATISFIED
+        }
+
+        internal fun activeForReplay() = active()
         private fun active() = !closed && current === this && resumed && focused
         override fun toString() = "OrionTaskUiChannel(<redacted>)"
+    }
+
+    @Synchronized fun presentForQueuedRequest(origin: OrionVerifiedTaskIngress): Boolean =
+        origin.wire.operation == "DISMISS" && role == OrionProcessRole.MAIN && current?.activeForReplay() == true &&
+            barrier.isOpen() && writeCapability() == OrionPolicyEvidence.SATISFIED && devicePresence() == OrionPolicyEvidence.SATISFIED
+
+    /** Recovery revokes every previously sampled UI admission, including lifecycle ABA. */
+    @Synchronized fun invalidateAdmissions() { advanceUi() }
+
+    @Synchronized fun replayCreate(origin: OrionVerifiedTaskIngress): OrionCreateTaskAdmission? {
+        val channel = current ?: return null
+        if (!channel.activeForReplay() || origin.wire.operation != "CREATE") return null
+        val prepared = OrionCreateTaskPreparer.prepare(origin.wire.create()) as? CreateTaskPreparation.Ready ?: return null
+        val binding = CreateTaskPolicyInputBinding.from(prepared.task)
+        val id = UUID.randomUUID(); val generation = uiGeneration
+        return OrionCreateTaskAdmission(prepared.task, CreateTaskPolicyContextSource {
+            synchronized(this@OrionTaskAdmissionOwner) {
+                if (current !== channel || !channel.activeForReplay() || generation != uiGeneration)
+                    CreateTaskPolicyContextRead.Unavailable else observe(id, binding)
+            }
+        })
+    }
+
+    @Synchronized fun replayStatus(origin: OrionVerifiedTaskIngress): OrionTaskStatusAdmission? {
+        val channel = current ?: return null
+        if (!channel.activeForReplay() || origin.wire.operation !in setOf("COMPLETE", "CANCEL")) return null
+        val prepared = OrionTaskStatusPreparer.prepare(origin.wire.change()) as? TaskStatusPreparation.Ready ?: return null
+        val binding = TaskStatusPolicyInputBinding.from(prepared.change)
+        val id = UUID.randomUUID(); val generation = uiGeneration
+        return OrionTaskStatusAdmission(prepared.change, TaskStatusPolicyContextSource {
+            synchronized(this@OrionTaskAdmissionOwner) {
+                if (current !== channel || !channel.activeForReplay() || generation != uiGeneration)
+                    TaskStatusPolicyContextRead.Unavailable else observeStatus(id, binding)
+            }
+        })
     }
 
     private fun observe(id: UUID, binding: CreateTaskPolicyInputBinding): CreateTaskPolicyContextRead {

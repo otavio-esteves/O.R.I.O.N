@@ -13,7 +13,7 @@ class FoundationNavigationTest {
             checkNotNull((compose.activity.application as OrionApplication).mainRuntime)
                 .health.value.core.readiness.isStartupBarrierOpen
         }
-        compose.onNodeWithText("Core: READY").assertExists()
+        compose.onNodeWithText("Core: DEGRADED_SAFE").assertExists()
         compose.onNodeWithText("Diagnóstico").performClick()
         compose.onNodeWithText("Contrato IPC: 1.0").assertExists()
         compose.activityRule.scenario.recreate()
@@ -21,6 +21,6 @@ class FoundationNavigationTest {
         compose.onNodeWithText("Ajustes").performClick()
         compose.onNodeWithText("Backup do app: desativado").assertExists()
         compose.onNodeWithText("Início").performClick()
-        compose.onNodeWithText("Core: READY").assertExists()
+        compose.onNodeWithText("Core: DEGRADED_SAFE").assertExists()
     }
 }

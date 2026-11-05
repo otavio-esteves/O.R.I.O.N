@@ -89,6 +89,21 @@ class OrionCreateTaskRunnerTest {
         assertEquals(0, count("orion_tasks")); assertEquals(0, count("orion_domain_event_outbox"))
     }
 
+    @Test fun queuedConfirmationPreservesOriginalGestureTimeAndNeverRenewsExpiredConsent() {
+        val pending = (preparation.prepare(admission()) as OrionTaskActionResult.Ready).preview
+        val atGesture = wall
+        val request = OrionCreateTaskActionStore.normalized(pending.actionId, pending.task, pending.policyVersion)
+        val receipt = network.orion.core.actions.ActionConfirmationBinding(clock).recordConfirmation(request, wall.plusSeconds(60))
+        wall = wall.plusSeconds(61)
+        assertEquals(OrionTaskActionResult.Blocked(OrionTaskActionFailure.CONFIRMATION_EXPIRED),
+            preparation.confirmWithReceipt(admission(), pending, receipt))
+        assertEquals(ActionStatus.NEEDS_CONFIRMATION, db.actions().find(pending.actionId.toString())!!.status)
+        assertNull(db.actions().find(pending.actionId.toString())!!.confirmedAt)
+        wall = atGesture.plusSeconds(5)
+        assertTrue(preparation.confirmWithReceipt(admission(), pending, receipt) is OrionTaskActionResult.Ready)
+        assertEquals(atGesture.toEpochMilli(), db.actions().find(pending.actionId.toString())!!.confirmedAt)
+    }
+
     @Test fun createCommitsTaskEventActionAndAuditTogetherAndReplayIsHarmless() {
         val preview = confirmed()
         val result = runner.execute(admission(), preview) as OrionTaskExecutionResult.Completed

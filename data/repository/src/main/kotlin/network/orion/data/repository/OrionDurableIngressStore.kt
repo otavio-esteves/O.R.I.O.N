@@ -28,7 +28,7 @@ class LocalIngressPayload internal constructor(
     override fun toString(): String = "LocalIngressPayload(<redacted>)"
 }
 
-/** Blocking main-owned adapter. Not wired to product commands until production recovery/authorization exists. */
+/** Blocking MAIN-owned adapter. Product consumers supply actual recovery, authorization and local transaction gates. */
 class OrionDurableIngressStore(
     private val database: OrionDatabase,
     private val encryption: OrionFieldEncryption,

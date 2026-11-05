@@ -4,15 +4,15 @@ import java.util.UUID
 import network.orion.core.commands.Command
 
 /**
- * A request to create one task through the future Core mutation pipeline.
+ * A request to create one task through the Core mutation pipeline.
  *
  * The issuer retains the same task ID and idempotency key across retries; a new
  * correlation ID may trace a replay. These IDs are neither action ownership nor
  * authorization. No client policy, permission, capability or confirmation field
  * is accepted. This contract does not install a dispatcher or create an action.
  *
- * This initial increment declares only operational unavailability. Preparation
- * has its own result type and cannot be mistaken for a completed mutation.
+ * QUEUED reports durable admission only. The resulting ActionRequest still needs
+ * exact human confirmation and successful execution before the task exists.
  */
 data class CreateTask(
     val taskId: UUID,
@@ -23,8 +23,8 @@ data class CreateTask(
     override fun toString(): String = "CreateTask(<redacted>)"
 }
 
-/** Actual creation results require the later authorized execution/receipt contract. */
-enum class CreateTaskResult { UNAVAILABLE }
+/** Admission outcome only: QUEUED never claims that a task was created. */
+enum class CreateTaskResult { QUEUED, REJECTED, UNAVAILABLE }
 
 enum class CreateTaskRejection { BLANK_TITLE, TITLE_TOO_LARGE, INVALID_UNICODE, INVALID_TITLE_CHARACTER }
 
