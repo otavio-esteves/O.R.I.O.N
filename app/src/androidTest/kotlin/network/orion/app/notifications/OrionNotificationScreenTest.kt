@@ -1,9 +1,11 @@
 package network.orion.app.notifications
 
+import androidx.activity.compose.setContent
+import network.orion.app.MainActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.util.UUID
 import network.orion.core.commands.notifications.*
@@ -16,10 +18,12 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class OrionNotificationScreenTest {
-    @get:Rule val compose=createComposeRule()
+    @get:Rule val compose=createAndroidComposeRule<MainActivity>()
     @Test fun permissionRefreshPreservesUnsentDraftAndNeverCreatesOrConfirmsAnAction() {
         val port=FakeGateway();var prompts=0;val revision=mutableLongStateOf(0)
-        compose.setContent { MaterialTheme { NotificationsScreen(port,refreshRevision=revision.longValue,onRequestPermission={prompts++}) } }
+        compose.activityRule.scenario.onActivity { activity->
+            activity.setContent { MaterialTheme { NotificationsScreen(port,refreshRevision=revision.longValue,onRequestPermission={prompts++}) } }
+        }
         compose.waitForIdle()
         compose.onNodeWithText("Título da notificação").performScrollTo().performTextInput("Título exato")
         compose.onNodeWithText("Mensagem da notificação").performScrollTo().performTextInput("Corpo confidencial")

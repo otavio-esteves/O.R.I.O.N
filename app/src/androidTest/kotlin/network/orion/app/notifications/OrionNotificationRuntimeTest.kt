@@ -6,6 +6,10 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import javax.crypto.spec.SecretKeySpec
 import network.orion.core.actions.*
 import network.orion.core.commands.notifications.*
@@ -40,6 +44,7 @@ class OrionNotificationRuntimeTest {
     private var present=true
     private var invokes=0
     private var beforeInvocationGate:(()->Unit)?=null
+    private var afterInvocation:(()->Unit)?=null
     private var runningPermissionReads=0
     private var expireOnSecondRunningPermissionRead=false
     private var postResult=NotificationPostResult.POSTED
@@ -74,6 +79,7 @@ class OrionNotificationRuntimeTest {
         }
         override fun post(actionId:UUID,notification:ValidatedPostNotification,permit:OrionNotificationInvocationPermit):NotificationPostResult {
             assertFalse("External invocation must never be inside Room",db.inTransaction())
+            assertFalse("External invocation must never hold the local admission monitor",Thread.holdsLock(barrier))
             val row=db.actions().find(actionId.toString())!!
             assertEquals(ActionStatus.RUNNING,row.status);assertNotNull(row.executionId)
             // Independent SQLite connection proves RUNNING committed before the external boundary.
@@ -84,6 +90,7 @@ class OrionNotificationRuntimeTest {
             beforeInvocationGate?.invoke()
             if(!permit.allows())return NotificationPostResult.NOT_INVOKED
             invokes++
+            afterInvocation?.invoke()
             postFailure?.let { throw it }
             return postResult
         }
@@ -232,5 +239,42 @@ class OrionNotificationRuntimeTest {
         val id=confirmed();beforeInvocationGate={elapsed=31_100}
         assertEquals(NotificationOutcome.BLOCKED,kernel.executeFromUser(admission(),id))
         assertEquals(0,invokes);assertEquals(ActionStatus.RUNNING,db.actions().find(id.toString())!!.status)
+    }
+    @Test fun gateClosureCompletesWhilePlatformPreparationWaitsAndFinalPermitBlocksInvocation() {
+        val id=confirmed();val original=db.actions().find(id.toString())!!.confirmedAt
+        val entered=CountDownLatch(1);val resume=CountDownLatch(1);val gateClosed=CountDownLatch(1)
+        val workers=Executors.newFixedThreadPool(2)
+        beforeInvocationGate={entered.countDown();check(resume.await(5,TimeUnit.SECONDS))}
+        try {
+            val captured=admission()
+            val result=workers.submit(Callable {kernel.executeFromUser(captured,id)})
+            assertTrue(entered.await(5,TimeUnit.SECONDS))
+            val closure=workers.submit {barrier.beginRecovery();owner.invalidateAdmissions();gateClosed.countDown()}
+            assertTrue("Recovery gate must not wait for platform preparation",gateClosed.await(2,TimeUnit.SECONDS))
+            resume.countDown();closure.get(5,TimeUnit.SECONDS)
+            assertEquals(NotificationOutcome.BLOCKED,result.get(5,TimeUnit.SECONDS))
+            assertEquals(0,invokes);assertEquals(ActionStatus.FAILED,db.actions().find(id.toString())!!.status)
+            assertEquals(original,db.actions().find(id.toString())!!.confirmedAt)
+            assertEquals(0,db.events().count());assertEquals(0,kernel.ingress.drain(25))
+        } finally {resume.countDown();workers.shutdownNow()}
+    }
+    @Test fun gateClosureAfterInvocationDoesNotBlockFactCommitOrCauseAnotherAttempt() {
+        val id=confirmed()
+        val invoked=CountDownLatch(1);val resume=CountDownLatch(1);val gateClosed=CountDownLatch(1)
+        val workers=Executors.newFixedThreadPool(2)
+        afterInvocation={invoked.countDown();check(resume.await(5,TimeUnit.SECONDS))}
+        try {
+            val captured=admission()
+            val result=workers.submit(Callable {kernel.executeFromUser(captured,id)})
+            assertTrue(invoked.await(5,TimeUnit.SECONDS))
+            val closure=workers.submit {barrier.beginRecovery();owner.invalidateAdmissions();gateClosed.countDown()}
+            assertTrue("Recovery gate must not wait for external registration proof",gateClosed.await(2,TimeUnit.SECONDS))
+            resume.countDown();closure.get(5,TimeUnit.SECONDS)
+            assertEquals(NotificationOutcome.POSTED,result.get(5,TimeUnit.SECONDS))
+            assertEquals(ActionStatus.SUCCEEDED,db.actions().find(id.toString())!!.status)
+            assertEquals(1,invokes);assertEquals(1,db.events().count())
+            release();assertEquals(NotificationOutcome.POSTED,kernel.executeFromUser(admission(),id))
+            assertEquals(1,invokes);assertEquals(1,db.events().count())
+        } finally {resume.countDown();workers.shutdownNow()}
     }
 }

@@ -18,16 +18,18 @@ import network.orion.skills.notifications.*
  * Bounded external runner: claim commits before invoking Android; neither a Room
  * transaction nor a durable-ingress consumer may call this entry. An uncertain
  * attempt never returns to CONFIRMED and is never invoked again automatically.
+ * The barrier monitor encloses only the local claim, never Android Binder/proof.
+ * Owned terminal metadata may finish independently after a later gate closure.
  */
 internal class OrionNotificationRunner(private val db:OrionDatabase,private val actions:OrionActionStore,
     private val clock:OrionClock,private val barrier:StartupBarrier,private val poster:OrionNotificationPoster) {
     fun execute(admission:OrionPostNotificationAdmission,actionId:UUID):NotificationOutcome {
-        if(db.inTransaction())return NotificationOutcome.BLOCKED
+        if(db.inTransaction()||Thread.holdsLock(barrier))return NotificationOutcome.BLOCKED
         var outcome=NotificationOutcome.BLOCKED
         val engine=object:ActionEngine {
             fun executeLocal(id:UUID):ActionExecutionResult {
                 if(id!=actionId)return ActionExecutionResult.UNAVAILABLE
-                outcome=barrier.whileOpen { executeOpen(admission,id) }?:NotificationOutcome.BLOCKED
+                outcome=executeOpen(admission,id)
                 return if(outcome==NotificationOutcome.POSTED)ActionExecutionResult.SUCCEEDED else ActionExecutionResult.BLOCKED
             }
             override suspend fun execute(actionId:UUID)=executeLocal(actionId)
@@ -36,7 +38,8 @@ internal class OrionNotificationRunner(private val db:OrionDatabase,private val 
         return outcome
     }
     private fun executeOpen(admission:OrionPostNotificationAdmission,id:UUID):NotificationOutcome {
-        check(!db.inTransaction())
+        check(!db.inTransaction()&&!Thread.holdsLock(barrier))
+        if(!barrier.isOpen())return NotificationOutcome.BLOCKED
         val input=admission.notification
         fun freshPolicy()=admission.evaluate() is PostNotificationPolicyDecision.NeedsConfirmation
         val stored=(actions.read(id) as? ActionReadResult.Ready)?.action?:return NotificationOutcome.UNAVAILABLE
@@ -62,13 +65,15 @@ internal class OrionNotificationRunner(private val db:OrionDatabase,private val 
             override fun userPresent()=freshPolicy()
         }
         val execution=OrionActionExecutionStore(db,actions,clock,authority)
-        // This internal writer transaction ends before executeOwned calls the platform.
-        val claim=execution.claim(id,stored.version,"orion_notification_main",Duration.ofSeconds(30)) as? ActionClaimResult.Claimed
-            ?:return NotificationOutcome.BLOCKED
-        check(!db.inTransaction())
+        // Only the bounded local claim transaction holds the admission monitor.
+        // Gate closure must never wait for Android Binder or registration proof.
+        val claim=barrier.whileOpen {
+            execution.claim(id,stored.version,"orion_notification_main",Duration.ofSeconds(30))
+        } as? ActionClaimResult.Claimed?:return NotificationOutcome.BLOCKED
+        check(!db.inTransaction()&&!Thread.holdsLock(barrier))
         val originalReceipt=stored.confirmation?:return NotificationOutcome.BLOCKED
         fun invocationAllowed(notification:network.orion.core.commands.notifications.ValidatedPostNotification,owner:SkillContext):Boolean {
-            if(db.inTransaction())return false
+            if(db.inTransaction()||Thread.holdsLock(barrier))return false
             val current=db.actions().find(id.toString())?:return false
             if(owner.actionId!=id||owner.executionId!=claim.lease.executionId||current.status!=ActionStatus.RUNNING||
                 current.version!=owner.actionVersion||current.executionId!=owner.executionId.toString()||
@@ -82,7 +87,7 @@ internal class OrionNotificationRunner(private val db:OrionDatabase,private val 
             if(!barrier.isOpen()||!poster.permissionGranted()||!freshPolicy())return false
             if(ActionConfirmationBinding(clock).validate(expected,originalReceipt)!=ConfirmationBindingResult.VALID_BINDING)return false
             if(claim.lease.statusAt(clock.monotonicNow())!=ActionLeaseStatus.ACTIVE)return false
-            return !db.inTransaction()
+            return !db.inTransaction()&&!Thread.holdsLock(barrier)
         }
         val skill=OrionPostNotificationSkill(OrionOwnedNotificationPoster { notification,owner->
             if(!invocationAllowed(notification,owner))return@OrionOwnedNotificationPoster NotificationPostResult.NOT_INVOKED

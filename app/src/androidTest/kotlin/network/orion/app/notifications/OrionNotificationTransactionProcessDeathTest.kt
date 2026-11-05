@@ -75,6 +75,7 @@ class OrionNotificationTransactionProcessDeathTest {
             override fun availability()=NotificationAvailability.AVAILABLE
             override fun post(actionId:UUID,notification:ValidatedPostNotification,permit:OrionNotificationInvocationPermit):NotificationPostResult {
                 assertFalse(db.inTransaction())
+                assertFalse("Synthetic external effect cannot hold the local admission monitor",Thread.holdsLock(barrier))
                 val observer=Room.databaseBuilder(context,OrionDatabase::class.java,name).build()
                 try { assertEquals(ActionStatus.RUNNING,observer.actions().find(actionId.toString())!!.status) }
                 finally {observer.close()}
