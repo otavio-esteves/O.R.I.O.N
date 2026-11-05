@@ -39,6 +39,9 @@ class OrionNotificationRuntimeTest {
     private var capable=true
     private var present=true
     private var invokes=0
+    private var beforeInvocationGate:(()->Unit)?=null
+    private var runningPermissionReads=0
+    private var expireOnSecondRunningPermissionRead=false
     private var postResult=NotificationPostResult.POSTED
     private var postFailure:Throwable?=null
     private var beforeAvailability:(()->Unit)?=null
@@ -58,12 +61,18 @@ class OrionNotificationRuntimeTest {
     private val channel=owner.openUiChannel().apply { onResumed(true);onWindowFocus(true) }
     private val request=PostNotification(UUID.randomUUID(),"Notificação confidencial","Mensagem exata\nSegunda linha",UUID.randomUUID(),UUID.randomUUID())
     private val poster=object:OrionNotificationPoster {
-        override fun permissionGranted()=permitted
+        override fun permissionGranted():Boolean {
+            if(expireOnSecondRunningPermissionRead&&db.actions().findByKey("notification.post",request.idempotencyKey.toString())?.status==ActionStatus.RUNNING) {
+                runningPermissionReads++
+                if(runningPermissionReads==2)wall=wall.plusSeconds(61)
+            }
+            return permitted
+        }
         override fun availability():NotificationAvailability {
             beforeAvailability?.invoke()
             return if(!permitted)NotificationAvailability.PERMISSION_DENIED else if(!capable)NotificationAvailability.CHANNEL_DISABLED else NotificationAvailability.AVAILABLE
         }
-        override fun post(actionId:UUID,notification:ValidatedPostNotification):NotificationPostResult {
+        override fun post(actionId:UUID,notification:ValidatedPostNotification,permit:OrionNotificationInvocationPermit):NotificationPostResult {
             assertFalse("External invocation must never be inside Room",db.inTransaction())
             val row=db.actions().find(actionId.toString())!!
             assertEquals(ActionStatus.RUNNING,row.status);assertNotNull(row.executionId)
@@ -72,6 +81,8 @@ class OrionNotificationRuntimeTest {
             try { assertEquals(ActionStatus.RUNNING,observer.actions().find(actionId.toString())!!.status) }
             finally { observer.close() }
             assertEquals(request.title,notification.title);assertEquals(request.body,notification.body)
+            beforeInvocationGate?.invoke()
+            if(!permit.allows())return NotificationPostResult.NOT_INVOKED
             invokes++
             postFailure?.let { throw it }
             return postResult
@@ -205,5 +216,21 @@ class OrionNotificationRuntimeTest {
         val changed=OrionNotificationIngressWire("POST",request.requestId,request.idempotencyKey,request.correlationId,request.title,"Changed")
         assertEquals(NotificationOutcome.REJECTED,kernel.submit(changed,request.idempotencyKey))
         assertEquals(1,count("orion_action_requests"));assertEquals(0,invokes)
+    }
+    @Test fun finalPermissionReadCannotExpireConsentAndStillInvoke() {
+        val id=confirmed();expireOnSecondRunningPermissionRead=true
+        assertEquals(NotificationOutcome.BLOCKED,kernel.executeFromUser(admission(),id))
+        assertEquals(2,runningPermissionReads);assertEquals(0,invokes)
+        assertEquals(ActionStatus.FAILED,db.actions().find(id.toString())!!.status)
+    }
+    @Test fun slowPlatformPreparationRevalidatesOriginalConsentAtActualInvocationGate() {
+        val id=confirmed();beforeInvocationGate={wall=wall.plusSeconds(61)}
+        assertEquals(NotificationOutcome.BLOCKED,kernel.executeFromUser(admission(),id))
+        assertEquals(0,invokes);assertEquals(ActionStatus.FAILED,db.actions().find(id.toString())!!.status)
+    }
+    @Test fun slowPlatformPreparationCannotUseAnExpiredExecutionLease() {
+        val id=confirmed();beforeInvocationGate={elapsed=31_100}
+        assertEquals(NotificationOutcome.BLOCKED,kernel.executeFromUser(admission(),id))
+        assertEquals(0,invokes);assertEquals(ActionStatus.RUNNING,db.actions().find(id.toString())!!.status)
     }
 }

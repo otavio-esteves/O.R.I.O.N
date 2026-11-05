@@ -66,23 +66,29 @@ internal class OrionNotificationRunner(private val db:OrionDatabase,private val 
         val claim=execution.claim(id,stored.version,"orion_notification_main",Duration.ofSeconds(30)) as? ActionClaimResult.Claimed
             ?:return NotificationOutcome.BLOCKED
         check(!db.inTransaction())
-        val skill=OrionPostNotificationSkill(OrionOwnedNotificationPoster { notification,owner->
-            if(db.inTransaction())return@OrionOwnedNotificationPoster NotificationPostResult.NOT_OWNED
-            val current=db.actions().find(id.toString())?:return@OrionOwnedNotificationPoster NotificationPostResult.NOT_OWNED
+        val originalReceipt=stored.confirmation?:return NotificationOutcome.BLOCKED
+        fun invocationAllowed(notification:network.orion.core.commands.notifications.ValidatedPostNotification,owner:SkillContext):Boolean {
+            if(db.inTransaction())return false
+            val current=db.actions().find(id.toString())?:return false
             if(owner.actionId!=id||owner.executionId!=claim.lease.executionId||current.status!=ActionStatus.RUNNING||
                 current.version!=owner.actionVersion||current.executionId!=owner.executionId.toString()||
-                claim.lease.statusAt(clock.monotonicNow())!=ActionLeaseStatus.ACTIVE)
-                return@OrionOwnedNotificationPoster NotificationPostResult.NOT_OWNED
-            val bound=(actions.read(id) as? ActionReadResult.Ready)?.action?:return@OrionOwnedNotificationPoster NotificationPostResult.NOT_OWNED
-            if(bound.request!=expected||notification.canonicalNormalizedArguments!=input.canonicalNormalizedArguments||
-                ActionExecutionValidation.denyReason(bound.request,bound.requiresConfirmation,authority)!=null||
-                bound.confirmation?.let { ActionConfirmationBinding(clock).validate(expected,it) }!=ConfirmationBindingResult.VALID_BINDING)
-                return@OrionOwnedNotificationPoster NotificationPostResult.NOT_INVOKED
-            // Last checks are after all DB reads; no open SQLite transaction encloses notify.
-            if(!barrier.isOpen()||!poster.permissionGranted()||!freshPolicy())return@OrionOwnedNotificationPoster NotificationPostResult.NOT_INVOKED
-            if(claim.lease.statusAt(clock.monotonicNow())!=ActionLeaseStatus.ACTIVE)return@OrionOwnedNotificationPoster NotificationPostResult.NOT_OWNED
-            check(!db.inTransaction())
-            poster.post(id,notification)
+                current.claimedBy!=claim.lease.claimedBy||current.leaseBootSessionId!=claim.lease.bootSessionId.bootCount||
+                current.leaseStartedElapsedRealtime!=claim.lease.startedElapsedRealtime||current.leaseExpiresElapsedRealtime!=claim.lease.expiresElapsedRealtime)
+                return false
+            val bound=(actions.read(id) as? ActionReadResult.Ready)?.action?:return false
+            if(bound.request!=expected||bound.confirmation!=originalReceipt||notification.canonicalNormalizedArguments!=input.canonicalNormalizedArguments||
+                ActionExecutionValidation.denyReason(bound.request,bound.requiresConfirmation,authority)!=null)return false
+            // These platform/policy reads may be slow. Never validate expiry before them.
+            if(!barrier.isOpen()||!poster.permissionGranted()||!freshPolicy())return false
+            if(ActionConfirmationBinding(clock).validate(expected,originalReceipt)!=ConfirmationBindingResult.VALID_BINDING)return false
+            if(claim.lease.statusAt(clock.monotonicNow())!=ActionLeaseStatus.ACTIVE)return false
+            return !db.inTransaction()
+        }
+        val skill=OrionPostNotificationSkill(OrionOwnedNotificationPoster { notification,owner->
+            if(!invocationAllowed(notification,owner))return@OrionOwnedNotificationPoster NotificationPostResult.NOT_INVOKED
+            // The platform invokes this same bound gate after all slow preparation,
+            // immediately before notify. There is no mutable global callback/permit.
+            poster.post(id,notification,OrionNotificationInvocationPermit { invocationAllowed(notification,owner) })
         })
         val intent=OrionIntent("notification.post",1.0,input,"MAIN_UI",false,input.correlationId)
         val outcome=try { skill.executeOwned(intent,SkillContext(id,claim.lease.executionId,claim.version)) }

@@ -14,10 +14,13 @@ import network.orion.skills.notifications.NotificationPostResult
 import network.orion.core.time.MonotonicClock
 
 /** Trusted MAIN platform boundary. IDs or a direct instance are never execution authority. */
+/** One trusted attempt's exact revalidation, never producer data or a reusable authorization flag. */
+internal fun interface OrionNotificationInvocationPermit { fun allows():Boolean }
+
 internal interface OrionNotificationPoster {
     fun availability():NotificationAvailability
     fun permissionGranted():Boolean
-    fun post(actionId:UUID,notification:ValidatedPostNotification):NotificationPostResult
+    fun post(actionId:UUID,notification:ValidatedPostNotification,permit:OrionNotificationInvocationPermit):NotificationPostResult
 }
 
 internal class OrionAndroidNotificationPoster(context:Context,private val clock:MonotonicClock):OrionNotificationPoster {
@@ -46,7 +49,7 @@ internal class OrionAndroidNotificationPoster(context:Context,private val clock:
             else->NotificationAvailability.AVAILABLE
         }
     } catch(_:Exception) { NotificationAvailability.UNAVAILABLE }
-    override fun post(actionId:UUID,notification:ValidatedPostNotification):NotificationPostResult {
+    override fun post(actionId:UUID,notification:ValidatedPostNotification,permit:OrionNotificationInvocationPermit):NotificationPostResult {
         // Distinguish proven pre-invocation denial from any ambiguous outcome after invoke.
         if(availability()!=NotificationAvailability.AVAILABLE)return NotificationPostResult.NOT_INVOKED
         val service=manager?:return NotificationPostResult.NOT_INVOKED
@@ -57,6 +60,8 @@ internal class OrionAndroidNotificationPoster(context:Context,private val clock:
             .setStyle(Notification.BigTextStyle().bigText(notification.body)).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setPublicVersion(public).setLocalOnly(true).setOnlyAlertOnce(true).setAllowSystemGeneratedContextualActions(false).build()
         if(availability()!=NotificationAvailability.AVAILABLE)return NotificationPostResult.NOT_INVOKED
+        val allowed=try { permit.allows() } catch(_:Exception) { return NotificationPostResult.NOT_INVOKED }
+        if(!allowed)return NotificationPostResult.NOT_INVOKED
         return try {
             service.notify(actionId.toString(),0,platform)
             // Android may enqueue notification registration asynchronously. A bounded

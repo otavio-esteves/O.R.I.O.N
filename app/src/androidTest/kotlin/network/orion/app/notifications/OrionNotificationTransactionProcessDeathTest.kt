@@ -73,11 +73,12 @@ class OrionNotificationTransactionProcessDeathTest {
         val poster=object:OrionNotificationPoster {
             override fun permissionGranted()=true
             override fun availability()=NotificationAvailability.AVAILABLE
-            override fun post(actionId:UUID,notification:ValidatedPostNotification):NotificationPostResult {
+            override fun post(actionId:UUID,notification:ValidatedPostNotification,permit:OrionNotificationInvocationPermit):NotificationPostResult {
                 assertFalse(db.inTransaction())
                 val observer=Room.databaseBuilder(context,OrionDatabase::class.java,name).build()
                 try { assertEquals(ActionStatus.RUNNING,observer.actions().find(actionId.toString())!!.status) }
                 finally {observer.close()}
+                if(!permit.allows())return NotificationPostResult.NOT_INVOKED
                 invokes++
                 // This marker is OUTSIDE SQLite and models an independently committed external effect.
                 val previous=if(marker.exists())marker.readText().trim().toInt() else 0
