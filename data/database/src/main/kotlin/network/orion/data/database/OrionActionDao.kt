@@ -33,6 +33,8 @@ abstract class OrionActionDao {
     abstract fun reminderConfirmations(limit: Int): List<ActionRequestEntity>
     @Query("SELECT * FROM orion_action_requests WHERE status = 'NEEDS_CONFIRMATION' AND skill IN ('timer.create', 'timer.cancel') ORDER BY createdAt, actionId LIMIT :limit")
     abstract fun timerConfirmations(limit: Int): List<ActionRequestEntity>
+    @Query("SELECT * FROM orion_action_requests WHERE status IN ('NEEDS_CONFIRMATION','CONFIRMED') AND skill = 'notification.post' ORDER BY createdAt, actionId LIMIT :limit")
+    abstract fun notificationConfirmations(limit: Int): List<ActionRequestEntity>
 
     @Query("SELECT * FROM orion_action_requests WHERE actionId = :actionId")
     abstract fun find(actionId: String): ActionRequestEntity?

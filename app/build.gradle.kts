@@ -71,6 +71,8 @@ dependencies {
     implementation(project(":feature:home"))
     implementation(project(":feature:tasks"))
     implementation(project(":feature:timers"))
+    implementation(project(":skills:notifications"))
+    implementation(project(":feature:notifications"))
     implementation(project(":feature:diagnostics"))
     implementation(project(":feature:settings"))
     implementation(libs.activity.compose)
