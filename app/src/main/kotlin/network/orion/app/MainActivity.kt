@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import network.orion.feature.diagnostics.DiagnosticsScreen
 import network.orion.feature.home.HomeScreen
 import network.orion.feature.tasks.TasksScreen
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val runtime = checkNotNull((application as OrionApplication).mainRuntime)
         taskChannel = runtime.taskAdmissions.openUiChannel()
+        taskChannel.onWindowFocus(hasWindowFocus())
         val tasks = runtime.taskGateway(taskChannel)
         setContent {
             MaterialTheme {
@@ -41,6 +43,7 @@ class MainActivity : ComponentActivity() {
                     catch (_: Exception) { null }
                 }
                 Scaffold(
+                    modifier = Modifier.fillMaxSize().imePadding(),
                     topBar = {
                         Column(Modifier.statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp)) {
                             Text("O.R.I.O.N.", style = MaterialTheme.typography.headlineMedium)
@@ -56,6 +59,7 @@ class MainActivity : ComponentActivity() {
                                     TextButton(onClick = { destination = label }, modifier = Modifier.weight(1f).semantics { selected = destination == label },
                                         contentPadding = PaddingValues(0.dp)) {
                                         Text(label, style = MaterialTheme.typography.labelMedium,
+                                            maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
                                             color = if (destination == label) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
                                     }
                                 }
@@ -63,9 +67,9 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                 ) { padding ->
-                    Box(Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp)) {
+                    Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).padding(horizontal = 24.dp)) {
                         when (destination) {
-                            "Tarefas" -> TasksScreen(tasks)
+                            "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, onRetry = { runtime.start() })
                             "Ajustes" -> SettingsScreen(report)
                             else -> HomeScreen(report)
@@ -79,6 +83,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         taskChannel.onResumed(true)
+        taskChannel.onWindowFocus(hasWindowFocus())
     }
 
     override fun onPause() {

@@ -13,7 +13,7 @@ class OrionTaskScreenTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private fun ready() {
         compose.waitUntil(10_000) {
-            compose.onAllNodesWithTag("orion_tasks").fetchSemanticsNodes().singleOrNull()?.config
+            compose.activity.hasWindowFocus() && compose.onAllNodesWithTag("orion_tasks").fetchSemanticsNodes().singleOrNull()?.config
                 ?.getOrNull(SemanticsProperties.StateDescription) == "Tarefas atualizadas"
         }
     }
@@ -22,8 +22,13 @@ class OrionTaskScreenTest {
         ready()
         val target = if (title == null) hasText(label) else hasText(label) and hasAnyAncestor(within(title, tag))
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(target)
-        compose.onNode(target).performClick()
+        compose.onNode(target).assertIsEnabled().performClick()
         ready()
+        if (label.startsWith("Confirmar")) {
+            compose.onNode(hasScrollToIndexAction()).performScrollToIndex(0)
+            try { compose.onNodeWithText("Alteração concluída.").assertExists() }
+            catch (failure: AssertionError) { throw AssertionError(compose.onRoot().printToString(maxDepth = 8), failure) }
+        }
     }
     private fun type(title: String) {
         ready()
