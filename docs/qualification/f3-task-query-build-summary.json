@@ -1,0 +1,20 @@
+{
+  "environment": "CONTAINER",
+  "result": "PASS",
+  "query_jvm_cases": 3,
+  "android_query_cases": 3,
+  "android_environment": "ANDROID_EMULATOR",
+  "runtime_evidence": "NON_DEFINITIVE",
+  "physical_followup": 23,
+  "checks": [
+    "core query JVM",
+    "data tasks debug/release assemble and lint",
+    "app/test APKs",
+    "module boundaries and 36 assertions"
+  ],
+  "build_duration": "3m13s + 51s main APK",
+  "schema_change": false,
+  "note": "Initial instrumentation used stale main APK and failed class loading; corrected APK pair passed all 3 cases.",
+  "app/build/outputs/apk/debug/app-debug.apk": "3335e7b84674a6a114c0a25dbd8c5f4a124f4b0ffa600b6019e736d3f1dbfa51",
+  "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "6dae3d5e8b806e3142c979e5e0e93bae548ce2242acd1c3cc108ec8f66d23486"
+}

@@ -9,6 +9,9 @@ import network.orion.core.model.Sensitivity
 /** Local persistence only; exposing this DAO never grants command/Skill authority. */
 @Dao
 abstract class OrionTaskDao {
+    @Query("SELECT * FROM orion_tasks WHERE (:after IS NULL OR taskId > :after) ORDER BY taskId LIMIT :limit")
+    abstract fun page(after: String?, limit: Int): List<TaskEntity>
+
     @Query("SELECT * FROM orion_tasks WHERE taskId = :id")
     abstract fun find(id: String): TaskEntity?
 
