@@ -27,6 +27,19 @@ import org.junit.runner.RunWith
 /** Requires a dedicated target with explicit POST_NOTIFICATIONS grant; denied environments are SKIPPED. */
 @RunWith(AndroidJUnit4::class)
 class OrionAndroidNotificationPosterTest {
+    @Test fun actualPlatformAdapterHonorsDeniedInvocationPermitBeforeNotify() {
+        val context:Context=ApplicationProvider.getApplicationContext()
+        val poster=OrionAndroidNotificationPoster(context,AndroidOrionClock(context.contentResolver))
+        poster.initializeChannels()
+        assumeTrue("Explicit notification permission and enabled user channel are required",poster.availability()==NotificationAvailability.AVAILABLE)
+        val id=UUID.randomUUID()
+        val input=(OrionPostNotificationPreparer.prepare(PostNotification(id,"Denied permit fixture","No platform post is authorized",id,id)) as PostNotificationPreparation.Ready).notification
+        var permits=0
+        assertEquals(network.orion.skills.notifications.NotificationPostResult.NOT_INVOKED,
+            poster.post(id,input,OrionNotificationInvocationPermit {permits++;false}))
+        assertEquals(1,permits)
+        assertFalse(context.getSystemService(NotificationManager::class.java).activeNotifications.any {it.tag==id.toString()&&it.id==0})
+    }
     @Test fun actualOwnedNotificationHasVerifiedRegistrationAndGenericPrivateLockscreenContent() {
         val context:Context=ApplicationProvider.getApplicationContext()
         val clock=AndroidOrionClock(context.contentResolver)
