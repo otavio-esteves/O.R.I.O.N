@@ -64,7 +64,7 @@ fun TimersScreen(gateway: TimerGateway, recoveryVersion: Instant? = null) {
         while (!busy) { delay(1000); if (activeWork == 0) reload() }
     }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize().testTag("orion_timers").semantics {
-        stateDescription = if (busy) "Carregando timers" else "Timers atualizadas"
+        stateDescription = if (busy) "Carregando timers" else "Timers atualizados"
     }) {
         item {
             Text("Timers", style = MaterialTheme.typography.headlineSmall)
@@ -72,7 +72,7 @@ fun TimersScreen(gateway: TimerGateway, recoveryVersion: Instant? = null) {
         }
         item {
             OutlinedTextField(value = title, onValueChange = { if (activeWork == 0) { title = it; submission = null } },
-                label = { Text("Título da timer") }, enabled = !busy, singleLine = true, modifier = Modifier.fillMaxWidth())
+                label = { Text("Título do timer") }, enabled = !busy, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = seconds, onValueChange = { if (!busy) { seconds = it; submission = null } },
                 label = { Text("Duração em segundos") }, enabled = !busy, singleLine = true, modifier = Modifier.fillMaxWidth())
             Button(enabled = !busy && title.isNotBlank() && seconds.toLongOrNull()?.let { it in 1..31_536_000 } == true, onClick = {
@@ -97,7 +97,7 @@ fun TimersScreen(gateway: TimerGateway, recoveryVersion: Instant? = null) {
             Card(Modifier.fillMaxWidth().testTag("orion_timer_confirmation")) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val verb = when (action.operation) { TimerOperation.CREATE -> "Criar"; TimerOperation.CANCEL -> "Cancelar" }
-                    Text("$verb esta timer?")
+                    Text("$verb este timer?")
                     action.durationMillis?.let { Text("Duração: ${it / 1000} segundos") }
                     Text(action.title ?: "Conteúdo indisponível ou pedido desatualizado. Descarte este pedido e tente novamente.")
                     Column {
@@ -121,7 +121,7 @@ fun TimersScreen(gateway: TimerGateway, recoveryVersion: Instant? = null) {
                 }
             }
         }
-        if (rows.isEmpty()) item { Text("Nenhuma timer para exibir.") }
+        if (rows.isEmpty()) item { Text("Nenhum timer para exibir.") }
         items(rows, key = { "timer/${it.timerId}" }) { timer ->
             Card(Modifier.fillMaxWidth().testTag("orion_timer_row")) {
                 Column(Modifier.padding(16.dp)) {

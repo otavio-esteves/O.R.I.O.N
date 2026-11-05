@@ -144,9 +144,9 @@ internal class OrionTimerKernel(private val db: OrionDatabase, encryption: Orion
         if (engine.executeLocal(id) != ActionExecutionResult.SUCCEEDED) invalid()
     }
 
-    fun diagnostics(): network.orion.core.health.TimerQueueDiagnostics {
+    fun diagnostics(): network.orion.core.health.TaskQueueDiagnostics {
         fun count(sql: String) = db.openHelper.readableDatabase.query(sql).use { it.moveToFirst(); it.getInt(0) }
-        return network.orion.core.health.TimerQueueDiagnostics(
+        return network.orion.core.health.TaskQueueDiagnostics(
             count("SELECT count(*) FROM orion_ingress_envelopes WHERE status = 'QUEUED'"),
             count("SELECT count(*) FROM orion_action_requests WHERE status = 'NEEDS_CONFIRMATION'"),
             count("SELECT count(*) FROM orion_action_requests WHERE status = 'RUNNING'"),
