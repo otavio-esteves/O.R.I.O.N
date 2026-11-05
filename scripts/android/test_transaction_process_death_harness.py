@@ -66,6 +66,13 @@ class TransactionRecorderContractTest(unittest.TestCase):
             self.assertEqual("network.orion.app.memories.OrionMemoryTransactionProcessDeathTest",
                              command[command.index("class") + 1])
 
+    def test_notification_scenario_uses_the_committed_external_claim_boundary(self):
+        fixture = "00000000-0000-0000-0000-000000000001"
+        for mode in ["prepare", "verify"]:
+            command = RECORDER.instrumentation_command(mode, fixture, "notification")
+            self.assertEqual("network.orion.app.notifications.OrionNotificationTransactionProcessDeathTest",
+                             command[command.index("class") + 1])
+
 
 if __name__ == "__main__":
     unittest.main()

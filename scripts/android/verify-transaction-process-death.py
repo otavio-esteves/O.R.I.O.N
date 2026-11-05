@@ -21,6 +21,8 @@ SCENARIOS = {
               "app/src/androidTest/kotlin/network/orion/app/timers/OrionTimerTransactionProcessDeathTest.kt"),
     "memory": ("network.orion.app.memories.OrionMemoryTransactionProcessDeathTest",
                "app/src/androidTest/kotlin/network/orion/app/memories/OrionMemoryTransactionProcessDeathTest.kt"),
+    "notification": ("network.orion.app.notifications.OrionNotificationTransactionProcessDeathTest",
+                     "app/src/androidTest/kotlin/network/orion/app/notifications/OrionNotificationTransactionProcessDeathTest.kt"),
 }
 
 

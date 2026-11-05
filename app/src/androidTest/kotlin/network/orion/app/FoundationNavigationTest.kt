@@ -59,4 +59,14 @@ class FoundationNavigationTest {
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("orion_memories").assertExists()
     }
+
+    @Test fun notificationDestinationRestoresAndNeverPostsOnNavigation() {
+        val manager = compose.activity.getSystemService(android.app.NotificationManager::class.java)
+        val before = manager?.activeNotifications.orEmpty().map { "${it.tag}/${it.id}" }.sorted()
+        compose.onNodeWithText("Notificações").performScrollTo().performClick()
+        compose.onNodeWithTag("orion_notifications").assertExists()
+        compose.activityRule.scenario.recreate()
+        compose.onNodeWithTag("orion_notifications").assertExists()
+        org.junit.Assert.assertEquals(before, manager?.activeNotifications.orEmpty().map { "${it.tag}/${it.id}" }.sorted())
+    }
 }
