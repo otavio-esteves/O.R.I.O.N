@@ -39,6 +39,8 @@ import network.orion.data.repository.OrionPrivatePayloadStore
 class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCoordinator {
     private val app = context.applicationContext
     private val clock = AndroidOrionClock(app.contentResolver)
+    internal val deviceGateway = network.orion.app.device.OrionDeviceUiGateway(app, clock)
+    internal val activityGateway = network.orion.app.device.OrionActivityUiGateway { database }
     private val logger = OrionLogger(clock, OrionLogSink { record ->
         val priority = when (record.severity) {
             OrionLogSeverity.INFO -> Log.INFO

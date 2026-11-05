@@ -10,11 +10,24 @@ import androidx.compose.ui.unit.dp
 import network.orion.core.health.*
 
 @Composable
-fun HomeScreen(report: OrionHealthReport) {
+fun HomeScreen(report: OrionHealthReport, onOpenDevice: (() -> Unit)? = null,
+    onOpenActivity: (() -> Unit)? = null, onOpenReminders: (() -> Unit)? = null,
+    onOpenTimers: (() -> Unit)? = null) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Seu assistente local", style = MaterialTheme.typography.headlineSmall)
         Text("Core: ${report.core.readiness}")
+        if (listOf(onOpenDevice, onOpenActivity, onOpenReminders, onOpenTimers).any { it != null }) {
+            ElevatedCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("O que você quer fazer?", style = MaterialTheme.typography.titleMedium)
+                    onOpenReminders?.let { OutlinedButton(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Lembretes") } }
+                    onOpenTimers?.let { OutlinedButton(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Timers") } }
+                    onOpenDevice?.let { OutlinedButton(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Dispositivo") } }
+                    onOpenActivity?.let { OutlinedButton(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Atividade") } }
+                }
+            }
+        }
         ElevatedCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Estado do dispositivo", style = MaterialTheme.typography.titleMedium)

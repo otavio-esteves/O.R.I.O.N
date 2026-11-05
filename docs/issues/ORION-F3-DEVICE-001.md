@@ -1,5 +1,7 @@
 # ORION-F3-DEVICE-001 — Read-only device information and technical activity
 
+GitHub issue: <https://github.com/otavio-esteves/O.R.I.O.N/issues/47>.
+
 OBJECTIVE: Complete the F3 read-only device/time/battery slice and a bounded native
 Activity history screen. Both flows expose selected DTOs without mutation.
 Baseline: Architecture V3.2 command/query ownership and SkillDescriptor contracts;
@@ -9,7 +11,7 @@ FILES ALLOWED: core/queries device/activity APIs and tests; core/skills/metadata
 read-only descriptors/tests; skills/device; feature/device; feature/activity;
 app/device Android adapters; data/events read-only history adapter; relevant
 Gradle/module declarations and tests. MAIN runtime/navigation wiring is integrated
-by the primary agent separately.
+by the primary agent in this package, including Home shortcuts and navigation/recreation regression.
 
 CONTRACTS INVOLVED: Query, OrionClock, SkillDescriptor, selected immutable DTOs,
 MAIN-only Android/source adapters and bounded stable history cursors. Battery is
@@ -40,3 +42,5 @@ OUT OF SCOPE: mutable Skills, reminder/timer execution, event delivery/acknowled
 notifications, memory CRUD, F4 scheduling/recovery, AI/voice, schema changes and S21
 hardware qualification. Process death discards only recomputable read snapshots;
 no migrations, permissions, exported components or process-topology changes occur.
+
+VALIDATION: Canonical Docker checks passed in4m7s (903 tasks), including23 JVM cases (9 new), zero failures/errors/skips, changed feature/data lint and debug/testAPK assembly. Module boundaries passed. Host/API35 x86_64 emulator passed8 actualAndroid cases for source/history/screens and navigation/recreation. Evidence with source/APK hashes: [device/activity](../qualification/f3-device-activity-evidence.json). Required remoteCI must pass before merge; no physical or fullF3/F4 qualification.
