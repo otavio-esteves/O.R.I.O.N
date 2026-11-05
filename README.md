@@ -120,6 +120,9 @@ python3 scripts/android/verify-transaction-process-death.py \
 ```
 
 For physical evidence, use the explicit device serial and `--environment PHYSICAL_DEVICE`.
+Add `--scenario task` to exercise owned task creation: the checkpoint is after the
+uncommitted task/event/action-success writes, and verification in a new process
+checks rollback followed by exactly one committed task/event after explicit replay.
 The Keystore instrumentation APK is built by CI; running its
 `network.orion.core.security.test/androidx.test.runner.AndroidJUnitRunner` on a device
 is a separate host responsibility. Emulator evidence does not qualify S21/OEM hardware.

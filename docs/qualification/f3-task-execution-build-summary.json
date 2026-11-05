@@ -1,0 +1,111 @@
+{
+  "recordedAtUtc": "2026-11-05T03:11:26.737784+00:00",
+  "workPackage": "ORION-F3-TASK-005",
+  "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/32",
+  "baseCommit": "4444e964efb081c2d5322f96d0c36501a02830d8",
+  "sourceSha256": {
+    "app/build.gradle.kts": "5acc69b603c50b0575abe71b650fd45c3d68775a120338c2b769b5477e40e75f",
+    "app/src/androidTest/kotlin/network/orion/app/tasks/OrionCreateTaskRunnerTest.kt": "938327df2fa503878ba5980c9600fd5e826c21b684962a316898821a44040349",
+    "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskTransactionProcessDeathTest.kt": "a02e13ee2cc4c746879495203734a86296e1ff9942ee19060a806ce3a31293b1",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionCreateTaskRunner.kt": "15d554edfab08390c73e88465c36e43d99117b6d0230bd0bbde2a4a92ee4465c",
+    "core/skills/metadata/src/main/kotlin/network/orion/core/skills/metadata/tasks/OrionCreateTaskDescriptor.kt": "44662b328c0e725d089e83d9fb529037c8421a89dd7411d06fc5af1211162e0c",
+    "data/tasks/build.gradle.kts": "e3b30ccd391cc05224c98c4ff5ae1a4c32c380d644f3af959934dc969865486e",
+    "data/tasks/src/main/kotlin/network/orion/data/tasks/OrionOwnedTaskStore.kt": "dbcf5cd2a63ee34fe9c227b34005951bb73c62283bc866891e45963b376fdb3a",
+    "scripts/android/test_transaction_process_death_harness.py": "8c48d15a7308689ba60cab36348c848229d1b66b0cad28648994b3d27109a6b8",
+    "scripts/android/verify-transaction-process-death.py": "94f4de61a98cace6db96a25f57d260eef7e8c89710ace40aab8ccd1a08b460e0",
+    "settings.gradle.kts": "d84f896c1ddb3617b20915e0f8e48f8e3922ac875321cd292a3a1658bd6812b2",
+    "skills/api/build.gradle.kts": "09920eb49f431f018fdb78550d2e1e82de8a175bc8f98eeb1c94110339acd3df",
+    "skills/api/src/main/kotlin/network/orion/skills/api/OrionSkill.kt": "689291f095666b348bc00c0dda64056f30a680864a640c6cb8fac01938aedc10",
+    "skills/tasks/build.gradle.kts": "92141db7c92b6e6ffe4337ce65e7d41ed2a2fc2dab2b78d302cb42dbeca10eae",
+    "skills/tasks/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+    "skills/tasks/src/main/kotlin/network/orion/skills/tasks/OrionCreateTaskSkill.kt": "71e37a5987bb094520bdee79f27c03ead20bbbf698a4871e4cb28c1cd0b475e5",
+    "skills/tasks/src/test/kotlin/network/orion/skills/tasks/OrionCreateTaskSkillTest.kt": "5bd622c324c0474733fc3856aa8764ebffef3887472b7564a165bbe09a92fefc"
+  },
+  "container": {
+    "result": "PASS",
+    "command": "docker compose run --rm android-build :skills:tasks:testDebugUnitTest :skills:tasks:assemble :skills:tasks:lint :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lint :data:tasks:lint verifyModuleBoundaries testModuleBoundaries --max-workers=2",
+    "duration": "5m 36s",
+    "tasks": {
+      "total": 1287,
+      "executed": 140,
+      "fromCache": 22,
+      "upToDate": 1125
+    },
+    "unitTests": {
+      "network.orion.app.CoreReadyLogEventTest": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.app.tasks.OrionTaskAdmissionOwnerTest": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.skills.tasks.OrionCreateTaskSkillTest": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "unitTestsTotal": 22,
+    "skillTests": 4,
+    "lint": {
+      "errors": 0,
+      "skillAndTaskStorageWarnings": 0,
+      "appWarnings": 10,
+      "appWarningScope": "unchanged files"
+    },
+    "moduleBoundaries": "PASS",
+    "negativeAssertions": 36,
+    "finalTestOnlyBuild": {
+      "command": "docker compose run --rm android-build :app:assembleDebugAndroidTest :app:lint --max-workers=2",
+      "duration": "1m 55s",
+      "tasks": 1103,
+      "result": "PASS"
+    },
+    "rawBuildSha256": "739c91055fd0f5ff9e18d45d9ada9c3d8c111535b9481717c732ff505db1bf34",
+    "rawFinalBuildSha256": "2955cb819b0818119e7c514fd1b10618e9c68459bc1fb040be8e7e0fee2bbc2c"
+  },
+  "hostContractTests": {
+    "command": "python3 scripts/android/test_transaction_process_death_harness.py",
+    "tests": 4,
+    "result": "PASS"
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "serial": "emulator-5586",
+    "apiLevel": "35",
+    "abi": "x86_64",
+    "tests": 54,
+    "newExecutionTests": 12,
+    "newTaskTransactionTest": 1,
+    "result": "PASS",
+    "command": "adb -s emulator-5586 shell am instrument -w -e class network.orion.app.tasks.OrionCreateTaskRunnerTest,network.orion.app.tasks.OrionTaskTransactionProcessDeathTest,network.orion.app.tasks.OrionCreateTaskActionStoreTest,network.orion.app.EncryptedActionStoreTest,network.orion.app.ActionExecutionOwnershipTest network.orion.test/androidx.test.runner.AndroidJUnitRunner",
+    "rawOutputSha256": "5cf1c1bfb7bb2c841ab7a51cb847f3c75e20831b1828626498c35facbade4a90"
+  },
+  "processDeath": {
+    "command": "python3 scripts/android/verify-transaction-process-death.py --serial emulator-5586 --environment ANDROID_EMULATOR --adb /home/otavio/Android/Sdk/platform-tools/adb --evidence-dir /tmp/orion-task005-death-final --scenario task",
+    "result": "PASS",
+    "beforePid": "3388",
+    "afterPid": "3442",
+    "checkpoint": "All local task/event/action-success writes are visible inside the still-open writer transaction; baseline confirmation was committed separately.",
+    "verification": "New process sees original CONFIRMED/version2/3audit, zero task/event. Explicit fresh execution and replay yield one task/event, SUCCEEDED/version4/5audit.",
+    "evidence": "f3-task-execution-transaction-death-api35.json"
+  },
+  "artifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "2c97ad986a9813dc6bb562fb2a1090feb2bade26af73b3d543f68dfcedac9542",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "5f2d0ef98bfd7c3bd4308141e7faaf81008180a05e56dcce8753dfe0624c6a13",
+    "skills/tasks/build/outputs/aar/tasks-debug.aar": "caccc5e50c3e475a12ca53310a90a68ad84f749e5ef55d1a435d04362494adb8",
+    "skills/tasks/build/outputs/aar/tasks-release.aar": "dedd1f3bb65e2da1e000458d5895f8420ff7714ae98362e181fdf2e682196741"
+  },
+  "runtimeTaskWritesEnabled": false,
+  "schemaOrIpcOrPermissionsChanged": false,
+  "recoveryStrategy": "MANUAL_REVIEW remains unchanged; no generic retry or external Skill execution.",
+  "physicalQualification": "Deferred #23; no hardware/OEM/24-7 or complete phase-gate claim.",
+  "requiredRemoteCi": "PENDING_PR_HEAD"
+}

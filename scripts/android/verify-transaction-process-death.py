@@ -18,11 +18,13 @@ def terminate_debug_main(adb, process_id):
     adb("shell", "run-as", "network.orion", "kill", "-9", process_id)
 
 
-def instrumentation_command(mode, fixture):
-    if mode not in ("prepare", "verify") or str(uuid.UUID(fixture)) != fixture:
+def instrumentation_command(mode, fixture, scenario="generic"):
+    if scenario not in ("generic", "task") or mode not in ("prepare", "verify") or str(uuid.UUID(fixture)) != fixture:
         raise ValueError("Invalid transaction fixture arguments.")
+    test_class = ("network.orion.app.TransactionProcessDeathTest" if scenario == "generic" else
+                  "network.orion.app.tasks.OrionTaskTransactionProcessDeathTest")
     return ["shell", "am", "instrument", "-w", "-e", "class",
-            "network.orion.app.TransactionProcessDeathTest", "-e", "orion_transaction_mode", mode,
+            test_class, "-e", "orion_transaction_mode", mode,
             "-e", "orion_transaction_fixture", fixture,
             "network.orion.test/androidx.test.runner.AndroidJUnitRunner"]
 
@@ -33,6 +35,7 @@ def main():
     parser.add_argument("--environment", required=True, choices=["ANDROID_EMULATOR", "PHYSICAL_DEVICE"])
     parser.add_argument("--adb", default=shutil.which("adb"))
     parser.add_argument("--evidence-dir", type=Path, required=True)
+    parser.add_argument("--scenario", choices=["generic", "task"], default="generic")
     args = parser.parse_args()
     if not args.adb:
         parser.error("Pass host adb with --adb.")
@@ -43,12 +46,14 @@ def main():
         parser.error("Build :app:assembleDebug :app:assembleDebugAndroidTest in Docker first.")
     args.evidence_dir.mkdir(parents=True, exist_ok=True)
     fixture = str(uuid.uuid4())
-    report = {"result": "FAIL", "environment": args.environment, "fixtureId": fixture,
+    test_source = ("app/src/androidTest/kotlin/network/orion/app/TransactionProcessDeathTest.kt" if args.scenario == "generic" else
+                   "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskTransactionProcessDeathTest.kt")
+    report = {"result": "FAIL", "environment": args.environment, "fixtureId": fixture, "scenario": args.scenario,
               "terminationMethod": "RUN_AS_SIGKILL", "checks": {},
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip(),
               "workingTreeDirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=root, text=True)),
               "sourceSha256": {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
-                               for path in [root / "app/src/androidTest/kotlin/network/orion/app/TransactionProcessDeathTest.kt",
+                               for path in [root / test_source,
                                             Path(__file__).resolve()]},
               "artifactSha256": {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in artifacts}}
     prepare = None
@@ -73,7 +78,7 @@ def main():
         for artifact in artifacts:
             adb("install", "-r", "-t", str(artifact))
         prepare_output = (args.evidence_dir / "prepare-instrumentation.txt").open("w")
-        prepare = subprocess.Popen([args.adb, "-s", args.serial, *instrumentation_command("prepare", fixture)],
+        prepare = subprocess.Popen([args.adb, "-s", args.serial, *instrumentation_command("prepare", fixture, args.scenario)],
                                    stdout=prepare_output, stderr=subprocess.STDOUT, text=True)
         checkpoint = "files/orion_transaction_" + fixture + ".ready"
         deadline = time.monotonic() + 40
@@ -100,7 +105,7 @@ def main():
         prepare_output.close()
         prepare_output = None
         report["checks"]["kill_during_room_transaction"] = "PASS"
-        output = adb(*instrumentation_command("verify", fixture))
+        output = adb(*instrumentation_command("verify", fixture, args.scenario))
         (args.evidence_dir / "verify-instrumentation.txt").write_text(output + "\n")
         if not re.search(r"OK \(1 test\)", output) or any(marker in output for marker in ["FAILURES!!!", "INSTRUMENTATION_FAILED"]):
             raise RuntimeError("Transaction recovery verification failed.")

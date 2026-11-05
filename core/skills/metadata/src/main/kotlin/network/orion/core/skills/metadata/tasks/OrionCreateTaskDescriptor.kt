@@ -15,7 +15,7 @@ object OrionCreateTaskDescriptor {
     val value = SkillDescriptor(
         name = "task.create",
         authorizationLevel = AuthorizationLevel.SAFE_WRITE,
-        // No replay-safe task creation adapter exists yet; metadata must not promise one.
+        // Generic replay remains unavailable until operational recovery is qualified.
         recoveryStrategy = RecoveryStrategy.MANUAL_REVIEW,
         sideEffectClass = SideEffectClass.LOCAL_MUTATION,
         idempotencyMode = IdempotencyMode.KEYED,

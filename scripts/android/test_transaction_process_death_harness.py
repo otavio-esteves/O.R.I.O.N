@@ -34,6 +34,16 @@ class TransactionRecorderContractTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 RECORDER.instrumentation_command(mode, bad_fixture)
 
+    def test_task_scenario_selects_only_the_owned_task_fixture(self):
+        fixture = "00000000-0000-0000-0000-000000000001"
+        for mode in ["prepare", "verify"]:
+            command = RECORDER.instrumentation_command(mode, fixture, "task")
+            self.assertIn("network.orion.app.tasks.OrionTaskTransactionProcessDeathTest", command)
+            self.assertNotIn("network.orion.app.TransactionProcessDeathTest", command)
+        for scenario in ["", "arbitrary.class", "task;echo unsafe"]:
+            with self.assertRaises(ValueError):
+                RECORDER.instrumentation_command("prepare", fixture, scenario)
+
 
 if __name__ == "__main__":
     unittest.main()
