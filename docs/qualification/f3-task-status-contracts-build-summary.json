@@ -1,0 +1,95 @@
+{
+  "recordedAtUtc": "2026-11-05T03:22:33.118192+00:00",
+  "workPackage": "ORION-F3-TASK-006",
+  "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/34",
+  "baseCommit": "d3c5b4ae515096bcec820a7e16fa8cec48065bcb",
+  "sourceSha256": {
+    "core/commands/src/main/kotlin/network/orion/core/commands/tasks/TaskStatusCommands.kt": "aa5e882e413a9ea1ce3fad5057d28244a9a375ff2d2db482bfd23cd5bcea4caf",
+    "core/commands/src/test/kotlin/network/orion/core/commands/tasks/TaskStatusPreparationTest.kt": "3a32c863f3fdb92676b921cb44a060658845102c468f15d94a1da12f1bc9b14b",
+    "core/policy/src/main/kotlin/network/orion/core/policy/tasks/OrionTaskStatusPolicy.kt": "4cf9bc8744d2bc4694bad88e471178b26fe81885558cc1eb77bd616ff76c8de4",
+    "core/policy/src/main/kotlin/network/orion/core/policy/tasks/TaskStatusPolicyContext.kt": "497c42ac6885dd5a11644f68be3bef9d5124e0cea89f010529711824f0b9b5dc",
+    "core/policy/src/test/kotlin/network/orion/core/policy/tasks/OrionTaskStatusPolicyTest.kt": "b6e27580a7956822f2a7501448dca04f73fa2167c8742bb3446ed9cb42db3a8f",
+    "core/skills/metadata/src/main/kotlin/network/orion/core/skills/metadata/tasks/OrionTaskStatusDescriptors.kt": "144949299a93dbdd5bcff8016469e7b928f565cddb085ee5ce838c5dbdb833f3",
+    "core/skills/metadata/src/test/kotlin/network/orion/core/skills/metadata/tasks/OrionTaskStatusDescriptorsTest.kt": "d61a2874306bace121aacf8050cad06826a55d5b540494b408d7df41aabb2511"
+  },
+  "container": {
+    "result": "PASS",
+    "command": "docker compose run --rm android-build :core:commands:testDebugUnitTest :core:commands:assemble :core:commands:lint :core:policy:testDebugUnitTest :core:policy:assemble :core:policy:lint :core:skills:metadata:testDebugUnitTest :core:skills:metadata:assemble :core:skills:metadata:lint verifyModuleBoundaries testModuleBoundaries --max-workers=2",
+    "duration": "1m 58s",
+    "tasks": {
+      "total": 295,
+      "executed": 74,
+      "fromCache": 3,
+      "upToDate": 218
+    },
+    "unitTests": {
+      "network.orion.core.commands.tasks.TaskStatusPreparationTest": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.core.commands.tasks.CreateTaskPreparationTest": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.core.commands.CommandContractTest": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.core.policy.tasks.OrionTaskStatusPolicyTest": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.core.policy.tasks.OrionCreateTaskPolicyTest": {
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptorTest": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.core.skills.metadata.SkillDescriptorTest": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.core.skills.metadata.tasks.OrionTaskStatusDescriptorsTest": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "unitTestsTotal": 68,
+    "newTests": 20,
+    "lint": "NO_ISSUES",
+    "moduleBoundaries": "PASS",
+    "negativeAssertions": 36,
+    "rawOutputSha256": "0b82b6e66bdd56607c792aea0642257984628a2f951464a50514b383b094fb9e"
+  },
+  "artifactSha256": {
+    "core/commands/build/outputs/aar/commands-debug.aar": "f87dba087a9ccba643c4c188a30a3e5330a9144f523c53806f872ac845aee2f6",
+    "core/commands/build/outputs/aar/commands-release.aar": "18e6e92a89a4318d0b62b357f95c50582df501ed21ee28747237cf80321c5e3d",
+    "core/policy/build/outputs/aar/policy-release.aar": "670c9bbd5c47e60ef96aaf06e717201760f91c65bc08ec7edc7eff4dd19a74a7",
+    "core/policy/build/outputs/aar/policy-debug.aar": "4aa063be140ae1980669be08f17756bc429db1b3565c52884b9f54f9c0144abb",
+    "core/skills/metadata/build/outputs/aar/metadata-debug.aar": "0035ead76eb535f13f1118f84837158cddd8b90b261ab279df2c1d9a4b98bd17",
+    "core/skills/metadata/build/outputs/aar/metadata-release.aar": "0b666f269464c8bcdec3c3b162b3f862957bb26385b65b19e884837178e68268"
+  },
+  "runtimeStatusMutationEnabled": false,
+  "schemaOrIpcOrPermissionsChanged": false,
+  "androidRuntimeEvidence": "NOT_RUN_FOR_PURE_CONTRACT_POLICY_PACKAGE",
+  "physicalQualification": "DEFERRED #23",
+  "requiredRemoteCi": "PENDING_PR_HEAD"
+}
