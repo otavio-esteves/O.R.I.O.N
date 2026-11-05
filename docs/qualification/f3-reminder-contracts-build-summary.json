@@ -1,0 +1,114 @@
+{
+  "workPackage": "ORION-F3-REMINDER-001",
+  "issue": 43,
+  "environment": "CONTAINER",
+  "baseCommit": "8920912e2595e0bd277b09bdf33ca5073d6bc951",
+  "branch": "feat/orion-f3-reminder-contracts",
+  "workingTreeDirty": true,
+  "command": "docker compose run --rm android-build :core:commands:testDebugUnitTest :core:skills:metadata:testDebugUnitTest :core:commands:assemble :core:skills:metadata:assemble :core:commands:lint :core:skills:metadata:lint verifyModuleBoundaries testModuleBoundaries --max-workers=2",
+  "result": "PASS",
+  "buildSummary": "BUILD SUCCESSFUL in 1m 10s; 179 tasks: 44 executed, 2 from cache, 133 up-to-date",
+  "jvm": {
+    "tests": 50,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "newCases": 23,
+  "suites": [
+    {
+      "module": "core/commands",
+      "name": "network.orion.core.commands.CommandContractTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "core/commands",
+      "name": "network.orion.core.commands.reminders.CreateReminderPreparationTest",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "core/commands",
+      "name": "network.orion.core.commands.tasks.CreateTaskPreparationTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "core/commands",
+      "name": "network.orion.core.commands.tasks.TaskStatusPreparationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "core/skills/metadata",
+      "name": "network.orion.core.skills.metadata.SkillDescriptorTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "core/skills/metadata",
+      "name": "network.orion.core.skills.metadata.reminders.OrionCreateReminderDescriptorTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "core/skills/metadata",
+      "name": "network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptorTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "core/skills/metadata",
+      "name": "network.orion.core.skills.metadata.tasks.OrionTaskStatusDescriptorsTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "moduleBoundaryAssertions": 36,
+  "assembly": [
+    "commands debug/release AAR",
+    "skills metadata debug/release AAR"
+  ],
+  "lint": "PASS for core:commands and core:skills:metadata",
+  "independentReview": "Read-only contract/source/test review; no blockers. Not human approval or runtime evidence.",
+  "schemaChanged": false,
+  "ipcChanged": false,
+  "processTopologyChanged": false,
+  "androidPermissionsChanged": false,
+  "qualificationBoundary": [
+    "Preparation and static metadata only; no mutable runtime, persistence or OS scheduling activated",
+    "No Android runtime, hardware, process-death, F3 or F4 readiness qualification claimed",
+    "Physical S21 qualification remains deferred in issue #23",
+    "Required docker-build-and-check must pass at final PR head before merge"
+  ],
+  "sourceSha256": {
+    "core/commands/src/main/kotlin/network/orion/core/commands/reminders/CreateReminder.kt": "b621a1217ca98eea9ff04861732a912c6a44582803cdd7a2cd0bf5b329cce2fe",
+    "core/commands/src/main/kotlin/network/orion/core/commands/reminders/OrionCreateReminderPreparer.kt": "ee25ebb0ed1dcb6d51446f44cee14c1ffa79d8adc8898f78dd923beca5bf60d5",
+    "core/commands/src/test/kotlin/network/orion/core/commands/reminders/CreateReminderPreparationTest.kt": "66be40731cb30ef0d20adcaee2ae06dcca9f8d72d84bbeacb8e69b323b5f84d8",
+    "core/skills/metadata/src/main/kotlin/network/orion/core/skills/metadata/reminders/OrionCreateReminderDescriptor.kt": "15bda19959edbd7ad7660cf74ce0748e50da68c4bf3b2886f72edde1637bfad1",
+    "core/skills/metadata/src/test/kotlin/network/orion/core/skills/metadata/reminders/OrionCreateReminderDescriptorTest.kt": "6afb436e7433e9561fe9d39f82a1304ed24def6035f9a193c25771050b16cfe7"
+  },
+  "artifactSha256": {
+    "core/commands/build/outputs/aar/commands-debug.aar": "69dde3c48d0834f11bab2f2999b96d3a3c27a0dca6063d25b36d193ddad8f447",
+    "core/commands/build/outputs/aar/commands-release.aar": "2d38e15573ff33741c4832ce884167b94c553092b3f0c6858dddd0fa4a38dfc3",
+    "core/skills/metadata/build/outputs/aar/metadata-debug.aar": "97f4929dd6a3ee6b6dacc1e575f190e10edfd603d263e5330b227613fa8a3314",
+    "core/skills/metadata/build/outputs/aar/metadata-release.aar": "016b70f2e364bafe80f75def486388f7c40b964117147c885831bee77caefbf8"
+  }
+}
