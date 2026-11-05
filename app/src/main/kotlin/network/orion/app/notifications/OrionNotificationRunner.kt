@@ -87,7 +87,7 @@ internal class OrionNotificationRunner(private val db:OrionDatabase,private val 
             if(!barrier.isOpen()||!poster.permissionGranted()||!freshPolicy())return false
             if(ActionConfirmationBinding(clock).validate(expected,originalReceipt)!=ConfirmationBindingResult.VALID_BINDING)return false
             if(claim.lease.statusAt(clock.monotonicNow())!=ActionLeaseStatus.ACTIVE)return false
-            return !db.inTransaction()&&!Thread.holdsLock(barrier)
+            return barrier.isOpen()&&!db.inTransaction()&&!Thread.holdsLock(barrier)
         }
         val skill=OrionPostNotificationSkill(OrionOwnedNotificationPoster { notification,owner->
             if(!invocationAllowed(notification,owner))return@OrionOwnedNotificationPoster NotificationPostResult.NOT_INVOKED
