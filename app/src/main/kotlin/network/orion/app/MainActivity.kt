@@ -13,12 +13,16 @@ import androidx.compose.ui.unit.dp
 import network.orion.feature.diagnostics.DiagnosticsScreen
 import network.orion.feature.home.HomeScreen
 import network.orion.feature.settings.SettingsScreen
+import network.orion.app.tasks.OrionTaskAdmissionOwner
 
 class MainActivity : ComponentActivity() {
+    private lateinit var taskChannel: OrionTaskAdmissionOwner.UiChannel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val runtime = checkNotNull((application as OrionApplication).mainRuntime)
+        taskChannel = runtime.taskAdmissions.openUiChannel()
         setContent {
             MaterialTheme {
                 val report by runtime.health.collectAsState()
@@ -53,5 +57,25 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        taskChannel.onResumed(true)
+    }
+
+    override fun onPause() {
+        taskChannel.onResumed(false)
+        super.onPause()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (::taskChannel.isInitialized) taskChannel.onWindowFocus(hasFocus)
+    }
+
+    override fun onDestroy() {
+        if (::taskChannel.isInitialized) taskChannel.close()
+        super.onDestroy()
     }
 }

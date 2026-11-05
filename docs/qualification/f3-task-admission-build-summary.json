@@ -1,0 +1,73 @@
+{
+  "recordedAtUtc": "2026-11-05T02:25:41.324208+00:00",
+  "workPackage": "ORION-F3-TASK-003",
+  "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/29",
+  "baseCommit": "6c8826a4d406c4458fc5a6a7339dfa4992457ecf",
+  "sourceSha256": {
+    "app/build.gradle.kts": "e691d3636d0b813b68dce04c022468a9dc3f7c707d5a619a0c79b655eafdf577",
+    "app/src/main/kotlin/network/orion/app/MainActivity.kt": "43bffdcce0e4196f83e630f7308c3b2328182bbda22b867895d02f8b09a62d4d",
+    "app/src/main/kotlin/network/orion/app/OrionFoundationRuntime.kt": "0e64a4a33beea22eea880695768ece5020e58a23d6151292d47ad313937eb287",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionTaskAdmissionOwner.kt": "10edbdc533098d71da88744f3aea2e21a4bc0fd7de24127d36e8c30e3471e887",
+    "app/src/test/kotlin/network/orion/app/tasks/OrionTaskAdmissionOwnerTest.kt": "0c3295a11ee2bf38eb93ee668cbf569565ef499a8b770fa04283195011c37c2f"
+  },
+  "container": {
+    "result": "PASS",
+    "command": "docker compose run --rm android-build :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lint verifyModuleBoundaries testModuleBoundaries --max-workers=2",
+    "duration": "7m 24s",
+    "tasks": {
+      "total": 1037,
+      "executed": 33,
+      "fromCache": 4,
+      "upToDate": 1000
+    },
+    "unitTests": {
+      "network.orion.app.CoreReadyLogEventTest": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "network.orion.app.tasks.OrionTaskAdmissionOwnerTest": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "unitTestsTotal": 18,
+    "newTests": 14,
+    "moduleBoundaries": "PASS",
+    "negativeAssertions": 36,
+    "lint": {
+      "errors": 0,
+      "warnings": 10,
+      "warningScope": "unchanged dependency/toolchain configuration, ChromeOS ABI and app icon"
+    },
+    "rawOutputSha256": "1f22d22b2b02d1bfeba573106eeca49974d7db15274d529ad8c77953d3defc0f"
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "serial": "emulator-5586",
+    "apiLevel": "35",
+    "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+    "abi": "x86_64",
+    "tests": 5,
+    "result": "PASS",
+    "classes": [
+      "FoundationNavigationTest",
+      "FoundationRuntimeTest"
+    ],
+    "command": "adb -s emulator-5586 shell am instrument -w -e class network.orion.app.FoundationNavigationTest,network.orion.app.FoundationRuntimeTest network.orion.test/androidx.test.runner.AndroidJUnitRunner",
+    "rawOutputSha256": "544662195dfc28fb8dfa396a0c82dc212ba00296bb80cb03dff488ca9a3c6857"
+  },
+  "artifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "f951df8fca4528b3ccac926631d98b8a408dcc967ca92fa313dfca040facc259",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "c57299b5e8173707acae896a901fbfbc0aecc04a4b5f1af79ef1607eba0c55e0"
+  },
+  "runtimeTaskWritesEnabled": false,
+  "taskBarrierReleased": false,
+  "schemaOrIpcOrPermissionChanged": false,
+  "physicalQualification": "DEFERRED #23; no hardware/OEM or 24/7 claim",
+  "requiredRemoteCi": "PENDING_PR_HEAD"
+}

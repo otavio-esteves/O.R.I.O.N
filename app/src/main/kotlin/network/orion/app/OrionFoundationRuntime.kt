@@ -1,7 +1,9 @@
 package network.orion.app
 
 import android.app.ActivityManager
+import android.app.KeyguardManager
 import android.content.Context
+import android.os.PowerManager
 import android.util.Log
 import java.time.Instant
 import java.util.UUID
@@ -16,6 +18,10 @@ import network.orion.core.exitinfo.ApplicationExitMonitor
 import network.orion.core.exitinfo.ProcessExitSignal
 import network.orion.core.health.*
 import network.orion.core.ingress.FoundationIngressCoordinator
+import network.orion.core.ingress.StartupBarrier
+import network.orion.core.common.process.OrionProcessRole
+import network.orion.core.policy.tasks.OrionPolicyEvidence
+import network.orion.app.tasks.OrionTaskAdmissionOwner
 import network.orion.core.model.UnavailableCapabilityRegistry
 import network.orion.core.observability.*
 import network.orion.core.recovery.RecoveryCoordinator
@@ -47,6 +53,21 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     val ingress = FoundationIngressCoordinator { health.value.core.readiness }
     val actions = UnavailableActionEngine()
     val capabilities = UnavailableCapabilityRegistry()
+    // The preparation adapter observes this real operational barrier. It remains
+    // closed until task recovery/execution is wired, independently of read readiness.
+    internal val taskStartupBarrier = StartupBarrier()
+    internal val taskAdmissions = OrionTaskAdmissionOwner(
+        OrionProcessRole.fromProcessName(app.packageName, android.app.Application.getProcessName()),
+        taskStartupBarrier,
+        writeCapability = { OrionPolicyEvidence.NOT_SATISFIED },
+        devicePresence = {
+            val power = app.getSystemService(PowerManager::class.java)
+            val keyguard = app.getSystemService(KeyguardManager::class.java)
+            if (power == null || keyguard == null) OrionPolicyEvidence.UNAVAILABLE
+            else if (power.isInteractive && !keyguard.isDeviceLocked) OrionPolicyEvidence.SATISFIED
+            else OrionPolicyEvidence.NOT_SATISFIED
+        },
+    )
     private var governor = UnavailableResourceGovernor()
     private var database: OrionDatabase? = null
     private var preferences: OrionPreferencesStore? = null
