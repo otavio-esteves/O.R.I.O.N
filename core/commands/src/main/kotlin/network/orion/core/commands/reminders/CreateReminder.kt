@@ -25,7 +25,7 @@ data class CreateReminder(
 }
 
 /** Operational execution remains unavailable in this preparation-only increment. */
-enum class CreateReminderResult { UNAVAILABLE }
+enum class CreateReminderResult { QUEUED, REJECTED, UNAVAILABLE }
 
 enum class CreateReminderRejection {
     BLANK_TITLE, TITLE_TOO_LARGE, INVALID_UNICODE, INVALID_TITLE_CHARACTER,
