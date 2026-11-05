@@ -205,6 +205,57 @@ class TransactionCorePersistenceTest {
         assertEquals(0, calls)
     }
 
+    @Test fun slowConsumerCannotGiveLaterEventsAnAlreadyElapsedBackoff() {
+        val first = event(uuid(), at = 100)
+        val second = event(uuid(), at = 101)
+        database.events().append(first)
+        database.events().append(second)
+        var now = 101L
+        val seen = mutableListOf<String>()
+        val consumer = DurableEventConsumer {
+            seen += it.eventId
+            if (it.eventId == first.eventId) {
+                now += 10_000
+                DurableDeliveryResult.ACCEPTED
+            } else DurableDeliveryResult.RETRY_LATER
+        }
+        val dispatcher = OrionEventDispatcher(database.events(), WallClock { Instant.ofEpochMilli(now) },
+            mapOf("TASK_CREATED" to listOf(consumer)), EventRetryPolicy { 0.0 })
+        val report = dispatcher.dispatchBatch()
+        assertEquals(listOf(first.eventId, second.eventId), seen)
+        assertEquals(1, report.delivered)
+        assertEquals(1, report.deferred)
+        val deferred = checkNotNull(database.events().find(second.eventId))
+        assertEquals(now + 500, deferred.nextAttemptAt)
+        assertEquals(1, deferred.attemptCount)
+        assertEquals(0, dispatcher.dispatchBatch().examined)
+    }
+
+    @Test fun rollbackDuringBatchLeavesLaterEventUnreservedUntilDueAgain() {
+        val first = event(uuid(), at = 100)
+        val second = event(uuid(), at = 101)
+        database.events().append(first)
+        database.events().append(second)
+        var now = 101L
+        val seen = mutableListOf<String>()
+        val consumer = DurableEventConsumer {
+            seen += it.eventId
+            if (it.eventId == first.eventId) now = 100
+            DurableDeliveryResult.ACCEPTED
+        }
+        val dispatcher = OrionEventDispatcher(database.events(), WallClock { Instant.ofEpochMilli(now) },
+            mapOf("TASK_CREATED" to listOf(consumer)), EventRetryPolicy { 0.0 })
+        assertEquals(1, dispatcher.dispatchBatch().delivered)
+        assertEquals(listOf(first.eventId), seen)
+        val pending = checkNotNull(database.events().find(second.eventId))
+        assertEquals(DomainEventDeliveryStatus.PENDING, pending.status)
+        assertEquals(0, pending.attemptCount)
+        assertEquals(0L, pending.version)
+        now = 101
+        assertEquals(1, dispatcher.dispatchBatch().delivered)
+        assertEquals(listOf(first.eventId, second.eventId), seen)
+    }
+
     @Test fun encryptedTaskSurvivesReopenWithoutRawSecretInDatabaseOrOutbox() {
         val secret = "orion-secret-task-fixture-413A9D"
         val id = UUID.randomUUID()

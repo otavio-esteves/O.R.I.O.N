@@ -5,6 +5,7 @@ import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.Callable
 import network.orion.core.actions.*
 import network.orion.core.model.AuthorizationLevel
 import network.orion.core.model.Sensitivity
@@ -121,6 +122,15 @@ class OrionActionStore(
         currentPolicyVersion: String): ActionStoreResult {
         require(expectedVersion >= 0 && expectedVersion < Long.MAX_VALUE)
         require(currentPolicyVersion.isNotBlank()) { "Current policy version is required." }
+        // Waiting for the SQLite writer must not preserve expired/future-dated
+        // consent. Read state and clocks only after acquiring that transaction.
+        return database.runInTransaction(Callable {
+            confirmInTransaction(actionId, expectedVersion, confirmation, currentPolicyVersion)
+        })
+    }
+
+    private fun confirmInTransaction(actionId: UUID, expectedVersion: Long, confirmation: ActionConfirmationSnapshot,
+        currentPolicyVersion: String): ActionStoreResult {
         val entity = when (val result = lookup(actionId)) {
             is EntityLookup.Present -> result.entity
             is EntityLookup.Blocked -> return ActionStoreResult(result.reason)

@@ -53,8 +53,7 @@ class OrionEventDispatcher(
 
     fun dispatchBatch(limit: Int = 25): EventDispatchReport {
         require(limit in 1..100)
-        val now = clock.wallNow().toEpochMilli()
-        val due = events.due(now, limit)
+        val due = events.due(clock.wallNow().toEpochMilli(), limit)
         var delivered = 0
         var deferred = 0
         var dead = 0
@@ -64,6 +63,9 @@ class OrionEventDispatcher(
                 if (events.deadLetter(event.eventId, event.version)) dead++
                 continue
             }
+            // Earlier consumers may take time or observe a civil-clock adjustment.
+            // Reserve each attempt against fresh time, including the DAO's due check.
+            val now = clock.wallNow().toEpochMilli()
             val claimed = events.reserveAttempt(event.eventId, event.version, now,
                 retry.nextAttemptAt(now, event.attemptCount + 1), retry.maxAttempts) ?: continue
             var result = DurableDeliveryResult.ACCEPTED

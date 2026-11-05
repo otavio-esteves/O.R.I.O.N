@@ -99,8 +99,11 @@ class OrionDurableIngressStore(
                 row.schemaVersion, row.receivedAt, row.expiresAt, row.idempotencyRetainUntil))) {
                 is FieldDecryptionResult.Plaintext -> decrypted.copyBytes()
                 is FieldDecryptionResult.Failure -> {
-                    // Loss/unavailability of keys is not a reason to discard pending requests.
-                    if (decrypted.reason == FieldCryptoFailure.KEY_UNAVAILABLE || decrypted.reason == FieldCryptoFailure.KEY_INVALIDATED)
+                    // Infrastructure unavailability is not evidence of invalid content.
+                    // Preserve the row without advancing attempts or invoking the consumer.
+                    if (decrypted.reason == FieldCryptoFailure.KEY_UNAVAILABLE ||
+                        decrypted.reason == FieldCryptoFailure.KEY_INVALIDATED ||
+                        decrypted.reason == FieldCryptoFailure.CRYPTO_UNAVAILABLE)
                         return@runInTransaction
                     reject(row, now); progressed = true; return@runInTransaction
                 }

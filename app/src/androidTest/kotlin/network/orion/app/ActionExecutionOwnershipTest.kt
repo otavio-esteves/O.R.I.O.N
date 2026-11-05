@@ -234,6 +234,53 @@ class ActionExecutionOwnershipTest {
         assertEquals(3, db.actions().auditFor(request.actionId.toString()).size)
     }
 
+    @Test fun confirmationExpiringWhileWaitingForWriterIsNotPersisted() {
+        val request = awaitingConfirmation()
+        val receipt = ActionConfirmationBinding(clock).recordConfirmation(request, wall.plusSeconds(60))
+        val result = withContendedWriter(
+            operation = { store.confirm(request.actionId, 1, receipt, "1") },
+            whileWaiting = { wall = wall.plusSeconds(60) },
+        )
+        assertEquals(ActionStoreOutcome.CONFIRMATION_EXPIRED, result.outcome)
+        assertUnconfirmed(request)
+    }
+
+    @Test fun clockRollbackWhileWaitingForWriterCannotPersistFutureConfirmation() {
+        val request = awaitingConfirmation()
+        val receipt = ActionConfirmationBinding(clock).recordConfirmation(request, wall.plusSeconds(60))
+        val result = withContendedWriter(
+            operation = { store.confirm(request.actionId, 1, receipt, "1") },
+            whileWaiting = { wall = wall.minusSeconds(1) },
+        )
+        assertEquals(ActionStoreOutcome.CONFIRMATION_STALE, result.outcome)
+        assertUnconfirmed(request)
+    }
+
+    @Test fun stillValidConfirmationCommitsExactReceiptAfterWaitingForWriter() {
+        val request = awaitingConfirmation()
+        val receipt = ActionConfirmationBinding(clock).recordConfirmation(request, wall.plusSeconds(60))
+        val result = withContendedWriter(
+            operation = { store.confirm(request.actionId, 1, receipt, "1") },
+            whileWaiting = { wall = wall.plusSeconds(1) },
+        )
+        assertEquals(ActionStoreOutcome.APPLIED, result.outcome)
+        val loaded = (store.read(request.actionId) as ActionReadResult.Ready).action
+        assertEquals(ActionStatus.CONFIRMED, loaded.status)
+        assertEquals(2L, loaded.version)
+        assertEquals(receipt, loaded.confirmation)
+        assertEquals(3, db.actions().auditFor(request.actionId.toString()).size)
+    }
+
+    private fun assertUnconfirmed(request: NormalizedActionRequest) {
+        val row = checkNotNull(db.actions().find(request.actionId.toString()))
+        assertEquals(ActionStatus.NEEDS_CONFIRMATION, row.status)
+        assertEquals(1L, row.version)
+        assertNull(row.confirmedAt)
+        assertNull(row.confirmedPayloadHash)
+        assertNull(row.payloadLockedAt)
+        assertEquals(2, db.actions().auditFor(request.actionId.toString()).size)
+    }
+
     @Test fun newLeaseStartsAfterAcquiringWriterInsteadOfBeforeTheWait() {
         val request = confirmed()
         val result = withContendedWriter(
@@ -333,13 +380,18 @@ class ActionExecutionOwnershipTest {
     }
 
     private fun confirmed(): NormalizedActionRequest {
+        val request = awaitingConfirmation()
+        val receipt = ActionConfirmationBinding(clock).recordConfirmation(request, wall.plusSeconds(60))
+        assertEquals(ActionStoreOutcome.APPLIED, store.confirm(request.actionId, 1, receipt, "1").outcome)
+        return request
+    }
+
+    private fun awaitingConfirmation(): NormalizedActionRequest {
         val request = NormalizedActionRequest(UUID.randomUUID(), descriptor.name, "{}", "target",
             descriptor.authorizationLevel, 1, descriptor.sideEffectClass, descriptor.recoveryStrategy, descriptor.idempotencyMode, "1")
         assertEquals(ActionStoreOutcome.REGISTERED, store.register(request, idempotency, UUID.randomUUID().toString(),
             UUID.randomUUID(), Sensitivity.SECRET, true).outcome)
         assertEquals(ActionStoreOutcome.APPLIED, store.requireConfirmation(request.actionId, 0).outcome)
-        val receipt = ActionConfirmationBinding(clock).recordConfirmation(request, wall.plusSeconds(60))
-        assertEquals(ActionStoreOutcome.APPLIED, store.confirm(request.actionId, 1, receipt, "1").outcome)
         return request
     }
 
