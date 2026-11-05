@@ -1,0 +1,31 @@
+{
+  "workPackage": "ORION-F3-INGRESS-001",
+  "issue": 45,
+  "baseCommit": "dcceec341711f6ae9fbaf7a26fcceeefdcc045ce",
+  "workingTreeDirty": true,
+  "buildEnvironment": "CONTAINER",
+  "command": "docker compose run --rm android-build :app:testDebugUnitTest :data:database:lint :data:repository:lint :app:assembleDebug :app:assembleDebugAndroidTest verifyModuleBoundaries testModuleBoundaries --max-workers=2",
+  "buildResult": "PASS: 4m35s, 856 tasks (70 executed, 786 up-to-date)",
+  "jvmTests": 27,
+  "jvmFailures": 0,
+  "moduleBoundaryAssertions": 36,
+  "androidEnvironment": "ANDROID_EMULATOR",
+  "androidRuntimeEvidence": "NON_DEFINITIVE",
+  "deviceSerial": "emulator-5580",
+  "androidApi": 35,
+  "abi": "x86_64",
+  "instrumentation": "network.orion.app.DurableIngressStoreTest: PASS 10 cases",
+  "newAndroidCases": 3,
+  "sourceSha256": {
+    "data/database/src/main/kotlin/network/orion/data/database/OrionIngressDao.kt": "cddcd26b3e0514ac6bb63708db54771358c5373a8c7a187a6ff6099a0cf740f5",
+    "data/repository/src/main/kotlin/network/orion/data/repository/OrionDurableIngressStore.kt": "8d5ce3b11bd1093e4fcc8ad2a236d69807a25266f92aaf7284e29666bba1b4dd",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionTaskKernel.kt": "aa3277ae1cd07fbedeb80040b5adf51e4354e11084850c60f1c0fde05f290d72",
+    "app/src/androidTest/kotlin/network/orion/app/DurableIngressStoreTest.kt": "f968387d17660aa8439c16d688feae01e9a6042e1049c6d8252923564c4ffd42"
+  },
+  "artifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "cf18b465c59a8c7a52c74f4a672ab1bc187e4640c55d703ff47e0f86d1569ebe",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "8e7e66a9dc2edb380bba949d4c84876c438c28809e07eef502c4cbff3f5b72c3"
+  },
+  "review": "Independent read-only review: no blockers",
+  "qualificationBoundary": "No physical, 24/7, F3/F4 gate or hardware qualification; scope routing alone grants no authority."
+}

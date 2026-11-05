@@ -25,6 +25,14 @@ abstract class OrionIngressDao {
         return queryQueued(limit)
     }
 
+    @Query("SELECT * FROM orion_ingress_envelopes WHERE status = 'QUEUED' AND idempotencyScope = :scope ORDER BY priority DESC, receivedAt, ingressId LIMIT :limit")
+    protected abstract fun queryQueuedInScope(scope: String, limit: Int): List<IngressEnvelopeEntity>
+
+    open fun queuedInScope(scope: String, limit: Int): List<IngressEnvelopeEntity> {
+        require(scope.matches(TECHNICAL_NAME) && limit in 1..100)
+        return queryQueuedInScope(scope, limit)
+    }
+
     @Insert
     protected abstract fun insert(envelope: IngressEnvelopeEntity)
 

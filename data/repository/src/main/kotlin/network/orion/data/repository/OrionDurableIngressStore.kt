@@ -35,13 +35,18 @@ class OrionDurableIngressStore(
     private val clock: WallClock,
     private val barrier: StartupBarrier,
     private val consumer: LocalIngressConsumer,
+    private val consumerScope: String? = null,
 ) : DurableIngressQueue {
+    init {
+        require(consumerScope == null || consumerScope.matches(Regex("[A-Za-z][A-Za-z0-9_.-]{0,95}")))
+    }
     override fun enqueue(request: DurableIngressRequest): DurableIngressOutcome = enqueue(request, null, null)
 
     internal fun enqueueExpiringReference(request: DurableIngressRequest, availableFrom: Long,
         expiresBy: Long): DurableIngressOutcome = enqueue(request, availableFrom, expiresBy)
 
     private fun enqueue(request: DurableIngressRequest, availableFrom: Long?, expiresBy: Long?): DurableIngressOutcome {
+        require(consumerScope == null || request.scope == consumerScope) { "Ingress scope does not match consumer." }
         val at = clock.wallNow().toEpochMilli()
         val expires = Math.addExact(at, request.lifetimeMillis)
         require(availableFrom == null || at >= availableFrom) { "Temporary content clock is invalid." }
@@ -81,7 +86,10 @@ class OrionDurableIngressStore(
         var progressed = false
         database.runInTransaction {
             val dao = database.ingress()
-            val row = dao.queued(1).firstOrNull() ?: return@runInTransaction
+            // Other domains retain their status/attempts, even when older, expired or
+            // higher priority. Routing does not replace consumer authorization.
+            val row = (consumerScope?.let { dao.queuedInScope(it, 1) } ?: dao.queued(1))
+                .firstOrNull() ?: return@runInTransaction
             val now = clock.wallNow().toEpochMilli()
             if (now < row.receivedAt) return@runInTransaction
             if (now >= row.expiresAt) {
