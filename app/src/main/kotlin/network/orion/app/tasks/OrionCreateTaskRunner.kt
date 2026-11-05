@@ -2,7 +2,6 @@ package network.orion.app.tasks
 
 import java.time.Duration
 import java.util.UUID
-import java.util.concurrent.Callable
 import network.orion.core.actions.*
 import network.orion.core.ingress.StartupBarrier
 import network.orion.core.model.Capability
@@ -44,13 +43,10 @@ internal class OrionCreateTaskRunner(
 ) {
     private val skill = OrionCreateTaskSkill(ownedTasks)
 
-    fun execute(admission: OrionCreateTaskAdmission, displayed: OrionTaskActionPreview): OrionTaskExecutionResult = barrier.whileOpen {
-        try {
-            database.runInTransaction(Callable { executeInTransaction(admission, displayed) })
-        } catch (rollback: TaskExecutionRollback) {
-            OrionTaskExecutionResult.Blocked(rollback.reason)
-        }
-    } ?: OrionTaskExecutionResult.Blocked(OrionTaskExecutionFailure.STARTUP_GATED)
+    fun execute(admission: OrionCreateTaskAdmission, displayed: OrionTaskActionPreview): OrionTaskExecutionResult =
+        orionTaskTransaction(database, barrier, OrionTaskTransactionBlocked.Execution(OrionTaskExecutionFailure.STARTUP_GATED),
+            blocked = { if (it is OrionTaskTransactionBlocked.Execution) OrionTaskExecutionResult.Blocked(it.reason) else throw it },
+            block = { executeInTransaction(admission, displayed) })
 
     private fun executeInTransaction(admission: OrionCreateTaskAdmission, displayed: OrionTaskActionPreview): OrionTaskExecutionResult {
         fun freshPolicy() = admission.evaluate() is CreateTaskPolicyDecision.NeedsConfirmation
@@ -111,6 +107,5 @@ internal class OrionCreateTaskRunner(
         return OrionTaskExecutionResult.Completed(displayed.actionId, task.taskId, (result as SkillResult.Completed).deduplicated)
     }
 
-    private class TaskExecutionRollback(val reason: OrionTaskExecutionFailure) : RuntimeException("Task execution blocked.")
-    private fun abort(reason: OrionTaskExecutionFailure): Nothing = throw TaskExecutionRollback(reason)
+    private fun abort(reason: OrionTaskExecutionFailure): Nothing = throw OrionTaskTransactionBlocked.Execution(reason)
 }

@@ -25,6 +25,19 @@ internal class OrionCreateTaskAdmission(
     override fun toString() = "OrionCreateTaskAdmission(<redacted>)"
 }
 
+internal sealed interface OrionTaskStatusAdmissionResult {
+    class Admitted(val request: OrionTaskStatusAdmission) : OrionTaskStatusAdmissionResult {
+        override fun toString() = "OrionTaskStatusAdmissionResult.Admitted(<redacted>)"
+    }
+    data class Invalid(val reason: TaskStatusRejection) : OrionTaskStatusAdmissionResult
+    data object Unavailable : OrionTaskStatusAdmissionResult
+}
+
+internal class OrionTaskStatusAdmission(val change: ValidatedTaskStatusChange, val source: TaskStatusPolicyContextSource) {
+    fun evaluate() = OrionTaskStatusPolicy(source).evaluate(change)
+    override fun toString() = "OrionTaskStatusAdmission(<redacted>)"
+}
+
 /**
  * MAIN-only owner. Only the trusted Activity's explicit user callback calls
  * captureCreateFromUser; producer IDs, Intent extras and arbitrary transcripts
@@ -104,6 +117,28 @@ internal class OrionTaskAdmissionOwner(
             OrionTaskAdmissionResult.Admitted(OrionCreateTaskAdmission(task, source))
         }
 
+        fun captureStatusFromUser(command: TaskStatusCommand): OrionTaskStatusAdmissionResult = synchronized(this@OrionTaskAdmissionOwner) {
+            if (!active() || role != OrionProcessRole.MAIN) return@synchronized OrionTaskStatusAdmissionResult.Unavailable
+            val present = try { devicePresence() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); throw interrupted }
+            catch (_: Exception) { return@synchronized OrionTaskStatusAdmissionResult.Unavailable }
+            if (present != OrionPolicyEvidence.SATISFIED) return@synchronized OrionTaskStatusAdmissionResult.Unavailable
+            val prepared = OrionTaskStatusPreparer.prepare(command)
+            if (prepared is TaskStatusPreparation.Rejected) return@synchronized OrionTaskStatusAdmissionResult.Invalid(prepared.reason)
+            val change = (prepared as TaskStatusPreparation.Ready).change
+            val binding = TaskStatusPolicyInputBinding.from(change)
+            val id = UUID.randomUUID()
+            val generation = uiGeneration
+            val source = TaskStatusPolicyContextSource {
+                synchronized(this@OrionTaskAdmissionOwner) {
+                    if (!active() || uiGeneration != generation) TaskStatusPolicyContextRead.Unavailable
+                    else observeStatus(id, binding)
+                }
+            }
+            OrionTaskStatusAdmissionResult.Admitted(OrionTaskStatusAdmission(change, source))
+        }
+
         private fun active() = !closed && current === this && resumed && focused
         override fun toString() = "OrionTaskUiChannel(<redacted>)"
     }
@@ -116,6 +151,15 @@ internal class OrionTaskAdmissionOwner(
             if (evidence.barrierOpen) OrionPolicyEvidence.SATISFIED else OrionPolicyEvidence.NOT_SATISFIED,
             evidence.presence, mapOf(OrionCreateTaskDescriptor.WRITE_CAPABILITY to evidence.capability),
         ))
+    }
+
+    private fun observeStatus(id: UUID, binding: TaskStatusPolicyInputBinding): TaskStatusPolicyContextRead {
+        val evidence = Evidence(barrier.isOpen(), writeCapability(), devicePresence())
+        if (lastEvidence != evidence) { advance(); lastEvidence = evidence }
+        return TaskStatusPolicyContextRead.Available(TaskStatusPolicyContext(id, binding, revision, role,
+            TaskStatusAdmissionOrigin.EXPLICIT_USER_REQUEST,
+            if (evidence.barrierOpen) OrionPolicyEvidence.SATISFIED else OrionPolicyEvidence.NOT_SATISFIED,
+            evidence.presence, mapOf(OrionCreateTaskDescriptor.WRITE_CAPABILITY to evidence.capability)))
     }
 
     private fun advance() { revision = Math.addExact(revision, 1) }

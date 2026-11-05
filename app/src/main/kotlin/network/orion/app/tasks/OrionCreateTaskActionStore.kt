@@ -2,7 +2,6 @@ package network.orion.app.tasks
 
 import java.time.Duration
 import java.util.UUID
-import java.util.concurrent.Callable
 import network.orion.core.actions.*
 import network.orion.core.commands.tasks.ValidatedCreateTask
 import network.orion.core.ingress.StartupBarrier
@@ -129,16 +128,12 @@ internal class OrionCreateTaskActionStore(
         stored.request.actionId, stored.version, ActionConfirmationBinding(clock).prepare(stored.request).confirmationFingerprint,
         stored.request.policyVersion, stored.status)
 
-    private fun admittedTransaction(block: () -> OrionTaskActionResult): OrionTaskActionResult = barrier.whileOpen {
-        try {
-            database.runInTransaction(Callable { block() })
-        } catch (rollback: TaskActionRollback) {
-            OrionTaskActionResult.Blocked(rollback.reason)
-        }
-    } ?: OrionTaskActionResult.Blocked(OrionTaskActionFailure.STARTUP_GATED)
+    private fun admittedTransaction(block: () -> OrionTaskActionResult) = orionTaskTransaction(database, barrier,
+        OrionTaskTransactionBlocked.Action(OrionTaskActionFailure.STARTUP_GATED), blocked = {
+            if (it is OrionTaskTransactionBlocked.Action) OrionTaskActionResult.Blocked(it.reason) else throw it
+        }, block = block)
 
-    private class TaskActionRollback(val reason: OrionTaskActionFailure) : RuntimeException("Task action preparation blocked.")
-    private fun abort(reason: OrionTaskActionFailure): Nothing = throw TaskActionRollback(reason)
+    private fun abort(reason: OrionTaskActionFailure): Nothing = throw OrionTaskTransactionBlocked.Action(reason)
 
     private fun failure(outcome: ActionStoreOutcome) = when (outcome) {
         ActionStoreOutcome.IDEMPOTENCY_CONFLICT -> OrionTaskActionFailure.IDEMPOTENCY_CONFLICT
