@@ -60,8 +60,22 @@ fun TimersScreen(gateway: TimerGateway, recoveryVersion: Instant? = null) {
         catch (_: Exception) { message = "Timers indisponíveis. Consulte o diagnóstico." }
         finally { activeWork-- }
     }
-    LaunchedEffect(gateway, recoveryVersion, busy) {
-        while (!busy) { delay(1000); if (activeWork == 0) reload() }
+    LaunchedEffect(gateway, recoveryVersion) {
+        while (true) {
+            delay(1000)
+            if (activeWork == 0 && rows.isNotEmpty()) {
+                // Claim UI work before the first suspension. Keep the selected page/cursor
+                // and pending previews; a timer tick never drains mutable ingress.
+                activeWork++
+                try {
+                    val refreshed = ArrayList<TimerSummary>(rows.size)
+                    for (row in rows) refreshed += gateway.status(GetTimerStatus(row.timerId)) ?: row
+                    rows = refreshed
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { message = "Não foi possível atualizar a contagem. Atualize para consultar o estado." }
+                finally { activeWork-- }
+            }
+        }
     }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize().testTag("orion_timers").semantics {
         stateDescription = if (busy) "Carregando timers" else "Timers atualizados"
