@@ -1,0 +1,72 @@
+{
+  "recordedAtUtc": "2026-11-05T00:24:48.129876+00:00",
+  "environment": "CONTAINER",
+  "result": "PASS",
+  "baseCommit": "dbb5a914b7fd6c88a579ca0f2b58c320cd7c2ff0",
+  "branch": "feat/orion-f3-task-policy",
+  "sourceSha256": {
+    "core/policy/build.gradle.kts": "f6e23200584db5f127182725aa40d94c32bce1954aceea5adf403084e219a212",
+    "core/policy/src/main/kotlin/network/orion/core/policy/tasks/CreateTaskPolicyContext.kt": "4c8b6b3ec159031dad4bf4cd17340c02787c2eafec5943614be68c34eb6fed04",
+    "core/policy/src/main/kotlin/network/orion/core/policy/tasks/CreateTaskPolicyInputBinding.kt": "b4efe060caf84b67b4863f6458deb258012d614935c0e238d4d1695ba52c4f23",
+    "core/policy/src/main/kotlin/network/orion/core/policy/tasks/OrionCreateTaskPolicy.kt": "42ee65c176212bfe57371a1ac10b89485245f928c548e781534dd93dcc512e36",
+    "core/policy/src/test/kotlin/network/orion/core/policy/tasks/OrionCreateTaskPolicyTest.kt": "0ba69a1c83fdfe2070cc7d4bb7f3132886173b561179e343af00cb0acbe6e5d0"
+  },
+  "command": "docker compose run --rm android-build :core:policy:testDebugUnitTest :core:policy:assemble :core:policy:lint verifyModuleBoundaries testModuleBoundaries --max-workers=2",
+  "duration": "3m 21s",
+  "tasks": {
+    "total": 241,
+    "executed": 22,
+    "fromCache": 1,
+    "upToDate": 218
+  },
+  "unitTests": {
+    "tests": 27,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "name": "network.orion.core.policy.tasks.OrionCreateTaskPolicyTest",
+        "tests": 27
+      }
+    ]
+  },
+  "lint": "NO_ISSUES",
+  "moduleBoundaries": "PASS",
+  "moduleBoundaryNegativeFixtures": {
+    "assertions": 36,
+    "result": "PASS"
+  },
+  "artifactSha256": {
+    "core/policy/build/outputs/aar/policy-debug.aar": "c1cfb5f27c4e1f8dc8a8cc90b8ced6a138f951523e0bd8bfb32630a1558712ee",
+    "core/policy/build/outputs/aar/policy-release.aar": "143a97741b2981b40bea2b4550ded6b163d789a04d048c93e764d32382567452"
+  },
+  "newExternalLibraries": false,
+  "apiDependencies": [
+    "core/commands",
+    "core/common",
+    "core/model"
+  ],
+  "implementationDependencies": [
+    "core/skills/metadata"
+  ],
+  "ruleVersion": "orion_task_create_policy_v1",
+  "onlyPositiveDecision": "NeedsConfirmation",
+  "contextSourceProductionAdapter": "NOT_IMPLEMENTED",
+  "runtimeMutationEnabled": false,
+  "actionRequestOrConfirmationCreated": false,
+  "schemaOrIpcChanged": false,
+  "independentReviews": {
+    "securityPrivacy": "NO_BLOCKERS",
+    "concurrencyIntegration": "NO_BLOCKERS",
+    "executedTestsByReviewers": false
+  },
+  "observationLimit": "Two reads are advisory, not atomic OS snapshots or execution authority; sources must not reuse state generations for observed relevant transitions including ABA. Execution still revalidates inside writer admission.",
+  "physicalQualification": {
+    "status": "DEFERRED_BY_USER",
+    "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/23"
+  },
+  "androidRuntimeEvidence": "NOT_RUN_FOR_THIS_PURE_POLICY_PACKAGE",
+  "requiredRemoteCi": "PENDING_PR_FINAL_HEAD",
+  "deterministicAgentReady": false
+}
