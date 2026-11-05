@@ -40,6 +40,19 @@ class OrionAndroidNotificationPosterTest {
         assertEquals(1,permits)
         assertFalse(context.getSystemService(NotificationManager::class.java).activeNotifications.any {it.tag==id.toString()&&it.id==0})
     }
+    @Test fun invocationGateCancellationPropagatesWithoutPublishing() {
+        val context:Context=ApplicationProvider.getApplicationContext()
+        val poster=OrionAndroidNotificationPoster(context,AndroidOrionClock(context.contentResolver))
+        poster.initializeChannels()
+        assumeTrue("Explicit notification permission and enabled user channel are required",poster.availability()==NotificationAvailability.AVAILABLE)
+        val id=UUID.randomUUID()
+        val input=(OrionPostNotificationPreparer.prepare(PostNotification(id,"Cancelled permit fixture","No notification is authorized",id,id)) as PostNotificationPreparation.Ready).notification
+        val cancellation=java.util.concurrent.CancellationException("Synthetic cancelled invocation gate")
+        assertSame(cancellation,assertThrows(java.util.concurrent.CancellationException::class.java) {
+            poster.post(id,input,OrionNotificationInvocationPermit {throw cancellation})
+        })
+        assertFalse(context.getSystemService(NotificationManager::class.java).activeNotifications.any {it.tag==id.toString()&&it.id==0})
+    }
     @Test fun actualOwnedNotificationHasVerifiedRegistrationAndGenericPrivateLockscreenContent() {
         val context:Context=ApplicationProvider.getApplicationContext()
         val clock=AndroidOrionClock(context.contentResolver)

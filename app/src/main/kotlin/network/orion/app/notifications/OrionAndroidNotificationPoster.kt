@@ -60,7 +60,10 @@ internal class OrionAndroidNotificationPoster(context:Context,private val clock:
             .setStyle(Notification.BigTextStyle().bigText(notification.body)).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setPublicVersion(public).setLocalOnly(true).setOnlyAlertOnce(true).setAllowSystemGeneratedContextualActions(false).build()
         if(availability()!=NotificationAvailability.AVAILABLE)return NotificationPostResult.NOT_INVOKED
-        val allowed=try { permit.allows() } catch(_:Exception) { return NotificationPostResult.NOT_INVOKED }
+        val allowed=try { permit.allows() }
+            catch(cancelled:java.util.concurrent.CancellationException) { throw cancelled }
+            catch(interrupted:InterruptedException) { Thread.currentThread().interrupt();throw interrupted }
+            catch(_:Exception) { return NotificationPostResult.NOT_INVOKED }
         if(!allowed)return NotificationPostResult.NOT_INVOKED
         return try {
             service.notify(actionId.toString(),0,platform)
@@ -77,8 +80,9 @@ internal class OrionAndroidNotificationPoster(context:Context,private val clock:
                 if(attempt<9)Thread.sleep(25)
             }
             NotificationPostResult.UNKNOWN
-        } catch(interrupted:InterruptedException) {
-            Thread.currentThread().interrupt();NotificationPostResult.UNKNOWN
+        } catch(cancelled:java.util.concurrent.CancellationException) { throw cancelled }
+        catch(interrupted:InterruptedException) {
+            Thread.currentThread().interrupt();throw interrupted
         } catch(_:Exception) { NotificationPostResult.UNKNOWN }
     }
 
