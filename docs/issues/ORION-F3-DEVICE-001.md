@@ -43,4 +43,9 @@ notifications, memory CRUD, F4 scheduling/recovery, AI/voice, schema changes and
 hardware qualification. Process death discards only recomputable read snapshots;
 no migrations, permissions, exported components or process-topology changes occur.
 
-VALIDATION: Canonical Docker checks passed in4m7s (903 tasks), including23 JVM cases (9 new), zero failures/errors/skips, changed feature/data lint and debug/testAPK assembly. Module boundaries passed. Host/API35 x86_64 emulator passed8 actualAndroid cases for source/history/screens and navigation/recreation. Evidence with source/APK hashes: [device/activity](../qualification/f3-device-activity-evidence.json). Required remoteCI must pass before merge; no physical or fullF3/F4 qualification.
+VALIDATION: Canonical Docker checks passed in 4m07s (903 tasks), including 23 JVM
+cases (9 new), zero failures/errors/skips, changed feature/data lint and debug/test
+APK assembly. Module boundaries passed. Host/API35 x86_64 emulator passed 8
+Android cases for source/history/screens and navigation/recreation. Evidence with
+source/APK hashes: [device/activity](../qualification/f3-device-activity-evidence.json).
+Required remote CI must pass before merge; no physical or full F3/F4 qualification.
