@@ -17,6 +17,8 @@ android {
 dependencies {
     implementation(project(":core:orchestrator"))
     implementation(libs.coroutines.android)
+    // Same pinned lifecycle version already selected by Activity Compose 1.13.0.
+    implementation(libs.lifecycle.runtime.compose)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
 }

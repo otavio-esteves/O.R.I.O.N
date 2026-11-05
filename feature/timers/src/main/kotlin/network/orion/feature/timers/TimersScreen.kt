@@ -17,6 +17,9 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import network.orion.core.commands.timers.*
 import network.orion.core.orchestrator.timers.*
 import network.orion.core.queries.timers.*
@@ -25,6 +28,7 @@ import network.orion.core.queries.timers.*
 @Composable
 fun TimersScreen(gateway: TimerGateway, recoveryVersion: Instant? = null) {
     val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     var title by remember { mutableStateOf("") }
@@ -60,20 +64,24 @@ fun TimersScreen(gateway: TimerGateway, recoveryVersion: Instant? = null) {
         catch (_: Exception) { message = "Timers indisponíveis. Consulte o diagnóstico." }
         finally { activeWork-- }
     }
-    LaunchedEffect(gateway, recoveryVersion) {
-        while (true) {
-            delay(1000)
-            if (activeWork == 0 && rows.isNotEmpty()) {
-                // Claim UI work before the first suspension. Keep the selected page/cursor
-                // and pending previews; a timer tick never drains mutable ingress.
-                activeWork++
-                try {
-                    val refreshed = ArrayList<TimerSummary>(rows.size)
-                    for (row in rows) refreshed += gateway.status(GetTimerStatus(row.timerId)) ?: row
-                    rows = refreshed
-                } catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { message = "Não foi possível atualizar a contagem. Atualize para consultar o estado." }
-                finally { activeWork-- }
+    LaunchedEffect(gateway, recoveryVersion, lifecycleOwner) {
+        // Composition can remain alive while its Activity is stopped. Cancel the
+        // polling child immediately below STARTED; resume without resetting UI state.
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                delay(1000)
+                if (activeWork == 0 && rows.isNotEmpty()) {
+                    // Claim UI work before the first suspension. Keep the selected page/cursor
+                    // and pending previews; a timer tick never drains mutable ingress.
+                    activeWork++
+                    try {
+                        val refreshed = ArrayList<TimerSummary>(rows.size)
+                        for (row in rows) refreshed += gateway.status(GetTimerStatus(row.timerId)) ?: row
+                        rows = refreshed
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { message = "Não foi possível atualizar a contagem. Atualize para consultar o estado." }
+                    finally { activeWork-- }
+                }
             }
         }
     }
