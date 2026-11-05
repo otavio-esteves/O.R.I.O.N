@@ -13,7 +13,13 @@ import org.json.JSONObject
 class OrionTaskQuery(private val database: OrionDatabase, private val encryption: OrionFieldEncryption) : TaskQuery {
     override fun get(request: GetTasks): TaskPage {
         val rows = database.tasks().page(request.after?.toString(), request.limit + 1)
-        val selected = rows.take(request.limit).map { row ->
+        val selected = rows.take(request.limit).map(::select)
+        return TaskPage(selected, if (rows.size > request.limit) selected.last().taskId else null)
+    }
+
+    fun find(id: UUID): TaskSummary? = database.tasks().find(id.toString())?.let(::select)
+
+    private fun select(row: network.orion.data.database.TaskEntity): TaskSummary {
             val id = UUID.fromString(row.taskId)
             var state = TaskContentState.UNREADABLE
             var title: String? = null
@@ -29,9 +35,7 @@ class OrionTaskQuery(private val database: OrionDatabase, private val encryption
                         FieldCryptoFailure.KEY_INVALIDATED, FieldCryptoFailure.CRYPTO_UNAVAILABLE)) state = TaskContentState.KEY_UNAVAILABLE
                 }
             }
-            TaskSummary(id, title, TaskState.valueOf(row.status.name), row.version, state)
-        }
-        return TaskPage(selected, if (rows.size > request.limit) selected.last().taskId else null)
+            return TaskSummary(id, title, TaskState.valueOf(row.status.name), row.version, state)
     }
 
     private fun decodeContent(id: UUID, bytes: ByteArray): String? {

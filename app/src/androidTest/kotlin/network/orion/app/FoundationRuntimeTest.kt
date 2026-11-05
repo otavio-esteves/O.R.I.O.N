@@ -39,6 +39,21 @@ class FoundationRuntimeTest {
         assertNotNull(report.lastRecovery)
     }
 
+    @Test fun taskCapabilityRequiresActualRecoveredBarrierAndDoesNotGrantUnboundExecution() = runBlocking {
+        val runtime = checkNotNull(app.mainRuntime)
+        runtime.recover()
+        withTimeout(30_000) { while (!runtime.taskStartupBarrier.isOpen()) kotlinx.coroutines.delay(10) }
+        assertNotNull(runtime.taskKernel)
+        assertEquals(CoreReadiness.DEGRADED_SAFE, runtime.health.value.core.readiness)
+        assertTrue(runtime.capabilities.isAvailable(network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor.WRITE_CAPABILITY))
+        assertFalse(runtime.capabilities.isAvailable(network.orion.core.model.Capability("orion_unknown")))
+        assertEquals(network.orion.core.actions.ActionExecutionResult.UNAVAILABLE, runtime.actions.execute(java.util.UUID.randomUUID()))
+        runtime.taskStartupBarrier.beginRecovery()
+        assertFalse(runtime.capabilities.isAvailable(network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor.WRITE_CAPABILITY))
+        assertEquals(CoreReadiness.DEGRADED_SAFE, runtime.recover())
+        assertTrue(runtime.taskStartupBarrier.isOpen())
+    }
+
     @Suppress("DEPRECATION")
     @Test fun componentSurfaceKeepsCorePrivateAndToolingPermissionProtected() {
         val info = app.packageManager.getPackageInfo(app.packageName, PackageManager.GET_ACTIVITIES or

@@ -4,7 +4,7 @@ import java.util.UUID
 import network.orion.core.commands.Command
 
 enum class TaskStatusOperation { COMPLETE, CANCEL }
-enum class TaskStatusResult { UNAVAILABLE }
+enum class TaskStatusResult { QUEUED, REJECTED, UNAVAILABLE }
 
 /** Expected version is domain concurrency data, never authorization or a confirmation flag. */
 sealed interface TaskStatusCommand : Command<TaskStatusResult> {

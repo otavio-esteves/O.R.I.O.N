@@ -41,8 +41,15 @@ Keystore-wrapped versioned data keys, and gated transactional ingress are implem
 MAIN startup provisions keys only after an empty-storage proof and a durable attempt
 marker. Reminder/memory adapters provide encrypted reads, CAS mutations, transactional
 supersession and claim deletion. Large ingress content has a bounded encrypted private
-file path with TTL. Product commands, Skill execution and complete F4 operational
-recovery remain gated. AI and voice remain unavailable. See the
+file path with TTL. The native Tasks screen now supports create/list/complete/cancel
+through encrypted durable UI ingress, exact human confirmation, and owned local
+Skills. Task startup recovery opens one operational barrier only after storage,
+keys and conservative action reconciliation; task/event/action/audit/ingress changes
+commit atomically. Pending confirmations restore after Activity/process recreation.
+Queue drains retain the original consent timestamp and never renew expired consent.
+GetTasks is read-only and exposes unreadable content explicitly. Diagnostics show
+technical queue counts; the Core reports DEGRADED_SAFE because full F4 recovery,
+event publication and scheduling remain unqualified. AI and voice remain unavailable. See the
 [F2 storage completion and remaining qualification](docs/qualification/F2-StorageCompletion.md).
 
 Build both APK variants, the release AAB, and the instrumentation APKs, and execute

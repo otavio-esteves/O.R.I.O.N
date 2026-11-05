@@ -69,6 +69,7 @@ class OrionTaskQueryTest {
         unavailable = true
         val row = query.get(GetTasks()).items.single()
         assertEquals(TaskContentState.KEY_UNAVAILABLE, row.contentState); assertNull(row.title)
+        assertEquals(TaskContentState.KEY_UNAVAILABLE, query.find(id)!!.contentState)
         assertArrayEquals(before, db.tasks().find(id.toString())!!.contentEnvelope)
         unavailable = false
         assertEquals(TaskContentState.READABLE, query.get(GetTasks()).items.single().contentState)

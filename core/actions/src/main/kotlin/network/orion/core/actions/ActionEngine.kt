@@ -7,8 +7,8 @@ fun interface ActionEngine {
     suspend fun execute(actionId: UUID): ActionExecutionResult
 }
 
-/** No execution status is invented while the transactional engine is absent. */
-enum class ActionExecutionResult { UNAVAILABLE }
+/** Local bound engines report actual execution. Unbound ID-only entry remains unavailable. */
+enum class ActionExecutionResult { SUCCEEDED, BLOCKED, UNAVAILABLE }
 
 class UnavailableActionEngine : ActionEngine {
     override suspend fun execute(actionId: UUID): ActionExecutionResult = ActionExecutionResult.UNAVAILABLE

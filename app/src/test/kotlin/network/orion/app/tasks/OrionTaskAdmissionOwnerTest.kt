@@ -27,6 +27,16 @@ class OrionTaskAdmissionOwnerTest {
         (channel.captureCreateFromUser(command) as OrionTaskAdmissionResult.Admitted).request
     private fun openBarrier() = barrier.releaseAfterRecovery(barrier.beginRecovery(), CoreReadiness.READY)
 
+    @Test fun recoveryInvalidationRevokesPreviouslyCapturedAdmissionEvenWithUnchangedUi() {
+        openBarrier()
+        val channel = active()
+        val request = admitted(channel)
+        assertTrue(request.evaluate() is CreateTaskPolicyDecision.NeedsConfirmation)
+        owner.invalidateAdmissions()
+        assertTrue(request.evaluate() is CreateTaskPolicyDecision.Unavailable)
+        assertTrue(admitted(channel).evaluate() is CreateTaskPolicyDecision.NeedsConfirmation)
+    }
+
     @Test fun explicitMainGestureBindsExactInputAndStillRequiresConfirmation() {
         openBarrier()
         val request = admitted()
