@@ -5,8 +5,10 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Instant
+import java.security.InvalidAlgorithmParameterException
 import java.util.UUID
 import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 import network.orion.core.health.CoreReadiness
 import network.orion.core.ingress.*
 import network.orion.core.model.Sensitivity
@@ -29,9 +31,17 @@ class DurableIngressStoreTest {
     private val barrier = StartupBarrier()
     private val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
     private var keysAvailable = true
+    private var cryptoUnavailable = false
+    // Inject a checked provider failure inside Cipher.init, without replacing crypto or storage.
+    private val unavailableKey = object : SecretKey {
+        override fun getAlgorithm() = "AES"
+        override fun getFormat() = "RAW"
+        override fun getEncoded(): ByteArray = throw InvalidAlgorithmParameterException("Synthetic provider unavailable")
+    }
     private val keys = object : FieldKeyProvider {
         override fun currentKey(): FieldKeyResult = if (keysAvailable) FieldKeyResult.Available(1, key) else FieldKeyResult.Unavailable
-        override fun keyForVersion(version: Int): FieldKeyResult = currentKey()
+        override fun keyForVersion(version: Int): FieldKeyResult =
+            if (cryptoUnavailable) FieldKeyResult.Available(1, unavailableKey) else currentKey()
     }
     private var calls = 0
     private var consume: (LocalIngressPayload) -> LocalIngressDisposition = { calls++; LocalIngressDisposition.CONSUMED }
@@ -119,5 +129,28 @@ class DurableIngressStoreTest {
         now = 1000
         assertTrue(store.consumeNext())
         assertEquals(1, calls)
+    }
+
+    @Test fun transientCryptoFailurePreservesQueuedRequestUntilProviderRecovers() {
+        val request = request()
+        assertEquals(DurableIngressOutcome.QUEUED, store.enqueue(request))
+        val before = checkNotNull(db.ingress().find(request.ingressId.toString()))
+        release()
+        cryptoUnavailable = true
+        // Verify that the fixture reaches the intended typed failure on this Android provider.
+        val envelope = (FieldEnvelopeCodec.decode(before.payloadEnvelope) as FieldEnvelopeDecodingResult.Decoded).envelope
+        val failure = OrionFieldEncryption(keys).decrypt(envelope, FieldEncryptionContext("fixture", "payload", 1))
+        assertEquals(FieldCryptoFailure.CRYPTO_UNAVAILABLE, (failure as FieldDecryptionResult.Failure).reason)
+        assertFalse(store.consumeNext())
+        val pending = checkNotNull(db.ingress().find(before.ingressId))
+        assertEquals(DurableIngressStatus.QUEUED, pending.status)
+        assertEquals(before.version, pending.version)
+        assertEquals(before.attemptCount, pending.attemptCount)
+        assertArrayEquals(before.payloadEnvelope, pending.payloadEnvelope)
+        assertEquals(0, calls)
+        cryptoUnavailable = false
+        assertTrue(store.consumeNext())
+        assertEquals(1, calls)
+        assertEquals(DurableIngressStatus.CONSUMED, db.ingress().find(before.ingressId)?.status)
     }
 }

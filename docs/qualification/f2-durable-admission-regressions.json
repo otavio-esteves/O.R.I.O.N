@@ -1,0 +1,141 @@
+{
+  "recordedAtUtc": "2026-11-05T01:56:43.955128+00:00",
+  "workPackage": "ORION-DATA-012",
+  "branch": "fix/orion-durable-admission-regressions",
+  "baseCommit": "154b28cf867169091da58a5ceac4d28b746a9249",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "data/repository/src/main/kotlin/network/orion/data/repository/OrionDurableIngressStore.kt": "c1f008b0d6a330c2ce2bc6e3b40fa5303ee64da1d2ccadb9ed39cdc2f129bd34",
+    "data/events/src/main/kotlin/network/orion/data/events/OrionEventDispatcher.kt": "e3466250753ef02105bb052dcdf52bb537129b83aa140eb21e34a70a12267f85",
+    "data/actions/src/main/kotlin/network/orion/data/actions/OrionActionStore.kt": "cb164e5a56bca837bd6cc92807819eaaedb3da839eabaed5adb9b4f1d44dda8d",
+    "app/src/androidTest/kotlin/network/orion/app/ActionExecutionOwnershipTest.kt": "28df3b16419e28ff91e59413d5bdb4da7dfe68e51ce183a0a23911b1e2ec0b9b",
+    "app/src/androidTest/kotlin/network/orion/app/DurableIngressStoreTest.kt": "6f356131eddde17fcc5ee4f070af60f2ace2b4461a730580497b406b4cdcde29",
+    "app/src/androidTest/kotlin/network/orion/app/TransactionCorePersistenceTest.kt": "a018f2d09a421b959acf3ffc46774d912bf550d8da45722ae19b8c820fe50533"
+  },
+  "baselineRegressionProof": {
+    "environment": "ANDROID_EMULATOR",
+    "productionSourceSha256": {
+      "data/repository/src/main/kotlin/network/orion/data/repository/OrionDurableIngressStore.kt": "31690870b90d9b2592d1d016a0b1cf62e1682e04cb4c6e4924a57af7259eb789",
+      "data/events/src/main/kotlin/network/orion/data/events/OrionEventDispatcher.kt": "5f5b261324c76d2ed5cb3e101c64363e3399e4863e4c1394a8725290c5442985",
+      "data/actions/src/main/kotlin/network/orion/data/actions/OrionActionStore.kt": "16f4d22439b7846f7ebd4c679a78897bc70e4eba18c594081a6be4b5d67a9659"
+    },
+    "artifactSha256": {
+      "app/build/outputs/apk/debug/app-debug.apk": "540caca6872f19ca1f2b011939751383bc69b7246c0d6379b0baf452cf92f213",
+      "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "82a9a406cea29e49316e980dc0e769a2f97a1e8f75850a2eecb5783420ae75ff"
+    },
+    "tests": 6,
+    "expectedFailures": 5,
+    "passedControlCases": 1,
+    "failureCases": [
+      "confirmationExpiringWhileWaitingForWriterIsNotPersisted",
+      "clockRollbackWhileWaitingForWriterCannotPersistFutureConfirmation",
+      "transientCryptoFailurePreservesQueuedRequestUntilProviderRecovers",
+      "rollbackDuringBatchLeavesLaterEventUnreservedUntilDueAgain",
+      "slowConsumerCannotGiveLaterEventsAnAlreadyElapsedBackoff"
+    ],
+    "rawOutputSha256": "b731de925f294c8209511e2c7fc3f583b1659bbce87e346ea30620a4996c9d5a"
+  },
+  "container": {
+    "result": "PASS",
+    "command": "docker compose run --rm android-build :app:assembleDebug :app:assembleDebugAndroidTest :core:actions:testDebugUnitTest :core:security:testDebugUnitTest :core:ingress:testDebugUnitTest :data:events:testDebugUnitTest :data:actions:lint :data:repository:lint :data:events:lint :app:lint verifyModuleBoundaries testModuleBoundaries --max-workers=2",
+    "duration": "8m",
+    "tasks": {
+      "total": 997,
+      "executed": 99,
+      "upToDate": 898
+    },
+    "unitTests": {
+      "core/actions": {
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "core/security": {
+        "tests": 37,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "core/ingress": {
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "data/events": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "unitTestsTotal": 75,
+    "lint": {
+      "app": {
+        "errors": 0,
+        "warnings": 10,
+        "warningIds": [
+          "AndroidGradlePluginVersion",
+          "ChromeOsAbiSupport",
+          "GradleDependency",
+          "MissingApplicationIcon",
+          "NewerVersionAvailable"
+        ]
+      },
+      "data/actions": {
+        "errors": 0,
+        "warnings": 0,
+        "warningIds": []
+      },
+      "data/repository": {
+        "errors": 0,
+        "warnings": 0,
+        "warningIds": []
+      },
+      "data/events": {
+        "errors": 0,
+        "warnings": 0,
+        "warningIds": []
+      }
+    },
+    "appLintWarningScope": "Unchanged toolchain/dependency files, app build configuration and manifest; no warning in changed code.",
+    "moduleBoundaries": "PASS",
+    "moduleBoundaryNegativeAssertions": 36,
+    "rawBuildOutputSha256": "4dd9d9a7721955d87c42b98d7fe8ab545525d52acc1a6688e48c88d596b6b423"
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "serial": "emulator-5584",
+    "apiLevel": "35",
+    "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+    "abi": "x86_64",
+    "pageSize": "4096",
+    "result": "PASS",
+    "tests": 88,
+    "failures": 0,
+    "newRegressionTests": 6,
+    "command": "/home/otavio/Android/Sdk/platform-tools/adb -s emulator-5584 shell am instrument -w network.orion.test/androidx.test.runner.AndroidJUnitRunner",
+    "installation": "Both matching APKs updated using adb install -r -t; no uninstall or app-data clearing.",
+    "rawOutputSha256": "111e901d7cdf13ce2c41d7977312d8a45834c287e1dd53289aad1f8e2583dc9b"
+  },
+  "artifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "fb8df9494f984d302a275ec2052ab02886121a502ee7a2b013281ba21ade2cf6",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "c57299b5e8173707acae896a901fbfbc0aecc04a4b5f1af79ef1607eba0c55e0"
+  },
+  "invariants": [
+    "INV-008",
+    "INV-011",
+    "INV-019",
+    "INV-021",
+    "INV-022",
+    "INV-023",
+    "INV-035"
+  ],
+  "schemaOrIpcChanged": false,
+  "newPermissionsOrLogging": false,
+  "runtimeMutationEnabled": false,
+  "physicalQualification": "S21 qualification remains deferred; no hardware/OEM or 24/7 claim.",
+  "remoteCi": "NOT_RUN_FOR_THIS_LOCAL_CHANGE"
+}
