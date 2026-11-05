@@ -34,7 +34,7 @@ class FoundationRuntimeTest {
         assertEquals(OrionHealthStatus.UNAVAILABLE, report.subsystems[OrionSubsystem.CORTEX])
         assertEquals(OrionHealthStatus.UNAVAILABLE, report.subsystems[OrionSubsystem.VOICE])
         assertEquals(1, runtime.databaseFormatVersion)
-        assertEquals(3, runtime.databaseSchemaVersion)
+        assertEquals(4, runtime.databaseSchemaVersion)
         assertEquals(1, runtime.configurationFormatVersion)
         assertNotNull(report.lastRecovery)
     }
