@@ -6,6 +6,8 @@ dependencies {
     api(project(":data:database"))
     api(project(":core:security"))
     implementation(project(":core:time"))
+    implementation(project(":core:commands"))
+    implementation(project(":data:actions"))
 }
 
 android {
