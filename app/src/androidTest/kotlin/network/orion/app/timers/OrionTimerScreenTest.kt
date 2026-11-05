@@ -33,6 +33,16 @@ class OrionTimerScreenTest {
         compose.waitUntil { port.confirmations==1 }
         compose.onNodeWithText("Alertas em segundo plano ainda não estão disponíveis.",substring=true).assertExists()
     }
+    @Test fun restoredFractionalSecondDurationIsDisplayedExactlyBeforeConsent() {
+        val port=FakeGateway().apply { last=CreateTimer(UUID.randomUUID(),"Dose",1,UUID.randomUUID(),UUID.randomUUID()) }
+        compose.setContent { MaterialTheme { TimersScreen(port) } }
+        compose.waitForIdle()
+        compose.onNodeWithText("Duração: 1 ms").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Duração: 0 segundos").assertDoesNotExist()
+        assertEquals(0,port.confirmations)
+        compose.onNodeWithText("Confirmar criação").performScrollTo().performClick()
+        compose.waitUntil { port.confirmations==1 }
+    }
     private class FakeGateway:TimerGateway {
         @Volatile var last:CreateTimer?=null
         @Volatile var confirmations=0

@@ -112,7 +112,7 @@ fun TimersScreen(gateway: TimerGateway, recoveryVersion: Instant? = null) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val verb = when (action.operation) { TimerOperation.CREATE -> "Criar"; TimerOperation.CANCEL -> "Cancelar" }
                     Text("$verb este timer?")
-                    action.durationMillis?.let { Text("Duração: ${it / 1000} segundos") }
+                    action.durationMillis?.let { Text(if (it % 1000 == 0L) "Duração: ${it / 1000} segundos" else "Duração: $it ms") }
                     Text(action.title ?: "Conteúdo indisponível ou pedido desatualizado. Descarte este pedido e tente novamente.")
                     Column {
                         Button(enabled = !busy && action.title != null, onClick = { run {
