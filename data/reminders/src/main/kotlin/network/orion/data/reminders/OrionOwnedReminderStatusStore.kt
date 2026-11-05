@@ -20,9 +20,35 @@ class OrionOwnedReminderStatusStore(private val database: OrionDatabase, encrypt
     private val actions = OrionActionStore(database, encryption, clock)
     private val reminders = OrionReminderStore(database, encryption, clock)
 
-    fun matchesExisting(change: ValidatedReminderStatusChange): Boolean {
-        val row = database.reminders().find(change.reminderId.toString()) ?: return false
-        return row.version == change.expectedVersion + 1 && matches(row, change)
+    /** Verify the committed action plus its audit/event receipt, independently of later aggregate mutations. */
+    fun matchesExisting(change: ValidatedReminderStatusChange, actionId: java.util.UUID): Boolean {
+        val action = database.actions().find(actionId.toString()) ?: return false
+        if (action.status != ActionStatus.SUCCEEDED || action.idempotencyScope != change.skillName ||
+            action.idempotencyKey != change.idempotencyKey.toString()) return false
+        val stored = (actions.read(actionId) as? ActionReadResult.Ready)?.action ?: return false
+        val descriptor = OrionReminderStatusDescriptors.forName(change.skillName) ?: return false
+        val expected = NormalizedActionRequest(actionId, descriptor.name, change.canonicalNormalizedArguments,
+            change.normalizedTarget, descriptor.authorizationLevel, descriptor.argumentSchemaVersion, descriptor.sideEffectClass,
+            descriptor.recoveryStrategy, descriptor.idempotencyMode, stored.request.policyVersion)
+        if (stored.request != expected || !stored.requiresConfirmation) return false
+        val confirmation = stored.confirmation ?: return false
+        val binding = ActionConfirmationBinding(clock).prepare(expected)
+        // Historical success does not expire; only its original consent/material identity is checked here.
+        if (confirmation.actionId != actionId || confirmation.confirmationFingerprint != binding.confirmationFingerprint ||
+            confirmation.normalizedPayloadHash != binding.normalizedPayloadHash ||
+            confirmation.confirmedPayloadHash != binding.normalizedPayloadHash ||
+            confirmation.policyVersionAtConfirmation != expected.policyVersion) return false
+        val audit = database.actions().auditFor(actionId.toString()).lastOrNull() ?: return false
+        if (audit.fromStatus != ActionStatus.RUNNING || audit.toStatus != ActionStatus.SUCCEEDED ||
+            audit.actionVersion != action.version || audit.occurredAt != action.executedAt ||
+            audit.correlationId != action.correlationId) return false
+        val target = database.reminders().find(change.reminderId.toString()) ?: return false
+        if (target.version < change.expectedVersion + 1) return false
+        if (target.version == change.expectedVersion + 1 && !matches(target, change)) return false
+        val type = if (change.operation == ReminderStatusOperation.SNOOZE) "REMINDER_SNOOZED" else "REMINDER_CANCELLED"
+        val event = database.reminders().historicalEvents(change.reminderId.toString(), change.expectedVersion + 1, type).singleOrNull()
+            ?: return false
+        return event.schemaVersion == 1 && event.payloadSensitivity == action.payloadSensitivity
     }
 
     override fun change(change: ValidatedReminderStatusChange, owner: ReminderExecutionOwner): OwnedReminderStatusResult {

@@ -44,10 +44,11 @@ internal class OrionReminderKernel(private val db: OrionDatabase, encryption: Or
     readiness: () -> CoreReadiness, storageAvailable: () -> Boolean) {
     val actions = OrionActionStore(db, encryption, clock)
     private val create = OrionCreateReminderActionStore(db, actions, clock, barrier)
-    private val status = OrionReminderStatusActionStore(db, actions, clock, barrier)
+    private val statusOwned = OrionOwnedReminderStatusStore(db, encryption, clock)
+    private val status = OrionReminderStatusActionStore(db, actions, statusOwned::matchesExisting, clock, barrier)
     private val owned = OrionOwnedReminderStore(db, encryption, clock)
     private val createRunner = OrionCreateReminderRunner(db, actions, owned, clock, barrier)
-    private val statusRunner = OrionReminderStatusRunner(db, actions, OrionOwnedReminderStatusStore(db, encryption, clock), clock, barrier)
+    private val statusRunner = OrionReminderStatusRunner(db, actions, statusOwned, clock, barrier)
     val query = OrionReminderQuery(db, encryption)
     private var processingId: UUID? = null // Only touched under barrier admission; no coroutine suspension.
     private val store = OrionDurableIngressStore(db, encryption, clock, barrier, LocalIngressConsumer { payload ->
@@ -225,5 +226,5 @@ internal class OrionReminderKernel(private val db: OrionDatabase, encryption: Or
 }
 
 internal fun formatReminderTime(at: java.time.Instant, zone: java.time.ZoneId): String = try {
-    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss").withZone(zone).format(at) + " (${zone.id})"
-} catch (_: java.time.DateTimeException) { "Horário fora do intervalo de exibição (${zone.id})" }
+    java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu HH:mm:ss.SSS XXX '['VV']'").withZone(zone).format(at)
+} catch (_: java.time.DateTimeException) { "$at (${zone.id})" }

@@ -10,6 +10,8 @@ import androidx.room.Transaction
 abstract class OrionReminderDao {
     @Query("SELECT * FROM orion_reminders WHERE (:after IS NULL OR reminderId > :after) ORDER BY reminderId LIMIT :limit")
     abstract fun page(after: String?, limit: Int): List<ReminderEntity>
+    @Query("SELECT * FROM orion_domain_event_outbox WHERE aggregateId = :id AND aggregateVersion = :version AND eventType = :type LIMIT 2")
+    abstract fun historicalEvents(id: String, version: Long, type: String): List<DomainEventOutboxEntity>
     @Query("SELECT * FROM orion_reminders WHERE reminderId = :id")
     abstract fun find(id: String): ReminderEntity?
     @Query("""UPDATE orion_reminders SET scheduledAt = :scheduledAt, zoneId = :zoneId,

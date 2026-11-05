@@ -54,7 +54,7 @@ internal class OrionReminderStatusRunner(
             displayed.confirmationFingerprint != ActionConfirmationBinding(clock).prepare(expected).confirmationFingerprint)
             abort(OrionReminderExecutionFailure.UNREADABLE)
         if (stored.status == ActionStatus.SUCCEEDED) {
-            if (!ownedReminders.matchesExisting(change)) abort(OrionReminderExecutionFailure.UNREADABLE)
+            if (!ownedReminders.matchesExisting(change, displayed.actionId)) abort(OrionReminderExecutionFailure.UNREADABLE)
             return OrionReminderExecutionResult.Completed(displayed.actionId, change.reminderId, true)
         }
         if (stored.status != ActionStatus.CONFIRMED) abort(OrionReminderExecutionFailure.INVALID_STATE)

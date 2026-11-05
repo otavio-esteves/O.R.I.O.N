@@ -225,4 +225,56 @@ class OrionReminderKernelTest {
         assertEquals(0L, db.reminders().find(command.reminderId.toString())!!.version)
     }
 
+    @Test fun historicalSucceededSnoozeReplaysAfterLaterSnoozeAndCancellationWithoutChangingState() {
+        val created = prepared(); kernel.submit(consent(created), UUID.randomUUID())
+        fun draft(version: Long, millis: Long) = OrionReminderIngressWire("SNOOZE", command.reminderId,
+            UUID.randomUUID(), UUID.randomUUID(), expectedVersion = version, scheduledAtMillis = millis)
+        val a = draft(0, command.scheduledAt.plusSeconds(600).toEpochMilli())
+        kernel.submit(a, a.key); val pendingA = kernel.pending().single()
+        kernel.submit(consent(pendingA), UUID.randomUUID())
+        val b = draft(1, command.scheduledAt.plusSeconds(1200).toEpochMilli())
+        kernel.submit(b, b.key); kernel.submit(consent(kernel.pending().single()), UUID.randomUUID())
+        val owned = network.orion.data.reminders.OrionOwnedReminderStatusStore(db, crypto, clock)
+        val preparation = OrionReminderStatusActionStore(db, kernel.actions, owned::matchesExisting, clock, barrier)
+        val runner = OrionReminderStatusRunner(db, kernel.actions, owned, clock, barrier)
+        fun assertHistoricalReplay(version: Long, due: Long, events: Int) {
+            val admission = (channel.captureStatusFromUser(a.change()) as OrionReminderStatusAdmissionResult.Admitted).request
+            assertTrue(preparation.prepare(admission) is OrionReminderStatusActionResult.AlreadySucceeded)
+            assertTrue((runner.execute(admission, checkNotNull(pendingA.change)) as OrionReminderExecutionResult.Completed).deduplicated)
+            val current = db.reminders().find(command.reminderId.toString())!!
+            assertEquals(version, current.version); assertEquals(due, current.scheduledAt)
+            assertEquals(events, count("orion_domain_event_outbox"))
+        }
+        assertHistoricalReplay(2, b.scheduledAtMillis, 3)
+        val cancel = OrionReminderIngressWire("CANCEL", command.reminderId, UUID.randomUUID(), UUID.randomUUID(), expectedVersion = 2)
+        kernel.submit(cancel, cancel.key); kernel.submit(consent(kernel.pending().single()), UUID.randomUUID())
+        assertHistoricalReplay(3, b.scheduledAtMillis, 4)
+        assertEquals(ReminderStatus.CANCELLED, db.reminders().find(command.reminderId.toString())!!.status)
+    }
+
+    @Test fun sameVersionScheduleTamperCannotBecomeAHistoricalDedupReceipt() {
+        val created = prepared(); kernel.submit(consent(created), UUID.randomUUID())
+        val due = command.scheduledAt.plusSeconds(600).toEpochMilli()
+        val wire = OrionReminderIngressWire("SNOOZE", command.reminderId, UUID.randomUUID(), UUID.randomUUID(), scheduledAtMillis = due)
+        kernel.submit(wire, wire.key); val pending = kernel.pending().single()
+        kernel.submit(consent(pending), UUID.randomUUID())
+        db.openHelper.writableDatabase.execSQL("UPDATE orion_reminders SET scheduledAt = scheduledAt + 1 WHERE reminderId = ?", arrayOf(command.reminderId.toString()))
+        val owned = network.orion.data.reminders.OrionOwnedReminderStatusStore(db, crypto, clock)
+        assertFalse(owned.matchesExisting(checkNotNull(pending.change).change, pending.display.actionId))
+    }
+
+    @Test fun createAndSnoozeDisplayExactFractionAndOverlapOffset() {
+        val id = UUID.randomUUID(); val key = UUID.randomUUID()
+        val first = Instant.parse("2024-11-03T05:30:00.001Z")
+        val zone = "America/New_York"
+        kernel.submit(OrionReminderIngressWire("CREATE", id, key, UUID.randomUUID(), "Exact display", scheduledAtMillis = first.toEpochMilli(), zoneId = zone), key)
+        val create = kernel.pending().single()
+        assertTrue(checkNotNull(create.display.title).contains("01:30:00.001 -04:00"))
+        kernel.submit(consent(create), UUID.randomUUID())
+        val second = Instant.parse("2024-11-03T06:30:00.999Z")
+        val snoozeKey = UUID.randomUUID()
+        kernel.submit(OrionReminderIngressWire("SNOOZE", id, snoozeKey, UUID.randomUUID(), scheduledAtMillis = second.toEpochMilli(), zoneId = zone), snoozeKey)
+        assertTrue(checkNotNull(kernel.pending().single().display.title).contains("01:30:00.999 -05:00"))
+    }
+
 }

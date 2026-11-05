@@ -45,6 +45,7 @@ internal sealed interface OrionReminderStatusActionResult {
 internal class OrionReminderStatusActionStore(
     private val database: OrionDatabase,
     private val actions: OrionActionStore,
+    private val verifySucceeded: (ValidatedReminderStatusChange, UUID) -> Boolean,
     private val clock: WallClock,
     private val barrier: StartupBarrier,
 ) {
@@ -63,10 +64,7 @@ internal class OrionReminderStatusActionStore(
         var stored = read(id)
         requireExact(stored, change, version)
         if (stored.status == ActionStatus.SUCCEEDED) {
-            val target = database.reminders().find(change.reminderId.toString()) ?: abort(OrionReminderActionFailure.UNREADABLE)
-            val desired = if (change.operation == ReminderStatusOperation.SNOOZE) ReminderStatus.PENDING else ReminderStatus.CANCELLED
-            if (target.version != change.expectedVersion + 1 || target.status != desired ||
-                change.operation == ReminderStatusOperation.SNOOZE && (target.scheduledAt != change.scheduledAt?.toEpochMilli() || target.zoneId != change.zoneId?.id)) abort(OrionReminderActionFailure.UNREADABLE)
+            if (!verifySucceeded(change, id)) abort(OrionReminderActionFailure.UNREADABLE)
             return@admittedTransaction OrionReminderStatusActionResult.AlreadySucceeded(id)
         }
         requireOpen(change)
