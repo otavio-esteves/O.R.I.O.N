@@ -51,6 +51,7 @@ dependencies {
     implementation(project(":data:database"))
     implementation(project(":data:datastore"))
     implementation(project(":data:repository"))
+    implementation(project(":data:actions"))
     implementation(project(":feature:home"))
     implementation(project(":feature:diagnostics"))
     implementation(project(":feature:settings"))
