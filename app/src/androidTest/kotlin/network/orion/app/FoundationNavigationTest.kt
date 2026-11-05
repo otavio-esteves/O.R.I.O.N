@@ -35,4 +35,12 @@ class FoundationNavigationTest {
         compose.onNodeWithText("Atividade").performScrollTo().performClick()
         compose.onNodeWithText("Histórico local de pedidos e alterações.").assertExists()
     }
+
+    @Test fun remindersDestinationRestoresWithoutClaimingAutomaticDelivery() {
+        compose.onNodeWithText("Lembretes").performScrollTo().performClick()
+        compose.onNodeWithTag("orion_reminders").assertExists()
+        compose.onNodeWithText("Lembretes ficam salvos. Alertas automáticos ainda não estão disponíveis.").assertExists()
+        compose.activityRule.scenario.recreate()
+        compose.onNodeWithTag("orion_reminders").assertExists()
+    }
 }

@@ -44,6 +44,14 @@ class TransactionRecorderContractTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 RECORDER.instrumentation_command("prepare", fixture, scenario)
 
+    def test_reminder_scenario_uses_the_owned_reminder_boundary(self):
+        fixture = "00000000-0000-0000-0000-000000000001"
+        for mode in ["prepare", "verify"]:
+            command = RECORDER.instrumentation_command(mode, fixture, "reminder")
+            self.assertEqual("network.orion.app.reminders.OrionReminderTransactionProcessDeathTest",
+                             command[command.index("class") + 1])
+            self.assertNotIn("network.orion.app.tasks.OrionTaskTransactionProcessDeathTest", command)
+
 
 if __name__ == "__main__":
     unittest.main()

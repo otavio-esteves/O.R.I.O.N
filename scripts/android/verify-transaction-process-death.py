@@ -10,6 +10,15 @@ import subprocess
 import time
 import uuid
 
+SCENARIOS = {
+    "generic": ("network.orion.app.TransactionProcessDeathTest",
+                "app/src/androidTest/kotlin/network/orion/app/TransactionProcessDeathTest.kt"),
+    "task": ("network.orion.app.tasks.OrionTaskTransactionProcessDeathTest",
+             "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskTransactionProcessDeathTest.kt"),
+    "reminder": ("network.orion.app.reminders.OrionReminderTransactionProcessDeathTest",
+                 "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderTransactionProcessDeathTest.kt"),
+}
+
 
 def terminate_debug_main(adb, process_id):
     """Explicit positive PID under the debug UID; no root or Force Stop fallback."""
@@ -19,10 +28,9 @@ def terminate_debug_main(adb, process_id):
 
 
 def instrumentation_command(mode, fixture, scenario="generic"):
-    if scenario not in ("generic", "task") or mode not in ("prepare", "verify") or str(uuid.UUID(fixture)) != fixture:
+    if scenario not in SCENARIOS or mode not in ("prepare", "verify") or str(uuid.UUID(fixture)) != fixture:
         raise ValueError("Invalid transaction fixture arguments.")
-    test_class = ("network.orion.app.TransactionProcessDeathTest" if scenario == "generic" else
-                  "network.orion.app.tasks.OrionTaskTransactionProcessDeathTest")
+    test_class = SCENARIOS[scenario][0]
     return ["shell", "am", "instrument", "-w", "-e", "class",
             test_class, "-e", "orion_transaction_mode", mode,
             "-e", "orion_transaction_fixture", fixture,
@@ -35,7 +43,7 @@ def main():
     parser.add_argument("--environment", required=True, choices=["ANDROID_EMULATOR", "PHYSICAL_DEVICE"])
     parser.add_argument("--adb", default=shutil.which("adb"))
     parser.add_argument("--evidence-dir", type=Path, required=True)
-    parser.add_argument("--scenario", choices=["generic", "task"], default="generic")
+    parser.add_argument("--scenario", choices=SCENARIOS, default="generic")
     args = parser.parse_args()
     if not args.adb:
         parser.error("Pass host adb with --adb.")
@@ -46,8 +54,7 @@ def main():
         parser.error("Build :app:assembleDebug :app:assembleDebugAndroidTest in Docker first.")
     args.evidence_dir.mkdir(parents=True, exist_ok=True)
     fixture = str(uuid.uuid4())
-    test_source = ("app/src/androidTest/kotlin/network/orion/app/TransactionProcessDeathTest.kt" if args.scenario == "generic" else
-                   "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskTransactionProcessDeathTest.kt")
+    test_source = SCENARIOS[args.scenario][1]
     report = {"result": "FAIL", "environment": args.environment, "fixtureId": fixture, "scenario": args.scenario,
               "terminationMethod": "RUN_AS_SIGKILL", "checks": {},
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip(),
