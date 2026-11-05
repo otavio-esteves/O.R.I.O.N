@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":core:queries"))
     api(project(":data:database"))
     api(project(":core:security"))
     implementation(project(":core:time"))
