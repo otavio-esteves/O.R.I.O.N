@@ -13,6 +13,10 @@ android {
 
 
 dependencies {
+    implementation(project(":core:commands"))
+    implementation(project(":core:queries"))
+    implementation(project(":core:skills:metadata"))
+    implementation(project(":data:actions"))
     implementation(project(":data:database"))
     implementation(project(":core:security"))
     implementation(project(":core:time"))

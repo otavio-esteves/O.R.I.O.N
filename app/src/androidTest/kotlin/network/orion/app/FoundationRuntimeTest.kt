@@ -34,7 +34,7 @@ class FoundationRuntimeTest {
         assertEquals(OrionHealthStatus.UNAVAILABLE, report.subsystems[OrionSubsystem.CORTEX])
         assertEquals(OrionHealthStatus.UNAVAILABLE, report.subsystems[OrionSubsystem.VOICE])
         assertEquals(1, runtime.databaseFormatVersion)
-        assertEquals(3, runtime.databaseSchemaVersion)
+        assertEquals(4, runtime.databaseSchemaVersion)
         assertEquals(1, runtime.configurationFormatVersion)
         assertNotNull(report.lastRecovery)
     }
@@ -44,14 +44,32 @@ class FoundationRuntimeTest {
         runtime.recover()
         withTimeout(30_000) { while (!runtime.taskStartupBarrier.isOpen()) kotlinx.coroutines.delay(10) }
         assertNotNull(runtime.taskKernel)
+        assertNotNull(runtime.reminderKernel)
+        assertNotNull(runtime.timerKernel)
+        assertNotNull(runtime.memoryKernel)
+        assertNotNull(runtime.notificationKernel)
+        val localCapabilities = listOf(
+            network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor.WRITE_CAPABILITY,
+            network.orion.core.skills.metadata.reminders.OrionCreateReminderDescriptor.WRITE_CAPABILITY,
+            network.orion.core.skills.metadata.timers.OrionCreateTimerDescriptor.WRITE_CAPABILITY,
+            network.orion.core.skills.metadata.memories.OrionCreateMemoryDescriptor.WRITE_CAPABILITY,
+        )
+        localCapabilities.forEach { assertTrue(runtime.capabilities.isAvailable(it)) }
+        val notificationCapability = network.orion.core.skills.metadata.notifications.OrionPostNotificationDescriptor.WRITE_CAPABILITY
+        assertEquals(runtime.notificationKernel!!.poster.availability() ==
+            network.orion.core.orchestrator.notifications.NotificationAvailability.AVAILABLE,
+            runtime.capabilities.isAvailable(notificationCapability))
         assertEquals(CoreReadiness.DEGRADED_SAFE, runtime.health.value.core.readiness)
         assertTrue(runtime.capabilities.isAvailable(network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor.WRITE_CAPABILITY))
         assertFalse(runtime.capabilities.isAvailable(network.orion.core.model.Capability("orion_unknown")))
         assertEquals(network.orion.core.actions.ActionExecutionResult.UNAVAILABLE, runtime.actions.execute(java.util.UUID.randomUUID()))
         runtime.taskStartupBarrier.beginRecovery()
+        localCapabilities.forEach { assertFalse(runtime.capabilities.isAvailable(it)) }
+        assertFalse(runtime.capabilities.isAvailable(notificationCapability))
         assertFalse(runtime.capabilities.isAvailable(network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor.WRITE_CAPABILITY))
         assertEquals(CoreReadiness.DEGRADED_SAFE, runtime.recover())
         assertTrue(runtime.taskStartupBarrier.isOpen())
+        localCapabilities.forEach { assertTrue(runtime.capabilities.isAvailable(it)) }
     }
 
     @Suppress("DEPRECATION")

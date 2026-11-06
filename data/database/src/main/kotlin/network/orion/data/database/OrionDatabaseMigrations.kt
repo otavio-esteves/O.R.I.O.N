@@ -4,6 +4,18 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object OrionDatabaseMigrations {
+    val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("""CREATE TABLE IF NOT EXISTS `orion_timers` (
+                `timerId` TEXT NOT NULL, `contentEnvelope` BLOB NOT NULL, `sensitivity` TEXT NOT NULL,
+                `durationMillis` INTEGER NOT NULL, `startedWallAt` INTEGER NOT NULL, `deadlineWallAt` INTEGER NOT NULL,
+                `bootSessionId` INTEGER NOT NULL, `startedElapsedRealtime` INTEGER NOT NULL,
+                `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `status` TEXT NOT NULL,
+                `version` INTEGER NOT NULL, PRIMARY KEY(`timerId`))""".trimIndent())
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_orion_timers_status_updatedAt` ON `orion_timers` (`status`, `updatedAt`)")
+        }
+    }
+
     val MIGRATION_2_3: Migration = object : Migration(2, 3) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("""CREATE TABLE IF NOT EXISTS `orion_tasks` (

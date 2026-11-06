@@ -45,6 +45,11 @@ Building the image downloads the Android SDK and records acceptance of its licen
 
 ## Native compatibility gate
 
+F3 timer UI declares a direct `androidx.lifecycle:lifecycle-runtime-compose:2.9.4`
+dependency for foreground lifecycle polling. That version was already transitively
+selected by the pinned Activity Compose baseline; this adds no toolchain or native
+library version upgrade. The direct dependency is pinned in the version catalog.
+
 The initial ABI is `arm64-v8a`. Once native artifacts enter the repository, the F0
 gate must verify 16 KiB ELF alignment and packaging before they can be qualified.
 The initial gate was `NOT_APPLICABLE_NO_NATIVE_ARTIFACTS`, not `PASS`; it is now activated as described below.

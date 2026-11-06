@@ -1,0 +1,28 @@
+{
+  "result": "PASS",
+  "environment": "ANDROID_EMULATOR",
+  "fixtureId": "72df9029-c390-40ab-ab72-579b4bb7798a",
+  "scenario": "reminder",
+  "terminationMethod": "RUN_AS_SIGKILL",
+  "checks": {
+    "kill_during_room_transaction": "PASS",
+    "committed_present_uncommitted_absent": "PASS"
+  },
+  "commit": "323963607d6ac5ea08248aa29e14b54a9db435a0",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderTransactionProcessDeathTest.kt": "9a70afad2e19b89d4860d8507715b0abf1b835f93f70b5f28cc1a0544d72261d",
+    "scripts/android/verify-transaction-process-death.py": "159a279d50e2cede051cafa0b767fabed619c4a78e5aedaff745c94d8b909043"
+  },
+  "artifactSha256": {
+    "app-debug.apk": "1b2accc724c9511ba84576825d7934a9a951723266d46613b2e926e1fbec0d6f",
+    "app-debug-androidTest.apk": "a3e19bff3e69d6c13dfbc94460291d59dc6852a36a2f4f81114890bd65ab7e92"
+  },
+  "androidRuntimeEvidence": "NON_DEFINITIVE",
+  "apiLevel": "35",
+  "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+  "abi": "x86_64",
+  "pageSize": "4096",
+  "beforePid": "2828",
+  "afterPid": "2894"
+}

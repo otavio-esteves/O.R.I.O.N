@@ -32,25 +32,35 @@ and `make check`.
 The F0 benchmark harness and its versioned profile contract live under `benchmark/`.
 Run `make benchmark-validate` to validate committed evidence and the negative fixtures.
 
-The Foundation includes shared contracts, a main-only Room/DataStore bootstrap,
-structured technical logging, health aggregation, and Compose Home/Diagnostics/Settings.
-Room v3 adds transactional domain records, a reference-only Event Outbox, durable
-ingress and bounded retention through explicit 1→2→3 migrations. Encrypted action
-preparation, guarded execution ownership, conservative abandoned-action recovery,
-Keystore-wrapped versioned data keys, and gated transactional ingress are implemented.
-MAIN startup provisions keys only after an empty-storage proof and a durable attempt
-marker. Reminder/memory adapters provide encrypted reads, CAS mutations, transactional
-supersession and claim deletion. Large ingress content has a bounded encrypted private
-file path with TTL. The native Tasks screen now supports create/list/complete/cancel
-through encrypted durable UI ingress, exact human confirmation, and owned local
-Skills. Task startup recovery opens one operational barrier only after storage,
-keys and conservative action reconciliation; task/event/action/audit/ingress changes
-commit atomically. Pending confirmations restore after Activity/process recreation.
-Queue drains retain the original consent timestamp and never renew expired consent.
-GetTasks is read-only and exposes unreadable content explicitly. Diagnostics show
-technical queue counts; the Core reports DEGRADED_SAFE because full F4 recovery,
-event publication and scheduling remain unqualified. AI and voice remain unavailable. See the
-[F2 storage completion and remaining qualification](docs/qualification/F2-StorageCompletion.md).
+The deterministic F3 candidate now includes native task, reminder, timer, personal
+memory and manual notification workflows, plus device information and activity
+history. All domain mutations pass through encrypted durable ingress, deterministic
+policy, exact human confirmation and owned ActionRequest execution. Local domain,
+action, audit, event and ingress changes commit together. Each domain consumes only
+its own queue scope behind the same operational Startup Barrier.
+
+Room v4 adds durable timers through the explicit 1→2→3→4 migration chain. Timers use
+monotonic elapsed time only in their original BootSessionId and expose wall fallback
+after reboot. User-declared memory remains distinct from inference; forgetting
+removes current entity/claim/processing copies and preserves minimal replay
+protection. Manual notification claims commit before invoking Android outside both
+Room transactions and the local barrier monitor. Original consent, capabilities,
+permission and ownership are revalidated at invocation; uncertain outcomes are
+never automatically resent.
+
+Reminders remain UNSCHEDULED, and timers have no automatic background alerts.
+Event publication, scheduler/reconciliation and full F4 recovery remain unqualified.
+The Core continues to report DEGRADED_SAFE; AI and voice remain unavailable. Formal
+F3 readiness also requires the deferred physical S21 qualification; this candidate
+does not declare DETERMINISTIC_AGENT_READY or resilient MVP status. See the
+[F3 implementation and qualification gate](docs/qualification/F3-ImplementationGate.md)
+and the historical [F2 storage qualification](docs/qualification/F2-StorageCompletion.md).
+
+The [integrated F3 evidence](docs/qualification/f3-integrated-evidence.json) records
+559 Debug JVM, 18 host and 247 Android cases, installed replacement and five actual
+process-death scenarios, with frozen source and matching artifact hashes. Full
+canonical Docker CI covers lint, module and native packaging gates. Runtime evidence
+is API35/x86_64 emulator evidence; the physical qualification remains open.
 
 Build both APK variants, the release AAB, and the instrumentation APKs, and execute
 unit, lint, benchmark, native-compatibility, and module-boundary gates with:
@@ -130,13 +140,20 @@ For physical evidence, use the explicit device serial and `--environment PHYSICA
 Add `--scenario task` to exercise owned task creation: the checkpoint is after the
 uncommitted task/event/action-success writes, and verification in a new process
 checks rollback followed by exactly one committed task/event after explicit replay.
+Additional scenarios are `reminder`, `timer`, `memory` and `notification`.
+Memory interrupts an uncommitted forget operation and verifies restoration of all
+logical copies before explicit erasure replay. Notification death uses a durable
+synthetic external marker after the committed claim; it proves no blind replay,
+while real NotificationManager registration/private content are separate Android
+instrumentation cases. The recorder never substitutes Force Stop or root for SIGKILL.
+
 The Keystore instrumentation APK is built by CI; running its
 `network.orion.core.security.test/androidx.test.runner.AndroidJUnitRunner` on a device
 is a separate host responsibility. Emulator evidence does not qualify S21/OEM hardware.
 
 ## Installed upgrade validation
 
-The debug candidate is versionCode 2. The host recorder installs a prior APK/test APK,
+The integrated F3 debug candidate is versionCode 4 (Room schema 4). The host recorder installs a prior APK/test APK,
 seeds synthetic state, replaces both with the candidate using `adb install -r`, and
 verifies encrypted records, original keys, queues, pending actions and UNKNOWN state.
 It never uninstalls, clears data or falls back to forced downgrade. Use a dedicated

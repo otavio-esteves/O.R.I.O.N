@@ -28,13 +28,16 @@ interface OrionStorageMetadataDao {
 }
 
 @Database(entities = [OrionStorageMetadata::class, ActionRequestEntity::class, ActionAuditEntity::class,
-    TaskEntity::class, ReminderEntity::class, MemoryEntity::class, MemoryClaimEntity::class,
+    TaskEntity::class, TimerEntity::class, ReminderEntity::class, MemoryEntity::class, MemoryClaimEntity::class,
     AuditEntity::class, TechnicalEventEntity::class, DomainEventOutboxEntity::class,
-    EventConsumerReceiptEntity::class, IngressEnvelopeEntity::class], version = 3, exportSchema = true)
+    EventConsumerReceiptEntity::class, IngressEnvelopeEntity::class], version = 4, exportSchema = true)
 abstract class OrionDatabase : RoomDatabase() {
     abstract fun metadata(): OrionStorageMetadataDao
     abstract fun actions(): OrionActionDao
+    abstract fun timers(): OrionTimerDao
+    abstract fun memories(): OrionMemoryDao
     abstract fun tasks(): OrionTaskDao
+    abstract fun reminders(): OrionReminderDao
     abstract fun records(): OrionRecordDao
     abstract fun events(): OrionEventDao
     abstract fun ingress(): OrionIngressDao
@@ -58,7 +61,7 @@ object OrionDatabaseFactory {
             context.isDeviceProtectedStorage,
         )
         return Room.databaseBuilder(app, OrionDatabase::class.java, "orion.db")
-            .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2, OrionDatabaseMigrations.MIGRATION_2_3)
+            .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2, OrionDatabaseMigrations.MIGRATION_2_3, OrionDatabaseMigrations.MIGRATION_3_4)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     db.execSQL("INSERT INTO orion_storage_metadata (id, formatVersion) VALUES (1, 1)")

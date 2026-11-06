@@ -23,8 +23,18 @@ enum class ActionMutation { APPLIED, CONFLICT, NOT_FOUND }
  */
 @Dao
 abstract class OrionActionDao {
+    @Query("SELECT * FROM orion_action_requests WHERE status = 'NEEDS_CONFIRMATION' AND skill IN ('memory.create', 'memory.delete') ORDER BY createdAt, actionId LIMIT :limit")
+    abstract fun memoryConfirmations(limit: Int): List<ActionRequestEntity>
+
     @Query("SELECT * FROM orion_action_requests WHERE status = 'NEEDS_CONFIRMATION' AND skill IN ('task.create', 'task.complete', 'task.cancel') ORDER BY createdAt, actionId LIMIT :limit")
     abstract fun taskConfirmations(limit: Int): List<ActionRequestEntity>
+
+    @Query("SELECT * FROM orion_action_requests WHERE status = 'NEEDS_CONFIRMATION' AND skill IN ('reminder.create', 'reminder.snooze', 'reminder.cancel') ORDER BY createdAt, actionId LIMIT :limit")
+    abstract fun reminderConfirmations(limit: Int): List<ActionRequestEntity>
+    @Query("SELECT * FROM orion_action_requests WHERE status = 'NEEDS_CONFIRMATION' AND skill IN ('timer.create', 'timer.cancel') ORDER BY createdAt, actionId LIMIT :limit")
+    abstract fun timerConfirmations(limit: Int): List<ActionRequestEntity>
+    @Query("SELECT * FROM orion_action_requests WHERE status IN ('NEEDS_CONFIRMATION','CONFIRMED') AND skill = 'notification.post' ORDER BY createdAt, actionId LIMIT :limit")
+    abstract fun notificationConfirmations(limit: Int): List<ActionRequestEntity>
 
     @Query("SELECT * FROM orion_action_requests WHERE actionId = :actionId")
     abstract fun find(actionId: String): ActionRequestEntity?

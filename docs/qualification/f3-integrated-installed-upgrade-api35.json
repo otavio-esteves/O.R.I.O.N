@@ -1,0 +1,30 @@
+{
+  "result": "PASS",
+  "environment": "ANDROID_EMULATOR",
+  "fixtureId": "cf8dd8a1-da92-4ca6-8def-114ebdce30a5",
+  "artifactSha256": {
+    "previous": "9223ef1c70388051df2d933d871e90a57d4c014ac94140c2fd6a45e175d3194e",
+    "previousTest": "38614bb9ab4b020812fbe15fdde53cc17d8c81e2ace086559d8a080899d01199",
+    "candidate": "d83291f9a8490dd7156610d45a9d32407db23ad25f0a30590e1a0ac250cda48d",
+    "candidateTest": "acde866bec3f5b97ee11e5e24438d015e5ab5e55585f7e93d7cec3452e096eda"
+  },
+  "checks": {
+    "seed_prior_installation": "PASS",
+    "encrypted_records_queues_and_keys_survived": "PASS",
+    "pending_and_unknown_never_replayed": "PASS"
+  },
+  "commit": "27b0add6204addf6a7820aefaca884881f02cffe",
+  "workingTreeDirty": false,
+  "sourceSha256": {
+    "scripts/android/verify-installed-upgrade.py": "44ffb201547a44494a9f308a6cbb8bd80b9b3c40b6a64421251812308ea1cd59",
+    "app/src/androidTest/kotlin/network/orion/app/UpgradePersistenceTest.kt": "6de766ad0606693449fd7b9da81c8e62b219919d13ada182d593dbc898ca67ad"
+  },
+  "androidRuntimeEvidence": "NON_DEFINITIVE",
+  "apiLevel": "35",
+  "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+  "abi": "x86_64",
+  "pageSize": "4096",
+  "previousVersionCode": 3,
+  "candidateVersionCode": 4,
+  "verifiedPid": "3745"
+}

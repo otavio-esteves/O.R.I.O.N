@@ -1,6 +1,11 @@
 package network.orion.app
 
 import android.os.Bundle
+import android.Manifest
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.activity.ComponentActivity
@@ -19,10 +24,29 @@ import network.orion.feature.diagnostics.DiagnosticsScreen
 import network.orion.feature.home.HomeScreen
 import network.orion.feature.tasks.TasksScreen
 import network.orion.feature.settings.SettingsScreen
+import network.orion.feature.device.DeviceScreen
+import network.orion.feature.activity.ActivityScreen
 import network.orion.app.tasks.OrionTaskAdmissionOwner
+import network.orion.app.reminders.OrionReminderAdmissionOwner
+import network.orion.feature.reminders.RemindersScreen
+import network.orion.app.timers.OrionTimerAdmissionOwner
+import network.orion.feature.timers.TimersScreen
+import network.orion.app.memories.OrionMemoryAdmissionOwner
+import network.orion.feature.memories.MemoriesScreen
+import network.orion.app.notifications.OrionNotificationAdmissionOwner
+import network.orion.feature.notifications.NotificationsScreen
 
 class MainActivity : ComponentActivity() {
     private lateinit var taskChannel: OrionTaskAdmissionOwner.UiChannel
+    private lateinit var reminderChannel: OrionReminderAdmissionOwner.UiChannel
+    private lateinit var timerChannel: OrionTimerAdmissionOwner.UiChannel
+    private lateinit var memoryChannel: OrionMemoryAdmissionOwner.UiChannel
+    private lateinit var notificationChannel: OrionNotificationAdmissionOwner.UiChannel
+    private var notificationRevision by mutableLongStateOf(0L)
+    private val notificationPermissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        notificationRevision++
+        (application as OrionApplication).mainRuntime?.refreshNotificationHealth()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +55,18 @@ class MainActivity : ComponentActivity() {
         taskChannel = runtime.taskAdmissions.openUiChannel()
         taskChannel.onWindowFocus(hasWindowFocus())
         val tasks = runtime.taskGateway(taskChannel)
+        reminderChannel = runtime.reminderAdmissions.openUiChannel()
+        reminderChannel.onWindowFocus(hasWindowFocus())
+        val reminders = runtime.reminderGateway(reminderChannel)
+        timerChannel = runtime.timerAdmissions.openUiChannel()
+        timerChannel.onWindowFocus(hasWindowFocus())
+        val timers = runtime.timerGateway(timerChannel)
+        memoryChannel = runtime.memoryAdmissions.openUiChannel()
+        memoryChannel.onWindowFocus(hasWindowFocus())
+        val memories = runtime.memoryGateway(memoryChannel)
+        notificationChannel = runtime.notificationAdmissions.openUiChannel()
+        notificationChannel.onWindowFocus(hasWindowFocus())
+        val notifications = runtime.notificationGateway(notificationChannel)
         setContent {
             MaterialTheme {
                 val report by runtime.health.collectAsState()
@@ -69,10 +105,27 @@ class MainActivity : ComponentActivity() {
                 ) { padding ->
                     Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).padding(horizontal = 24.dp)) {
                         when (destination) {
+                            "Lembretes" -> RemindersScreen(reminders, report.lastRecovery)
+                            "Timers" -> TimersScreen(timers, report.lastRecovery)
+                            "Memórias" -> MemoriesScreen(memories, report.lastRecovery)
+                            "Notificações" -> NotificationsScreen(notifications, report.lastRecovery, notificationRevision,
+                                onRequestPermission = {
+                                    if (Build.VERSION.SDK_INT >= 33) notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    else { notificationRevision++; runtime.refreshNotificationHealth() }
+                                },
+                                onOpenSettings = {
+                                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                                })
+                            "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
+                            "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, onRetry = { runtime.start() })
                             "Ajustes" -> SettingsScreen(report)
-                            else -> HomeScreen(report)
+                            else -> HomeScreen(report, onOpenDevice = { destination = "Dispositivo" },
+                                onOpenActivity = { destination = "Atividade" }, onOpenReminders = { destination = "Lembretes" },
+                                onOpenTimers = { destination = "Timers" }, onOpenMemories = { destination = "Memórias" },
+                                onOpenNotifications = { destination = "Notificações" })
                         }
                     }
                 }
@@ -84,20 +137,42 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         taskChannel.onResumed(true)
         taskChannel.onWindowFocus(hasWindowFocus())
+        reminderChannel.onResumed(true)
+        reminderChannel.onWindowFocus(hasWindowFocus())
+        timerChannel.onResumed(true)
+        timerChannel.onWindowFocus(hasWindowFocus())
+        memoryChannel.onResumed(true)
+        memoryChannel.onWindowFocus(hasWindowFocus())
+        notificationChannel.onResumed(true)
+        notificationChannel.onWindowFocus(hasWindowFocus())
+        notificationRevision++
+        (application as OrionApplication).mainRuntime?.refreshNotificationHealth()
     }
 
     override fun onPause() {
         taskChannel.onResumed(false)
+        reminderChannel.onResumed(false)
+        timerChannel.onResumed(false)
+        memoryChannel.onResumed(false)
+        notificationChannel.onResumed(false)
         super.onPause()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (::taskChannel.isInitialized) taskChannel.onWindowFocus(hasFocus)
+        if (::reminderChannel.isInitialized) reminderChannel.onWindowFocus(hasFocus)
+        if (::timerChannel.isInitialized) timerChannel.onWindowFocus(hasFocus)
+        if (::memoryChannel.isInitialized) memoryChannel.onWindowFocus(hasFocus)
+        if (::notificationChannel.isInitialized) notificationChannel.onWindowFocus(hasFocus)
     }
 
     override fun onDestroy() {
         if (::taskChannel.isInitialized) taskChannel.close()
+        if (::reminderChannel.isInitialized) reminderChannel.close()
+        if (::timerChannel.isInitialized) timerChannel.close()
+        if (::memoryChannel.isInitialized) memoryChannel.close()
+        if (::notificationChannel.isInitialized) notificationChannel.close()
         super.onDestroy()
     }
 }
