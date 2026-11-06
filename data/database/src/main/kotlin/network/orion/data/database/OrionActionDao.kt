@@ -23,6 +23,9 @@ enum class ActionMutation { APPLIED, CONFLICT, NOT_FOUND }
  */
 @Dao
 abstract class OrionActionDao {
+    @Query("SELECT * FROM orion_action_requests WHERE status = 'NEEDS_CONFIRMATION' AND skill IN ('memory.create', 'memory.delete') ORDER BY createdAt, actionId LIMIT :limit")
+    abstract fun memoryConfirmations(limit: Int): List<ActionRequestEntity>
+
     @Query("SELECT * FROM orion_action_requests WHERE status = 'NEEDS_CONFIRMATION' AND skill IN ('task.create', 'task.complete', 'task.cancel') ORDER BY createdAt, actionId LIMIT :limit")
     abstract fun taskConfirmations(limit: Int): List<ActionRequestEntity>
 

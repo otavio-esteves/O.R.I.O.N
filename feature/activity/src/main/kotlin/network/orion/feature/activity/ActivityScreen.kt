@@ -66,6 +66,7 @@ private fun label(code: String) = when (code) {
     "task.cancel" -> "Pedido de cancelamento de tarefa"; "reminder.create" -> "Pedido de criação de lembrete"
     "reminder.cancel" -> "Pedido de cancelamento de lembrete"; "reminder.snooze" -> "Pedido de adiamento de lembrete"
     "timer.create" -> "Pedido de criação de timer"; "timer.cancel" -> "Pedido de cancelamento de timer"
+    "memory.create" -> "Pedido para guardar memória"; "memory.delete" -> "Pedido para esquecer memória"
     else -> "Registro do Core"
 }
 private fun status(value: String) = when (value) {

@@ -46,10 +46,12 @@ class FoundationRuntimeTest {
         assertNotNull(runtime.taskKernel)
         assertNotNull(runtime.reminderKernel)
         assertNotNull(runtime.timerKernel)
+        assertNotNull(runtime.memoryKernel)
         val localCapabilities = listOf(
             network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor.WRITE_CAPABILITY,
             network.orion.core.skills.metadata.reminders.OrionCreateReminderDescriptor.WRITE_CAPABILITY,
             network.orion.core.skills.metadata.timers.OrionCreateTimerDescriptor.WRITE_CAPABILITY,
+            network.orion.core.skills.metadata.memories.OrionCreateMemoryDescriptor.WRITE_CAPABILITY,
         )
         localCapabilities.forEach { assertTrue(runtime.capabilities.isAvailable(it)) }
         assertEquals(CoreReadiness.DEGRADED_SAFE, runtime.health.value.core.readiness)
