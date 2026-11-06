@@ -43,4 +43,12 @@ class FoundationNavigationTest {
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("orion_reminders").assertExists()
     }
+
+    @Test fun timersDestinationRestoresWithoutClaimingBackgroundAlerts() {
+        compose.onNodeWithText("Timers").performScrollTo().performClick()
+        compose.onNodeWithTag("orion_timers").assertExists()
+        compose.onNodeWithText("Contagem local. Alertas em segundo plano ainda não estão disponíveis.").assertExists()
+        compose.activityRule.scenario.recreate()
+        compose.onNodeWithTag("orion_timers").assertExists()
+    }
 }

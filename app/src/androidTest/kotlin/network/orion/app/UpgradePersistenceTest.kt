@@ -131,7 +131,7 @@ class UpgradePersistenceTest {
                     assertEquals("HEALTHY", health.subsystems.entries.single { it.key.name == "FIELD_KEYS" }.value.name)
                 }
                 assertEquals(properties.getProperty("keyVersion").toInt(), key.version)
-                assertEquals(3, database.openHelper.readableDatabase.version)
+                assertEquals(4, database.openHelper.readableDatabase.version)
                 assertEquals(content, String((taskStore.readContent(ids.getValue("task")) as FieldDecryptionResult.Plaintext).copyBytes()))
                 for (kind in listOf("reminder", "memory")) {
                     val recordId = ids.getValue(kind)

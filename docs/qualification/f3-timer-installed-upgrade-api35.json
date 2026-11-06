@@ -1,0 +1,37 @@
+{
+  "result": "PASS",
+  "environment": "ANDROID_EMULATOR",
+  "fixtureId": "61d24c87-5cf2-4cd1-8b62-8c6844759248",
+  "artifactSha256": {
+    "previous": "cf18b465c59a8c7a52c74f4a672ab1bc187e4640c55d703ff47e0f86d1569ebe",
+    "previousTest": "8e7e66a9dc2edb380bba949d4c84876c438c28809e07eef502c4cbff3f5b72c3",
+    "candidate": "9223ef1c70388051df2d933d871e90a57d4c014ac94140c2fd6a45e175d3194e",
+    "candidateTest": "38614bb9ab4b020812fbe15fdde53cc17d8c81e2ace086559d8a080899d01199"
+  },
+  "checks": {
+    "seed_prior_installation": "PASS",
+    "encrypted_records_queues_and_keys_survived": "PASS",
+    "pending_and_unknown_never_replayed": "PASS"
+  },
+  "commit": "057dc39922eaae1fb89b3ee3862f9d98a2392eaf",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "scripts/android/verify-installed-upgrade.py": "44ffb201547a44494a9f308a6cbb8bd80b9b3c40b6a64421251812308ea1cd59",
+    "app/src/androidTest/kotlin/network/orion/app/UpgradePersistenceTest.kt": "fa8807e4e9194e0bac2b5a9a5c8302737844176c9175f45bb68b816db4fe2d45"
+  },
+  "androidRuntimeEvidence": "NON_DEFINITIVE",
+  "apiLevel": "35",
+  "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+  "abi": "x86_64",
+  "pageSize": "4096",
+  "previousVersionCode": 2,
+  "candidateVersionCode": 3,
+  "verifiedPid": "3011",
+  "migrationComponentSha256": {
+    "data/database/src/main/kotlin/network/orion/data/database/OrionDatabase.kt": "9a95a81e925354589dfe270860f7458be4789df105d0fce70e775c3695459f10",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionDatabaseMigrations.kt": "dd4b054ff6a314e765432ee0740befd468eae14ca7681661a78f542af2dace36",
+    "data/database/src/main/kotlin/network/orion/data/database/TimerEntity.kt": "c92be29fcd93e31efa89c5d564b8913924e5eb603c44c73ee7b4e0da7dd25ef4",
+    "data/database/schemas/network.orion.data.database.OrionDatabase/4.json": "4741bd841149cf061c3df15a9d4e0b43d88e68b8f23de480b4c969c5807ab49e"
+  },
+  "qualificationBoundary": "Initial timer candidate, schema3/versionCode2 to schema4/versionCode3; later UI-only fixes do not substitute for this recorded artifact. No physical qualification."
+}
