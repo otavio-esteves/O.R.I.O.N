@@ -23,4 +23,16 @@ class FoundationNavigationTest {
         compose.onNodeWithText("Início").performClick()
         compose.onNodeWithText("Core: DEGRADED_SAFE").assertExists()
     }
+
+    @Test fun readOnlyDestinationsAreReachableFromHomeAndRestoreAfterRecreation() {
+        compose.onNodeWithText("Dispositivo").performScrollTo().performClick()
+        compose.waitUntil(30_000) { compose.onAllNodesWithText("Bateria").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Bateria").assertExists()
+        compose.activityRule.scenario.recreate()
+        compose.waitUntil(30_000) { compose.onAllNodesWithText("Bateria").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Bateria").assertExists()
+        compose.onNodeWithText("Início").performClick()
+        compose.onNodeWithText("Atividade").performScrollTo().performClick()
+        compose.onNodeWithText("Histórico local de pedidos e alterações.").assertExists()
+    }
 }

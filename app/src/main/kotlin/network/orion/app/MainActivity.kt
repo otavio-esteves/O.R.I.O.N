@@ -19,6 +19,8 @@ import network.orion.feature.diagnostics.DiagnosticsScreen
 import network.orion.feature.home.HomeScreen
 import network.orion.feature.tasks.TasksScreen
 import network.orion.feature.settings.SettingsScreen
+import network.orion.feature.device.DeviceScreen
+import network.orion.feature.activity.ActivityScreen
 import network.orion.app.tasks.OrionTaskAdmissionOwner
 
 class MainActivity : ComponentActivity() {
@@ -69,10 +71,13 @@ class MainActivity : ComponentActivity() {
                 ) { padding ->
                     Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).padding(horizontal = 24.dp)) {
                         when (destination) {
+                            "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
+                            "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, onRetry = { runtime.start() })
                             "Ajustes" -> SettingsScreen(report)
-                            else -> HomeScreen(report)
+                            else -> HomeScreen(report, onOpenDevice = { destination = "Dispositivo" },
+                                onOpenActivity = { destination = "Atividade" })
                         }
                     }
                 }

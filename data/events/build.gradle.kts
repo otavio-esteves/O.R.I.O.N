@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":core:queries"))
     api(project(":data:database"))
     implementation(project(":core:time"))
     testImplementation(libs.junit4)

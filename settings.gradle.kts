@@ -54,3 +54,7 @@ include(":feature:diagnostics")
 include(":feature:settings")
 
 include(":feature:tasks")
+
+include(":skills:device")
+include(":feature:device")
+include(":feature:activity")
