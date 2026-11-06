@@ -28,7 +28,7 @@ class CreateReminderPreparationTest {
         val request = command()
         val typed: Command<CreateReminderResult> = request
         assertSame(request, typed)
-        assertEquals(listOf(CreateReminderResult.UNAVAILABLE), CreateReminderResult.entries.toList())
+        assertEquals(listOf(CreateReminderResult.QUEUED, CreateReminderResult.REJECTED, CreateReminderResult.UNAVAILABLE), CreateReminderResult.entries.toList())
         val reminder = prepared(request)
         assertEquals(reminderId, reminder.reminderId)
         assertEquals(key, reminder.idempotencyKey)

@@ -35,6 +35,7 @@ abstract class OrionDatabase : RoomDatabase() {
     abstract fun metadata(): OrionStorageMetadataDao
     abstract fun actions(): OrionActionDao
     abstract fun tasks(): OrionTaskDao
+    abstract fun reminders(): OrionReminderDao
     abstract fun records(): OrionRecordDao
     abstract fun events(): OrionEventDao
     abstract fun ingress(): OrionIngressDao
