@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host recorder: kill an instrumented debug process during an open Room transaction."""
+"""Host recorder: verify local transaction rollback or uncertain external claims after process death."""
 import argparse
 import hashlib
 import json
@@ -24,6 +24,29 @@ SCENARIOS = {
     "notification": ("network.orion.app.notifications.OrionNotificationTransactionProcessDeathTest",
                      "app/src/androidTest/kotlin/network/orion/app/notifications/OrionNotificationTransactionProcessDeathTest.kt"),
 }
+
+
+def scenario_proof(scenario):
+    """Declare the fixture's checkpoint/proof; labels never substitute verification."""
+    if scenario not in SCENARIOS:
+        raise ValueError("Invalid process-death scenario.")
+    if scenario == "notification":
+        return {
+            "killCheck": "kill_after_committed_external_claim",
+            "verificationCheck": "uncertain_external_effect_not_replayed",
+            "metadata": {
+                "checkpointBoundary": "AFTER_COMMITTED_RUNNING_OUTSIDE_ROOM_TRANSACTION",
+                "externalEvidence": "SYNTHETIC_DURABLE_MARKER",
+                "notificationManagerEvidence": "SEPARATE_PLATFORM_TEST",
+            },
+        }
+    if scenario in ("generic", "task", "reminder", "timer", "memory"):
+        return {
+            "killCheck": "kill_during_room_transaction",
+            "verificationCheck": "committed_present_uncommitted_absent",
+            "metadata": {"checkpointBoundary": "OPEN_ROOM_TRANSACTION"},
+        }
+    raise ValueError("Scenario requires an explicit checkpoint proof contract.")
 
 
 def terminate_debug_main(adb, process_id):
@@ -61,6 +84,7 @@ def main():
     args.evidence_dir.mkdir(parents=True, exist_ok=True)
     fixture = str(uuid.uuid4())
     test_source = SCENARIOS[args.scenario][1]
+    proof = scenario_proof(args.scenario)
     report = {"result": "FAIL", "environment": args.environment, "fixtureId": fixture, "scenario": args.scenario,
               "terminationMethod": "RUN_AS_SIGKILL", "checks": {},
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip(),
@@ -69,6 +93,7 @@ def main():
                                for path in [root / test_source,
                                             Path(__file__).resolve()]},
               "artifactSha256": {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in artifacts}}
+    report.update(proof["metadata"])
     prepare = None
     prepare_output = None
 
@@ -101,10 +126,10 @@ def main():
             if re.fullmatch(r"[1-9][0-9]*", before):
                 break
             if prepare.poll() is not None:
-                raise RuntimeError("Prepare instrumentation exited before the open transaction checkpoint.")
+                raise RuntimeError("Prepare instrumentation exited before the scenario checkpoint.")
             time.sleep(0.2)
         if not re.fullmatch(r"[1-9][0-9]*", before):
-            raise RuntimeError("Open transaction checkpoint timed out.")
+            raise RuntimeError("Scenario checkpoint timed out.")
         if adb("shell", "pidof", "network.orion") != before:
             raise RuntimeError("Checkpoint PID does not match the current main process.")
         report["beforePid"] = before
@@ -117,17 +142,17 @@ def main():
         prepare.wait(timeout=10)
         prepare_output.close()
         prepare_output = None
-        report["checks"]["kill_during_room_transaction"] = "PASS"
+        report["checks"][proof["killCheck"]] = "PASS"
         output = adb(*instrumentation_command("verify", fixture, args.scenario))
         (args.evidence_dir / "verify-instrumentation.txt").write_text(output + "\n")
         if not re.search(r"OK \(1 test\)", output) or any(marker in output for marker in ["FAILURES!!!", "INSTRUMENTATION_FAILED"]):
-            raise RuntimeError("Transaction recovery verification failed.")
+            raise RuntimeError("Scenario recovery verification failed.")
         verified = re.search(r"INSTRUMENTATION_STATUS: orion_transaction_verified_pid=([1-9][0-9]*)", output)
         after = verified.group(1) if verified else ""
         if not after or after == before:
             raise RuntimeError("Verification did not run in a new main process.")
         report["afterPid"] = after
-        report["checks"]["committed_present_uncommitted_absent"] = "PASS"
+        report["checks"][proof["verificationCheck"]] = "PASS"
         report["result"] = "PASS"
     except Exception as error:
         report["failureType"] = type(error).__name__

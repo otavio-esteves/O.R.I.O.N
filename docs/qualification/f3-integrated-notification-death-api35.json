@@ -1,0 +1,31 @@
+{
+  "result": "PASS",
+  "environment": "ANDROID_EMULATOR",
+  "fixtureId": "f00d51c0-d406-4cba-bf8f-30378f71ccce",
+  "scenario": "notification",
+  "terminationMethod": "RUN_AS_SIGKILL",
+  "checks": {
+    "kill_after_committed_external_claim": "PASS",
+    "uncertain_external_effect_not_replayed": "PASS"
+  },
+  "commit": "27b0add6204addf6a7820aefaca884881f02cffe",
+  "workingTreeDirty": false,
+  "sourceSha256": {
+    "app/src/androidTest/kotlin/network/orion/app/notifications/OrionNotificationTransactionProcessDeathTest.kt": "9f4b0392aba0f4dfb10081a1e6fe6652a32364e3bd0c878aa2c593ce6a2816fe",
+    "scripts/android/verify-transaction-process-death.py": "2e880ea265fdcc04b99201c7994e12e07a13f6d6d1d918277ed4d2c8ee3a3d20"
+  },
+  "artifactSha256": {
+    "app-debug.apk": "d83291f9a8490dd7156610d45a9d32407db23ad25f0a30590e1a0ac250cda48d",
+    "app-debug-androidTest.apk": "acde866bec3f5b97ee11e5e24438d015e5ab5e55585f7e93d7cec3452e096eda"
+  },
+  "checkpointBoundary": "AFTER_COMMITTED_RUNNING_OUTSIDE_ROOM_TRANSACTION",
+  "externalEvidence": "SYNTHETIC_DURABLE_MARKER",
+  "notificationManagerEvidence": "SEPARATE_PLATFORM_TEST",
+  "androidRuntimeEvidence": "NON_DEFINITIVE",
+  "apiLevel": "35",
+  "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+  "abi": "x86_64",
+  "pageSize": "4096",
+  "beforePid": "5020",
+  "afterPid": "5113"
+}

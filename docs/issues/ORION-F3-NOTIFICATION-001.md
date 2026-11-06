@@ -20,10 +20,14 @@ OUT OF SCOPE: Scheduler, alarms, reminder delivery, FGS, proactivity, external i
 
 PROCESS-DEATH / SECURITY: Death after durable claim and before/after Android invoke leaves RUNNING for conservative MANUAL_REVIEW recovery. No uncertain outcome is automatically resent. Baseline REMINDERS/PROACTIVE/VOICE_SERVICE/SYSTEM_STATUS channels remain separate; manual user posts use a dedicated USER_NOTIFICATIONS channel. Root diagnostics report denied/unavailable notification capability. Original confirmation timestamps survive queue replay; fresh focused UI presence remains mandatory for an external invoke.
 
-VALIDATION: Production, UI and permission/health wiring are integrated. Canonical
-checks and actual Android/SIGKILL execution will run against the complete F3 graph.
-No phase gate is claimed until those checks finish. Independent reviews resolved
-late consent expiry and prohibited external invocation under the barrier monitor;
-regressions cover both boundaries. Optional notification/permission observations
-merge atomically into latest health, preserving concurrent storage failures and
-lastRecovery; a deterministic concurrency regression covers that race.
+VALIDATION: Production, UI and permission/health wiring passed canonical Docker CI
+and the [complete F3 candidate](../qualification/f3-integrated-evidence.json): 559 Debug
+JVM cases, 243 app and 4 security Android cases. Actual Android platform posting
+verifies registration and private/generic lock-screen content. The separate
+[SIGKILL fixture](../qualification/f3-integrated-notification-death-api35.json) kills
+outside Room after a committed claim and synthetic durable external marker; a
+new PID proves MANUAL_REVIEW and no repeated invocation. It is not a claim of
+real NotificationManager process-death delivery. Original consent expiry, late
+capability/ownership/lease changes and responsive barrier closure are covered.
+Atomic optional health observations preserve concurrent Core failures. Physical
+S21 and formal F3/F4 readiness remain unqualified.

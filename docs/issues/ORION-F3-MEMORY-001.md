@@ -58,8 +58,10 @@ or exported surface. Fixed PERSONAL content is still encrypted, never raw-indexe
 and all content-bearing diagnostics are redacted. Physical S21 qualification
 remains deferred; this package alone declares no phase or 24/7 gate.
 
-INTEGRATION STATUS: MAIN recovery/barrier/admission/UI wiring is integrated with
-the deterministic domains. Shared candidate validation will cover the memory
-pipeline, ciphertext erasure, fresh-key replay guard and real process-death
-fixture alongside the complete F3 graph. No tests or phase gate are claimed
-complete until those canonical and Android checks finish.
+INTEGRATION STATUS: MAIN recovery/barrier/admission/UI wiring is integrated and
+validated in the [complete F3 candidate](../qualification/f3-integrated-evidence.json).
+Canonical Docker CI, 559 Debug JVM cases, 243 app and 4 security Android cases passed.
+Memory kernel/query/UI coverage verifies encryption, fixed provenance, erasure and
+old/fresh-key replay guards. [Actual SIGKILL](../qualification/f3-integrated-memory-death-api35.json)
+inside owned forgetting restores every copy, then explicit replay erases safely
+without resurrection. Physical S21 and phase-readiness gates remain open.
