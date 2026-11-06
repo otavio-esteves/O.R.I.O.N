@@ -47,6 +47,7 @@ class FoundationRuntimeTest {
         assertNotNull(runtime.reminderKernel)
         assertNotNull(runtime.timerKernel)
         assertNotNull(runtime.memoryKernel)
+        assertNotNull(runtime.notificationKernel)
         val localCapabilities = listOf(
             network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor.WRITE_CAPABILITY,
             network.orion.core.skills.metadata.reminders.OrionCreateReminderDescriptor.WRITE_CAPABILITY,
@@ -54,12 +55,17 @@ class FoundationRuntimeTest {
             network.orion.core.skills.metadata.memories.OrionCreateMemoryDescriptor.WRITE_CAPABILITY,
         )
         localCapabilities.forEach { assertTrue(runtime.capabilities.isAvailable(it)) }
+        val notificationCapability = network.orion.core.skills.metadata.notifications.OrionPostNotificationDescriptor.WRITE_CAPABILITY
+        assertEquals(runtime.notificationKernel!!.poster.availability() ==
+            network.orion.core.orchestrator.notifications.NotificationAvailability.AVAILABLE,
+            runtime.capabilities.isAvailable(notificationCapability))
         assertEquals(CoreReadiness.DEGRADED_SAFE, runtime.health.value.core.readiness)
         assertTrue(runtime.capabilities.isAvailable(network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor.WRITE_CAPABILITY))
         assertFalse(runtime.capabilities.isAvailable(network.orion.core.model.Capability("orion_unknown")))
         assertEquals(network.orion.core.actions.ActionExecutionResult.UNAVAILABLE, runtime.actions.execute(java.util.UUID.randomUUID()))
         runtime.taskStartupBarrier.beginRecovery()
         localCapabilities.forEach { assertFalse(runtime.capabilities.isAvailable(it)) }
+        assertFalse(runtime.capabilities.isAvailable(notificationCapability))
         assertFalse(runtime.capabilities.isAvailable(network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor.WRITE_CAPABILITY))
         assertEquals(CoreReadiness.DEGRADED_SAFE, runtime.recover())
         assertTrue(runtime.taskStartupBarrier.isOpen())

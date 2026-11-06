@@ -40,7 +40,8 @@ class OrionActivityQuery(private val database: OrionDatabase) : ActivityQuery {
         val knownCodes = setOf("TASK_CREATED", "TASK_COMPLETED", "TASK_CANCELLED", "REMINDER_CREATED", "REMINDER_CANCELLED",
             "REMINDER_SNOOZED", "REMINDER_UPDATED", "TIMER_CREATED", "TIMER_CANCELLED", "MEMORY_CREATED", "MEMORY_UPDATED",
             "MEMORY_DELETED", "task.create", "task.complete", "task.cancel", "reminder.create", "reminder.cancel",
-            "reminder.snooze", "timer.create", "timer.cancel", "memory.create", "memory.delete")
+            "reminder.snooze", "timer.create", "timer.cancel", "memory.create", "memory.delete",
+            "notification.post", "NOTIFICATION_POSTED")
         val knownStatuses = setOf("PENDING", "DELIVERED", "DEAD_LETTER", "NEEDS_CONFIRMATION", "CONFIRMED", "RUNNING",
             "SUCCEEDED", "FAILED", "CANCELLED", "UNKNOWN", "MANUAL_REVIEW")
     }

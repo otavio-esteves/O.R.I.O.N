@@ -13,8 +13,8 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.3.1"
     }
 
     buildTypes {
@@ -71,6 +71,8 @@ dependencies {
     implementation(project(":feature:home"))
     implementation(project(":feature:tasks"))
     implementation(project(":feature:timers"))
+    implementation(project(":skills:notifications"))
+    implementation(project(":feature:notifications"))
     implementation(project(":feature:diagnostics"))
     implementation(project(":feature:settings"))
     implementation(libs.activity.compose)

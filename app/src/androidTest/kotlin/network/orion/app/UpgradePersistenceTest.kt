@@ -50,8 +50,12 @@ class UpgradePersistenceTest {
             val keys = AndroidKeystoreFieldKeyProvider.open(context)
             if (mode != "verify" && keys.currentKey() is FieldKeyResult.Unavailable) {
                 // Baseline has no provisioning bootstrap. Never create keys over any encrypted row/artifact.
-                val tables = listOf("orion_action_requests", "orion_tasks", "orion_reminders", "orion_memories",
+                val tables = mutableListOf("orion_action_requests", "orion_tasks", "orion_reminders", "orion_memories",
                     "orion_memory_claims", "orion_ingress_envelopes")
+                // The same fixture source can build against schema3 and the additive timer schema4.
+                database.openHelper.readableDatabase.query(
+                    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'orion_timers'",
+                ).use { if (it.moveToFirst()) tables += "orion_timers" }
                 tables.forEach { table -> database.openHelper.readableDatabase.query("SELECT count(*) FROM $table").use {
                     assertTrue(it.moveToFirst()); assertEquals(0, it.getInt(0))
                 } }
