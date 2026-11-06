@@ -55,8 +55,69 @@ class DurableIngressStoreTest {
     @After fun close() { db.close(); context.deleteDatabase(name) }
     private fun release() { assertTrue(barrier.releaseAfterRecovery(barrier.beginRecovery(), CoreReadiness.READY)) }
     private fun request(id: UUID = UUID.randomUUID(), key: UUID = UUID.randomUUID(), priority: Int = 0,
-        bytes: ByteArray = "synthetic SECRET marker ingress".toByteArray()) = DurableIngressRequest(id, "task.create", key,
+        bytes: ByteArray = "synthetic SECRET marker ingress".toByteArray(), scope: String = "task.create") = DurableIngressRequest(id, scope, key,
         "ui", "CreateTask", 1, Sensitivity.SECRET, false, null, bytes, 1000, 2000, priority, UUID.randomUUID())
+
+    private fun scoped(scope: String, consumer: LocalIngressConsumer) = OrionDurableIngressStore(db,
+        OrionFieldEncryption(keys), WallClock { Instant.ofEpochMilli(now) }, barrier, consumer, consumerScope = scope)
+
+    @Test fun scopedConsumersNeverClaimOrExpireForeignRequestsRegardlessOfPriority() {
+        val seen = mutableListOf<String>()
+        val tasks = scoped("task.create", LocalIngressConsumer { seen += it.scope; LocalIngressDisposition.CONSUMED })
+        val timers = scoped("timer.create", LocalIngressConsumer { seen += it.scope; LocalIngressDisposition.CONSUMED })
+        val timer = request(scope = "timer.create", priority = 100)
+        val task = request(priority = 1)
+        assertEquals(DurableIngressOutcome.QUEUED, timers.enqueue(timer))
+        assertEquals(DurableIngressOutcome.QUEUED, tasks.enqueue(task))
+        assertFalse(tasks.consumeNext())
+        release()
+        assertTrue(tasks.consumeNext())
+        assertEquals(listOf("task.create"), seen)
+        val before = checkNotNull(db.ingress().find(timer.ingressId.toString()))
+        assertEquals(DurableIngressStatus.QUEUED, before.status)
+        assertEquals(0L, before.version)
+        assertEquals(0, before.attemptCount)
+        now = 2000
+        assertFalse(tasks.consumeNext())
+        val unchanged = checkNotNull(db.ingress().find(timer.ingressId.toString()))
+        assertEquals(before.status, unchanged.status)
+        assertEquals(before.version, unchanged.version)
+        assertEquals(before.attemptCount, unchanged.attemptCount)
+        assertArrayEquals(before.payloadEnvelope, unchanged.payloadEnvelope)
+        assertTrue(timers.consumeNext())
+        assertEquals(DurableIngressStatus.EXPIRED, db.ingress().find(timer.ingressId.toString())?.status)
+        assertEquals(listOf("task.create"), seen)
+    }
+
+    @Test fun scopedStoreRefusesToAdmitAnotherDomainsRequest() {
+        val tasks = scoped("task.create", LocalIngressConsumer { error("Must not consume") })
+        val foreign = request(scope = "reminder.create")
+        assertThrows(IllegalArgumentException::class.java) { tasks.enqueue(foreign) }
+        assertNull(db.ingress().find(foreign.ingressId.toString()))
+        assertThrows(IllegalArgumentException::class.java) { db.ingress().queuedInScope("", 1) }
+        assertThrows(IllegalArgumentException::class.java) { db.ingress().queuedInScope("task.create", 101) }
+    }
+
+    @Test fun scopedFailureRollsBackOnlyItsOwnIngressAndDomainWrites() {
+        val foreign = request(scope = "reminder.create", priority = 100)
+        val own = request()
+        store.enqueue(foreign); store.enqueue(own); release()
+        val technicalId = UUID.randomUUID().toString()
+        val tasks = scoped("task.create", LocalIngressConsumer {
+            db.records().appendTechnical(TechnicalEventEntity(technicalId, "INGRESS", "APPLIED", now, UUID.randomUUID().toString()))
+            error("Synthetic scoped transaction failure")
+        })
+        assertThrows(IllegalStateException::class.java) { tasks.consumeNext() }
+        for (request in listOf(foreign, own)) {
+            val row = checkNotNull(db.ingress().find(request.ingressId.toString()))
+            assertEquals(DurableIngressStatus.QUEUED, row.status)
+            assertEquals(0, row.attemptCount)
+            assertEquals(0L, row.version)
+        }
+        db.openHelper.readableDatabase.query("SELECT count(*) FROM orion_technical_events WHERE technicalEventId = ?", arrayOf(technicalId)).use {
+            assertTrue(it.moveToFirst()); assertEquals(0, it.getInt(0))
+        }
+    }
 
     @Test fun enqueueWhileGatedIsEncryptedAndDirectStoreDrainAlsoCannotBypassBarrier() {
         val request = request()

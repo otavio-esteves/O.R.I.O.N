@@ -56,7 +56,7 @@ internal class OrionTaskKernel(private val db: OrionDatabase, encryption: OrionF
             catch (_: java.io.IOException) { return@LocalIngressConsumer LocalIngressDisposition.REJECTED }
         consume(origin)
         LocalIngressDisposition.CONSUMED
-    })
+    }, consumerScope = OrionTaskIngressWire.SCOPE)
     private val queue = object : DurableIngressQueue {
         override fun enqueue(request: DurableIngressRequest) = store.enqueue(request)
         override fun consumeNext(): Boolean {
