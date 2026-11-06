@@ -1,12 +1,21 @@
 # ORION-F3-TEST-001 — Shared deterministic-domain ingress isolation
 
+Tracking: [issue #57](https://github.com/otavio-esteves/O.R.I.O.N/issues/57).
+
 OBJECTIVE: Prove task/reminder/timer/memory/notification kernels safely share one
 MAIN Room database and one StartupBarrier, even with identical UUIDs and replay
 keys across domains. These are real scoped kernels with synthetic platform input.
 
 FILES ALLOWED: One new Android instrumentation class
-OrionDeterministicDomainIsolationTest and this test work package. Production,
-existing tests, schema, module dependencies and runtime wiring are unchanged.
+OrionDeterministicDomainIsolationTest and this test work package; final combined
+qualification evidence, F3 gate report, relevant README/toolchain documentation
+and per-package validation summaries. Production behavior, schema, module
+dependencies and runtime wiring are inherited from the separate domain packages.
+The host death recorder and its contract tests may distinguish local transaction
+checkpoints from the post-claim external checkpoint, so evidence labels never
+misrepresent an external invocation as an open Room transaction.
+The two allowed host files are `scripts/android/verify-transaction-process-death.py`
+and `scripts/android/test_transaction_process_death_harness.py`.
 
 CONTRACTS INVOLVED: StartupBarrier, scoped encrypted durable ingress, per-scope
 idempotency constraints, independent ActionRequest/confirmation binding, local
@@ -31,3 +40,10 @@ integrating primary agent; no unexecuted test is claimed as evidence.
 OUT OF SCOPE: Production behavior, UI/navigation, migrations, platform delivery,
 F4 scheduling, new authority, physical S21/OEM qualification and phase-ready claims.
 The fixture uses isolated disposable databases and synthetic data only.
+
+FINAL INTEGRATION VALIDATION: Canonical Docker `check assembleDebug assembleRelease
+:app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2`,
+full host/API35 Android suites, installed APK replacement and actual SIGKILL
+scenarios for owned local operations and the external claim boundary. All runtime
+evidence retains its execution environment and matching artifact/source identities.
+No physical or phase-ready conclusion is inferred from these checks.
