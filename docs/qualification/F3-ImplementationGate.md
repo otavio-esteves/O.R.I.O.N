@@ -1,8 +1,8 @@
 # F3 — Deterministic implementation and qualification
 
 The integrated candidate covers the functional implementation scope of Master
-Plan §9 and Architecture §128. Validation is in progress; a phase-ready claim is
-not inferred from implementation or emulator results.
+Plan §9 and Architecture §128. Functional validation passed as recorded below; a
+phase-ready claim is not inferred from implementation or emulator results.
 
 ## Functional scope
 
@@ -46,8 +46,36 @@ become `UNKNOWN`; abandoned executions follow `MANUAL_REVIEW`, without blind ret
 
 ## Evidence status
 
-The final canonical build, full Android suites, installed upgrade and process-death
-reports are being captured against frozen source and matching APK hashes.
+The [integrated evidence](f3-integrated-evidence.json) records:
+
+- full canonical Docker CI on source commit `27b0add`, including lint, module,
+  benchmark and native packaging gates;
+- 559 Debug JVM cases in 77 suites, without Release duplicates;
+- 18 host harness cases;
+- 243 application and 4 security Android cases, with no failures or skips;
+- [installed APK update 3→4](f3-integrated-installed-upgrade-api35.json), preserving
+  encrypted records, original keys, queues and `PENDING`/`UNKNOWN` without replay;
+- actual MAIN `run-as`/SIGKILL for [tasks](f3-integrated-task-death-api35.json),
+  [reminders](f3-integrated-reminder-death-api35.json),
+  [timers](f3-integrated-timer-death-api35.json),
+  [memory](f3-integrated-memory-death-api35.json) and
+  [notifications](f3-integrated-notification-death-api35.json), each verified in a
+  different PID with the same recorded APK hashes.
+
+Local operations are killed inside an uncommitted owned Room transaction. Memory
+proves restoration of every logical copy after interrupted forgetting, then safe
+explicit erasure and no resurrection. Notification death occurs **after the
+committed RUNNING claim and outside Room**; a synthetic durable invocation marker
+proves no blind replay and manual-review recovery. This marker does not claim real
+NotificationManager evidence. Separate passing Android platform tests verify real
+active registration, denied invocation permits and private/generic lock-screen
+content under an explicitly granted permission on the disposable emulator.
+
+[Source equivalence](f3-integrated-source-equivalence.json) records frozen build
+inputs and artifact hashes. The final local Docker run consolidates Debug JVM and
+packaging results; the complete static/native gates are backed by the exact-source
+canonical CI. A redundant slow local lint run was stopped after that CI passed.
+Elapsed build durations are not hardware performance evidence.
 
 Earlier independently verified increments remain historical evidence:
 
@@ -72,3 +100,19 @@ F4 remains separate: AlarmManager/WorkManager delivery, exact-alarm capability,
 civil recurrence/DST reconciliation, durable event publication and full operational
 recovery. Core readiness remains `DEGRADED_SAFE`; no resilient MVP/24-7 claim, AI,
 voice, wake word or System Assistant qualification is introduced.
+
+## Review packages
+
+| Responsibility | Issue | Pull request |
+| --- | --- | --- |
+| Scoped ingress isolation | #45 | [#46](https://github.com/otavio-esteves/O.R.I.O.N/pull/46) |
+| Device/activity queries and UI | #47 | [#48](https://github.com/otavio-esteves/O.R.I.O.N/pull/48) |
+| Reminders | #49 | [#50](https://github.com/otavio-esteves/O.R.I.O.N/pull/50) |
+| Timers/Room v4 | #51 | [#54](https://github.com/otavio-esteves/O.R.I.O.N/pull/54) |
+| Personal memory/forgetting | #52 | [#55](https://github.com/otavio-esteves/O.R.I.O.N/pull/55) |
+| Explicit notifications | #53 | [#56](https://github.com/otavio-esteves/O.R.I.O.N/pull/56) |
+| Cross-domain/runtime qualification | #57 | [#58](https://github.com/otavio-esteves/O.R.I.O.N/pull/58) |
+
+The branches form an ordered review stack; this report is not a claim that they
+have already merged into `main`. Merging remains subject to the protected branch's
+required CI and up-to-date rule.

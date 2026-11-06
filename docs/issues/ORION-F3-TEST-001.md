@@ -47,3 +47,11 @@ full host/API35 Android suites, installed APK replacement and actual SIGKILL
 scenarios for owned local operations and the external claim boundary. All runtime
 evidence retains its execution environment and matching artifact/source identities.
 No physical or phase-ready conclusion is inferred from these checks.
+
+RESULTS: [Integrated evidence](../qualification/f3-integrated-evidence.json) and
+[source equivalence](../qualification/f3-integrated-source-equivalence.json) record
+canonical Docker CI, 559 Debug JVM cases, 18 host cases, 243 app plus 4 security
+Android cases, installed update 3→4 and five actual SIGKILL scenarios. All three
+mixed-domain kernel cases passed. The notification death marker is synthetic;
+real Android registration/privacy is verified separately. No physical/phase gate
+is closed and the PR stack remains subject to normal protected-branch review.

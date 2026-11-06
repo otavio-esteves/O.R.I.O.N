@@ -1,0 +1,648 @@
+{
+  "workPackage": "ORION-F3-TEST-001",
+  "issue": 57,
+  "buildEnvironment": "CONTAINER",
+  "canonicalCheckCi": {
+    "conclusion": "success",
+    "headSha": "27b0add6204addf6a7820aefaca884881f02cffe",
+    "status": "completed",
+    "url": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/42135681482",
+    "workflowName": "CI"
+  },
+  "localJvmAndPackaging": {
+    "command": [
+      "docker",
+      "compose",
+      "run",
+      "--rm",
+      "android-build",
+      "testDebugUnitTest",
+      "assembleDebug",
+      "assembleRelease",
+      ":app:assembleDebugAndroidTest",
+      ":core:security:assembleDebugAndroidTest",
+      "--max-workers=2"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 441.97,
+    "sourceUnchanged": true,
+    "changedInputs": [],
+    "commit": "27b0add6204addf6a7820aefaca884881f02cffe",
+    "trackedInputs": 472
+  },
+  "releaseBundle": {
+    "command": [
+      "docker",
+      "compose",
+      "run",
+      "--rm",
+      "android-build",
+      ":app:bundleRelease",
+      "--max-workers=2"
+    ],
+    "exitCode": 0,
+    "sourceUnchanged": true,
+    "sourceCommit": "27b0add6204addf6a7820aefaca884881f02cffe"
+  },
+  "buildLogSha256": "e57eeee459b95f4f8b4bd2e1c8f68fa54ed81285082d1b9adc4be47b76f196e0",
+  "verificationScope": "Full canonical check passed on CI at the exact source commit. Local frozen-source Docker run consolidates Debug JVM cases and debug/release/test APKs; the redundant local lint run was stopped after the full CI succeeded. Runtime evidence is separate host ADB validation.",
+  "jvm": {
+    "variant": "Debug; Release duplicates excluded",
+    "suites": 77,
+    "tests": 559,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "bySuite": [
+      {
+        "file": "app/build/test-results/testDebugUnitTest/TEST-network.orion.app.CoreReadyLogEventTest.xml",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "app/build/test-results/testDebugUnitTest/TEST-network.orion.app.tasks.OrionTaskAdmissionOwnerTest.xml",
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "app/build/test-results/testDebugUnitTest/TEST-network.orion.app.memories.OrionMemoryIngressWireTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminders.OrionReminderIngressWireTest.xml",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "app/build/test-results/testDebugUnitTest/TEST-network.orion.app.memories.OrionMemoryAdmissionOwnerTest.xml",
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminders.OrionReminderDisplayTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "app/build/test-results/testDebugUnitTest/TEST-network.orion.app.timers.OrionTimerIngressWireTest.xml",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "app/build/test-results/testDebugUnitTest/TEST-network.orion.app.tasks.OrionTaskIngressWireTest.xml",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "app/build/test-results/testDebugUnitTest/TEST-network.orion.app.notifications.OrionNotificationIngressWireTest.xml",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "app/build/test-results/testDebugUnitTest/TEST-network.orion.app.OrionHealthObservationsTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/actions/build/test-results/testDebugUnitTest/TEST-network.orion.core.actions.ActionStateMachineTest.xml",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/actions/build/test-results/testDebugUnitTest/TEST-network.orion.core.actions.ActionExecutionLeaseTest.xml",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/actions/build/test-results/testDebugUnitTest/TEST-network.orion.core.actions.ActionConfirmationBindingTest.xml",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/actions/build/test-results/testDebugUnitTest/TEST-network.orion.core.actions.IdempotencyKeyPolicyTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/actions/build/test-results/testDebugUnitTest/TEST-network.orion.core.actions.UnavailableActionEngineTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.reminders.CreateReminderPreparationTest.xml",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.memories.CreateMemoryPreparationTest.xml",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.tasks.TaskStatusPreparationTest.xml",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.timers.CreateTimerPreparationTest.xml",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.notifications.PostNotificationPreparationTest.xml",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.tasks.CreateTaskPreparationTest.xml",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.reminders.ReminderStatusPreparationTest.xml",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.CommandContractTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/common/build/test-results/testDebugUnitTest/TEST-network.orion.core.common.process.MainProcessStoragePolicyTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/common/build/test-results/testDebugUnitTest/TEST-network.orion.core.common.process.OrionProcessRoleTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/common/build/test-results/testDebugUnitTest/TEST-network.orion.core.common.process.OrionProcessBootstrapperTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/events/build/test-results/testDebugUnitTest/TEST-network.orion.core.events.OrionEventTest.xml",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/health/build/test-results/testDebugUnitTest/TEST-network.orion.core.health.CoreReadinessTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/health/build/test-results/testDebugUnitTest/TEST-network.orion.core.health.OrionHealthAggregatorTest.xml",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/health/build/test-results/testDebugUnitTest/TEST-network.orion.core.health.OrionHealthTest.xml",
+        "tests": 50,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/ingress/build/test-results/testDebugUnitTest/TEST-network.orion.core.ingress.DurableIngressCoordinatorTest.xml",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/ingress/build/test-results/testDebugUnitTest/TEST-network.orion.core.ingress.FoundationIngressCoordinatorTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/ipc/build/test-results/testDebugUnitTest/TEST-network.orion.core.ipc.ProtocolInfoTest.xml",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/ipc/build/test-results/testDebugUnitTest/TEST-network.orion.core.ipc.IpcBoundaryPolicyTest.xml",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/model/build/test-results/testDebugUnitTest/TEST-network.orion.core.model.CapabilityTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/model/build/test-results/testDebugUnitTest/TEST-network.orion.core.model.ModelVocabularyTest.xml",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/model/build/test-results/testDebugUnitTest/TEST-network.orion.core.model.OrionIntentTest.xml",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/observability/build/test-results/testDebugUnitTest/TEST-network.orion.core.observability.OrionLoggerTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.tasks.OrionTaskStatusPolicyTest.xml",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.reminders.OrionReminderStatusPolicyTest.xml",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.timers.OrionTimerStatusPolicyTest.xml",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.reminders.OrionCreateReminderPolicyTest.xml",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.timers.OrionCreateTimerPolicyTest.xml",
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.memories.OrionCreateMemoryPolicyTest.xml",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.tasks.OrionCreateTaskPolicyTest.xml",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.memories.OrionMemoryStatusPolicyTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.notifications.OrionPostNotificationPolicyTest.xml",
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/queries/build/test-results/testDebugUnitTest/TEST-network.orion.core.queries.QueryContractTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/queries/build/test-results/testDebugUnitTest/TEST-network.orion.core.queries.timers.OrionTimerRemainingTest.xml",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/queries/build/test-results/testDebugUnitTest/TEST-network.orion.core.queries.TaskQueryTest.xml",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/queries/build/test-results/testDebugUnitTest/TEST-network.orion.core.queries.activity.GetActivityTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/recovery/build/test-results/testDebugUnitTest/TEST-network.orion.core.recovery.OrderedRecoveryCoordinatorTest.xml",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/resources/build/test-results/testDebugUnitTest/TEST-network.orion.core.resources.UnavailableResourceGovernorTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/security/build/test-results/testDebugUnitTest/TEST-network.orion.core.security.DurablePayloadPolicyTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/security/build/test-results/testDebugUnitTest/TEST-network.orion.core.security.DurableFieldKeyProviderTest.xml",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/security/build/test-results/testDebugUnitTest/TEST-network.orion.core.security.FirstInstallFieldKeysTest.xml",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/security/build/test-results/testDebugUnitTest/TEST-network.orion.core.security.FieldEnvelopeCodecTest.xml",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/security/build/test-results/testDebugUnitTest/TEST-network.orion.core.security.OrionFieldEncryptionTest.xml",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.reminders.OrionCreateReminderDescriptorTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptorTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.memories.OrionMemoryDescriptorsTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.notifications.OrionPostNotificationDescriptorTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.SkillDescriptorTest.xml",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.timers.OrionCreateTimerDescriptorTest.xml",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.device.OrionDeviceDescriptorsTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.tasks.OrionTaskStatusDescriptorsTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/time/build/test-results/testDebugUnitTest/TEST-network.orion.core.time.AndroidOrionClockTest.xml",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "core/time/build/test-results/testDebugUnitTest/TEST-network.orion.core.time.OrionClockTest.xml",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "data/events/build/test-results/testDebugUnitTest/TEST-network.orion.data.events.EventRetryPolicyTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "skills/device/build/test-results/testDebugUnitTest/TEST-network.orion.skills.device.OrionDeviceInformationSkillTest.xml",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "skills/notifications/build/test-results/testDebugUnitTest/TEST-network.orion.skills.notifications.OrionPostNotificationSkillTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "skills/reminders/build/test-results/testDebugUnitTest/TEST-network.orion.skills.reminders.OrionCreateReminderSkillTest.xml",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "skills/reminders/build/test-results/testDebugUnitTest/TEST-network.orion.skills.reminders.OrionReminderStatusSkillTest.xml",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "skills/tasks/build/test-results/testDebugUnitTest/TEST-network.orion.skills.tasks.OrionTaskStatusSkillTest.xml",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "skills/tasks/build/test-results/testDebugUnitTest/TEST-network.orion.skills.tasks.OrionCreateTaskSkillTest.xml",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "skills/timers/build/test-results/testDebugUnitTest/TEST-network.orion.skills.timers.OrionCreateTimerSkillTest.xml",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "file": "voice/ipc/build/test-results/testDebugUnitTest/TEST-network.orion.voice.ipc.VoiceCoreClientTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "hostHarness": {
+    "environment": "HOST",
+    "tests": 18,
+    "result": "PASS"
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "apiLevel": 35,
+    "abi": "x86_64",
+    "pageSize": 4096,
+    "application": {
+      "result": "PASS",
+      "reportedTests": 243,
+      "passed": 243,
+      "ignored": 0,
+      "assumptionSkipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "logSha256": "0c92cb1546f6f38c34dc9fbee442091aa97993379274887450f1ea8f8b5c2378"
+    },
+    "security": {
+      "result": "PASS",
+      "reportedTests": 4,
+      "passed": 4,
+      "ignored": 0,
+      "assumptionSkipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "logSha256": "d2ad1df731ade2fb8d0d05511f3ac67744d759d22dca1551209ed6ca22060c51"
+    },
+    "notificationPermission": "POST_NOTIFICATIONS explicitly granted only on disposable validation emulator for actual platform posting tests"
+  },
+  "installedUpgrade": "f3-integrated-installed-upgrade-api35.json",
+  "actualProcessDeath": {
+    "task": "f3-integrated-task-death-api35.json",
+    "reminder": "f3-integrated-reminder-death-api35.json",
+    "timer": "f3-integrated-timer-death-api35.json",
+    "memory": "f3-integrated-memory-death-api35.json",
+    "notification": "f3-integrated-notification-death-api35.json"
+  },
+  "notificationDeathEvidence": "Synthetic durable external invocation marker only; real NotificationManager registration is separately exercised by Android platform tests.",
+  "artifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "d83291f9a8490dd7156610d45a9d32407db23ad25f0a30590e1a0ac250cda48d",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "acde866bec3f5b97ee11e5e24438d015e5ab5e55585f7e93d7cec3452e096eda",
+    "app/build/outputs/apk/release/app-release-unsigned.apk": "3271718ae30f5b9f464c17125d14fd18dad04411fc9b6f8f5fc46e69ddf80582",
+    "app/build/outputs/bundle/release/app-release.aab": "18c83d42536807d1d88ac1798bacf8eb075da01ab7e31d96ee7f7fc30ec2d792",
+    "core/security/build/outputs/apk/androidTest/debug/security-debug-androidTest.apk": "6d46a22e2389b9db3e077bddab94493f77771dc8873222339d7ff67f163b935f"
+  },
+  "qualificationBoundary": "Functional F3 implementation validated on API35 emulator. Physical S21 qualification remains issue23; no DETERMINISTIC_AGENT_READY, F4 delivery/recovery, AI or voice qualification."
+}

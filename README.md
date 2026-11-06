@@ -56,6 +56,12 @@ does not declare DETERMINISTIC_AGENT_READY or resilient MVP status. See the
 [F3 implementation and qualification gate](docs/qualification/F3-ImplementationGate.md)
 and the historical [F2 storage qualification](docs/qualification/F2-StorageCompletion.md).
 
+The [integrated F3 evidence](docs/qualification/f3-integrated-evidence.json) records
+559 Debug JVM, 18 host and 247 Android cases, installed replacement and five actual
+process-death scenarios, with frozen source and matching artifact hashes. Full
+canonical Docker CI covers lint, module and native packaging gates. Runtime evidence
+is API35/x86_64 emulator evidence; the physical qualification remains open.
+
 Build both APK variants, the release AAB, and the instrumentation APKs, and execute
 unit, lint, benchmark, native-compatibility, and module-boundary gates with:
 

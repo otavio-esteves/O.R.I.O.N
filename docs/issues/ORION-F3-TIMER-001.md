@@ -20,12 +20,12 @@ PROCESS DEATH: Before transaction commit all action/timer/event/ingress changes 
 
 SECURITY / MIGRATION: Timer content uses versioned encryption and technical reference-only events. Room v4 adds a timer table, indices and accessor, with an explicit additive v3→4 migration; no destructive fallback. Monotonic timestamps are interpreted only with matching BootSessionId. Creation uses bounded positive millisecond durations and overflow-safe deadline arithmetic. The UI explains that timers have no background alert until scheduler qualification.
 
-INTEGRATION STATUS: Room v4 and MAIN/UI wiring are integrated. Initial canonical
-Docker checks passed 245 JVM cases (69 timer cases), zero failures, timer UI/storage
-lint, module boundaries and debug/test packaging in 6m37s. Initial focused Android
-run passed backend/migration/recovery/navigation but two UI tests failed because
-the test host Activity was not declared. Test-host and foreground polling fixes
-are being integrated; no final test completion or readiness is claimed here.
+INTEGRATION STATUS: Room v4 and MAIN/UI wiring are integrated and validated in the
+[complete F3 candidate](../qualification/f3-integrated-evidence.json): canonical
+Docker CI, 559 Debug JVM cases, 243 app and 4 security Android cases. Both timer UI
+cases and the lifecycle stop/resume regression passed. Actual SIGKILL inside the
+owned timer transaction proved rollback and explicit replay in a different PID.
+The final installed APK update 3→4 also passed; no physical or phase gate is closed.
 
 Actual installed update versionCode2/schema3 to versionCode3/schema4 passed on
 API35/x86_64 emulator, preserving encrypted records, keys, pending and UNKNOWN
@@ -40,4 +40,4 @@ regression checks frozen read counts while CREATED, resumed reads while STARTED,
 draft preservation and unchanged explicit queue-drain/list counts. The direct
 lifecycle-runtime-compose dependency is pinned at 2.9.4, already selected transitively
 by the existing Activity Compose 1.13.0; this adds explicit API use, not a baseline
-version upgrade. Runtime execution belongs to the integrating primary agent.
+version upgrade. The registry regression passed in the integrated Android suite.
