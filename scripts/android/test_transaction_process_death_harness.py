@@ -73,6 +73,42 @@ class TransactionRecorderContractTest(unittest.TestCase):
             self.assertEqual("network.orion.app.notifications.OrionNotificationTransactionProcessDeathTest",
                              command[command.index("class") + 1])
 
+    def test_local_scenarios_preserve_the_legacy_room_rollback_proof_labels(self):
+        for scenario in ["generic", "task", "reminder", "timer", "memory"]:
+            with self.subTest(scenario=scenario):
+                proof = RECORDER.scenario_proof(scenario)
+                self.assertEqual("kill_during_room_transaction", proof["killCheck"])
+                self.assertEqual("committed_present_uncommitted_absent", proof["verificationCheck"])
+                self.assertEqual({"checkpointBoundary": "OPEN_ROOM_TRANSACTION"}, proof["metadata"])
+
+    def test_notification_proof_distinguishes_committed_claim_and_synthetic_external_marker(self):
+        proof = RECORDER.scenario_proof("notification")
+        self.assertEqual("kill_after_committed_external_claim", proof["killCheck"])
+        self.assertEqual("uncertain_external_effect_not_replayed", proof["verificationCheck"])
+        self.assertEqual("AFTER_COMMITTED_RUNNING_OUTSIDE_ROOM_TRANSACTION", proof["metadata"]["checkpointBoundary"])
+        self.assertEqual("SYNTHETIC_DURABLE_MARKER", proof["metadata"]["externalEvidence"])
+        self.assertEqual("SEPARATE_PLATFORM_TEST", proof["metadata"]["notificationManagerEvidence"])
+        local = RECORDER.scenario_proof("generic")
+        self.assertNotEqual(local["killCheck"], proof["killCheck"])
+        self.assertNotEqual(local["verificationCheck"], proof["verificationCheck"])
+
+    def test_unknown_scenario_cannot_select_a_checkpoint_or_verification_claim(self):
+        for scenario in ["", "arbitrary.class", "notification;echo unsafe", "new_external_boundary"]:
+            with self.subTest(scenario=scenario):
+                with self.assertRaises(ValueError):
+                    RECORDER.scenario_proof(scenario)
+        # Every declared instrumentation scenario needs an explicit proof declaration.
+        for scenario in RECORDER.SCENARIOS:
+            self.assertIn("verificationCheck", RECORDER.scenario_proof(scenario))
+
+    def test_proof_metadata_is_not_shared_mutable_report_state(self):
+        proof = RECORDER.scenario_proof("notification")
+        proof["killCheck"] = "incorrect_room_claim"
+        proof["metadata"]["externalEvidence"] = "incorrect_platform_claim"
+        fresh = RECORDER.scenario_proof("notification")
+        self.assertEqual("kill_after_committed_external_claim", fresh["killCheck"])
+        self.assertEqual("SYNTHETIC_DURABLE_MARKER", fresh["metadata"]["externalEvidence"])
+
 
 if __name__ == "__main__":
     unittest.main()
