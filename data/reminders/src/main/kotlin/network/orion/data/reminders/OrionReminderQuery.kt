@@ -10,7 +10,8 @@ import network.orion.data.database.OrionDatabase
 import org.json.JSONObject
 
 /** MAIN-only read adapter. Legacy opaque/corrupt content stays explicitly unreadable. */
-class OrionReminderQuery(private val database: OrionDatabase, private val encryption: OrionFieldEncryption) : ReminderQuery {
+class OrionReminderQuery(private val database: OrionDatabase, private val encryption: OrionFieldEncryption,
+    private val clock: network.orion.core.time.WallClock) : ReminderQuery {
     override fun get(request: GetReminders): ReminderPage {
         val rows = database.reminders().page(request.after?.toString(), request.limit + 1)
         val selected = rows.take(request.limit).map(::select)
@@ -35,7 +36,22 @@ class OrionReminderQuery(private val database: OrionDatabase, private val encryp
                         FieldCryptoFailure.KEY_INVALIDATED, FieldCryptoFailure.CRYPTO_UNAVAILABLE)) state = ReminderContentState.KEY_UNAVAILABLE
                 }
             }
-            return ReminderSummary(id, title, ReminderState.valueOf(row.status.name), row.version, state, java.time.Instant.ofEpochMilli(row.scheduledAt), row.zoneId, row.precision.name)
+            return ReminderSummary(id, title, ReminderState.valueOf(row.status.name), row.version, state, java.time.Instant.ofEpochMilli(row.scheduledAt), row.zoneId, row.precision.name, alertState(row))
+    }
+
+    private fun alertState(row: network.orion.data.database.ReminderEntity): ReminderAlertState {
+        val actionId = row.deliveryActionId ?: return ReminderAlertState.DISABLED
+        val action = database.actions().find(actionId)
+        if (action?.status == network.orion.core.actions.ActionStatus.CONFIRMED &&
+            action.confirmationExpiresAt?.let { clock.wallNow().toEpochMilli() >= it } == true) return ReminderAlertState.EXPIRED
+        return when (action?.status) {
+            network.orion.core.actions.ActionStatus.SUCCEEDED -> ReminderAlertState.DELIVERED
+            network.orion.core.actions.ActionStatus.UNKNOWN, network.orion.core.actions.ActionStatus.MANUAL_REVIEW,
+            network.orion.core.actions.ActionStatus.RUNNING -> ReminderAlertState.UNCERTAIN
+            network.orion.core.actions.ActionStatus.CONFIRMED -> if (!row.registrationConfirmed || row.precision == network.orion.data.database.ReminderPrecision.UNSCHEDULED)
+                ReminderAlertState.AWAITING_SCHEDULE else ReminderAlertState.SCHEDULED
+            else -> ReminderAlertState.EXPIRED
+        }
     }
 
     private fun decodeContent(id: UUID, bytes: ByteArray): String? {

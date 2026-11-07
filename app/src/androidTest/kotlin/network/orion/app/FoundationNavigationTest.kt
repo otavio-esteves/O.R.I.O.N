@@ -39,7 +39,7 @@ class FoundationNavigationTest {
     @Test fun remindersDestinationRestoresWithoutClaimingAutomaticDelivery() {
         compose.onNodeWithText("Lembretes").performScrollTo().performClick()
         compose.onNodeWithTag("orion_reminders").assertExists()
-        compose.onNodeWithText("Lembretes ficam salvos. Alertas automáticos ainda não estão disponíveis.").assertExists()
+        compose.onNodeWithText("Lembretes ficam salvos. Ative e confirme um alerta único para receber uma notificação.").assertExists()
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("orion_reminders").assertExists()
     }

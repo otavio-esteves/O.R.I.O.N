@@ -22,8 +22,13 @@ import network.orion.core.queries.reminders.*
 
 /** Sensitive drafts stay in transient memory; only submitted requests enter encrypted Core storage. */
 @Composable
-fun RemindersScreen(gateway: ReminderGateway, recoveryVersion: Instant? = null) {
+fun RemindersScreen(gateway: ReminderGateway, recoveryVersion: Instant? = null,
+    deliveryGateway: ReminderDeliveryGateway? = null, onRequestNotificationPermission: (() -> Unit)? = null,
+    onRequestExactAccess: (() -> Unit)? = null) {
     val scope = rememberCoroutineScope()
+    var deliveryPreview by remember { mutableStateOf<ReminderDeliveryPreview?>(null) }
+    var deliveryTitle by remember { mutableStateOf<String?>(null) }
+    var seriesPreview by remember { mutableStateOf<ReminderSeriesPreview?>(null) }
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     var title by remember { mutableStateOf("") }
@@ -64,7 +69,8 @@ fun RemindersScreen(gateway: ReminderGateway, recoveryVersion: Instant? = null) 
     }) {
         item {
             Text("Lembretes", style = MaterialTheme.typography.headlineSmall)
-            Text("Lembretes ficam salvos. Alertas automáticos ainda não estão disponíveis.")
+            Text(if (deliveryGateway == null) "Lembretes ficam salvos. Alertas automáticos ainda não estão disponíveis."
+                else "Lembretes ficam salvos. Ative e confirme um alerta único para receber uma notificação.")
         }
         item {
             OutlinedTextField(value = title, onValueChange = { if (activeWork == 0) { title = it; submission = null } },
@@ -89,8 +95,61 @@ fun RemindersScreen(gateway: ReminderGateway, recoveryVersion: Instant? = null) 
             }) { Text("Preparar criação") }
         }
         item { message?.let { Text(it) } }
+        if (deliveryGateway != null) item {
+            Column {
+                onRequestNotificationPermission?.let { TextButton(onClick = it) { Text("Permitir notificações") } }
+                onRequestExactAccess?.let { TextButton(onClick = it) { Text("Permitir alertas exatos") } }
+            }
+        }
+        seriesPreview?.let { preview -> item {
+            Card(Modifier.fillMaxWidth().testTag("orion_reminder_series_confirmation")) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Confirmar estes ${preview.occurrences.size} alertas?")
+                    Text(deliveryTitle ?: "Lembrete selecionado")
+                    Text("Cada notificação mostrará: Você tem um lembrete.")
+                    Text("Solicitar horário exato quando permitido; caso contrário, usar entrega aproximada. " +
+                        "Cada alerta pode chegar até 24 horas depois após uma interrupção. " +
+                        "Cancelar ou adiar interrompe os próximos alertas desta série.")
+                    for (occurrence in preview.occurrences) {
+                        Text(java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu HH:mm XXX '['VV']'")
+                            .withZone(preview.rule.zoneId).format(occurrence.delivery.scheduledAt))
+                    }
+                    Button(enabled = !busy, onClick = { run {
+                        message = when (deliveryGateway?.confirmSeries(preview)) {
+                            ReminderDeliveryOutcome.ENABLED -> { seriesPreview = null; "Série de alertas autorizada." }
+                            ReminderDeliveryOutcome.QUEUED -> "Confirmação recebida. Atualize para consultar o resultado."
+                            else -> "A série mudou ou não pôde ser ativada. Atualize e revise os horários."
+                        }
+                        reload()
+                    } }) { Text("Confirmar todos os horários") }
+                    TextButton(onClick = { seriesPreview = null }) { Text("Voltar") }
+                }
+            }
+        } }
+        deliveryPreview?.let { preview -> item {
+            Card(Modifier.fillMaxWidth().testTag("orion_reminder_delivery_confirmation")) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Ativar um alerta para este lembrete?")
+                    Text(deliveryTitle ?: "Lembrete selecionado")
+                    Text("Horário: ${preview.scheduledAt}")
+                    Text("A notificação mostrará: Você tem um lembrete.")
+                    Text("Solicitar horário exato quando permitido; caso contrário, usar entrega aproximada. " +
+                        "Após interrupção, este único alerta pode chegar até 24 horas depois. Adiar exige nova ativação.")
+                    Button(enabled = !busy, onClick = { run {
+                        message = when (deliveryGateway?.confirm(preview)) {
+                            ReminderDeliveryOutcome.ENABLED -> { deliveryPreview = null; "Alerta autorizado. Consulte a precisão após atualizar." }
+                            ReminderDeliveryOutcome.QUEUED -> "Confirmação recebida. Atualize para consultar o resultado."
+                            else -> "Não foi possível ativar o alerta. Atualize e confirme novamente."
+                        }
+                        reload()
+                    } }) { Text("Confirmar alerta único") }
+                    TextButton(onClick = { deliveryPreview = null; deliveryTitle = null }) { Text("Voltar") }
+                }
+            }
+        } }
+
         item {
-            TextButton(enabled = !busy, onClick = { run { gateway.processPending(); reload() } }) { Text("Atualizar lembretes e pedidos") }
+            TextButton(enabled = !busy, onClick = { run { deliveryGateway?.processPending(); gateway.processPending(); reload() } }) { Text("Atualizar lembretes e pedidos") }
         }
         items(pending, key = { "pending/${it.actionId}" }) { action ->
             Card(Modifier.fillMaxWidth().testTag("orion_reminder_confirmation")) {
@@ -128,7 +187,38 @@ fun RemindersScreen(gateway: ReminderGateway, recoveryVersion: Instant? = null) 
                         java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
                             .withZone(java.time.ZoneId.of(reminder.zoneId)).format(reminder.scheduledAt) + " (${reminder.zoneId})"
                     } catch (_: java.time.DateTimeException) { "Horário indisponível" })
-                    Text("Alertas: indisponíveis nesta versão")
+                    Text(if (deliveryGateway == null) "Alertas: indisponíveis nesta versão" else when (reminder.alertState) {
+                        ReminderAlertState.DISABLED -> "Alerta: não ativado"
+                        ReminderAlertState.AWAITING_SCHEDULE -> "Alerta autorizado: aguardando agendamento"
+                        ReminderAlertState.SCHEDULED -> if (reminder.precision == "EXACT") "Alerta: exato" else "Alerta: aproximado"
+                        ReminderAlertState.DELIVERED -> "Alerta entregue"
+                        ReminderAlertState.UNCERTAIN -> "Entrega incerta: revisão necessária, sem repetição automática"
+                        ReminderAlertState.EXPIRED -> "Alerta indisponível ou expirado"
+                    })
+                    if (deliveryGateway != null && reminder.state == ReminderState.PENDING &&
+                        reminder.contentState == ReminderContentState.READABLE && reminder.alertState == ReminderAlertState.DISABLED) {
+                        TextButton(enabled = !busy, onClick = { run {
+                            when (val prepared = deliveryGateway.prepare(reminder.reminderId, reminder.version)) {
+                                is ReminderDeliveryPreparation.Ready -> { deliveryPreview = prepared.preview; deliveryTitle = reminder.title; seriesPreview = null }
+                                else -> message = "Não foi possível preparar o alerta. Verifique as notificações e atualize o lembrete."
+                            }
+                        } }) { Text("Ativar alerta único") }
+                        for ((frequency, count, label) in listOf(
+                            Triple(network.orion.core.model.OrionReminderRecurrenceFrequency.DAILY, 7, "Repetir diariamente: 7 alertas"),
+                            Triple(network.orion.core.model.OrionReminderRecurrenceFrequency.WEEKLY, 4, "Repetir semanalmente: 4 alertas"))) {
+                            TextButton(enabled = !busy, onClick = { run {
+                                val rule = network.orion.core.model.OrionReminderRecurrenceRule(frequency, 1, count,
+                                    reminder.scheduledAt.atZone(java.time.ZoneId.of(reminder.zoneId)).toLocalDateTime(),
+                                    java.time.ZoneId.of(reminder.zoneId))
+                                when (val prepared = deliveryGateway.prepareSeries(reminder.reminderId, reminder.version, rule)) {
+                                    is ReminderSeriesPreparation.Ready -> {
+                                        seriesPreview = prepared.preview; deliveryTitle = reminder.title; deliveryPreview = null
+                                    }
+                                    else -> message = "Não foi possível preparar a série. Verifique notificações e horários."
+                                }
+                            } }) { Text(label) }
+                        }
+                    }
                     Text(when (reminder.state) { ReminderState.PENDING -> "Pendente"; ReminderState.FIRED -> "Disparado"; ReminderState.CANCELLED -> "Cancelado" })
                     if (reminder.state == ReminderState.PENDING && reminder.contentState == ReminderContentState.READABLE) {
                         Row {

@@ -9,7 +9,7 @@ import network.orion.core.model.Sensitivity
 
 /** F2 encrypted records only; semantic memory and scheduler implementations remain later phases. */
 @Dao
-abstract class OrionRecordDao {
+abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
     /** Every authoritative encrypted table, including retained terminal envelopes. */
     @Query("""SELECT (EXISTS(SELECT 1 FROM orion_action_requests) OR
         EXISTS(SELECT 1 FROM orion_tasks) OR EXISTS(SELECT 1 FROM orion_timers) OR EXISTS(SELECT 1 FROM orion_reminders) OR
@@ -43,13 +43,18 @@ abstract class OrionRecordDao {
     }
 
     @Query("""UPDATE orion_reminders SET contentEnvelope = :content, sensitivity = :sensitivity,
-        scheduledAt = :scheduledAt, zoneId = :zoneId, precision = 'UNSCHEDULED', updatedAt = :at, version = version + 1
-        WHERE reminderId = :id AND version = :version AND status = 'PENDING'""")
+        scheduledAt = :scheduledAt, zoneId = :zoneId, precision = 'UNSCHEDULED',
+        scheduleMethod = 'UNSCHEDULED', deliveryActionId = NULL, fireGeneration = fireGeneration + 1, registrationConfirmed = 0,
+        localDateTime = NULL, recurrenceRule = NULL, resolutionDecision = NULL, resolvedOffsetSeconds = NULL,
+        updatedAt = :at, version = version + 1
+        WHERE reminderId = :id AND version = :version AND status = 'PENDING' AND fireGeneration < 9223372036854775807""")
     protected abstract fun editReminder(id: String, version: Long, content: ByteArray, sensitivity: Sensitivity,
         scheduledAt: Long, zoneId: String, at: Long): Int
 
-    @Query("""UPDATE orion_reminders SET status = 'CANCELLED', updatedAt = :at, version = version + 1
-        WHERE reminderId = :id AND version = :version AND status = 'PENDING'""")
+    @Query("""UPDATE orion_reminders SET status = 'CANCELLED', updatedAt = :at, version = version + 1,
+        precision = 'UNSCHEDULED', scheduleMethod = 'UNSCHEDULED', deliveryActionId = NULL, registrationConfirmed = 0,
+        fireGeneration = fireGeneration + 1
+        WHERE reminderId = :id AND version = :version AND status = 'PENDING' AND fireGeneration < 9223372036854775807""")
     protected abstract fun cancelReminder(id: String, version: Long, at: Long): Int
 
     @Query("""UPDATE orion_memories SET status = 'SUPERSEDED', updatedAt = :at, version = version + 1
@@ -76,6 +81,7 @@ abstract class OrionRecordDao {
         requireCreationEvent(id, at, "REMINDER_UPDATED", sensitivity, event, version + 1)
         check(eventCount() < 10_000) { "Durable event capacity reached." }
         if (editReminder(id, version, content, sensitivity, scheduledAt, zoneId, at) != 1) return ActionMutation.CONFLICT
+        invalidateReminderSeries(id, at)
         insertEvent(event)
         return ActionMutation.APPLIED
     }
@@ -88,6 +94,7 @@ abstract class OrionRecordDao {
         requireCreationEvent(id, at, "REMINDER_CANCELLED", current.sensitivity, event, version + 1)
         check(eventCount() < 10_000) { "Durable event capacity reached." }
         if (cancelReminder(id, version, at) != 1) return ActionMutation.CONFLICT
+        invalidateReminderSeries(id, at)
         insertEvent(event)
         return ActionMutation.APPLIED
     }
@@ -159,6 +166,12 @@ abstract class OrionRecordDao {
         ZoneId.of(reminder.zoneId)
         require(reminder.status == ReminderStatus.PENDING && reminder.precision == ReminderPrecision.UNSCHEDULED &&
             reminder.version == 0L && reminder.updatedAt == reminder.createdAt)
+        require(reminder.deliveryActionId == null && reminder.fireGeneration == 0L &&
+            reminder.scheduleMethod == ReminderScheduleMethod.UNSCHEDULED && reminder.requestCode == 0 &&
+            reminder.lastScheduledAt == null && reminder.lastScheduledGeneration == null &&
+            !reminder.registrationConfirmed &&
+            reminder.lastFiredAt == null && reminder.localDateTime == null &&
+            reminder.recurrenceRule == null && reminder.resolutionDecision == null && reminder.resolvedOffsetSeconds == null)
         requireCreationEvent(reminder.reminderId, reminder.createdAt, "REMINDER_CREATED", reminder.sensitivity, event)
         check(eventCount() < 10_000) { "Durable event capacity reached." }
         insertReminder(reminder)

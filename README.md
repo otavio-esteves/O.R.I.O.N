@@ -39,7 +39,7 @@ policy, exact human confirmation and owned ActionRequest execution. Local domain
 action, audit, event and ingress changes commit together. Each domain consumes only
 its own queue scope behind the same operational Startup Barrier.
 
-Room v4 adds durable timers through the explicit 1→2→3→4 migration chain. Timers use
+Room v5 preserves durable timers and adds explicit scheduling/finite-occurrence metadata through the non-destructive 1→2→3→4→5 migration chain. Timers use
 monotonic elapsed time only in their original BootSessionId and expose wall fallback
 after reboot. User-declared memory remains distinct from inference; forgetting
 removes current entity/claim/processing copies and preserves minimal replay
@@ -48,15 +48,30 @@ Room transactions and the local barrier monitor. Original consent, capabilities,
 permission and ownership are revalidated at invocation; uncertain outcomes are
 never automatically resent.
 
-Reminders remain UNSCHEDULED, and timers have no automatic background alerts.
-Event publication, scheduler/reconciliation and full F4 recovery remain unqualified.
-The Core continues to report DEGRADED_SAFE; AI and voice remain unavailable. Formal
-F3 readiness also requires the deferred physical S21 qualification; this candidate
-does not declare DETERMINISTIC_AGENT_READY or resilient MVP status. See the
-[F3 implementation and qualification gate](docs/qualification/F3-ImplementationGate.md)
-and the historical [F2 storage qualification](docs/qualification/F2-StorageCompletion.md).
+The F4 runtime candidate adds explicitly confirmed one-shot and finite daily/weekly
+reminder alerts, exact-alarm capability with observable approximate fallback,
+reference-only durable callbacks, event publication and recovery/unique maintenance.
+Every occurrence in a finite series is prepared and individually bound to an original
+confirmation receipt before activation. Unknown delivery pauses that series; cancel
+or snooze invalidates its remaining waiting occurrences. Legacy reminders retain no
+external alert authority and require a new explicit opt-in. Timers still have no
+automatic background alerts.
 
-The [integrated F3 evidence](docs/qualification/f3-integrated-evidence.json) records
+Core readiness remains DEGRADED_SAFE while the physical/system qualification gate
+is open; AI and voice remain unavailable. This candidate does not declare resilient
+MVP or 24/7 readiness. Current validation and the gate checklist are recorded in the
+[F4 runtime report](docs/qualification/F4-RuntimeGate.md); the
+[F3 implementation report](docs/qualification/F3-ImplementationGate.md) remains
+historical evidence of the preceding baseline.
+
+The final F4 candidate passed 630 Debug JVM cases, 35 host contracts, 313 application
+Android cases and four Keystore cases. Real emulator notification checks cover
+Doze, reboot, Force Stop/allowed return, time/timezone changes and observable
+background restriction. Actual committed-claim SIGKILL verifies no blind replay.
+The reports retain source/artifact hashes and failed attempts; physical/system/soak
+qualification remains open in [issue #64](https://github.com/otavio-esteves/O.R.I.O.N/issues/64).
+
+The historical [integrated F3 evidence](docs/qualification/f3-integrated-evidence.json) records
 559 Debug JVM, 18 host and 247 Android cases, installed replacement and five actual
 process-death scenarios, with frozen source and matching artifact hashes. Full
 canonical Docker CI covers lint, module and native packaging gates. Runtime evidence
@@ -72,11 +87,9 @@ docker compose run --rm android-build check assembleDebug assembleRelease :app:a
 The GitHub Actions baseline runs this same Compose flow. Android device installation
 and runtime validation remain host/physical-device responsibilities.
 
-Preparatory F4 components now include civil recurrence/DST resolution, exact versus
-approximate alarm selection and a durable technical event consumer. They are not
-registered in the production runtime. See the [F4 preparation report](docs/qualification/F4-Preparation.md)
-for their contracts, validation and the remaining delivery sequence. The physical
-F3 gate and full F4 scheduling/recovery qualification remain open.
+The earlier [F4 preparation report](docs/qualification/F4-Preparation.md) describes
+PR #62 before production activation. The runtime candidate builds on those contracts;
+its physical and full system/soak qualification remains separately gated.
 
 ```text
 source -> Docker build/check/APK -> Linux host + ADB -> physical Android device
@@ -115,10 +128,11 @@ The host harness contract tests run without ADB or a device:
 python3 scripts/android/test_foundation_runtime_harness.py
 python3 scripts/android/test_transaction_process_death_harness.py
 python3 scripts/android/test_installed_upgrade_harness.py
+python3 scripts/android/test_scheduled_reminder_runtime_harness.py
 ```
 
 Action preparation, migration and encrypted-storage evidence is recorded in the
-[F2 increment report](docs/qualification/F2-ActionPreparation.md). F2 remains in progress.
+[F2 increment report](docs/qualification/F2-ActionPreparation.md). Its physical qualification remains pending.
 
 The native gate is active for Compose/DataStore transitive libraries. `check`
 verifies ELF/ABI/APK/AAB packaging, including negative fixtures; physical arm64
@@ -146,7 +160,7 @@ For physical evidence, use the explicit device serial and `--environment PHYSICA
 Add `--scenario task` to exercise owned task creation: the checkpoint is after the
 uncommitted task/event/action-success writes, and verification in a new process
 checks rollback followed by exactly one committed task/event after explicit replay.
-Additional scenarios are `reminder`, `timer`, `memory` and `notification`.
+Additional scenarios are `reminder`, `timer`, `memory`, `notification` and `reminder_delivery`.
 Memory interrupts an uncommitted forget operation and verifies restoration of all
 logical copies before explicit erasure replay. Notification death uses a durable
 synthetic external marker after the committed claim; it proves no blind replay,
@@ -159,7 +173,7 @@ is a separate host responsibility. Emulator evidence does not qualify S21/OEM ha
 
 ## Installed upgrade validation
 
-The integrated F3 debug candidate is versionCode 4 (Room schema 4). The host recorder installs a prior APK/test APK,
+The F4 runtime debug candidate is versionCode 5 (Room schema 5); the preceding F3 baseline is versionCode 4/schema 4. The host recorder installs a prior APK/test APK,
 seeds synthetic state, replaces both with the candidate using `adb install -r`, and
 verifies encrypted records, original keys, queues, pending actions and UNKNOWN state.
 It never uninstalls, clears data or falls back to forced downgrade. Use a dedicated
@@ -183,3 +197,22 @@ When sharing the Gradle user cache across checkouts, give the baseline a separat
 project cache with `--project-cache-dir /tmp/orion-baseline-project-cache` so its
 incremental output history cannot overwrite the candidate's history.
 Run builds sequentially when sharing the Gradle user cache across containers.
+
+## Scheduled reminder system validation
+
+The F4 recorder observes a real Android notification before verification starts the
+app again. Use a dedicated target because these scenarios change its lifecycle,
+clock, timezone or power restrictions and temporarily grant test access:
+
+```bash
+python3 scripts/android/verify-scheduled-reminder-runtime.py \
+  --serial emulator-5586 --environment ANDROID_EMULATOR --dedicated-target \
+  --adb /path/to/platform-tools/adb --scenario doze \
+  --evidence-dir /tmp/orion-f4-doze
+```
+
+Other scenarios are `reboot`, `force_stop`, `time_change`, `timezone_change` and
+`background_restriction`. Run Doze first to respect allow-while-idle alarm quotas.
+Force Stop requires an explicit permitted return; background restriction remains
+observable degradation. Reports retain artifact/source identities and restore
+the target's temporary settings. Emulator results remain non-definitive.

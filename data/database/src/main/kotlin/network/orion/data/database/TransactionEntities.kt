@@ -1,6 +1,7 @@
 package network.orion.data.database
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -9,6 +10,7 @@ import network.orion.core.model.Sensitivity
 enum class TaskStatus { OPEN, COMPLETED, CANCELLED }
 enum class ReminderStatus { PENDING, FIRED, CANCELLED }
 enum class ReminderPrecision { UNSCHEDULED, EXACT, APPROXIMATE }
+enum class ReminderScheduleMethod { UNSCHEDULED, EXACT_ALARM, INEXACT_ALARM }
 enum class MemoryOrigin { USER_DECLARED, SYSTEM_OBSERVED, SYSTEM_DERIVED, LLM_INFERRED, IMPORTED, EXTERNAL_SOURCE }
 enum class MemoryStatus { ACTIVE, SUPERSEDED, DELETED }
 
@@ -38,6 +40,21 @@ data class ReminderEntity(
     val status: ReminderStatus = ReminderStatus.PENDING,
     val precision: ReminderPrecision = ReminderPrecision.UNSCHEDULED,
     val version: Long = 0,
+    val localDateTime: String? = null,
+    val recurrenceRule: String? = null,
+    val resolutionDecision: String? = null,
+    val resolvedOffsetSeconds: Int? = null,
+    @ColumnInfo(defaultValue = "'UNSCHEDULED'") val scheduleMethod: ReminderScheduleMethod = ReminderScheduleMethod.UNSCHEDULED,
+    @ColumnInfo(defaultValue = "0") val requestCode: Int = 0,
+    @ColumnInfo(defaultValue = "0") val fireGeneration: Long = 0,
+    val lastScheduledAt: Long? = null,
+    /** Last registered OS token generation, retained across invalidation for exact cleanup. */
+    val lastScheduledGeneration: Long? = null,
+    /** Derived OS-artifact observation only; never grants delivery authority. */
+    @ColumnInfo(defaultValue = "0") val registrationConfirmed: Boolean = false,
+    val lastFiredAt: Long? = null,
+    /** Exact future ActionRequest consent anchor; null never authorizes external delivery. */
+    val deliveryActionId: String? = null,
 ) {
     override fun toString(): String = "ReminderEntity(<redacted>)"
 }

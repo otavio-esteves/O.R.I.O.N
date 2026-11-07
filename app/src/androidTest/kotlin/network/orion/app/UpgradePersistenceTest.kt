@@ -135,7 +135,7 @@ class UpgradePersistenceTest {
                     assertEquals("HEALTHY", health.subsystems.entries.single { it.key.name == "FIELD_KEYS" }.value.name)
                 }
                 assertEquals(properties.getProperty("keyVersion").toInt(), key.version)
-                assertEquals(4, database.openHelper.readableDatabase.version)
+                assertEquals(5, database.openHelper.readableDatabase.version)
                 assertEquals(content, String((taskStore.readContent(ids.getValue("task")) as FieldDecryptionResult.Plaintext).copyBytes()))
                 for (kind in listOf("reminder", "memory")) {
                     val recordId = ids.getValue(kind)
@@ -160,7 +160,8 @@ class UpgradePersistenceTest {
                 for (kind in listOf("task", "reminder", "memory")) {
                     database.openHelper.readableDatabase.query("SELECT status,attemptCount FROM orion_domain_event_outbox WHERE aggregateId = ?",
                         arrayOf(ids.getValue(kind).toString())).use {
-                        assertEquals(1, it.count); assertTrue(it.moveToFirst()); assertEquals("PENDING", it.getString(0)); assertEquals(0, it.getInt(1))
+                        assertEquals(1, it.count); assertTrue(it.moveToFirst()); assertTrue(it.getString(0) in setOf("PENDING", "DELIVERED"))
+                        assertTrue(it.getInt(1) in 0..5) // Recovery may publish a committed fact, never replay a domain action.
                     }
                 }
                 InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {

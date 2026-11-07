@@ -3,6 +3,8 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":core:common"))
+    implementation(libs.work.runtime)
     testImplementation(libs.junit4)
 }
 

@@ -3,6 +3,14 @@ package network.orion.app
 import android.app.ActivityManager
 import android.app.KeyguardManager
 import android.content.Context
+import android.content.ComponentName
+import android.os.Build
+import android.os.Process
+import java.util.concurrent.TimeUnit
+import network.orion.app.scheduling.*
+import network.orion.app.reminderdelivery.OrionReminderDeliveryPipeline
+import network.orion.scheduler.alarms.*
+import network.orion.scheduler.workers.OrionMaintenanceScheduler
 import android.os.PowerManager
 import android.util.Log
 import java.time.Instant
@@ -50,6 +58,23 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     private val app = context.applicationContext
     private val clock = AndroidOrionClock(app.contentResolver)
     private val notificationPoster = OrionAndroidNotificationPoster(app, clock)
+    private val reminderPoster = OrionAndroidNotificationPoster(app, clock, OrionAndroidNotificationPoster.REMINDER_CHANNEL)
+    private val alarmBackend = AndroidOrionAlarmBackend(app, ComponentName(app, OrionReminderAlarmReceiver::class.java))
+    private val reminderAlarms = OrionReminderAlarms(alarmBackend)
+    @Volatile internal var reminderDelivery: OrionReminderDeliveryPipeline? = null
+        private set
+    private var scheduling: OrionSchedulingCoordinator? = null
+    private var maintenance: OrionMaintenanceScheduler? = null
+    private var heartbeatRegistered = false
+    @Volatile internal var maintenanceNeedsContinuation = false
+        private set
+    private val forceStopEvidence = network.orion.core.exitinfo.OrionForceStopStartupEvidence()
+    private var forceStopListenerRegistered = false
+    private var forceStopSignal = "UNAVAILABLE"
+    private var lastExitReason: Int? = null
+    private var lastExitKind: String? = null
+    internal fun deliveryGateway() = OrionReminderDeliveryUiGateway({ reminderDelivery },
+        { id -> reconcileAuthorizedReminder(id) }, { nudgeUiMaintenance() })
     internal val deviceGateway = network.orion.app.device.OrionDeviceUiGateway(app, clock)
     internal val activityGateway = network.orion.app.device.OrionActivityUiGateway { database }
     private val logger = OrionLogger(clock, OrionLogSink { record ->
@@ -83,7 +108,9 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         (capability in setOf(OrionCreateTaskDescriptor.WRITE_CAPABILITY, OrionCreateReminderDescriptor.WRITE_CAPABILITY,
             OrionCreateTimerDescriptor.WRITE_CAPABILITY, OrionCreateMemoryDescriptor.WRITE_CAPABILITY) ||
             capability == OrionPostNotificationDescriptor.WRITE_CAPABILITY &&
-                notificationPoster.availability() == NotificationAvailability.AVAILABLE) &&
+                notificationPoster.availability() == NotificationAvailability.AVAILABLE ||
+            capability == network.orion.core.skills.metadata.reminders.OrionDeliverReminderDescriptor.DELIVERY_CAPABILITY &&
+                reminderPoster.availability() == NotificationAvailability.AVAILABLE) &&
             taskWriteReady && taskStartupBarrier.isOpen() && clock.monotonicNow().bootSessionId != null
     }
     internal fun taskGateway(channel: OrionTaskAdmissionOwner.UiChannel) = OrionTaskUiGateway(channel, { taskKernel }, clock, ::taskOperationFailed)
@@ -182,12 +209,16 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         timerAdmissions.invalidateAdmissions()
         memoryAdmissions.invalidateAdmissions()
         notificationAdmissions.invalidateAdmissions()
+        reminderDelivery?.invalidateAdmissions()
         mutableHealth.publishSubsystemObservations(clock, mapOf(OrionSubsystem.ACTION_OUTBOX to OrionHealthStatus.FAILED))
     }
 
     @Synchronized fun start() {
         if (startupJob?.isActive == true) return
-        startupJob = scope.launch { recover() }
+        startupJob = scope.launch {
+            registerForceStopCompletionListener()
+            recover()
+        }
     }
 
     override suspend fun recover(): CoreReadiness = withContext(Dispatchers.IO) { mutex.withLock {
@@ -202,6 +233,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         timerAdmissions.invalidateAdmissions()
         memoryAdmissions.invalidateAdmissions()
         notificationAdmissions.invalidateAdmissions()
+        reminderDelivery?.invalidateAdmissions()
         val correlation = UUID.randomUUID()
         val states = initial.toMutableMap()
         var stage = OrionSubsystem.DATABASE
@@ -247,6 +279,9 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 states[OrionSubsystem.EXIT_MONITOR] = OrionHealthStatus.DEGRADED
                 emptyList()
             }
+            lastExitReason = exits.firstOrNull()?.reason
+            lastExitKind = exits.firstOrNull()?.kind?.name
+            sampleForceStop(config)
             if (keyState == FieldKeyInitialization.READY) {
                 taskStorageReady = true
                 val kernel = OrionTaskKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier, taskAdmissions,
@@ -260,14 +295,48 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     memoryAdmissions, { health.value.core.readiness }, { taskStorageReady })
                 notificationKernel = OrionNotificationKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
                     notificationAdmissions, { health.value.core.readiness }, { taskStorageReady }, notificationPoster)
-                states[OrionSubsystem.REMINDERS] = OrionHealthStatus.DEGRADED
+                val delivery = OrionReminderDeliveryPipeline(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
+                    { health.value.core.readiness }, { taskStorageReady }, OrionProcessRole.MAIN,
+                    { presenceEvidence() == OrionPolicyEvidence.SATISFIED }, reminderPoster,
+                    onAuthorized = { id -> launchCoreMaintenance { reconcileAuthorizedReminder(id) } })
+                reminderDelivery = delivery
+                val scheduler = OrionSchedulingCoordinator(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
+                    { health.value.core.readiness }, { taskStorageReady }, object : OrionReconciliationCursors {
+                        override suspend fun read(name: String) = config.maintenanceCursor(name)
+                        override suspend fun write(name: String, cursor: String?) = config.saveMaintenanceCursor(name, cursor)
+                    }, delivery, reminderAlarms, alarmBackend)
+                scheduling = scheduler
                 stage = OrionSubsystem.EVENT_OUTBOX
-                // Pending durable facts remain intact: no consumer is registered in this slice.
-                states[OrionSubsystem.EVENT_OUTBOX] = OrionHealthStatus.DEGRADED
+                states[stage] = if (scheduler.publishEvents()) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED
                 stage = OrionSubsystem.ACTION_OUTBOX
                 kernel.recoverActions()
-                states[OrionSubsystem.ACTION_OUTBOX] = OrionHealthStatus.DEGRADED
-                // Reminder records remain UNSCHEDULED; OS delivery/reconciliation is F4.
+                states[stage] = OrionHealthStatus.HEALTHY
+                stage = OrionSubsystem.REMINDERS
+                db.reminderSchedules().invalidateRegistrationObservations()
+                // OS registration observations were invalidated, so revisit their whole finite snapshot.
+                config.saveMaintenanceCursor("reminders", null)
+                config.saveMaintenanceCursor("alarm_cleanup", null)
+                // Due paging survives process recreation: resetting it would let an unreadable
+                // confirmed prefix starve valid later deliveries across repeated process deaths.
+                val snapshotRows = scheduler.count("orion_reminders")
+                val maximumBatches = snapshotRows / 200 + 2
+                var reconciled = OrionReconciliationResult(false, true)
+                var allHealthy = true
+                for (batch in 0 until maximumBatches) {
+                    reconciled = scheduler.reconcileRegistrations()
+                    allHealthy = allHealthy && reconciled.healthy
+                    if (reconciled.complete) break
+                }
+                reconciled = OrionReconciliationResult(reconciled.complete, allHealthy)
+                states[stage] = if (reconciled.complete && reconciled.healthy) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED
+                stage = OrionSubsystem.SCHEDULER
+                check((app as OrionApplication).initializeMainSchedulerIfUnlocked())
+                val workers = OrionMaintenanceScheduler(app, OrionMaintenanceWorker::class.java)
+                maintenance = workers
+                workers.reconcileHeartbeat().result.get(5, TimeUnit.SECONDS)
+                heartbeatRegistered = true
+                workers.requestReconciliation().result.get(5, TimeUnit.SECONDS)
+                states[stage] = if (reconciled.complete && reconciled.healthy) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED
                 stage = OrionSubsystem.NOTIFICATIONS
                 try {
                     notificationPoster.initializeChannels()
@@ -286,6 +355,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     notificationPermissionEvidence() != OrionPolicyEvidence.SATISFIED)
                     OrionHealthStatus.DEGRADED else OrionHealthStatus.HEALTHY
             }
+            // Optional inference remains disabled; hardware/system qualification is still pending.
+            states[OrionSubsystem.RESOURCES] = OrionHealthStatus.DEGRADED
             governor = UnavailableResourceGovernor(exits)
             check(!governor.canRunInference())
             taskStartupBarrier.completeRecovery(ticket,
@@ -298,9 +369,13 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                         memoryKernel?.ingress?.drain(25)
                         // Preparation/receipt only. External notification execution is NEVER a recovery callback.
                         notificationKernel?.ingress?.drain(25)
+                        reminderDelivery?.drainUi(25)
+                        scheduling?.ingress?.drain(25)
                     }
                     else taskStartupBarrier.abortRecovery(ticket)
                 })
+            // Recovery's bounded UI drain ran under the admission monitor; hand off committed consent only after release.
+            reminderDelivery?.flushAuthorized()
             val event = readyLogEvent(health.value.core.readiness)
             logger.record(correlation, OrionLogComponent.RECOVERY, event,
                 if (event == OrionLogEvent.CORE_DEGRADED) OrionLogSeverity.WARN else OrionLogSeverity.INFO)
@@ -327,20 +402,161 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         health.value.core.readiness
     } }
 
+    internal fun recordMaintenanceFailure() {
+        mutableHealth.publishSubsystemObservations(clock, mapOf(OrionSubsystem.SCHEDULER to OrionHealthStatus.DEGRADED))
+    }
+
+    private fun launchCoreMaintenance(block: suspend () -> Unit) {
+        scope.launch {
+            try { block() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (interrupted: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw CancellationException("Maintenance interrupted").apply { initCause(interrupted) }
+            }
+            catch (_: Exception) { recordMaintenanceFailure() }
+        }
+    }
+
+    /** UI lifecycle only nudges Core-owned work; cancelling a screen cannot cancel an authorized delivery. */
+    internal fun nudgeUiMaintenance() {
+        launchCoreMaintenance { performMaintenance() }
+    }
+
+    /** Framework ingress is persisted before a worker may invoke any future alert. */
+    internal suspend fun receiveReminderAlarm(id: UUID, generation: Long) {
+        recover()
+        mutex.withLock {
+            scheduling?.acceptAlarm(id, generation)
+            scheduling?.deliverAcceptedAlarm(id, generation)
+            maintenance?.requestReconciliation()?.result?.get(5, TimeUnit.SECONDS)
+        }
+    }
+
+    /** Register this committed new authorization synchronously; unique-work KEEP cannot lose its first deadline. */
+    private suspend fun reconcileAuthorizedReminder(id: UUID) = withContext(Dispatchers.IO) {
+        recover()
+        mutex.withLock {
+            val registered = scheduling?.reconcileOne(id) == true
+            if (!registered) mutableHealth.publishSubsystemObservations(clock,
+                mapOf(OrionSubsystem.SCHEDULER to OrionHealthStatus.DEGRADED))
+            maintenance?.requestReconciliation()?.result?.get(5, TimeUnit.SECONDS)
+            Unit
+        }
+    }
+
+    internal suspend fun requestReconciliation() = withContext(Dispatchers.IO) {
+        recover()
+        mutex.withLock { maintenance?.requestReconciliation()?.result?.get(5, TimeUnit.SECONDS); Unit }
+    }
+
+    /** Recovery has returned and released its monitor before this method invokes external delivery. */
+    internal suspend fun performMaintenance(): Boolean = withContext(Dispatchers.IO) {
+        recover()
+        mutex.withLock {
+            if (!taskStartupBarrier.isOpen() || !taskWriteReady) return@withLock false
+            val scheduler = scheduling ?: return@withLock false
+            preferences?.let { sampleForceStop(it) }
+            taskKernel?.recoverActions()
+            val db = database ?: return@withLock false
+            // Existing facts and eligible retention must progress before expiry adds
+            // cancellation facts; a full outbox must not block its own cleanup.
+            scheduler.publishEvents()
+            network.orion.data.repository.OrionRetentionMaintenance(db.retention(), clock).runBatch()
+            val delivery = reminderDelivery
+            if (delivery != null)
+                network.orion.app.reminderdelivery.OrionReminderDeliveryRetention(db, delivery.actions, clock).expireBatch(100)
+            reminderDelivery?.drainUi(100)
+            val reconciled = scheduler.reconcileRegistrations()
+            val delivered = scheduler.deliverDue()
+            val published = scheduler.publishEvents()
+            mutableHealth.publishSubsystemObservations(clock, mapOf(
+                OrionSubsystem.EVENT_OUTBOX to if (published) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED,
+                OrionSubsystem.NOTIFICATIONS to notificationHealth(),
+                OrionSubsystem.PERMISSIONS to if (notificationPermissionEvidence() != OrionPolicyEvidence.SATISFIED ||
+                    app.getSystemService(ActivityManager::class.java)?.isBackgroundRestricted == true)
+                    OrionHealthStatus.DEGRADED else OrionHealthStatus.HEALTHY,
+                OrionSubsystem.REMINDERS to if (reconciled.healthy && delivered.healthy) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED,
+                OrionSubsystem.SCHEDULER to if (reconciled.healthy && reconciled.complete && delivered.healthy) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED))
+            // Retry only unfinished internal batches. Denied permission/UNKNOWN remain observable,
+            // and await a later capability event/heartbeat instead of creating a tight retry loop.
+            maintenanceNeedsContinuation = !reconciled.complete || !delivered.complete || scheduler.hasDueEvents()
+            !maintenanceNeedsContinuation && reconciled.healthy && delivered.healthy
+        }
+    }
+
+    internal suspend fun schedulingDiagnostics(): OrionSchedulingDiagnostics? = withContext(Dispatchers.IO) { mutex.withLock {
+        val scheduler = scheduling ?: return@withLock null
+        OrionSchedulingDiagnostics(scheduler.count("orion_reminders", "status = 'PENDING'"),
+            scheduler.count("orion_reminders", "precision = 'APPROXIMATE' AND status = 'PENDING'"),
+            scheduler.count("orion_domain_event_outbox", "status = 'DEAD_LETTER'"), alarmBackend.availability().name,
+            heartbeatRegistered, app.getSystemService(ActivityManager::class.java)?.isBackgroundRestricted == true,
+            forceStopSignal, preferences?.read()?.lastForceStopDetectedAtMillis?.let(Instant::ofEpochMilli), lastExitReason, lastExitKind)
+    } }
+
+    private suspend fun sampleForceStop(config: OrionPreferencesStore) {
+        if (Build.VERSION.SDK_INT < 35) forceStopEvidence.markUnsupported()
+        else if (forceStopEvidence.observation == network.orion.core.exitinfo.ForceStopStartupObservation.UNAVAILABLE)
+            observeForceStop()
+        forceStopSignal = forceStopEvidence.observation.name
+        if (forceStopEvidence.needsPersistence) {
+            config.recordForceStopDetection(clock.wallNow().toEpochMilli())
+            forceStopEvidence.markPersisted()
+        }
+    }
+
+    private fun observeForceStop() {
+        if (Build.VERSION.SDK_INT < 35) return
+        try {
+            val start = app.getSystemService(ActivityManager::class.java)?.getHistoricalProcessStartReasons(8)
+                ?.firstOrNull { it.pid == Process.myPid() } ?: return
+            forceStopEvidence.observe(start.wasForceStopped(),
+                start.startupState == android.app.ApplicationStartInfo.STARTUP_STATE_FIRST_FRAME_DRAWN)
+        } catch (_: Exception) { /* Missing/incomplete startup evidence stays explicitly unavailable. */ }
+    }
+
+    /**
+     * The public callback identifies THIS startup even on builds whose historical
+     * records report pid=0. Never associate an old wasForceStopped=true by PID guesswork.
+     * Completion is asynchronous and automatically removes the listener after one callback.
+     */
+    private fun registerForceStopCompletionListener() {
+        if (Build.VERSION.SDK_INT < 35 || forceStopListenerRegistered) return
+        try {
+            val manager = app.getSystemService(ActivityManager::class.java) ?: return
+            manager.addApplicationStartInfoCompletionListener(java.util.concurrent.Executor { task ->
+                launchCoreMaintenance { task.run() }
+            }, java.util.function.Consumer { start ->
+                val observed = start.wasForceStopped()
+                launchCoreMaintenance {
+                    mutex.withLock {
+                        forceStopEvidence.observe(observed, startupComplete = true)
+                        preferences?.let { sampleForceStop(it) }
+                    }
+                }
+            })
+            forceStopListenerRegistered = true
+        } catch (_: Exception) { /* Public optional startup evidence remains unavailable and retryable. */ }
+    }
+
     private fun publish(states: Map<OrionSubsystem, OrionHealthStatus>, lastRecovery: Instant? = null) {
         mutableHealth.value = OrionHealthAggregator.aggregate(states, clock.wallNow(), lastRecovery)
     }
 
-    private fun notificationHealth() = when (notificationPoster.availability()) {
-        NotificationAvailability.AVAILABLE -> OrionHealthStatus.HEALTHY
-        NotificationAvailability.UNAVAILABLE -> OrionHealthStatus.UNAVAILABLE
-        else -> OrionHealthStatus.DEGRADED
+    private fun notificationHealth(): OrionHealthStatus {
+        val channels = listOf(notificationPoster.availability(), reminderPoster.availability())
+        return when {
+            channels.any { it == NotificationAvailability.UNAVAILABLE } -> OrionHealthStatus.UNAVAILABLE
+            channels.all { it == NotificationAvailability.AVAILABLE } -> OrionHealthStatus.HEALTHY
+            else -> OrionHealthStatus.DEGRADED
+        }
     }
 
     /** A permission/settings return refreshes observations, never opens ingress or creates consent. */
     internal fun refreshNotificationHealth() {
-        scope.launch { mutex.withLock {
+        launchCoreMaintenance { mutex.withLock {
             if (notificationKernel == null) return@withLock
+            preferences?.let { sampleForceStop(it) }
             val observed = mutableMapOf<OrionSubsystem, OrionHealthStatus>()
             try {
                 observed[OrionSubsystem.NOTIFICATIONS] = notificationHealth()
@@ -357,12 +573,19 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 observed[OrionSubsystem.PERMISSIONS] = OrionHealthStatus.DEGRADED
             }
             mutableHealth.publishSubsystemObservations(clock, observed)
+            maintenance?.requestReconciliation()?.result?.get(5, TimeUnit.SECONDS)
         } }
     }
 }
 
 private class AndroidApplicationExitMonitor(context: Context) : ApplicationExitMonitor {
     private val manager = context.getSystemService(ActivityManager::class.java)
+    private val memoryLimiterReason = try {
+        android.app.ApplicationExitInfo::class.java.getField("REASON_MEMORY_LIMITER").getInt(null)
+    } catch (_: ReflectiveOperationException) { null }
     override suspend fun recentExits(): List<ProcessExitSignal> =
-        manager.getHistoricalProcessExitReasons(null, 0, 8).map { ProcessExitSignal(it.reason, Instant.ofEpochMilli(it.timestamp)) }
+        manager.getHistoricalProcessExitReasons(null, 0, 8).map {
+            network.orion.core.exitinfo.OrionProcessExitClassifier.classify(it.reason, Instant.ofEpochMilli(it.timestamp),
+                it.description, memoryLimiterReason)
+        }
 }

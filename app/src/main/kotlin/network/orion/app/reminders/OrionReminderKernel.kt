@@ -49,7 +49,7 @@ internal class OrionReminderKernel(private val db: OrionDatabase, encryption: Or
     private val owned = OrionOwnedReminderStore(db, encryption, clock)
     private val createRunner = OrionCreateReminderRunner(db, actions, owned, clock, barrier)
     private val statusRunner = OrionReminderStatusRunner(db, actions, statusOwned, clock, barrier)
-    val query = OrionReminderQuery(db, encryption)
+    val query = OrionReminderQuery(db, encryption, clock)
     private var processingId: UUID? = null // Only touched under barrier admission; no coroutine suspension.
     private val store = OrionDurableIngressStore(db, encryption, clock, barrier, LocalIngressConsumer { payload ->
         processingId = payload.ingressId

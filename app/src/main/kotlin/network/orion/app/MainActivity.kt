@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var timerChannel: OrionTimerAdmissionOwner.UiChannel
     private lateinit var memoryChannel: OrionMemoryAdmissionOwner.UiChannel
     private lateinit var notificationChannel: OrionNotificationAdmissionOwner.UiChannel
+    private lateinit var deliveryAlerts: network.orion.app.scheduling.OrionReminderDeliveryUiGateway
     private var notificationRevision by mutableLongStateOf(0L)
     private val notificationPermissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         notificationRevision++
@@ -58,6 +59,7 @@ class MainActivity : ComponentActivity() {
         reminderChannel = runtime.reminderAdmissions.openUiChannel()
         reminderChannel.onWindowFocus(hasWindowFocus())
         val reminders = runtime.reminderGateway(reminderChannel)
+        deliveryAlerts = runtime.deliveryGateway()
         timerChannel = runtime.timerAdmissions.openUiChannel()
         timerChannel.onWindowFocus(hasWindowFocus())
         val timers = runtime.timerGateway(timerChannel)
@@ -72,11 +74,21 @@ class MainActivity : ComponentActivity() {
                 val report by runtime.health.collectAsState()
                 var destination by rememberSaveable { mutableStateOf("Início") }
                 var taskQueues by remember { mutableStateOf<network.orion.core.health.TaskQueueDiagnostics?>(null) }
+                var schedulingDiagnostics by remember { mutableStateOf<network.orion.core.health.OrionSchedulingDiagnostics?>(null) }
+                LaunchedEffect(report.lastRecovery) {
+                    if (report.lastRecovery != null) {
+                        deliveryAlerts.onCoreRecovered()
+                        deliveryAlerts.processPending()
+                    }
+                }
                 LaunchedEffect(destination, report.lastRecovery) {
-                    if (destination == "Diagnóstico") taskQueues = try {
+                    if (destination == "Diagnóstico") {
+                        schedulingDiagnostics = runtime.schedulingDiagnostics()
+                        taskQueues = try {
                         withContext(Dispatchers.IO) { runtime.taskKernel?.diagnostics() }
                     } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                     catch (_: Exception) { null }
+                    }
                 }
                 Scaffold(
                     modifier = Modifier.fillMaxSize().imePadding(),
@@ -105,7 +117,17 @@ class MainActivity : ComponentActivity() {
                 ) { padding ->
                     Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).padding(horizontal = 24.dp)) {
                         when (destination) {
-                            "Lembretes" -> RemindersScreen(reminders, report.lastRecovery)
+                            "Lembretes" -> RemindersScreen(reminders, report.lastRecovery, deliveryAlerts,
+                                onRequestNotificationPermission = {
+                                    if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                                        android.content.pm.PackageManager.PERMISSION_GRANTED)
+                                        notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    else startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                                }, onRequestExactAccess = {
+                                    startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                        .setData(android.net.Uri.parse("package:$packageName")))
+                                })
                             "Timers" -> TimersScreen(timers, report.lastRecovery)
                             "Memórias" -> MemoriesScreen(memories, report.lastRecovery)
                             "Notificações" -> NotificationsScreen(notifications, report.lastRecovery, notificationRevision,
@@ -120,7 +142,7 @@ class MainActivity : ComponentActivity() {
                             "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
                             "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
-                            "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, onRetry = { runtime.start() })
+                            "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics, onRetry = { runtime.start() })
                             "Ajustes" -> SettingsScreen(report)
                             else -> HomeScreen(report, onOpenDevice = { destination = "Dispositivo" },
                                 onOpenActivity = { destination = "Atividade" }, onOpenReminders = { destination = "Lembretes" },
@@ -135,6 +157,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        deliveryAlerts.onResumed(true)
+        deliveryAlerts.onWindowFocus(hasWindowFocus())
         taskChannel.onResumed(true)
         taskChannel.onWindowFocus(hasWindowFocus())
         reminderChannel.onResumed(true)
@@ -150,6 +174,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        deliveryAlerts.onResumed(false)
         taskChannel.onResumed(false)
         reminderChannel.onResumed(false)
         timerChannel.onResumed(false)
@@ -160,14 +185,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        if (::deliveryAlerts.isInitialized) deliveryAlerts.onWindowFocus(hasFocus)
         if (::taskChannel.isInitialized) taskChannel.onWindowFocus(hasFocus)
         if (::reminderChannel.isInitialized) reminderChannel.onWindowFocus(hasFocus)
         if (::timerChannel.isInitialized) timerChannel.onWindowFocus(hasFocus)
         if (::memoryChannel.isInitialized) memoryChannel.onWindowFocus(hasFocus)
         if (::notificationChannel.isInitialized) notificationChannel.onWindowFocus(hasFocus)
+        if (hasFocus && ::deliveryAlerts.isInitialized)
+            (application as OrionApplication).mainRuntime?.nudgeUiMaintenance()
     }
 
     override fun onDestroy() {
+        if (::deliveryAlerts.isInitialized) deliveryAlerts.close()
         if (::taskChannel.isInitialized) taskChannel.close()
         if (::reminderChannel.isInitialized) reminderChannel.close()
         if (::timerChannel.isInitialized) timerChannel.close()

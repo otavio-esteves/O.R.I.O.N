@@ -171,9 +171,8 @@ internal class OrionTaskKernel(private val db: OrionDatabase, encryption: OrionF
         val now = clock.wallNow().toEpochMilli()
         val retention = now - Duration.ofDays(90).toMillis()
         db.retention().prune(now, retention, retention, retention, retention, retention, 2000, 100)
-        // Domain events are facts, not action commands. With no registered durable
-        // consumers yet, retain pending/backoff/manual rows unchanged for F4.
-        // No reminders/workers are installed by this task-only slice.
+        // Action recovery never publishes facts or invokes Skills. The MAIN runtime
+        // owns event publication, reminder reconciliation and worker registration separately.
     }
 
     fun pending(): List<OrionTaskPending> = db.actions().taskConfirmations(50).mapNotNull { row ->

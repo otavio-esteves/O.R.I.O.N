@@ -73,6 +73,22 @@ class TransactionRecorderContractTest(unittest.TestCase):
             self.assertEqual("network.orion.app.notifications.OrionNotificationTransactionProcessDeathTest",
                              command[command.index("class") + 1])
 
+    def test_reminder_delivery_scenario_selects_the_explicitly_confirmed_external_fixture(self):
+        fixture = "00000000-0000-0000-0000-000000000001"
+        for mode in ["prepare", "verify"]:
+            command = RECORDER.instrumentation_command(mode, fixture, "reminder_delivery")
+            self.assertEqual("network.orion.app.reminderdelivery.OrionReminderDeliveryProcessDeathTest",
+                             command[command.index("class") + 1])
+            self.assertNotIn("network.orion.app.reminders.OrionReminderTransactionProcessDeathTest", command)
+
+    def test_reminder_delivery_proof_is_external_and_synthetic_rather_than_room_rollback(self):
+        proof = RECORDER.scenario_proof("reminder_delivery")
+        self.assertEqual("kill_after_committed_external_claim", proof["killCheck"])
+        self.assertEqual("uncertain_external_effect_not_replayed", proof["verificationCheck"])
+        self.assertEqual("AFTER_COMMITTED_RUNNING_OUTSIDE_ROOM_TRANSACTION", proof["metadata"]["checkpointBoundary"])
+        self.assertEqual("SYNTHETIC_DURABLE_MARKER", proof["metadata"]["externalEvidence"])
+        self.assertEqual("SEPARATE_PLATFORM_TEST", proof["metadata"]["notificationManagerEvidence"])
+
     def test_local_scenarios_preserve_the_legacy_room_rollback_proof_labels(self):
         for scenario in ["generic", "task", "reminder", "timer", "memory"]:
             with self.subTest(scenario=scenario):
