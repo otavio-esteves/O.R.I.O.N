@@ -145,6 +145,56 @@ class ActionExecutionOwnershipTest {
         assertEquals(ActionStatus.MANUAL_REVIEW, db.actions().find(request.actionId.toString())?.status)
     }
 
+    @Test fun paginatedRecoveryPassesActivePrefixAndPreservesUnknownWithoutReplaying() {
+        descriptor = descriptor(SideEffectClass.EXTERNAL_IRREVERSIBLE, RecoveryStrategy.NO_RETRY)
+        val requests = (1..5).map { confirmed() }.sortedBy { it.actionId.toString() }
+        val claims = requests.mapIndexed { index, request ->
+            execution.claim(request.actionId, 2, "main", Duration.ofSeconds(if (index < 3) 30 else 1))
+                as ActionClaimResult.Claimed
+        }
+        val unknown = requests[2]
+        assertEquals(ActionMutation.APPLIED, execution.finish(unknown.actionId, claims[2].version,
+            claims[2].lease.executionId, ActionStatus.UNKNOWN))
+        val unknownBefore = checkNotNull(db.actions().find(unknown.actionId.toString()))
+        val unknownAuditBefore = db.actions().auditFor(unknown.actionId.toString())
+        fun assertUnknownUnchanged() {
+            val current = checkNotNull(db.actions().find(unknown.actionId.toString()))
+            assertArrayEquals(unknownBefore.argumentsEnvelope, current.argumentsEnvelope)
+            assertArrayEquals(unknownBefore.targetEnvelope, current.targetEnvelope)
+            assertEquals(unknownBefore, current.copy(argumentsEnvelope = unknownBefore.argumentsEnvelope,
+                targetEnvelope = unknownBefore.targetEnvelope))
+            assertEquals(unknownAuditBefore, db.actions().auditFor(unknown.actionId.toString()))
+        }
+        monotonic = MonotonicInstant(BootSessionId(4), 1_100)
+
+        // A full active page must still yield a continuation: zero recovered is
+        // not end-of-scan, and terminal UNKNOWN is excluded rather than retried.
+        val first = execution.recoverAbandoned(limit = 2)
+        assertEquals(2, first.scanned)
+        assertEquals(0, first.recovered)
+        assertEquals(requests[1].actionId, first.nextAfterActionId)
+        val second = execution.recoverAbandoned(2, first.nextAfterActionId)
+        assertEquals(2, second.scanned)
+        assertEquals(2, second.recovered)
+        assertEquals(requests[4].actionId, second.nextAfterActionId)
+        val last = execution.recoverAbandoned(2, second.nextAfterActionId)
+        assertEquals(0, last.scanned)
+        assertEquals(0, last.recovered)
+        assertNull(last.nextAfterActionId)
+
+        assertUnknownUnchanged()
+        requests.forEachIndexed { index, request ->
+            val row = checkNotNull(db.actions().find(request.actionId.toString()))
+            assertEquals(if (index < 2) ActionStatus.RUNNING else ActionStatus.UNKNOWN, row.status)
+            assertEquals(1, row.attemptCount)
+            assertEquals(claims[index].lease.executionId.toString(), row.executionId)
+            assertEquals(if (index < 2) 4 else 5, db.actions().auditFor(row.actionId).size)
+        }
+        // Re-running recovery cannot mutate the recovered or prior UNKNOWN rows.
+        assertEquals(0, execution.recoverAbandoned().recovered)
+        assertUnknownUnchanged()
+    }
+
     @Test fun activeOwnerCompletesExactlyOneTerminalTransition() {
         val request = confirmed()
         val claim = execution.claim(request.actionId, 2, "main", Duration.ofSeconds(10)) as ActionClaimResult.Claimed
