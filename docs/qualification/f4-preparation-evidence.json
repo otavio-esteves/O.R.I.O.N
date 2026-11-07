@@ -1,0 +1,99 @@
+{
+  "recordedAt": "2026-11-06T15:16:09.159136+00:00",
+  "scope": "ORION-F4-PREP-001; preparatory components, production runtime not activated",
+  "baseCommit": "259c13cef3b340af0b6b41da2caee9638f55fdb4",
+  "sourceIdentity": "Base commit plus changed Kotlin/Gradle file hashes; not a full release source freeze",
+  "changedSourceSha256": {
+    "app/src/androidTest/kotlin/network/orion/app/ActionExecutionOwnershipTest.kt": "b29d449c1f89d59b6701dbcf449ab2c0b156b8f243e3ab5e9879a18ce66532a2",
+    "app/src/androidTest/kotlin/network/orion/app/OrionTechnicalEventConsumerPersistenceTest.kt": "766e500a70de27021328d4aedfb8010d5b1063015db403dbfa76049b2879a3cc",
+    "data/events/src/main/kotlin/network/orion/data/events/OrionTechnicalEventConsumer.kt": "2ebcdee3eeb95e39b3eeab3fc3a6ad863a828d18b3591fd44d5bab7bb7027624",
+    "data/events/src/test/kotlin/network/orion/data/events/OrionTechnicalEventConsumerTest.kt": "762936cc9fc6f27adb37f8bb9ddc14d38ef1df7172407b9be662f78ee27cda3b",
+    "scheduler/build.gradle.kts": "7779d3f3f75a39328d08ff4153f770091a5cf7debaa5253aeb6fe12c87023e5c",
+    "scheduler/src/main/kotlin/network/orion/scheduler/alarms/OrionAlarmStrategy.kt": "901c8aa31a7603eefc2a78d651f7a3ddd3e806b0d1db4c11a68e053f3931f44b",
+    "scheduler/src/main/kotlin/network/orion/scheduler/reconciliation/OrionCivilRecurrence.kt": "05d18e873ba6f2f7960857c0e2ef6a7aaca143a4bd162c64558fb337fe252293",
+    "scheduler/src/test/kotlin/network/orion/scheduler/alarms/OrionAlarmStrategyTest.kt": "440957bdc64aa9fb42443fb4187a9bc456bd530b67c7885cf8afb7baa28c81e7",
+    "scheduler/src/test/kotlin/network/orion/scheduler/reconciliation/OrionCivilRecurrenceTest.kt": "49ddf7e84fa24e2980bc8cc235c57ece289524a56524f2cff4074f4edc3f39a0"
+  },
+  "container": {
+    "environment": "CONTAINER",
+    "jvmSuites": [
+      {
+        "name": "network.orion.scheduler.alarms.OrionAlarmStrategyTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "network.orion.scheduler.reconciliation.OrionCivilRecurrenceTest",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "network.orion.data.events.EventRetryPolicyTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "network.orion.data.events.OrionTechnicalEventConsumerTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0
+      }
+    ],
+    "tests": 30,
+    "newTests": 28,
+    "commandsPassed": [
+      "docker compose run --rm android-build :scheduler:testDebugUnitTest :data:events:testDebugUnitTest verifyModuleBoundaries testModuleBoundaries :scheduler:lintDebug :data:events:lintDebug :app:assembleDebugAndroidTest --max-workers=2",
+      "docker compose run --rm android-build :scheduler:testDebugUnitTest :scheduler:lintDebug :scheduler:assembleRelease :data:events:assembleRelease :app:assembleDebug :app:assembleRelease --max-workers=2"
+    ],
+    "architectureFixturesPassed": 36,
+    "fullRepositoryCheckExecuted": false
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "qualification": "NON_DEFINITIVE",
+    "api": 35,
+    "abi": "x86_64",
+    "serial": "emulator-5584",
+    "fingerprint": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+    "command": "adb -s emulator-5584 shell am instrument -w -r -e class network.orion.app.OrionTechnicalEventConsumerPersistenceTest,network.orion.app.ActionExecutionOwnershipTest network.orion.test/androidx.test.runner.AndroidJUnitRunner",
+    "tests": 22,
+    "newTests": 4,
+    "failures": 0,
+    "cases": [
+      "unknownTypeAndSchemaRemainUnconsumedAndBecomeDeadLetter",
+      "receiptInsertionFailureRollsBackProjectionAndAllowsSafeRetry",
+      "committedProjectionSurvivesMissingAcknowledgementAndReopenWithoutDuplicateMutation",
+      "auditFailureRollsBackOwnershipClaim",
+      "onlyOneConcurrentClaimWinsAndPersistsAtomicOwnershipAudit",
+      "permissionRevokedWhileWaitingForWriterBlocksClaim",
+      "ownershipSurvivesReopenAndOriginalLeaseCannotCompleteAfterExpiry",
+      "newLeaseStartsAfterAcquiringWriterInsteadOfBeforeTheWait",
+      "confirmationExpiringWhileWaitingForWriterCannotBeClaimed",
+      "confirmationExpiringWhileWaitingForWriterIsNotPersisted",
+      "clockRollbackWhileWaitingForWriterCannotPersistFutureConfirmation",
+      "oldBootExecutionBecomesUnknownAndCannotBeReclaimedOrCompletedByLateCallback",
+      "uncertainCompletionDoesNotAssertAnExecutionTimeOrAllowRetry",
+      "activeLeaseSurvivesRecoveryButExpiredLocalLeaseRequiresReview",
+      "terminalCallbackWaitingForWriterCannotUseAnExpiredLease",
+      "boundPayloadCorruptionCannotBeClaimed",
+      "activeOwnerCompletesExactlyOneTerminalTransition",
+      "stillValidConfirmationCommitsExactReceiptAfterWaitingForWriter",
+      "paginatedRecoveryPassesActivePrefixAndPreservesUnknownWithoutReplaying",
+      "startupPolicyPermissionsCapabilitiesAndPresenceDenyClaimWithoutMutation",
+      "expiryAndBootIdentityFailureBlockClaims",
+      "directDaoClaimRejectsPayloadHashAndFingerprintMismatchWithoutOwnership"
+    ],
+    "actualProcessDeathExecuted": false,
+    "rawOutputSha256": "9a66ad1db413fbcb14238b536235393eb0c0fca80c1f90863772ff0e10380f7d"
+  },
+  "artifactsSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "8928a0d70b0ae47a68972218c61e2ec592470e97d681d7dd925a518b1f185805",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "29c4bd98092a2b74c69db866ab9babf01bbcc3158a0b7c40991b8e0246198637",
+    "app/build/outputs/apk/release/app-release-unsigned.apk": "c31a923fdb712f968d4824dfc3d2717ed86c55aa60d326565ba4fa1dbbfe4b2c"
+  },
+  "physicalQualification": "NOT_EXECUTED; no physical device connected",
+  "f4Gate": "OPEN; F2/F3 physical qualification and operational F4 implementation/system qualification remain pending"
+}

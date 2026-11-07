@@ -72,6 +72,12 @@ docker compose run --rm android-build check assembleDebug assembleRelease :app:a
 The GitHub Actions baseline runs this same Compose flow. Android device installation
 and runtime validation remain host/physical-device responsibilities.
 
+Preparatory F4 components now include civil recurrence/DST resolution, exact versus
+approximate alarm selection and a durable technical event consumer. They are not
+registered in the production runtime. See the [F4 preparation report](docs/qualification/F4-Preparation.md)
+for their contracts, validation and the remaining delivery sequence. The physical
+F3 gate and full F4 scheduling/recovery qualification remain open.
+
 ```text
 source -> Docker build/check/APK -> Linux host + ADB -> physical Android device
 ```
