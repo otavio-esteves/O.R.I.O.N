@@ -87,6 +87,12 @@ docker compose run --rm android-build check assembleDebug assembleRelease :app:a
 The GitHub Actions baseline runs this same Compose flow. Android device installation
 and runtime validation remain host/physical-device responsibilities.
 
+Host ADB recorder contracts run without a device using
+`docker compose run --rm host-harness-check`. The
+[passive soak observer](docs/qualification/F4-SoakObservation.md) prepares bounded
+technical observations for the pending long-running recovery qualification; a
+completed collection never automatically approves that gate.
+
 The earlier [F4 preparation report](docs/qualification/F4-Preparation.md) describes
 PR #62 before production activation. The runtime candidate builds on those contracts;
 its physical and full system/soak qualification remains separately gated.
