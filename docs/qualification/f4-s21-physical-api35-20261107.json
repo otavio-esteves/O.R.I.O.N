@@ -1,0 +1,1162 @@
+{
+  "recordedAt": "2026-11-07T10:38:06.982628+00:00",
+  "scope": "ORION-F4-QUAL-001 \u2014 initial Samsung S21 physical qualification; open failures and outstanding gates retained",
+  "result": "PARTIAL_WITH_FAILURES",
+  "gateClosed": false,
+  "metadata": {
+    "recordedAt": "2026-11-07T10:04:34.233933+00:00",
+    "environment": "PHYSICAL_DEVICE",
+    "connection": "ADB_WIRELESS",
+    "commit": "4253378a79e8467995e1e985229f408bb247f199",
+    "workingTreeDirty": false,
+    "device": {
+      "manufacturer": "samsung",
+      "model": "SM-G991B",
+      "androidRelease": "15",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "emulated": "0",
+      "pageSize": "4096",
+      "memoryTotal": "MemTotal:        7373752 kB",
+      "currentUser": "0"
+    },
+    "workPackage": {
+      "objective": "Install and physically validate the F4 deterministic Core on the authorized S21",
+      "filesAllowed": [
+        "docs/qualification/**"
+      ],
+      "contracts": [
+        "F4 scheduler/recovery",
+        "confirmation/ownership",
+        "ADR-0001"
+      ],
+      "invariants": [
+        "INV-001",
+        "INV-005",
+        "INV-006",
+        "INV-007",
+        "INV-008",
+        "INV-014",
+        "INV-015",
+        "INV-016",
+        "INV-018",
+        "INV-019",
+        "INV-021",
+        "INV-022",
+        "INV-023",
+        "INV-029",
+        "INV-030",
+        "INV-032",
+        "INV-033",
+        "INV-035",
+        "INV-036"
+      ],
+      "tests": [
+        "canonical Docker check and packaging",
+        "installed 4 to 5 replacement",
+        "Android application suite",
+        "Keystore suite",
+        "actual SIGKILL checkpoints",
+        "authorized system scenarios"
+      ],
+      "acceptance": "Report actual physical outcomes and exact artifacts; preserve failures; leave untested gates open",
+      "outOfScope": [
+        "AI/voice",
+        "architecture changes",
+        "deleting existing app data",
+        "claiming full F4 completion without soak/API/OEM evidence"
+      ]
+    },
+    "artifacts": {
+      "app/build/outputs/apk/debug/app-debug.apk": {
+        "sha256": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "size": 36549681
+      },
+      "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+        "sha256": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6",
+        "size": 4806332
+      },
+      "core/security/build/outputs/apk/androidTest/debug/security-debug-androidTest.apk": {
+        "sha256": "5bc4e88e07cbca3ed2407eb696d874b08f62a770b773fb395d91390a575b57a5",
+        "size": 4975793
+      },
+      "app/build/outputs/apk/release/app-release-unsigned.apk": {
+        "sha256": "5499f027a16ad58a0d409830e140a8c8bbd69ee9ca2b5acb26cf5cd977b4eed4",
+        "size": 27627373
+      },
+      "app/build/outputs/bundle/release/app-release.aab": {
+        "sha256": "6cba0264cbbd7afb9bcc6fa25f77e927d4967ca0b487ca2db6e4bc9a2dfe89aa",
+        "size": 9585368
+      }
+    },
+    "docker": {
+      "image": "sha256:4e1b776c374c4ba3064323ff3106bd004e7946551e2d86ee0ff86a5d38777371",
+      "command": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2",
+      "result": "PASS",
+      "buildLogSha256": "64a55dc5f3bd569210419c3909c94f58b0fb013209252795ad01ef2a23911884",
+      "tasks": 4108
+    },
+    "debugJvm": {
+      "suites": 89,
+      "tests": 630,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "baseline": {
+      "source": "259c13c Merge F3 delivery; preserved APK pair matched historical F4 evidence",
+      "artifacts": {
+        "app-debug-androidTest.apk": "29c4bd98092a2b74c69db866ab9babf01bbcc3158a0b7c40991b8e0246198637",
+        "app-debug.apk": "8928a0d70b0ae47a68972218c61e2ec592470e97d681d7dd925a518b1f185805"
+      }
+    },
+    "systemTestsAuthorized": true,
+    "hostContracts": {
+      "environment": "HOST",
+      "tests": 35,
+      "failures": 0,
+      "result": "PASS",
+      "commands": [
+        "python3 -B scripts/android/test_foundation_runtime_harness.py",
+        "python3 -B scripts/android/test_transaction_process_death_harness.py",
+        "python3 -B scripts/android/test_installed_upgrade_harness.py",
+        "python3 -B scripts/android/test_scheduled_reminder_runtime_harness.py"
+      ]
+    },
+    "temporaryNotificationPermission": {
+      "originalGranted": false,
+      "grantedForPlatformAssertions": true,
+      "restoreAtEnd": true
+    },
+    "diagnosticInvestigation": {
+      "description": "Temporary assertion and semantics dump in the reminder UI test only; reverted after investigation; never promoted as a qualification pass. One diagnostic attempt had no Compose hierarchy while screen was inactive; a wake/dismiss retry passed. Product source unchanged.",
+      "patchSha256": "1accd195f776f9fb2b9c5aff86c016a5e4fb669cfcbeff7de8e5ea76e9a349bd",
+      "diagnosticTestApkSha256": "f04fa57036428e76c07fb5c151d7a726d00983032d9a97efbd38b3b14db0d4a1"
+    },
+    "temporaryScreenTimeout": {
+      "originalMillis": 60000,
+      "temporaryMillis": 1800000,
+      "reason": "Prevent test preparation from losing real user presence between wireless installs; secure keyguard remains enabled",
+      "restoreAtEnd": true
+    },
+    "testArtifactRestoration": {
+      "reason": "After removing the temporary cleanup-only class, incremental repackaging produced a different test APK. Restore the preserved, already canonical-built original artifact so all qualification attempts use the identical app/test pair. Product and test sources have no net changes.",
+      "incrementalRepackagingSha256": "fcfbd9a618e93a54adf26cd77bbaba15df5b6c0b2dc375c3621abc833d5f9aa4",
+      "restoredCanonicalSha256": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+    }
+  },
+  "installedUpgrade": {
+    "result": "PASS",
+    "environment": "PHYSICAL_DEVICE",
+    "fixtureId": "d52a9d6e-14b6-4d5f-b763-e98f89bcf26c",
+    "artifactSha256": {
+      "previous": "8928a0d70b0ae47a68972218c61e2ec592470e97d681d7dd925a518b1f185805",
+      "previousTest": "29c4bd98092a2b74c69db866ab9babf01bbcc3158a0b7c40991b8e0246198637",
+      "candidate": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+      "candidateTest": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+    },
+    "checks": {
+      "seed_prior_installation": "PASS",
+      "encrypted_records_queues_and_keys_survived": "PASS",
+      "pending_and_unknown_never_replayed": "PASS"
+    },
+    "commit": "4253378a79e8467995e1e985229f408bb247f199",
+    "workingTreeDirty": false,
+    "sourceSha256": {
+      "scripts/android/verify-installed-upgrade.py": "44ffb201547a44494a9f308a6cbb8bd80b9b3c40b6a64421251812308ea1cd59",
+      "app/src/androidTest/kotlin/network/orion/app/UpgradePersistenceTest.kt": "62a5f245714ea915ae602aec3a3f3c8241a24ec6f791216d8be908e1d3b68cc4"
+    },
+    "androidRuntimeEvidence": "DEFINITIVE",
+    "apiLevel": "35",
+    "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+    "abi": "arm64-v8a",
+    "pageSize": "4096",
+    "previousVersionCode": 4,
+    "candidateVersionCode": 5,
+    "verifiedPid": "12318"
+  },
+  "androidApplication": {
+    "initial": {
+      "name": "app-suite",
+      "environment": "PHYSICAL_DEVICE",
+      "startedAt": "2026-11-07T10:05:56.355442+00:00",
+      "command": [
+        "shell",
+        "am",
+        "instrument",
+        "--user",
+        "0",
+        "-w",
+        "-r",
+        "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+      ],
+      "result": "FAIL",
+      "processExitCode": 0,
+      "reportedTests": null,
+      "passed": 312,
+      "skipped": 0,
+      "failed": 1,
+      "durationSeconds": 59.19,
+      "rawOutputSha256": "743957125388304ceda266ab04c6e7902eefe83f2d92c546dbf2f42eaddf711e",
+      "executed": 313,
+      "failures": [
+        {
+          "class": "network.orion.app.reminders.OrionReminderScreenTest",
+          "stack": "java.lang.AssertionError: Failed to assert the following: (is enabled)",
+          "test": "reminderRequiresExplicitConfirmationAndSurvivesRecreationBeforeCompletion",
+          "code": -2
+        }
+      ]
+    },
+    "unchangedOriginalRepeat": {
+      "name": "app-suite-original-repeat",
+      "environment": "PHYSICAL_DEVICE",
+      "startedAt": "2026-11-07T10:11:12.464047+00:00",
+      "command": [
+        "shell",
+        "am",
+        "instrument",
+        "--user",
+        "0",
+        "-w",
+        "-r",
+        "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+      ],
+      "result": "PASS",
+      "processExitCode": 0,
+      "reportedTests": 313,
+      "passed": 313,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 70.79,
+      "rawOutputSha256": "cb2e4f0bcb3839eb6ffda11747564ca5cf8a3e9b7325faeec4196f4f9898f550",
+      "failures": []
+    },
+    "initialFocusedRecheck": {
+      "name": "reminder-ui-recheck",
+      "environment": "PHYSICAL_DEVICE",
+      "startedAt": "2026-11-07T10:07:09.528628+00:00",
+      "command": [
+        "shell",
+        "am",
+        "instrument",
+        "--user",
+        "0",
+        "-w",
+        "-r",
+        "-e",
+        "class",
+        "network.orion.app.reminders.OrionReminderScreenTest",
+        "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+      ],
+      "result": "FAIL",
+      "processExitCode": 0,
+      "reportedTests": null,
+      "passed": 0,
+      "skipped": 0,
+      "failed": 1,
+      "durationSeconds": 3.88,
+      "rawOutputSha256": "76308f2a88199429744dbc01ce6b4da357ed97bc3ee3cf71fa24428fa1888d2b",
+      "failures": [
+        {
+          "class": "network.orion.app.reminders.OrionReminderScreenTest",
+          "stack": "java.lang.AssertionError: Failed to assert the following: (is enabled)",
+          "test": "reminderRequiresExplicitConfirmationAndSurvivesRecreationBeforeCompletion",
+          "code": -2
+        }
+      ]
+    },
+    "interpretation": "Original suite passed 313/313 with no skips on repeat. Initial suite had 312 passes and one disabled-button reminder UI failure, reproduced in the initial focused recheck. Root cause remains unproven; diagnostic-only test edits were reverted."
+  },
+  "androidKeystore": {
+    "name": "keystore",
+    "environment": "PHYSICAL_DEVICE",
+    "startedAt": "2026-11-07T10:07:38.361670+00:00",
+    "command": [
+      "shell",
+      "am",
+      "instrument",
+      "--user",
+      "0",
+      "-w",
+      "-r",
+      "network.orion.core.security.test/androidx.test.runner.AndroidJUnitRunner"
+    ],
+    "result": "PASS",
+    "processExitCode": 0,
+    "reportedTests": 4,
+    "passed": 4,
+    "skipped": 0,
+    "failed": 0,
+    "durationSeconds": 1.43,
+    "rawOutputSha256": "3708029ebc1ca742b3aaecf4295af8117296e0a1830145576476278d7b57ff5f",
+    "failures": []
+  },
+  "actualProcessDeath": {
+    "death-generic": {
+      "result": "PASS",
+      "environment": "PHYSICAL_DEVICE",
+      "fixtureId": "ab460a82-2e5a-42fc-9aab-3809665f9bc8",
+      "scenario": "generic",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checks": {
+        "kill_during_room_transaction": "PASS",
+        "committed_present_uncommitted_absent": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/TransactionProcessDeathTest.kt": "93d653d52ee5207d837ddf18617d97200cd60aa5fc091ba501b89d7d7d63845e",
+        "scripts/android/verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "checkpointBoundary": "OPEN_ROOM_TRANSACTION",
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "pageSize": "4096",
+      "beforePid": "20498",
+      "afterPid": "20560"
+    },
+    "death-memory": {
+      "result": "PASS",
+      "environment": "PHYSICAL_DEVICE",
+      "fixtureId": "5d6c1049-18c7-4bcf-ae54-72fd67a90942",
+      "scenario": "memory",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checks": {
+        "kill_during_room_transaction": "PASS",
+        "committed_present_uncommitted_absent": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/memories/OrionMemoryTransactionProcessDeathTest.kt": "e0b2ec07930943d1ead433ed10b44c0c4606a0e93850dcc5fefb2df48b6b5ae2",
+        "scripts/android/verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "checkpointBoundary": "OPEN_ROOM_TRANSACTION",
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "pageSize": "4096",
+      "beforePid": "22650",
+      "afterPid": "22728"
+    },
+    "death-notification": {
+      "result": "PASS",
+      "environment": "PHYSICAL_DEVICE",
+      "fixtureId": "9019602f-24b7-43d4-95c1-d4beef253c9c",
+      "scenario": "notification",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checks": {
+        "kill_after_committed_external_claim": "PASS",
+        "uncertain_external_effect_not_replayed": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/notifications/OrionNotificationTransactionProcessDeathTest.kt": "9f4b0392aba0f4dfb10081a1e6fe6652a32364e3bd0c878aa2c593ce6a2816fe",
+        "scripts/android/verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "checkpointBoundary": "AFTER_COMMITTED_RUNNING_OUTSIDE_ROOM_TRANSACTION",
+      "externalEvidence": "SYNTHETIC_DURABLE_MARKER",
+      "notificationManagerEvidence": "SEPARATE_PLATFORM_TEST",
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "pageSize": "4096",
+      "beforePid": "23058",
+      "afterPid": "23128"
+    },
+    "death-reminder": {
+      "result": "PASS",
+      "environment": "PHYSICAL_DEVICE",
+      "fixtureId": "7dda8d2a-c913-42f7-8ab3-bc0d99bafe33",
+      "scenario": "reminder",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checks": {
+        "kill_during_room_transaction": "PASS",
+        "committed_present_uncommitted_absent": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderTransactionProcessDeathTest.kt": "9a70afad2e19b89d4860d8507715b0abf1b835f93f70b5f28cc1a0544d72261d",
+        "scripts/android/verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "checkpointBoundary": "OPEN_ROOM_TRANSACTION",
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "pageSize": "4096",
+      "beforePid": "21821",
+      "afterPid": "21895"
+    },
+    "death-reminder_delivery": {
+      "result": "PASS",
+      "environment": "PHYSICAL_DEVICE",
+      "fixtureId": "9badc58c-f1fe-48b6-be04-91356a061300",
+      "scenario": "reminder_delivery",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checks": {
+        "kill_after_committed_external_claim": "PASS",
+        "uncertain_external_effect_not_replayed": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryProcessDeathTest.kt": "3e3322988e94abffb95e9e8ebabc49ecc8452701991979ab4f1669214cffce0c",
+        "scripts/android/verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "checkpointBoundary": "AFTER_COMMITTED_RUNNING_OUTSIDE_ROOM_TRANSACTION",
+      "externalEvidence": "SYNTHETIC_DURABLE_MARKER",
+      "notificationManagerEvidence": "SEPARATE_PLATFORM_TEST",
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "pageSize": "4096",
+      "beforePid": "23761",
+      "afterPid": "23860"
+    },
+    "death-task": {
+      "result": "PASS",
+      "environment": "PHYSICAL_DEVICE",
+      "fixtureId": "439d6881-f446-4968-9b18-2fcb884d1ff2",
+      "scenario": "task",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checks": {
+        "kill_during_room_transaction": "PASS",
+        "committed_present_uncommitted_absent": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskTransactionProcessDeathTest.kt": "a02e13ee2cc4c746879495203734a86296e1ff9942ee19060a806ce3a31293b1",
+        "scripts/android/verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "checkpointBoundary": "OPEN_ROOM_TRANSACTION",
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "pageSize": "4096",
+      "beforePid": "21363",
+      "afterPid": "21489"
+    },
+    "death-timer": {
+      "result": "PASS",
+      "environment": "PHYSICAL_DEVICE",
+      "fixtureId": "418ea80c-3c92-4d06-9061-8f90acf9fa72",
+      "scenario": "timer",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checks": {
+        "kill_during_room_transaction": "PASS",
+        "committed_present_uncommitted_absent": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/timers/OrionTimerTransactionProcessDeathTest.kt": "71e56bbef6f4ec828345ea17d6c4a14480c26154a53ba65e16ef428ca9212d3a",
+        "scripts/android/verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "checkpointBoundary": "OPEN_ROOM_TRANSACTION",
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "pageSize": "4096",
+      "beforePid": "22247",
+      "afterPid": "22317"
+    }
+  },
+  "systemAttempts": {
+    "doze-retry-doze": {
+      "result": "FAIL",
+      "environment": "PHYSICAL_DEVICE",
+      "scenario": "doze",
+      "fixtureId": "17210a22-2627-41f8-9cdc-0535f2fe71a9",
+      "dedicatedTarget": true,
+      "checks": {
+        "registered_before_lifecycle_boundary": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "bootCountBefore": 357,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "fixture": {
+        "fixtureId": "17210a22-2627-41f8-9cdc-0535f2fe71a9",
+        "reminderId": "0f9932c2-fda3-3bea-a929-ccd2275f3711",
+        "actionId": "659c3556-051d-4ae6-bf4b-8be43b4333cd",
+        "generation": 1,
+        "requestCode": 791730824,
+        "scheduledAtEpochMillis": 1794047359545,
+        "preparedAtEpochMillis": 1794047299545,
+        "previousForceStopDetectedAtEpochMillis": null,
+        "preparedPid": 21168,
+        "precision": "EXACT"
+      },
+      "deepIdleTestConfiguration": {
+        "originalEnabled": true,
+        "temporaryEnableRequired": false,
+        "screenOn": false,
+        "charging": false
+      },
+      "dozeCapability": "UNAVAILABLE_OR_DENIED",
+      "failureType": "RuntimeError",
+      "failure": "ADB failed: shell cmd deviceidle",
+      "dozeAndBatteryRestore": "PASS",
+      "deepIdleEnabledRestore": "PASS",
+      "exactAccessRestore": "PASS"
+    },
+    "final-reboot": {
+      "result": "FAIL",
+      "environment": "PHYSICAL_DEVICE",
+      "scenario": "reboot",
+      "fixtureId": "af70f4be-f106-49ea-9226-68513bebe28e",
+      "dedicatedTarget": true,
+      "checks": {
+        "registered_before_lifecycle_boundary": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "bootCountBefore": 357,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "fixture": {
+        "fixtureId": "af70f4be-f106-49ea-9226-68513bebe28e",
+        "reminderId": "bff3278f-4774-310c-84c0-01e867377af6",
+        "actionId": "f9cf19fc-22a6-474a-a268-0ce31224cb3f",
+        "generation": 1,
+        "requestCode": 885018655,
+        "scheduledAtEpochMillis": 1794047688235,
+        "preparedAtEpochMillis": 1794047628235,
+        "previousForceStopDetectedAtEpochMillis": null,
+        "preparedPid": 23754,
+        "precision": "EXACT"
+      },
+      "bootCountAfter": 358,
+      "failureType": "RuntimeError",
+      "failure": "No autonomous real notification appeared before verification instrumentation.",
+      "exactAccessRestore": "PASS"
+    },
+    "retry-force_stop": {
+      "result": "FAIL",
+      "environment": "PHYSICAL_DEVICE",
+      "scenario": "force_stop",
+      "fixtureId": "2f02fcd9-b480-4bed-b235-aea254f49455",
+      "dedicatedTarget": true,
+      "checks": {
+        "registered_before_lifecycle_boundary": "PASS",
+        "package_stopped_boundary_observed": "PASS",
+        "explicit_allowed_return": "PASS",
+        "production_notification_before_verification": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "bootCountBefore": 357,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "fixture": {
+        "fixtureId": "2f02fcd9-b480-4bed-b235-aea254f49455",
+        "reminderId": "cd09d1e8-8c0b-338c-b483-e3c0c8461928",
+        "actionId": "ac053f6d-b10d-42a3-922a-0e09f6de3734",
+        "generation": 1,
+        "requestCode": 1762292363,
+        "scheduledAtEpochMillis": 1794046936401,
+        "preparedAtEpochMillis": 1794046876401,
+        "previousForceStopDetectedAtEpochMillis": null,
+        "preparedPid": 29155,
+        "precision": "EXACT"
+      },
+      "productionPidBeforeVerification": "29259",
+      "notificationObservedBeforeVerification": true,
+      "matchingNotificationKeys": [
+        "0|network.orion|0|ac053f6d-b10d-42a3-922a-0e09f6de3734|10369"
+      ],
+      "failureType": "RuntimeError",
+      "failure": "Production delivery verification failed.",
+      "exactAccessRestore": "PASS"
+    },
+    "retry-time_change": {
+      "result": "PASS",
+      "environment": "PHYSICAL_DEVICE",
+      "scenario": "time_change",
+      "fixtureId": "0ca73901-9a5e-433f-8489-7cfe0f152ebd",
+      "dedicatedTarget": true,
+      "checks": {
+        "registered_before_lifecycle_boundary": "PASS",
+        "alarm_service_clock_advanced": "PASS",
+        "production_notification_before_verification": "PASS",
+        "single_committed_delivery_private_notification_and_cleanup": "PASS",
+        "approved_instant_preserved_after_system_time_change": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "bootCountBefore": 357,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "fixture": {
+        "fixtureId": "0ca73901-9a5e-433f-8489-7cfe0f152ebd",
+        "reminderId": "2dc0a4b9-95ee-37a5-8bf5-8cf26defa909",
+        "actionId": "f2568d1e-cf0a-407d-9a22-b4bbb9acda0a",
+        "generation": 1,
+        "requestCode": 989769651,
+        "scheduledAtEpochMillis": 1794047034510,
+        "preparedAtEpochMillis": 1794046974510,
+        "previousForceStopDetectedAtEpochMillis": null,
+        "preparedPid": 30671,
+        "precision": "EXACT"
+      },
+      "wallMutation": {
+        "beforeMillis": 1794046975000,
+        "targetMillis": 1794047095000,
+        "clockSource": "DEVICE_DATE_SECONDS_PLUS_HOST_MONOTONIC_ELAPSED",
+        "observedMillis": 1794047095000,
+        "restoreTargetMillis": 1794046988925,
+        "restoredObservedMillis": 1794046988000
+      },
+      "timeChangeCapability": "OBSERVED",
+      "productionPidBeforeVerification": "31360",
+      "notificationObservedBeforeVerification": true,
+      "matchingNotificationKeys": [
+        "0|network.orion|0|f2568d1e-cf0a-407d-9a22-b4bbb9acda0a|10369"
+      ],
+      "wallClockRestore": "PASS",
+      "exactAccessRestore": "PASS"
+    },
+    "retry-timezone_change": {
+      "result": "FAIL",
+      "environment": "PHYSICAL_DEVICE",
+      "scenario": "timezone_change",
+      "fixtureId": "2a25ffd6-36b6-498c-9a28-23324a6024f6",
+      "dedicatedTarget": true,
+      "checks": {
+        "registered_before_lifecycle_boundary": "PASS",
+        "alarm_service_timezone_changed": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "bootCountBefore": 357,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "fixture": {
+        "fixtureId": "2a25ffd6-36b6-498c-9a28-23324a6024f6",
+        "reminderId": "47480cf7-a02d-38c7-a359-02fdd00c3b6c",
+        "actionId": "d3421d4f-57a1-4b4d-99ea-71ced3c1240b",
+        "generation": 1,
+        "requestCode": 1791868808,
+        "scheduledAtEpochMillis": 1794047077213,
+        "preparedAtEpochMillis": 1794047017213,
+        "previousForceStopDetectedAtEpochMillis": null,
+        "preparedPid": 6317,
+        "precision": "EXACT"
+      },
+      "timezoneMutation": {
+        "before": "America/Sao_Paulo",
+        "target": "Asia/Tokyo",
+        "observed": "Asia/Tokyo"
+      },
+      "timezoneChangeCapability": "OBSERVED",
+      "failureType": "RuntimeError",
+      "failure": "No autonomous real notification appeared before verification instrumentation.",
+      "timezoneRestore": "PASS",
+      "exactAccessRestore": "PASS"
+    },
+    "system-background_restriction": {
+      "result": "PASS",
+      "environment": "PHYSICAL_DEVICE",
+      "scenario": "background_restriction",
+      "fixtureId": "2b8bd8c9-8b90-4436-b766-19a0b8522af3",
+      "dedicatedTarget": true,
+      "checks": {
+        "registered_before_lifecycle_boundary": "PASS",
+        "background_restricted_and_explicit_foreground_return": "PASS",
+        "production_notification_before_verification": "PASS",
+        "single_committed_delivery_private_notification_and_cleanup": "PASS",
+        "background_restriction_observable_degradation": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "bootCountBefore": 357,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "fixture": {
+        "fixtureId": "2b8bd8c9-8b90-4436-b766-19a0b8522af3",
+        "reminderId": "46c515b7-ebe8-3d72-bd39-52478861d0ab",
+        "actionId": "09d35d8d-95b9-4043-950d-497eb84a6559",
+        "generation": 1,
+        "requestCode": 573205737,
+        "scheduledAtEpochMillis": 1794046826291,
+        "preparedAtEpochMillis": 1794046766291,
+        "previousForceStopDetectedAtEpochMillis": null,
+        "preparedPid": 27153,
+        "precision": "EXACT"
+      },
+      "backgroundRestrictionCapability": "OBSERVED",
+      "deliveryContext": "EXPLICIT_ALLOWED_FOREGROUND_RETURN_WHILE_BACKGROUND_RESTRICTED",
+      "productionPidBeforeVerification": "27223",
+      "notificationObservedBeforeVerification": true,
+      "matchingNotificationKeys": [
+        "0|network.orion|0|09d35d8d-95b9-4043-950d-497eb84a6559|10369"
+      ],
+      "backgroundContinuousOperationQualified": false,
+      "backgroundRestrictionRestore": "PASS",
+      "exactAccessRestore": "PASS"
+    },
+    "system-doze": {
+      "result": "FAIL",
+      "environment": "PHYSICAL_DEVICE",
+      "scenario": "doze",
+      "fixtureId": "fdcc5ae0-af51-4fe3-98cf-748463936997",
+      "dedicatedTarget": true,
+      "checks": {
+        "registered_before_lifecycle_boundary": "PASS"
+      },
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "bootCountBefore": 357,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "fixture": {
+        "fixtureId": "fdcc5ae0-af51-4fe3-98cf-748463936997",
+        "reminderId": "034b26af-60fe-396c-8f82-b042530dc435",
+        "actionId": "377c7175-a028-43db-a575-6774c3ef152b",
+        "generation": 1,
+        "requestCode": 440682013,
+        "scheduledAtEpochMillis": 1794046685021,
+        "preparedAtEpochMillis": 1794046625021,
+        "previousForceStopDetectedAtEpochMillis": null,
+        "preparedPid": 24253,
+        "precision": "EXACT"
+      },
+      "deepIdleTestConfiguration": {
+        "originalEnabled": true,
+        "temporaryEnableRequired": false,
+        "screenOn": false,
+        "charging": false
+      },
+      "dozeCapability": "UNAVAILABLE_OR_DENIED",
+      "failureType": "RuntimeError",
+      "failure": "ADB failed: shell cmd deviceidle",
+      "dozeAndBatteryRestore": "PASS",
+      "deepIdleEnabledRestore": "PASS",
+      "exactAccessRestore": "PASS"
+    },
+    "system-force_stop": {
+      "result": "FAIL",
+      "environment": "PHYSICAL_DEVICE",
+      "scenario": "force_stop",
+      "fixtureId": "d50e0f7e-6a4e-4d35-8a5f-7da980415f4c",
+      "dedicatedTarget": true,
+      "checks": {},
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "bootCountBefore": 357,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "failureType": "RuntimeError",
+      "failure": "Production reminder preparation failed.",
+      "exactAccessRestore": "PASS"
+    },
+    "system-time_change": {
+      "result": "FAIL",
+      "environment": "PHYSICAL_DEVICE",
+      "scenario": "time_change",
+      "fixtureId": "58cf51e4-1316-4e8d-9933-625625b59c43",
+      "dedicatedTarget": true,
+      "checks": {},
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "bootCountBefore": 357,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "failureType": "RuntimeError",
+      "failure": "Production reminder preparation failed.",
+      "exactAccessRestore": "PASS"
+    },
+    "system-timezone_change": {
+      "result": "FAIL",
+      "environment": "PHYSICAL_DEVICE",
+      "scenario": "timezone_change",
+      "fixtureId": "324f828f-9135-4106-b14d-16f6bb3656b8",
+      "dedicatedTarget": true,
+      "checks": {},
+      "commit": "4253378a79e8467995e1e985229f408bb247f199",
+      "workingTreeDirty": false,
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "abi": "arm64-v8a",
+      "bootCountBefore": 357,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "failureType": "RuntimeError",
+      "failure": "Production reminder preparation failed.",
+      "exactAccessRestore": "PASS"
+    }
+  },
+  "unconfirmedSyntheticFixtureCleanup": {
+    "environment": "PHYSICAL_DEVICE",
+    "result": "PASS",
+    "fixtures": [
+      {
+        "fixtureId": "324f828f-9135-4106-b14d-16f6bb3656b8",
+        "reminderId": "36bebd52-daff-30b5-9075-d28dfb13d1d1",
+        "attempt": "system-timezone_change"
+      },
+      {
+        "fixtureId": "58cf51e4-1316-4e8d-9933-625625b59c43",
+        "reminderId": "058036ff-c14b-3cc7-8d85-c4cf40b20842",
+        "attempt": "system-time_change"
+      },
+      {
+        "fixtureId": "d50e0f7e-6a4e-4d35-8a5f-7da980415f4c",
+        "reminderId": "7eea78d2-b834-39aa-ae74-4f6ed5b495fa",
+        "attempt": "system-force_stop"
+      }
+    ],
+    "temporaryTestSourceSha256": "69cf5b2cec1a585a70cd30a1850a4a7528e4e8ee70fdb3622a960e97b067f5a1",
+    "temporaryTestApkSha256": "38113e785a7d5b48838c62168f91c76fcc61f79e5e52230cdb9bc30bc49359a9",
+    "rawOutputSha256": "6e1dd2023d515a69bab20bb4373c84378f057b15ea6960dd01c61c1bb77981cc"
+  },
+  "originalDeviceSettings": {
+    "timezone": "America/Sao_Paulo",
+    "autoTime": "1",
+    "autoTimezone": "1",
+    "screenOffTimeout": "60000",
+    "deepIdleForced": "false",
+    "deepIdleEnabled": "1",
+    "notificationPermissionOriginal": false,
+    "exactAlarmAppOp": "No operations.\nDefault mode: default",
+    "backgroundAppOp": "No operations.\nDefault mode: allow"
+  },
+  "finalDeviceSettings": {
+    "timezone": "America/Sao_Paulo",
+    "autoTime": "1",
+    "autoTimezone": "1",
+    "screenOffTimeout": "60000",
+    "deepIdleForced": "false",
+    "deepIdleEnabled": "1",
+    "exactAlarmAppOp": "SCHEDULE_EXACT_ALARM: default",
+    "backgroundAppOp": "RUN_ANY_IN_BACKGROUND: default",
+    "notificationPermissionGranted": false,
+    "hostDeviceClockSkewSeconds": 0.3,
+    "batteryTestOverrideActive": false,
+    "restorationChecks": {
+      "timezone": true,
+      "autoTime": true,
+      "autoTimezone": true,
+      "screenOffTimeout": true,
+      "deepIdleForced": true,
+      "deepIdleEnabled": true,
+      "notificationPermission": true,
+      "batteryUpdatesResumed": true,
+      "clockWithinFiveSeconds": true
+    },
+    "applicationStartedAfterCleanup": true
+  },
+  "productSourceChanged": false,
+  "qualificationLimits": [
+    "No 24-hour recovery soak was completed.",
+    "Doze deep-idle forcing failed on this One UI build; no deep Doze delivery proof.",
+    "Force Stop real notification was observed, but fresh persisted primary startup signal timed out in verification.",
+    "Timezone-change delivery was not observed before verification; a later cleanup verification cannot substitute autonomous evidence.",
+    "Initial reminder UI failure remains intermittent and unresolved.",
+    "This API35/arm64/4KiB S21 run does not qualify other APIs/OEMs, 16KiB runtime, or resource/storage stress.",
+    "No AI, voice, 24/7 or resilient MVP claim is made.",
+    "After reboot, the Core started autonomously after manual unlock, but no reminder notification was observed within the host deadline. Wireless debugging required manual reactivation; transport outage is retained in the raw log and this run does not close reboot qualification."
+  ],
+  "hostBatchCleanupSummaries": {
+    "death-batch-summary.json": {
+      "generic": {
+        "exitCode": 0,
+        "result": "PASS"
+      },
+      "task": {
+        "exitCode": 0,
+        "result": "PASS"
+      },
+      "reminder": {
+        "exitCode": 0,
+        "result": "PASS"
+      },
+      "timer": {
+        "exitCode": 0,
+        "result": "PASS"
+      },
+      "memory": {
+        "exitCode": 0,
+        "result": "PASS"
+      },
+      "notification": {
+        "exitCode": 0,
+        "result": "PASS"
+      },
+      "reminder_delivery": {
+        "exitCode": 0,
+        "result": "PASS"
+      }
+    },
+    "doze-retry-batch-doze.json": {
+      "doze": {
+        "exitCode": 1,
+        "result": "FAIL",
+        "failure": "ADB failed: shell cmd deviceidle",
+        "cleanupCommandExit": 0,
+        "syntheticFixtureMetadataRemoved": true
+      }
+    },
+    "final-batch-reboot.json": {
+      "reboot": {
+        "exitCode": 1,
+        "result": "FAIL",
+        "failure": "No autonomous real notification appeared before verification instrumentation.",
+        "cleanupCommandExit": 0,
+        "syntheticFixtureMetadataRemoved": true
+      }
+    },
+    "retry-batch-force_stop-time_change-timezone_change.json": {
+      "force_stop": {
+        "exitCode": 1,
+        "result": "FAIL",
+        "failure": "Production delivery verification failed.",
+        "cleanupCommandExit": 0,
+        "syntheticFixtureMetadataRemoved": true
+      },
+      "time_change": {
+        "exitCode": 0,
+        "result": "PASS",
+        "failure": null
+      },
+      "timezone_change": {
+        "exitCode": 1,
+        "result": "FAIL",
+        "failure": "No autonomous real notification appeared before verification instrumentation.",
+        "cleanupCommandExit": 0,
+        "syntheticFixtureMetadataRemoved": true
+      }
+    },
+    "system-batch-doze-force_stop-time_change-timezone_change-background_restriction.json": {
+      "doze": {
+        "exitCode": 1,
+        "result": "FAIL",
+        "failure": "ADB failed: shell cmd deviceidle",
+        "cleanupCommandExit": 0,
+        "syntheticFixtureMetadataRemoved": true
+      },
+      "force_stop": {
+        "exitCode": 1,
+        "result": "FAIL",
+        "failure": "Production reminder preparation failed."
+      },
+      "time_change": {
+        "exitCode": 1,
+        "result": "FAIL",
+        "failure": "Production reminder preparation failed."
+      },
+      "timezone_change": {
+        "exitCode": 1,
+        "result": "FAIL",
+        "failure": "Production reminder preparation failed."
+      },
+      "background_restriction": {
+        "exitCode": 0,
+        "result": "PASS",
+        "failure": null
+      }
+    }
+  },
+  "sourceUnchangedCheck": true,
+  "platformCommandFailures": [
+    {
+      "at": "2026-11-07T10:28:21.456429+00:00",
+      "args": [
+        "-s",
+        "adb-RXCT100BA3D-AjxxOu._adb-tls-connect._tcp",
+        "shell",
+        "cmd",
+        "deviceidle",
+        "force-idle",
+        "deep"
+      ],
+      "exitCode": 255,
+      "stdout": "Unable to go deep idle; stopped at INACTIVE\n",
+      "stderr": ""
+    }
+  ],
+  "rawEvidenceArchive": {
+    "path": "/home/otavio/Projects/O.R.I.O.N-evidence/s21-api35-20261107.zip",
+    "sha256": "9830d15e42b5f9f8143ee06a83d54a576e82a781978eb0bd869ed77d2ec5ee16",
+    "bytes": 15619624
+  }
+}
