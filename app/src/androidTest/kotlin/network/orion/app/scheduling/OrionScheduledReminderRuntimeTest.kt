@@ -47,9 +47,10 @@ class OrionScheduledReminderRuntimeTest {
     @Test fun scheduledReminderSurvivesExplicitHostLifecycleBoundary() = runBlocking {
         val arguments = InstrumentationRegistry.getArguments()
         val mode = arguments.getString("orion_scheduled_mode") ?: return@runBlocking
-        require(mode in setOf("prepare", "verify"))
+        require(mode in setOf("prepare", "verify", "resume_doze"))
         val scenario = arguments.getString("orion_scheduled_scenario")
         require(scenario == null || scenario in setOf("reboot", "force_stop", "time_change", "timezone_change", "doze", "background_restriction"))
+        require(mode != "resume_doze" || scenario == "doze")
         val rawFixture = checkNotNull(arguments.getString("orion_scheduled_fixture"))
         val fixture = UUID.fromString(rawFixture).also { require(it.toString() == rawFixture) }
         val id = UUID.nameUUIDFromBytes("$fixture/runtime-reminder".toByteArray(Charsets.UTF_8))
@@ -60,6 +61,9 @@ class OrionScheduledReminderRuntimeTest {
         val db = OrionDatabaseFactory.open(app)
         try {
             if (mode == "prepare") {
+                assertTrue("Unlock the dedicated target before preparing a new confirmation",
+                    app.getSystemService(android.os.PowerManager::class.java).isInteractive &&
+                        !app.getSystemService(android.app.KeyguardManager::class.java).isDeviceLocked)
                 require(!metadataFile.exists() && db.reminders().find(id.toString()) == null)
                 val clock = AndroidOrionClock(app.contentResolver)
                 val preparedAt = clock.wallNow()
@@ -88,6 +92,16 @@ class OrionScheduledReminderRuntimeTest {
                         .put("preparedAtEpochMillis", preparedAt.toEpochMilli())
                         .put("previousForceStopDetectedAtEpochMillis", previousForceStop ?: JSONObject.NULL)
                         .put("preparedPid", Process.myPid()).put("precision", row.precision.name)
+                        .put("normalizedPayloadHash", action.normalizedPayloadHash)
+                        .put("confirmationFingerprint", action.confirmationFingerprint)
+                    if (scenario == "doze") {
+                        // A near wake-from-idle artifact can itself block OEM idle entry.
+                        // Remove only this derived artifact, retaining its confirmed authority.
+                        val alarms = OrionReminderAlarms(AndroidOrionAlarmBackend(app,
+                            ComponentName(app, OrionReminderAlarmReceiver::class.java)))
+                        assertTrue(alarms.cancel(OrionAlarmToken(id, row.fireGeneration, row.requestCode)))
+                        metadata.put("dozeAlarmTemporarilyRemoved", true)
+                    }
                     FileOutputStream(metadataFile).use {
                         it.write(metadata.toString().toByteArray(Charsets.UTF_8)); it.fd.sync()
                     }
@@ -95,6 +109,33 @@ class OrionScheduledReminderRuntimeTest {
                         putString("orion_scheduled_prepared_pid", Process.myPid().toString())
                     })
                 } finally { channel.close() }
+            } else if (mode == "resume_doze") {
+                require(metadataFile.isFile)
+                val metadata = JSONObject(metadataFile.readText())
+                require(metadata.getString("fixtureId") == fixture.toString() && metadata.getString("reminderId") == id.toString())
+                require(metadata.getBoolean("dozeAlarmTemporarilyRemoved"))
+                val original = checkNotNull(db.reminders().find(id.toString()))
+                val actionId = metadata.getString("actionId")
+                val action = checkNotNull(db.actions().find(actionId))
+                assertEquals(ActionStatus.CONFIRMED, action.status)
+                assertEquals(metadata.getString("normalizedPayloadHash"), action.normalizedPayloadHash)
+                assertEquals(metadata.getString("confirmationFingerprint"), action.confirmationFingerprint)
+                assertEquals(actionId, original.deliveryActionId)
+                assertEquals(metadata.getLong("generation"), original.fireGeneration)
+                assertEquals(metadata.getLong("scheduledAtEpochMillis"), original.scheduledAt)
+                db.reminderSchedules().invalidateRegistrationObservation(id.toString(), original.fireGeneration)
+                runtime.requestReconciliation() // Existing consent only; no resumed/focused UI channel.
+                val registered = checkNotNull(db.reminders().find(id.toString()))
+                assertTrue(registered.registrationConfirmed)
+                assertEquals(ReminderPrecision.EXACT, registered.precision)
+                assertEquals(original.fireGeneration, registered.fireGeneration)
+                assertEquals(original.scheduledAt, registered.scheduledAt)
+                assertEquals(actionId, registered.deliveryActionId)
+                assertEquals(action.normalizedPayloadHash, db.actions().find(actionId)?.normalizedPayloadHash)
+                assertEquals(action.confirmationFingerprint, db.actions().find(actionId)?.confirmationFingerprint)
+                InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
+                    putString("orion_scheduled_doze_registration", "ORIGINAL_DOZE_BINDING_REGISTERED")
+                })
             } else {
                 require(metadataFile.isFile)
                 val metadata = JSONObject(metadataFile.readText())
@@ -137,6 +178,10 @@ class OrionScheduledReminderRuntimeTest {
                         val preparedAt = metadata.getLong("preparedAtEpochMillis")
                         val previous = if (metadata.isNull("previousForceStopDetectedAtEpochMillis")) null
                             else metadata.getLong("previousForceStopDetectedAtEpochMillis")
+                        InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
+                            putString("orion_scheduled_primary_force_stop_observation",
+                                runtime.schedulingDiagnostics()?.forceStopSignal ?: "UNAVAILABLE")
+                        })
                         withTimeout(5_000) {
                             while (true) {
                                 val detected = runtime.schedulingDiagnostics()?.lastForceStopDetectedAt?.toEpochMilli()

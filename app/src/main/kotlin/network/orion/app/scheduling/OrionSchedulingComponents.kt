@@ -39,7 +39,7 @@ class OrionReconciliationReceiver : BroadcastReceiver() {
         val runtime = (context.applicationContext as? OrionApplication)?.mainRuntime ?: return
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try { withTimeout(8_000) { runtime.requestReconciliation() } }
+            try { withTimeout(8_000) { runtime.requestReconciliation(rebuildAlarmArtifacts = true) } }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { /* Startup recovery and the durable heartbeat remain independent triggers. */ }
             finally { pending.finish() }
