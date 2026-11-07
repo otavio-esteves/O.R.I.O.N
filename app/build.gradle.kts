@@ -85,6 +85,8 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.junit)
+    // Compose's transitive Espresso 3.5 reflection targets an InputManager method removed in API 37.
+    androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(libs.room.testing)
     androidTestImplementation(project(":data:actions"))
     androidTestImplementation(project(":data:repository"))

@@ -12,6 +12,10 @@ On 2026-11-04 the user explicitly deferred S21 physical testing. The follow-up i
 No physical/hardware/OEM/24-7 qualification or TRANSACTION_CORE_READY declaration
 is inferred from this integration. Android evidence remains NON_DEFINITIVE.
 
+The user resumed physical testing on 2026-11-07. The later
+[S21 physical review](F2-S21-PhysicalGate.md) records the target-specific evidence
+and its scoped decision; the 2026-11-04 deferral above remains historical.
+
 ## Independent reviews and resolutions
 
 Three delegated coding agents independently reviewed transactions, keys/private

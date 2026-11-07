@@ -25,3 +25,22 @@ The activated gate tracks ELF 16 KiB alignment, APK/AAB packaging, a load test, 
 ABI compatibility independently. `PASS` is valid only when every check passes;
 `PENDING` and `FAIL` remain explicit non-passing states. Device-dependent load
 evidence continues to follow the Docker/host/physical-device boundary.
+
+The [scoped native load record](native-load-scoped-20261107.json) now contains
+actual debug linker/JNI loads of both packaged libraries on the physical S21
+(API35, arm64, 4 KiB) and an official API37 x86_64/16 KiB emulator. The main APK
+hash is identical; the additional focused test has its own recorded test APK hash.
+This replaces the earlier absence of any physical arm64 debug-load evidence,
+without approving release/R8 or physical arm64/16 KiB loading. The aggregate
+`LOAD_TEST = NOT_RUN` and overall `PENDING` therefore continue to describe the
+unfinished full matrix; they do not erase the executed scoped debug proofs.
+
+The same main APK also passed 318 application cases on an official AOSP
+API31/x86_64/4 KiB emulator, with no failures or skips. The S21/API35 physical
+suite passed the same 318-case manifest. After adding the native load probe and
+repairing the test-only Espresso dependency and exact-selector synchronization,
+the final 319-case suites passed on S21/API35 and official API37 AOSP ATD/4KiB,
+without failures or skips. Per-run APK hashes and retained startup/environment/UI
+failures are tracked in the [F4 closeout audit](../qualification/F4-Closeout.md).
+Emulator app-surface checks alone do not approve the entire CompatibilityProfile,
+including future Cortex/voice and actual MemoryLimiter behavior.

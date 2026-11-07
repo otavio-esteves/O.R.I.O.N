@@ -1,0 +1,2228 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-07T19:56:07.849211+00:00",
+  "scope": "F4 physical capability/resource matrix and controlled short workload; audit of remaining gates",
+  "result": "TARGETED_PHYSICAL_QUALIFICATION_WITH_OPEN_GATES",
+  "fullF4GateClosed": false,
+  "baseCommit": "705b8e74ce51af7c5db308ee6aafdff657e4138b",
+  "workPackage": "ORION-F4-QUAL-002",
+  "parentIssue": 64,
+  "productionRuntimeChanged": false,
+  "schemaChanged": false,
+  "finalSourceSha256": {
+    "app/build.gradle.kts": "bcfd4bd82427d761de27ebcf823ba49ff6acf9c883341de073af7f30db535d1f",
+    "app/src/androidTest/kotlin/network/orion/app/compatibility/OrionNativeLibraryLoadTest.kt": "705f056af31683f97324d0dbfc5823ffd94767f70062ebed1177a535c6a65d99",
+    "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderScreenTest.kt": "cf53e50499b8cb0fb484d10cdd4fd49839bbd5bee0c380341ee4003b1e7be5b4",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionF4ChannelQualificationTest.kt": "44a96f5c802ecb99e8c7f61b9ab010990f7a7d50b9955538eb25bc324bcacae2",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionF4ResourceQualificationTest.kt": "95689e22ef36f3e572239a21e209642e6edf96993fc3db8962ddd6cbfc1afbb7",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionF4SoakStateTest.kt": "6c9514ab43a93932006e967dabbcec55c364af5325df75d7ea2c20ee01803c1f",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e",
+    "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskScreenTest.kt": "f289d176f06c093820f512c55dca85c868debf2b90e3d9b733c6df92ff6e5c09",
+    "gradle/libs.versions.toml": "4412accd5792cb9075d8ed42e6c989d9e0c94c4271a0cc069f384e039fc58361",
+    "scripts/android/test_f4_capability_runtime_harness.py": "1e7ea3f0f94a8af83c835c9464697059ccfbf5fadff97edb04ace5a7c0b7ca58",
+    "scripts/android/test_f4_channel_runtime_harness.py": "b04909fc8abf0c9dbe74182970e2a1800e055966c79da71e8dd5a391e97ab85c",
+    "scripts/android/test_f4_soak_runtime_harness.py": "0dd075c96d0f97eab758d105c0278986547846a0be9e1faaf9d6611b4798cbd4",
+    "scripts/android/verify-f4-capability-runtime.py": "039701c737bd9bc51d050de4d89d071963022c69d26850a1df5db35dd4527133",
+    "scripts/android/verify-f4-channel-runtime.py": "47578d87815fe7caf76e451d0a590dc634272684baf355fbcd796fa3e8cbe293",
+    "scripts/android/verify-f4-soak-runtime.py": "7391dfabb041a8fc10765856d217cd06b722e364844e95b82952d96c9dd3bd4c"
+  },
+  "finalArtifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "74bd1be0ef53bfd3b78e8ea88daa4f190d0617237462fab4ad6d13e0851b67a9"
+  },
+  "earlierCapabilityArtifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "1bf5fc576ae3f82502a76b1cc67ff6b145f1bb3897fecdfb152d994940eff503"
+  },
+  "environments": {
+    "physical": "Samsung SM-G991B, Android15/API35, arm64, 4096-byte pages",
+    "buildAndHostContracts": "CONTAINER; canonical Android build and pinned Python host-harness container",
+    "emulator": "API compatibility only under Architecture119; never physical hardware/performance qualification"
+  },
+  "checks": {
+    "fullPhysicalApplicationSuite": {
+      "rawReport": "final-android-suite-report.json",
+      "rawReportSha256": "9919bf5bbad8102c7ab587e5e1a26d12f2a7e9cd2b088cedd50bd49ed8c474ee",
+      "summary": {
+        "name": "final-android-suite",
+        "environment": "PHYSICAL_DEVICE",
+        "startedAt": "2026-11-07T16:57:03.939339+00:00",
+        "command": [
+          "shell",
+          "am",
+          "instrument",
+          "--user",
+          "0",
+          "-w",
+          "-r",
+          "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+        ],
+        "result": "PASS",
+        "processExitCode": 0,
+        "reportedTests": 318,
+        "passed": 318,
+        "skipped": 0,
+        "failed": 0,
+        "durationSeconds": 110.93,
+        "rawOutputSha256": "1f4ca1418a0168498cbc6f6030a36ed2e12bc4fc0080e5522ab38bbbcff7e7ab"
+      }
+    },
+    "realDisposableSqliteAndBoundedHeap": {
+      "rawReport": "f4-resource-report.json",
+      "rawReportSha256": "06fe6a76237b2cfd9287f03f2ec449d9d5792000831ff005d426c94371cdf18f",
+      "summary": {
+        "name": "f4-resource",
+        "environment": "PHYSICAL_DEVICE",
+        "startedAt": "2026-11-07T16:14:32.768655+00:00",
+        "command": [
+          "shell",
+          "am",
+          "instrument",
+          "--user",
+          "0",
+          "-w",
+          "-r",
+          "-e",
+          "class",
+          "network.orion.app.scheduling.OrionF4ResourceQualificationTest",
+          "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+        ],
+        "result": "PASS",
+        "tests": [
+          {
+            "class": "network.orion.app.scheduling.OrionF4ResourceQualificationTest",
+            "test": "boundedHeapAndWriteLoadKeepsAtomicEventsAndRejectsDuplicateRows",
+            "code": 0
+          },
+          {
+            "class": "network.orion.app.scheduling.OrionF4ResourceQualificationTest",
+            "test": "fullDatabaseDuringEventInsertRollsBackTaskAndAllowsSafeLocalRetry",
+            "code": 0
+          }
+        ],
+        "processExitCode": 0,
+        "reportedTests": 2,
+        "passed": 2,
+        "skipped": 0,
+        "failed": 0,
+        "durationSeconds": 4.35,
+        "rawOutputSha256": "b76fe3f0a53682c93fef1c20b65da3d0f5659a16ba8b2e48058fd01d403f1ace"
+      }
+    },
+    "notificationPermissionDenialGrant": {
+      "rawReport": "capability-r2-notification_denied/f4-capability-runtime-report.json",
+      "rawReportSha256": "e65ebfead37ffa3f6da18fdca25ec6d462c4c727099a01f9ae8ec34a5af7fe31",
+      "summary": {
+        "result": "PASS",
+        "gateClosed": false,
+        "scenario": "notification_denied",
+        "environment": "PHYSICAL_DEVICE",
+        "checks": {
+          "prepare": "PASS",
+          "inspect_denied": "PASS",
+          "real_notification_before_verification": "PASS",
+          "verify": "PASS"
+        },
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "1bf5fc576ae3f82502a76b1cc67ff6b145f1bb3897fecdfb152d994940eff503"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-f4-capability-runtime.py": "ba250684fac3f4819d5cebca1d60f283a5bf4370e869555314bd6a490b240b7e",
+          "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+        },
+        "fixtureId": "7d05de8c-5ec4-4bb3-99f7-0ed662470138",
+        "apiLevel": "35",
+        "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "fixture": {
+          "fixtureId": "7d05de8c-5ec4-4bb3-99f7-0ed662470138",
+          "reminderId": "75ced499-7c8d-31e0-9a8d-3ab195949980",
+          "actionId": "a2a16476-e1ef-4947-a359-d9dc6a4b3e2e",
+          "generation": 1,
+          "requestCode": 1622796345,
+          "scheduledAtEpochMillis": 1794068220264,
+          "preparedAtEpochMillis": 1794068100264,
+          "previousForceStopDetectedAtEpochMillis": 1794054158737,
+          "preparedPid": 14955,
+          "precision": "EXACT",
+          "normalizedPayloadHash": "a15e6a044fa3ef4a468b70fda2cf04f39d698982c24862c81dfb129ee1eb0527",
+          "confirmationFingerprint": "6615f828656813f52d81168de3f82627a7bff4f112f939edb66ff01a0a220d15"
+        },
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS"
+      }
+    },
+    "exactAccessLossGain": {
+      "rawReport": "capability-r3-exact_access/f4-capability-runtime-report.json",
+      "rawReportSha256": "aae1ca4a2c05c383d0473ff1bfb1929b37c9a033547488b4b5b57c3706ee93e4",
+      "summary": {
+        "result": "PASS",
+        "gateClosed": false,
+        "scenario": "exact_access",
+        "environment": "PHYSICAL_DEVICE",
+        "checks": {
+          "prepare": "PASS",
+          "inspect_approximate": "PASS",
+          "inspect_exact": "PASS",
+          "real_notification_before_verification": "PASS",
+          "verify": "PASS"
+        },
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "1bf5fc576ae3f82502a76b1cc67ff6b145f1bb3897fecdfb152d994940eff503"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-f4-capability-runtime.py": "039701c737bd9bc51d050de4d89d071963022c69d26850a1df5db35dd4527133",
+          "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+        },
+        "fixtureId": "551ae899-c9f8-41c8-bb08-e8fb3999fb27",
+        "apiLevel": "35",
+        "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "fixture": {
+          "fixtureId": "551ae899-c9f8-41c8-bb08-e8fb3999fb27",
+          "reminderId": "bab998c0-ac0c-3ae8-9c76-ca50ba6eff71",
+          "actionId": "bb6d7f50-b51f-42ee-96ba-b15d9a2b2154",
+          "generation": 1,
+          "requestCode": 1578622886,
+          "scheduledAtEpochMillis": 1794068986859,
+          "preparedAtEpochMillis": 1794068866859,
+          "previousForceStopDetectedAtEpochMillis": 1794054158737,
+          "preparedPid": 20536,
+          "precision": "EXACT",
+          "normalizedPayloadHash": "5b8172cc7d5ecda840fc56c622ae9bd0191f80ca8e0f07b187c2051d73661f16",
+          "confirmationFingerprint": "36d6ebe9ac08fb9a5057c88899990281cc0c523ea5ed79dfddbfc50f28bac531"
+        },
+        "notificationKeysBeforeVerification": [
+          "0|network.orion|0|bb6d7f50-b51f-42ee-96ba-b15d9a2b2154|10369"
+        ],
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS"
+      }
+    },
+    "actualBatterySaver": {
+      "rawReport": "capability-r2-battery_saver/f4-capability-runtime-report.json",
+      "rawReportSha256": "77dfd322b43b1c6e1017aee701501502e0be85a702ed1607239d80442bc9a0b1",
+      "summary": {
+        "result": "PASS",
+        "gateClosed": false,
+        "scenario": "battery_saver",
+        "environment": "PHYSICAL_DEVICE",
+        "checks": {
+          "prepare": "PASS",
+          "inspect_power_save": "PASS",
+          "real_notification_before_verification": "PASS",
+          "verify": "PASS"
+        },
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "1bf5fc576ae3f82502a76b1cc67ff6b145f1bb3897fecdfb152d994940eff503"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-f4-capability-runtime.py": "ba250684fac3f4819d5cebca1d60f283a5bf4370e869555314bd6a490b240b7e",
+          "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+        },
+        "fixtureId": "229abbbb-e734-46d1-afcc-15227cf74bd6",
+        "apiLevel": "35",
+        "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "fixture": {
+          "fixtureId": "229abbbb-e734-46d1-afcc-15227cf74bd6",
+          "reminderId": "abf21514-0d7b-3512-9db7-4a38c176e286",
+          "actionId": "a1a31a66-009c-48f2-8081-66f0a2db29f9",
+          "generation": 1,
+          "requestCode": 539149826,
+          "scheduledAtEpochMillis": 1794068529829,
+          "preparedAtEpochMillis": 1794068409829,
+          "previousForceStopDetectedAtEpochMillis": 1794054158737,
+          "preparedPid": 18690,
+          "precision": "EXACT",
+          "normalizedPayloadHash": "9d4a29bdf78052d0c4cf04f651591a096a5333c1e2251ff49be3e0a3fa6abf80",
+          "confirmationFingerprint": "1e68b3d8df4e4a18b989feec0af6c8349f6bfffd21c6639b0ba7853fde2ca76c"
+        },
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS"
+      }
+    },
+    "actualChannelDisableRestore": {
+      "rawReport": "channel-visual-proof/report.json",
+      "rawReportSha256": "27f0dab32c46872f899c023842aaa723f364abc6e924778887492b7d7f13f9c0",
+      "summary": {
+        "environment": "PHYSICAL_DEVICE",
+        "method": "VISUALLY_VERIFIED_OFFICIAL_ANDROID_SETTINGS_UI",
+        "result": "PASS",
+        "originalNotificationGranted": false,
+        "originalImportance": 3,
+        "startedAt": "2026-11-07T16:53:25.982562+00:00",
+        "checks": {
+          "original_channel_available": "PASS",
+          "channel_disabled_without_invocation": "PASS",
+          "original_importance_restored": "PASS",
+          "original_permission_restored": "PASS"
+        },
+        "artifactSha256": {
+          "app/build/outputs/apk/debug/app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "74bd1be0ef53bfd3b78e8ea88daa4f190d0617237462fab4ad6d13e0851b67a9"
+        },
+        "sourceSha256": {
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionF4ChannelQualificationTest.kt": "44a96f5c802ecb99e8c7f61b9ab010990f7a7d50b9955538eb25bc324bcacae2"
+        },
+        "rawEvidenceSha256": {
+          "01-before.txt": "d72dc141015c83d4c7fe3d4ab38e93b952ef6d0e5fd762460c7fd196ebb226fa",
+          "02-disabled.txt": "91cfefc80829dbe4ebefdf6ee5d14c306d8cc100528c1118e1d807658c571fd8",
+          "03-restored.txt": "6038e1837ef8b32c0c272046a916fc6bdb4a18f298568ab310f618fb2fab2183",
+          "after-disable-tap.png": "43af29871a4f03e5dcddea7a380debd9d35ce35727b5b6fe5a783eb16841eb7c",
+          "before.png": "a0cb7cc52b56b2bf2ae7e0fd16dcd26ff3bcc3b682d60bfa54bafe510d33166c",
+          "disable-tap.json": "3709a5bcfd47083e169d14440f6ee194727703acdad73a169f9eea278fce9e5b",
+          "disabled.png": "43af29871a4f03e5dcddea7a380debd9d35ce35727b5b6fe5a783eb16841eb7c",
+          "restore-tap.json": "270b13018ca2e109815d9d067415cbf1af6a95ce5cdf7c3289ad9b143417322f"
+        }
+      }
+    },
+    "canonicalBuild": {
+      "result": "PASS",
+      "environment": "CONTAINER",
+      "command": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2",
+      "tasks": 4108,
+      "log": "final-canonical-check.log",
+      "logSha256": "d0f23c301153ab1574cbc68df0f78ca3fcdad31d7d8e1bdbfa4e791ba532c471"
+    },
+    "hostContracts": {
+      "result": "PASS",
+      "environment": "CONTAINER",
+      "command": "docker compose run --rm host-harness-check",
+      "tests": 98,
+      "log": "combined-host-contracts-final.txt",
+      "logSha256": "aed40a5197fdfc98d951648208c9b93053716f19b6344425a9d9ff873ad503ce"
+    },
+    "controlledOneHourWorkload": {
+      "rawReport": "soak-1h/f4-soak-runtime-report.json",
+      "rawReportSha256": "62aadacc7f8c7758672be56234b5648acaaf85c070b82aa22a49384ee9089fa6",
+      "summary": {
+        "result": "INCOMPLETE",
+        "fullF4GateClosed": false,
+        "fullSoakGateClosed": false,
+        "durationRequestedSeconds": 3600,
+        "eligibleFor24HourReview": false,
+        "fullSoakProfileComplete": false,
+        "environment": "PHYSICAL_DEVICE",
+        "fixtureId": "c847b557-8212-4e94-9310-9350d4bbef22",
+        "checks": {},
+        "instrumentationCheckpointsRestartMain": true,
+        "limitations": [
+          "Short runs cannot substitute for 24 hours.",
+          "Passive polling adds overhead; battery/idle qualification remains separate.",
+          "Wake-lock and exit-history snapshots require review; they are not exhaustive traces.",
+          "Boot/unlock, passive backlog histories and actual heartbeat execution need separate qualification evidence."
+        ],
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "74bd1be0ef53bfd3b78e8ea88daa4f190d0617237462fab4ad6d13e0851b67a9"
+        },
+        "sourceSha256": {
+          "verify-f4-soak-runtime.py": "ffc4decf80621f79f4ede88e52a36fcd993e07188de1d3bfbbfeec3aef9a48b9",
+          "record-soak-observation.py": "d0ad00af0b10fa43bc1d3f5d4021d0e98b3be85d228cd52e9e69ec8fc98bd18a",
+          "verify-f4-capability-runtime.py": "039701c737bd9bc51d050de4d89d071963022c69d26850a1df5db35dd4527133"
+        },
+        "manifestDelaysSeconds": [
+          120,
+          720,
+          1320,
+          1920,
+          2520,
+          3120
+        ],
+        "reminders": [
+          {
+            "fixtureId": "a55e780c-e7c8-4165-b2d5-c966b422402f",
+            "delaySeconds": 120,
+            "binding": {
+              "fixtureId": "a55e780c-e7c8-4165-b2d5-c966b422402f",
+              "reminderId": "d71340df-e30c-3cbd-b22d-be6001f8ac0b",
+              "actionId": "a23c7110-9f83-42e7-9d8a-0d8366279d3e",
+              "generation": 1,
+              "requestCode": 1570260902,
+              "scheduledAtEpochMillis": 1794071535639,
+              "preparedAtEpochMillis": 1794071415639,
+              "previousForceStopDetectedAtEpochMillis": 1794054158737,
+              "preparedPid": 32314,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "188fea90f41cf63f6f5fdf531d30eba90bfa1d8ca16689761f1227a8646778e8",
+              "confirmationFingerprint": "cd73819cb314ed10ba89d286c73dcebeb4b90bf698b244e66b71d84a8f6750fc"
+            }
+          },
+          {
+            "fixtureId": "76ee0656-de21-4fa7-81eb-467ff1323025",
+            "delaySeconds": 720,
+            "binding": {
+              "fixtureId": "76ee0656-de21-4fa7-81eb-467ff1323025",
+              "reminderId": "1de81a68-3c19-3707-809e-d32992641367",
+              "actionId": "842dac9c-aaf5-488a-b09a-8e3892cebb34",
+              "generation": 1,
+              "requestCode": 181353175,
+              "scheduledAtEpochMillis": 1794072138788,
+              "preparedAtEpochMillis": 1794071418788,
+              "previousForceStopDetectedAtEpochMillis": 1794054158737,
+              "preparedPid": 32364,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "1a1f8f222829c2d6f9b374a65e274525579dcadb832b62fc02db6449c0ca5305",
+              "confirmationFingerprint": "aeb7af3d3e15ca1fdb2c19cb5f30af1162fbce3407d49a4531cc109fc47422cd"
+            }
+          },
+          {
+            "fixtureId": "05408fc9-9ede-48f5-8a82-0b559de97d29",
+            "delaySeconds": 1320,
+            "binding": {
+              "fixtureId": "05408fc9-9ede-48f5-8a82-0b559de97d29",
+              "reminderId": "164baa71-1f5a-36d2-8cca-68074ea829cb",
+              "actionId": "0a629c45-21c7-43be-9ca4-d1e6b87d4413",
+              "generation": 1,
+              "requestCode": 1386956523,
+              "scheduledAtEpochMillis": 1794072741702,
+              "preparedAtEpochMillis": 1794071421702,
+              "previousForceStopDetectedAtEpochMillis": 1794054158737,
+              "preparedPid": 32419,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "0f28c60a7a26963d9acce9a9eef37cba00990e2ada31fd5be47bc921fc6bd976",
+              "confirmationFingerprint": "26219945515d9eae63817f2921cb4a2b15e7c930debf169132530592ce40fce0"
+            }
+          },
+          {
+            "fixtureId": "84eaebf1-0d48-406e-8849-1d80f57d9ddd",
+            "delaySeconds": 1920,
+            "binding": {
+              "fixtureId": "84eaebf1-0d48-406e-8849-1d80f57d9ddd",
+              "reminderId": "f948002d-8f36-3165-861d-c406e97a8b57",
+              "actionId": "9b3fa4c2-e305-4e41-84a7-232f96488589",
+              "generation": 1,
+              "requestCode": 1103628997,
+              "scheduledAtEpochMillis": 1794073344942,
+              "preparedAtEpochMillis": 1794071424942,
+              "previousForceStopDetectedAtEpochMillis": 1794054158737,
+              "preparedPid": 32468,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "fde1b1c4a6e244fb3db66bedbfae0c6c94db5a04f0f3017068b6f00d862eed99",
+              "confirmationFingerprint": "99c82129c71d5622a987d5c88d4faef80bfc6830fab5092cc5ae593e53e34f8e"
+            }
+          },
+          {
+            "fixtureId": "8618bf33-8e38-4095-a03e-06bba3959324",
+            "delaySeconds": 2520,
+            "binding": {
+              "fixtureId": "8618bf33-8e38-4095-a03e-06bba3959324",
+              "reminderId": "1a53c3c8-7896-3ebf-9815-2dea607d79ce",
+              "actionId": "77f8c82b-1556-482c-bd24-348c5be8f823",
+              "generation": 1,
+              "requestCode": 1405598689,
+              "scheduledAtEpochMillis": 1794073948264,
+              "preparedAtEpochMillis": 1794071428264,
+              "previousForceStopDetectedAtEpochMillis": 1794054158737,
+              "preparedPid": 32521,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "629a42a35f09ab888dc76e3412807bbeb0c85a84eed17590f97df22ed63b84b7",
+              "confirmationFingerprint": "fd0b27099a34514c355fce284593dedd802196640cf256158aee5c38db9af854"
+            }
+          },
+          {
+            "fixtureId": "383fa82c-4e07-40b1-90c0-31a3fa53c703",
+            "delaySeconds": 3120,
+            "binding": {
+              "fixtureId": "383fa82c-4e07-40b1-90c0-31a3fa53c703",
+              "reminderId": "2a0e08a1-afcf-364e-b803-ea18f7eee61d",
+              "actionId": "023027fa-fe74-4dc9-a4d6-01d350d28443",
+              "generation": 1,
+              "requestCode": 860299239,
+              "scheduledAtEpochMillis": 1794074551586,
+              "preparedAtEpochMillis": 1794071431586,
+              "previousForceStopDetectedAtEpochMillis": 1794054158737,
+              "preparedPid": 32570,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "00a4dd5a905bca0910fbdb074641b5e68bfff038de418ed460eb1ca38aa9db6e",
+              "confirmationFingerprint": "29a9a99aa889f53b321ace34492f63a2ee50844fd3ee17006da008b963419c09"
+            }
+          }
+        ],
+        "observedNotifications": {
+          "a23c7110-9f83-42e7-9d8a-0d8366279d3e": {
+            "elapsedSeconds": 102.111,
+            "key": "0|network.orion|0|a23c7110-9f83-42e7-9d8a-0d8366279d3e|10369",
+            "productionPidAtObservation": "566"
+          },
+          "842dac9c-aaf5-488a-b09a-8e3892cebb34": {
+            "elapsedSeconds": 706.689,
+            "key": "0|network.orion|0|842dac9c-aaf5-488a-b09a-8e3892cebb34|10369",
+            "productionPidAtObservation": "566"
+          },
+          "0a629c45-21c7-43be-9ca4-d1e6b87d4413": {
+            "elapsedSeconds": 1315.54,
+            "key": "0|network.orion|0|0a629c45-21c7-43be-9ca4-d1e6b87d4413|10369",
+            "productionPidAtObservation": "566"
+          }
+        },
+        "apiLevel": "35",
+        "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "failureType": "TimeoutExpired",
+        "failure": "Workload interrupted or bounded command unavailable.",
+        "stateFixtureCleanup": "FAIL",
+        "powerSaverRestore": "FAIL",
+        "exactAccessRestore": "FAIL",
+        "notificationRestore": "FAIL",
+        "screenTimeoutRestore": "FAIL"
+      }
+    },
+    "api37Compatibility": {
+      "rawReport": "api37-compatibility-report.json",
+      "rawReportSha256": "09781e6f547b8fce9c5f280d9988aec04517af29434158dcba1907937c8e4db0",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "scope": "API compatibility; non-definitive for physical/OEM/hardware/performance behavior",
+        "result": "INCOMPLETE",
+        "fullF4GateClosed": false,
+        "nativePhysicalGateClosed": false,
+        "startedAt": "2026-11-07T17:40:31.131041+00:00",
+        "artifactSha256": {
+          "app-debug-androidTest.apk": "74bd1be0ef53bfd3b78e8ea88daa4f190d0617237462fab4ad6d13e0851b67a9",
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d"
+        },
+        "emulatorBoot": {
+          "environment": "ANDROID_EMULATOR",
+          "scope": "API37/16KiB x86_64 API compatibility only; not physical/OEM/arm64 performance qualification",
+          "result": "INCOMPLETE",
+          "startedAt": "2026-11-07T17:36:33.015865+00:00",
+          "serial": "emulator-5572",
+          "physicalGateClosed": false,
+          "imageProvenance": {
+            "source": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-ps16k-37.0_r08.zip",
+            "catalog": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+            "expected": {
+              "bytes": 2081411720,
+              "checksumType": "sha1",
+              "checksum": "3e04f6c168a573640e63fdd8afd71a3c4d947f64"
+            },
+            "archiveSha256": "94936d2fb7d8bd1d0c2411510ca7e06ce93184695cad8a43fea036660ffb972d",
+            "archiveSha1": "3e04f6c168a573640e63fdd8afd71a3c4d947f64",
+            "allZipEntryCrcsVerified": true,
+            "sparseExtraction": true,
+            "systemImageLogicalBytes": 5498732544,
+            "systemImageAllocatedBytes": 4077264896
+          },
+          "command": [
+            "/home/otavio/Android/Sdk/emulator/emulator",
+            "-avd",
+            "OrionF4Api37",
+            "-sysdir",
+            "/tmp/orion-api37-image/x86_64",
+            "-datadir",
+            "/dev/shm/orion-api37-16k",
+            "-no-window",
+            "-no-audio",
+            "-no-snapshot",
+            "-wipe-data",
+            "-memory",
+            "2048",
+            "-cores",
+            "2",
+            "-gpu",
+            "swiftshader_indirect",
+            "-no-boot-anim",
+            "-port",
+            "5572"
+          ],
+          "emulatorPid": 3018533,
+          "failure": "Emulator exited before boot."
+        },
+        "failureType": "RuntimeError",
+        "failure": "The emulator did not boot the required target."
+      }
+    },
+    "actualNativeDebugLoads": {
+      "record": "../compatibility/native-load-scoped-20261107.json",
+      "fullNativeGateClosed": false,
+      "summary": {
+        "schemaVersion": 1,
+        "recordedAt": "2026-11-07T18:27:59.730161+00:00",
+        "scope": "Actual debug APK linker/JNI loading of every packaged library for the running process ABI",
+        "result": "SCOPED_DEBUG_LOADS_PASS_FULL_GATE_PENDING",
+        "fullNativeGateClosed": false,
+        "fullF4GateClosed": false,
+        "source": "app/src/androidTest/kotlin/network/orion/app/compatibility/OrionNativeLibraryLoadTest.kt",
+        "sourceSha256": "705f056af31683f97324d0dbfc5823ffd94767f70062ebed1177a535c6a65d99",
+        "proofs": [
+          {
+            "report": "native-load-s21-report.json",
+            "reportSha256": "0ba29ddac68d299a01f35aa550d83e6082a544eb226022f2113cd4e6fdccc059",
+            "environment": "PHYSICAL_DEVICE",
+            "scope": "Debug APK actual native linker/JNI load only; no release or physical16KiB gate promotion",
+            "result": "PASS",
+            "startedAt": "2026-11-07T18:22:06.601022+00:00",
+            "artifactSha256": {
+              "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+              "app-debug-androidTest.apk": "943430df0b8c8527a2c294fbcebe9d2733b4333f6f8483ecc8c04dd8bc7b6ac7"
+            },
+            "sourceSha256": "705f056af31683f97324d0dbfc5823ffd94767f70062ebed1177a535c6a65d99",
+            "buildFingerprint": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+            "apiLevel": "35",
+            "command": [
+              "shell",
+              "am",
+              "instrument",
+              "-w",
+              "-r",
+              "-e",
+              "class",
+              "network.orion.app.compatibility.OrionNativeLibraryLoadTest",
+              "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+            ],
+            "rawOutputSha256": "c50e843f4a644f9582e1b97c7a07a7c7326dc808f8a6c97ec6b33d07321e6491",
+            "loadedLibraries": [
+              "libandroidx.graphics.path.so",
+              "libdatastore_shared_counter.so"
+            ],
+            "processAbi": "arm64-v8a",
+            "pageSizeBytes": 4096
+          },
+          {
+            "report": "native-load-api37-16k-report.json",
+            "reportSha256": "9592c72ffb5bc51d9ccd8be13ec8c8b3735a23955c32e09d430ed58d2713fea6",
+            "environment": "ANDROID_EMULATOR",
+            "scope": "Debug APK actual native linker/JNI load only; no release or physical16KiB gate promotion",
+            "result": "PASS",
+            "startedAt": "2026-11-07T18:22:25.134070+00:00",
+            "artifactSha256": {
+              "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+              "app-debug-androidTest.apk": "943430df0b8c8527a2c294fbcebe9d2733b4333f6f8483ecc8c04dd8bc7b6ac7"
+            },
+            "sourceSha256": "705f056af31683f97324d0dbfc5823ffd94767f70062ebed1177a535c6a65d99",
+            "buildFingerprint": "google/sdk_gphone16k_x86_64/emu64xa16k:17/CE2A.260420.051.A3/16571990:userdebug/dev-keys",
+            "apiLevel": "37",
+            "command": [
+              "shell",
+              "am",
+              "instrument",
+              "-w",
+              "-r",
+              "-e",
+              "class",
+              "network.orion.app.compatibility.OrionNativeLibraryLoadTest",
+              "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+            ],
+            "rawOutputSha256": "9321579166ac082d967f099c81536cea18c47bf0fe1498446eeaf704d3aaead0",
+            "loadedLibraries": [
+              "libandroidx.graphics.path.so",
+              "libdatastore_shared_counter.so"
+            ],
+            "processAbi": "x86_64",
+            "pageSizeBytes": 16384
+          }
+        ],
+        "remaining": [
+          "Release/R8 native loading remains unqualified.",
+          "No physical arm64/16KiB target was available; x86_64 emulator results are compatibility evidence only."
+        ],
+        "aggregateLoadTest": "NOT_RUN in native-compatibility-gate.json refers to the full required load matrix; the executed scoped debug proofs above are preserved separately.",
+        "currentCandidateRegressionLoads": [
+          {
+            "environment": "PHYSICAL_DEVICE",
+            "processAbi": "arm64-v8a",
+            "pageSizeBytes": 4096,
+            "result": "PASS_AS_PART_OF_FULL319",
+            "report": "final-qualified-s21-report.json",
+            "reportSha256": "9c0d7ad52615f0d0579982135a12a7880eb5201d335d687caef7e1a8b20711f4",
+            "rawSha256": "a40d6ca5a4adcf03f6a7521674f9f8f2bd80502723d09f0d8f90239153b85a5e",
+            "artifactSha256": {
+              "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+              "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+            }
+          },
+          {
+            "environment": "ANDROID_EMULATOR",
+            "processAbi": "x86_64",
+            "pageSizeBytes": 4096,
+            "result": "PASS_AS_PART_OF_FULL319",
+            "report": "api37-atd-r3-compatibility-report.json",
+            "reportSha256": "5fb80a1175f2df585bf03504a855a0678d6078853b8b17b0e280518bb742c107",
+            "rawSha256": "b0f544e8b60e9e5540629c37a7695e1cfa0b41dceb316e42dbb241336c2f9a39",
+            "artifactSha256": {
+              "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+              "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+            }
+          }
+        ],
+        "artifactEquivalenceNote": "The newer main APK has a distinct container hash; all uncompressed entries equal the earlier scoped debug APK, with native data offsets still16KiB aligned. These supplementary loads qualify the current candidate on the recorded4KiB targets only."
+      }
+    },
+    "api31FullApplicationSuite": {
+      "rawReport": "api31-r4-compatibility-report.json",
+      "rawReportSha256": "81565dcd3ff4f8260898b18bfeb12041f542134cb10438624d3017deb0da8707",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "scope": "API compatibility; non-definitive for physical/OEM/hardware/performance behavior",
+        "result": "PASS",
+        "fullF4GateClosed": false,
+        "nativePhysicalGateClosed": false,
+        "startedAt": "2026-11-07T17:54:45.529040+00:00",
+        "artifactSha256": {
+          "app-debug-androidTest.apk": "74bd1be0ef53bfd3b78e8ea88daa4f190d0617237462fab4ad6d13e0851b67a9",
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d"
+        },
+        "properties": {
+          "ro.build.version.sdk": "31",
+          "ro.build.version.release": "12",
+          "ro.build.fingerprint": "Android/sdk_phone64_x86_64/emulator64_x86_64:12/SE1A.220826.006.A1/10064458:userdebug/test-keys",
+          "ro.product.cpu.abi": "x86_64"
+        },
+        "pageSizeBytes": 4096,
+        "command": [
+          "shell",
+          "am",
+          "instrument",
+          "--user",
+          "0",
+          "-w",
+          "-r",
+          "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+        ],
+        "rawOutputSha256": "186cce3b8f32088c6ae3a07e0d40c67f69b98cbeb7f75c100199ea24657f93db",
+        "durationSeconds": 216.0,
+        "passed": 318,
+        "skipped": 0,
+        "failed": 0,
+        "reportedTests": 318
+      }
+    },
+    "api37Cold16kFullAttempt": {
+      "rawReport": "api37-r3-compatibility-report.json",
+      "rawReportSha256": "71c9bc7e366088a8c2f95e9ac2df553174f430cb2d0258f31295ea981fe270ab",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "scope": "API compatibility; non-definitive for physical/OEM/hardware/performance behavior",
+        "result": "INCOMPLETE",
+        "fullF4GateClosed": false,
+        "nativePhysicalGateClosed": false,
+        "startedAt": "2026-11-07T18:02:04.764188+00:00",
+        "artifactSha256": {
+          "app-debug-androidTest.apk": "74bd1be0ef53bfd3b78e8ea88daa4f190d0617237462fab4ad6d13e0851b67a9",
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d"
+        },
+        "properties": {
+          "ro.build.version.sdk": "37",
+          "ro.build.version.release": "17",
+          "ro.build.fingerprint": "google/sdk_gphone16k_x86_64/emu64xa16k:17/CE2A.260420.051.A3/16571990:userdebug/dev-keys",
+          "ro.product.cpu.abi": "x86_64"
+        },
+        "pageSizeBytes": 16384,
+        "command": [
+          "shell",
+          "am",
+          "instrument",
+          "--user",
+          "0",
+          "-w",
+          "-r",
+          "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+        ],
+        "rawOutputSha256": "5183207d8065a4511c9828bc0b242aa385a8995295f4d529174f7223911f4b6a",
+        "durationSeconds": 45.242,
+        "passed": 0,
+        "skipped": 0,
+        "failed": 0,
+        "reportedTests": null,
+        "failureType": "RuntimeError",
+        "failure": "API-specific Android suite did not pass the complete expected manifest."
+      }
+    },
+    "api37Warm16kResourceSubset": {
+      "rawReport": "api37-resource-reproduction-report.json",
+      "rawReportSha256": "27654255bc787f100d6e70b382e91f159c8f8853870e00ed7461f5500c94c334",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "scope": "Targeted API37/16KiB runner reproduction; no physical claim",
+        "result": "PASS",
+        "startedAt": "2026-11-07T18:11:36.833726+00:00",
+        "command": [
+          "shell",
+          "am",
+          "instrument",
+          "--user",
+          "0",
+          "-w",
+          "-r",
+          "-e",
+          "class",
+          "network.orion.app.scheduling.OrionF4ResourceQualificationTest",
+          "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+        ],
+        "instrumentationExitCode": 0
+      },
+      "artifactLineage": "Same installation as api37-r3-compatibility-report.json (app8862/test74bd); no APK installation occurred between that attempt and this focused two-case run. Native-test APK9434 was installed later."
+    },
+    "api37AtdBeforeEspressoFix": {
+      "rawReport": "api37-atd-compatibility-report.json",
+      "rawReportSha256": "de5d5b03303d662e4d2006dddc4617d805b8610d6b38b78053b514c84cf5947c",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "scope": "API compatibility; non-definitive for physical/OEM/hardware/performance behavior",
+        "result": "INCOMPLETE",
+        "fullF4GateClosed": false,
+        "nativePhysicalGateClosed": false,
+        "startedAt": "2026-11-07T18:26:48.149779+00:00",
+        "artifactSha256": {
+          "app-debug-androidTest.apk": "943430df0b8c8527a2c294fbcebe9d2733b4333f6f8483ecc8c04dd8bc7b6ac7",
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d"
+        },
+        "properties": {
+          "ro.build.version.sdk": "37",
+          "ro.build.version.release": "17",
+          "ro.build.fingerprint": "Android/sdk_slim_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+          "ro.product.cpu.abi": "x86_64"
+        },
+        "pageSizeBytes": 4096,
+        "command": [
+          "shell",
+          "am",
+          "instrument",
+          "--user",
+          "0",
+          "-w",
+          "-r",
+          "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+        ],
+        "rawOutputSha256": "976e5193a2f37c39ce30f71c7ae8714f5594f1a337c8c945034edb59d62879b5",
+        "durationSeconds": 67.764,
+        "passed": 301,
+        "skipped": 0,
+        "failed": 18,
+        "reportedTests": null,
+        "failureType": "RuntimeError",
+        "failure": "API-specific Android suite did not pass the complete expected manifest."
+      },
+      "diagnosis": "All18 failed UI cases report NoSuchMethodException InputManager.getInstance from the transitive Espresso3.5.0 injector. Other301 cases passed, including actual native loading."
+    },
+    "interruptedOneHourCleanup": {
+      "rawReport": "interrupted-soak-reconnected-cleanup.json",
+      "rawReportSha256": "61ae6e9061c1c05591103948e00f7cf00a47f7339c0ef2b7be1c36ed64824110",
+      "summary": {
+        "scope": "Cleanup only; original interrupted qualification remains INCOMPLETE",
+        "result": "CLEANUP_COMPLETE",
+        "recordedAt": "2026-11-07T18:04:55.795483+00:00",
+        "reminders": [
+          {
+            "fixtureId": "a55e780c-e7c8-4165-b2d5-c966b422402f",
+            "verificationPassed": false,
+            "ownedMetadataRemoved": true
+          },
+          {
+            "fixtureId": "76ee0656-de21-4fa7-81eb-467ff1323025",
+            "verificationPassed": false,
+            "ownedMetadataRemoved": true
+          },
+          {
+            "fixtureId": "05408fc9-9ede-48f5-8a82-0b559de97d29",
+            "verificationPassed": false,
+            "ownedMetadataRemoved": true
+          },
+          {
+            "fixtureId": "84eaebf1-0d48-406e-8849-1d80f57d9ddd",
+            "verificationPassed": false,
+            "ownedMetadataRemoved": true
+          },
+          {
+            "fixtureId": "8618bf33-8e38-4095-a03e-06bba3959324",
+            "verificationPassed": false,
+            "ownedMetadataRemoved": true
+          },
+          {
+            "fixtureId": "383fa82c-4e07-40b1-90c0-31a3fa53c703",
+            "verificationPassed": false,
+            "ownedMetadataRemoved": true
+          }
+        ],
+        "stateFixtureCleanup": "PASS",
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS",
+        "screenTimeoutRestore": "PASS"
+      }
+    },
+    "tenMinuteBeforeSamplerOrderingFix": {
+      "rawReport": "soak-10m-r2/f4-soak-runtime-report.json",
+      "rawReportSha256": "e83284237de4bd0dae7d3a50beb5b6fdb77462fba8a525b26458d81e1e0cf956",
+      "summary": {
+        "result": "INCOMPLETE",
+        "fullF4GateClosed": false,
+        "fullSoakGateClosed": false,
+        "durationRequestedSeconds": 600,
+        "eligibleFor24HourReview": false,
+        "fullSoakProfileComplete": false,
+        "environment": "PHYSICAL_DEVICE",
+        "fixtureId": "a58fd81f-3bf8-4fa1-8500-60257a9d157a",
+        "checks": {
+          "controlledDeathAndAutonomousReturn": "PASS"
+        },
+        "instrumentationCheckpointsRestartMain": true,
+        "limitations": [
+          "Short runs cannot substitute for 24 hours.",
+          "Passive polling adds overhead; battery/idle qualification remains separate.",
+          "Wake-lock and exit-history snapshots require review; they are not exhaustive traces.",
+          "Boot/unlock, passive backlog histories and actual heartbeat execution need separate qualification evidence."
+        ],
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "74bd1be0ef53bfd3b78e8ea88daa4f190d0617237462fab4ad6d13e0851b67a9"
+        },
+        "sourceSha256": {
+          "verify-f4-soak-runtime.py": "ffc4decf80621f79f4ede88e52a36fcd993e07188de1d3bfbbfeec3aef9a48b9",
+          "record-soak-observation.py": "d0ad00af0b10fa43bc1d3f5d4021d0e98b3be85d228cd52e9e69ec8fc98bd18a",
+          "verify-f4-capability-runtime.py": "039701c737bd9bc51d050de4d89d071963022c69d26850a1df5db35dd4527133"
+        },
+        "manifestDelaysSeconds": [
+          120,
+          420
+        ],
+        "reminders": [
+          {
+            "fixtureId": "6e39cc50-1a30-4d13-b0cc-c57c9930aa83",
+            "delaySeconds": 120,
+            "binding": {
+              "fixtureId": "6e39cc50-1a30-4d13-b0cc-c57c9930aa83",
+              "reminderId": "066bb003-154b-3d56-81a7-1258186c4c81",
+              "actionId": "b1b0dae7-3075-410e-bbbd-0f6daec00384",
+              "generation": 1,
+              "requestCode": 1493653140,
+              "scheduledAtEpochMillis": 1794074978758,
+              "preparedAtEpochMillis": 1794074858758,
+              "previousForceStopDetectedAtEpochMillis": 1794054158737,
+              "preparedPid": 18590,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "a027e827f5d12d42190cb3ba3798896109f9f87d09b0e76dcffd98b64a4a3c16",
+              "confirmationFingerprint": "fcc6bc3bb2834f3345284a97e5b4437f28b5cbfe0ab723c0f1ff1ee9bf52af58"
+            }
+          },
+          {
+            "fixtureId": "eed9d2dc-3547-4d1b-a2a3-e6f0786ff574",
+            "delaySeconds": 420,
+            "binding": {
+              "fixtureId": "eed9d2dc-3547-4d1b-a2a3-e6f0786ff574",
+              "reminderId": "c88013f2-ed54-3f1f-be53-443859c4f516",
+              "actionId": "caf022f6-0988-47da-a9ab-2d35d7abfdf3",
+              "generation": 1,
+              "requestCode": 725468658,
+              "scheduledAtEpochMillis": 1794075281385,
+              "preparedAtEpochMillis": 1794074861385,
+              "previousForceStopDetectedAtEpochMillis": 1794054158737,
+              "preparedPid": 18636,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "786e5aeddfe765caed79d6ad9315a0923cf1f9b99dc95373f6599b9ee4937197",
+              "confirmationFingerprint": "3f4c96d1f4ed2b6dddc3a4a4772336d9a2cf94a2bc19221b2f6fe820d2c35531"
+            }
+          }
+        ],
+        "observedNotifications": {
+          "b1b0dae7-3075-410e-bbbd-0f6daec00384": {
+            "elapsedSeconds": 122.262,
+            "key": "0|network.orion|0|b1b0dae7-3075-410e-bbbd-0f6daec00384|10369",
+            "productionPidAtObservation": "18898"
+          },
+          "caf022f6-0988-47da-a9ab-2d35d7abfdf3": {
+            "elapsedSeconds": 420.379,
+            "key": "0|network.orion|0|caf022f6-0988-47da-a9ab-2d35d7abfdf3|10369",
+            "productionPidAtObservation": "20289"
+          }
+        },
+        "apiLevel": "35",
+        "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "controlledProcessDeath": {
+          "method": "RUN_AS_SIGKILL",
+          "beforePid": "18898",
+          "elapsedSeconds": 302.781
+        },
+        "elapsedWorkloadSeconds": 600.0,
+        "productionPidBeforeVerification": "20289",
+        "failureType": "RuntimeError",
+        "failure": "Passive observation contains gaps or identity mismatches.",
+        "stateFixtureCleanup": "PASS",
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS",
+        "screenTimeoutRestore": "PASS"
+      },
+      "review": "Both original reminders were independently observed; actual SIGKILL and new productionPID were observed. Raw endpoint reminder and task/timer verifications passed. The whole attempt remains INCOMPLETE: endpoint instrumentation raced the final passive PID/memory read, yielding one mainMemory gap."
+    },
+    "tenMinuteSamplerRegression": {
+      "redLog": "soak-final-sample-regression-red.txt",
+      "redLogSha256": "354e29be4f2f92003cf86970d1fc88bf0d2d5b5f92b63f740877b8fb2f610b7e",
+      "redResult": "1 failure out of7; endpoint verification ran before passive completion",
+      "greenLog": "final-host-contracts-after-sample-fix.txt",
+      "greenLogSha256": "621b212a6cc9129a1ae86bb22de2fe28ddcf079da6910ebe6cb52d48e2c16953",
+      "greenResult": "98 PASS; recorder now awaits final observer sample before instrumentation. No gap assertion was waived."
+    },
+    "tenMinuteAfterSamplerOrderingFix": {
+      "rawReport": "soak-10m-r3/f4-soak-runtime-report.json",
+      "rawReportSha256": "8a3b8f631bbebf344dc8687943f1d65733dacbb5a34d89ab545e27eca290d852",
+      "summary": {
+        "result": "SHORT_RUN_COMPLETE_REVIEW_REQUIRED",
+        "fullF4GateClosed": false,
+        "fullSoakGateClosed": false,
+        "durationRequestedSeconds": 600,
+        "eligibleFor24HourReview": false,
+        "fullSoakProfileComplete": false,
+        "environment": "PHYSICAL_DEVICE",
+        "fixtureId": "13ac3702-3ef4-4855-9fb0-6604d7f2732d",
+        "checks": {
+          "controlledDeathAndAutonomousReturn": "PASS",
+          "originalBindingsAndSingleCommittedDelivery": "PASS",
+          "taskTimerAndUncertaintyPreserved": "PASS",
+          "passiveObservation": "PASS"
+        },
+        "instrumentationCheckpointsRestartMain": true,
+        "limitations": [
+          "Short runs cannot substitute for 24 hours.",
+          "Passive polling adds overhead; battery/idle qualification remains separate.",
+          "Wake-lock and exit-history snapshots require review; they are not exhaustive traces.",
+          "Boot/unlock, passive backlog histories and actual heartbeat execution need separate qualification evidence."
+        ],
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "943430df0b8c8527a2c294fbcebe9d2733b4333f6f8483ecc8c04dd8bc7b6ac7"
+        },
+        "sourceSha256": {
+          "verify-f4-soak-runtime.py": "7391dfabb041a8fc10765856d217cd06b722e364844e95b82952d96c9dd3bd4c",
+          "record-soak-observation.py": "d0ad00af0b10fa43bc1d3f5d4021d0e98b3be85d228cd52e9e69ec8fc98bd18a",
+          "verify-f4-capability-runtime.py": "039701c737bd9bc51d050de4d89d071963022c69d26850a1df5db35dd4527133"
+        },
+        "manifestDelaysSeconds": [
+          120,
+          420
+        ],
+        "reminders": [
+          {
+            "fixtureId": "e62779b6-be51-47ee-b1fc-c2d6c428c1e8",
+            "delaySeconds": 120,
+            "binding": {
+              "fixtureId": "e62779b6-be51-47ee-b1fc-c2d6c428c1e8",
+              "reminderId": "f7f9477d-908d-3fbb-8ca4-3b53e52cce38",
+              "actionId": "6f579cc0-5d66-446a-8cda-0468ac10f04c",
+              "generation": 1,
+              "requestCode": 7191259,
+              "scheduledAtEpochMillis": 1794075938148,
+              "preparedAtEpochMillis": 1794075818148,
+              "previousForceStopDetectedAtEpochMillis": 1794054158737,
+              "preparedPid": 22619,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "09c19d4ad5fa9ceef1e1d2fbbf8a7d54196b070f1828109a93cd45182bb1e484",
+              "confirmationFingerprint": "2340e4c6fcf8e6c59717f184eb0c0f26cd5fe5b737e2584c1bd4145f7a7fe1b4"
+            }
+          },
+          {
+            "fixtureId": "ad4fae21-2813-4f0d-8556-5dd52dba9ddd",
+            "delaySeconds": 420,
+            "binding": {
+              "fixtureId": "ad4fae21-2813-4f0d-8556-5dd52dba9ddd",
+              "reminderId": "ae642997-c98f-3015-afe8-d673f84eba6b",
+              "actionId": "02c6b12d-206e-4db6-9def-b0925343efc1",
+              "generation": 1,
+              "requestCode": 1084730856,
+              "scheduledAtEpochMillis": 1794076240915,
+              "preparedAtEpochMillis": 1794075820915,
+              "previousForceStopDetectedAtEpochMillis": 1794054158737,
+              "preparedPid": 22671,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "81085287b037ec1ba8704d56c88d3a84f29caa79c6ce6355740c950c397f5c75",
+              "confirmationFingerprint": "a894a2d80b0577d2ba25ad4ce0c0a1930a6d9dc1630ad61163271c1cc3f8c1cc"
+            }
+          }
+        ],
+        "observedNotifications": {
+          "6f579cc0-5d66-446a-8cda-0468ac10f04c": {
+            "elapsedSeconds": 123.087,
+            "key": "0|network.orion|0|6f579cc0-5d66-446a-8cda-0468ac10f04c|10369",
+            "productionPidAtObservation": "22989"
+          },
+          "02c6b12d-206e-4db6-9def-b0925343efc1": {
+            "elapsedSeconds": 429.408,
+            "key": "0|network.orion|0|02c6b12d-206e-4db6-9def-b0925343efc1|10369",
+            "productionPidAtObservation": "24147"
+          }
+        },
+        "apiLevel": "35",
+        "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "controlledProcessDeath": {
+          "method": "RUN_AS_SIGKILL",
+          "beforePid": "22989",
+          "elapsedSeconds": 301.215
+        },
+        "elapsedWorkloadSeconds": 600.0,
+        "productionPidBeforeVerification": "24147",
+        "real24HourDurationObserved": false,
+        "stateFixtureCleanup": "PASS",
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS",
+        "screenTimeoutRestore": "PASS"
+      }
+    },
+    "tenMinuteFinalSessionRestore": {
+      "rawReport": "soak-10m-r3-outer-setting-restore.json",
+      "rawReportSha256": "f286c1cbf1ef31125b1bdb12f5da2140866299c04233926ad2fb966e803c06c5",
+      "summary": {
+        "screenTimeoutOriginalSession": "60000",
+        "observed": "60000",
+        "restored": true
+      }
+    },
+    "api37AtdAfterEspressoFix": {
+      "rawReport": "api37-atd-r2-compatibility-report.json",
+      "rawReportSha256": "327698503aa74cc145c3e6e7e7c46470d911ad0d28c38d38ecb7b16d5449ca9e",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "scope": "API compatibility; non-definitive for physical/OEM/hardware/performance behavior",
+        "result": "INCOMPLETE",
+        "fullF4GateClosed": false,
+        "nativePhysicalGateClosed": false,
+        "startedAt": "2026-11-07T18:49:35.333057+00:00",
+        "artifactSha256": {
+          "app-debug-androidTest.apk": "59aabd25c41e192e564193e2d9a14760e0d09e3f85443781fb959bf31b1d69da",
+          "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a"
+        },
+        "emulatorBoot": {
+          "environment": "ANDROID_EMULATOR",
+          "scope": "API37 AOSP ATD restart for the test-only Espresso fix; previous failure retained",
+          "imageProvenance": {
+            "source": "https://dl.google.com/android/repository/sys-img/aosp_atd/x86_64-37.0_r01.zip",
+            "catalog": "https://dl.google.com/android/repository/sys-img/aosp_atd/sys-img2-3.xml",
+            "expected": {
+              "bytes": 798992458,
+              "checksumType": "sha1",
+              "checksum": "db0dcd1ad656745d60f54b6cc5d1f95a638a64f1"
+            },
+            "archiveSha256": "a08af18df1f010ff214e9aac63800a5184c1a7daea0615d12a282f16c00408e7",
+            "archiveSha1": "db0dcd1ad656745d60f54b6cc5d1f95a638a64f1",
+            "allZipEntryCrcsVerified": true,
+            "sparseExtraction": true,
+            "systemImageLogicalBytes": 2528116736,
+            "systemImageAllocatedBytes": 1637875712
+          },
+          "command": [
+            "/home/otavio/Projects/O.R.I.O.N-tools/android-emulator-37.2.13/emulator/emulator",
+            "-avd",
+            "OrionF4Api37Atd",
+            "-sysdir",
+            "/tmp/orion-api37-atd-image/x86_64",
+            "-datadir",
+            "/dev/shm/orion-api37-atd-data",
+            "-data",
+            "/dev/shm/orion-api37-atd-data/userdata-small.img",
+            "-partition-size",
+            "2048",
+            "-no-window",
+            "-no-audio",
+            "-no-snapshot",
+            "-memory",
+            "2048",
+            "-cores",
+            "2",
+            "-gpu",
+            "swiftshader",
+            "-no-boot-anim",
+            "-port",
+            "5572"
+          ],
+          "properties": {
+            "ro.build.version.sdk": "37",
+            "ro.build.fingerprint": "Android/sdk_slim_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+            "ro.kernel.qemu": "1",
+            "ro.product.cpu.abi": "x86_64"
+          },
+          "pageSizeBytes": 4096,
+          "result": "BOOTED_COMPATIBILITY_TARGET",
+          "startedAt": "2026-11-07T18:41:53.049731+00:00",
+          "emulatorPid": 3089680
+        },
+        "properties": {
+          "ro.build.version.sdk": "37",
+          "ro.build.version.release": "17",
+          "ro.build.fingerprint": "Android/sdk_slim_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+          "ro.product.cpu.abi": "x86_64"
+        },
+        "pageSizeBytes": 4096,
+        "command": [
+          "shell",
+          "am",
+          "instrument",
+          "--user",
+          "0",
+          "-w",
+          "-r",
+          "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+        ],
+        "rawOutputSha256": "cb82f6d2ec20cfb8b64c16d00c732d4a9d90f7fa10287c951763fc67187f127e",
+        "durationSeconds": 211.275,
+        "passed": 317,
+        "skipped": 0,
+        "failed": 2,
+        "reportedTests": null,
+        "failureType": "RuntimeError",
+        "failure": "API-specific Android suite did not pass the complete expected manifest."
+      }
+    },
+    "latestPhysicalFullSuite": {
+      "rawReport": "final-qualified-s21-report.json",
+      "rawReportSha256": "9c0d7ad52615f0d0579982135a12a7880eb5201d335d687caef7e1a8b20711f4",
+      "summary": {
+        "name": "final-qualified-s21",
+        "environment": "PHYSICAL_DEVICE",
+        "startedAt": "2026-11-07T19:12:54.103256+00:00",
+        "command": [
+          "shell",
+          "am",
+          "instrument",
+          "--user",
+          "0",
+          "-w",
+          "-r",
+          "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+        ],
+        "result": "PASS",
+        "processExitCode": 0,
+        "reportedTests": 319,
+        "passed": 319,
+        "skipped": 0,
+        "failed": 0,
+        "durationSeconds": 117.26,
+        "rawOutputSha256": "a40d6ca5a4adcf03f6a7521674f9f8f2bd80502723d09f0d8f90239153b85a5e"
+      }
+    },
+    "nativeCanonicalBuild": {
+      "result": "PASS",
+      "environment": "CONTAINER",
+      "tasks": 4108,
+      "log": "native-load-canonical-check.log",
+      "logSha256": "90e421337fb9c43e20efd3fab1972eb636d935e3abb8b6b8510c5cfda1055a19"
+    },
+    "espressoCanonicalBuild": {
+      "result": "PASS",
+      "log": "espresso-api37-canonical-check.log",
+      "logSha256": "4034265d9a955a1b152144f7eeb2a554a9af144aa1adbcfd409c7bdcacf55855"
+    },
+    "latestPhysicalFullSuiteContext": {
+      "rawReport": "final-qualified-s21-context.json",
+      "rawReportSha256": "920957865cac4054abe9be1877f0e31e4baf4120306ef7780100770a3007f59b",
+      "summary": {
+        "environment": "PHYSICAL_DEVICE",
+        "scope": "Full319 manifest after test-only Espresso3.7 fix; production payload unchanged (separately recorded container hashes)",
+        "artifactSha256": {
+          "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+          "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+        },
+        "result": "PASS",
+        "installedMainBefore": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+        "fingerprint": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "pageSizeBytes": 4096,
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS",
+        "screenTimeoutRestore": "PASS"
+      }
+    },
+    "api37FinalApplicationSuite": {
+      "rawReport": "api37-atd-r3-compatibility-report.json",
+      "rawReportSha256": "5fb80a1175f2df585bf03504a855a0678d6078853b8b17b0e280518bb742c107",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "scope": "API compatibility; non-definitive for physical/OEM/hardware/performance behavior",
+        "result": "PASS",
+        "fullF4GateClosed": false,
+        "nativePhysicalGateClosed": false,
+        "startedAt": "2026-11-07T19:12:51.407688+00:00",
+        "artifactSha256": {
+          "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67",
+          "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a"
+        },
+        "properties": {
+          "ro.build.version.sdk": "37",
+          "ro.build.version.release": "17",
+          "ro.build.fingerprint": "Android/sdk_slim_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+          "ro.product.cpu.abi": "x86_64"
+        },
+        "pageSizeBytes": 4096,
+        "command": [
+          "shell",
+          "am",
+          "instrument",
+          "--user",
+          "0",
+          "-w",
+          "-r",
+          "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+        ],
+        "rawOutputSha256": "b0f544e8b60e9e5540629c37a7695e1cfa0b41dceb316e42dbb241336c2f9a39",
+        "durationSeconds": 143.772,
+        "passed": 319,
+        "skipped": 0,
+        "failed": 0,
+        "reportedTests": 319
+      }
+    },
+    "focusedUiRegressions": {
+      "oldUnchangedRaw": "api37-two-ui-unchanged.txt",
+      "oldRawSha256": "40e2136ec5776a04422e90664e0bd3da4d15c2602679884fff85b9b288befc25",
+      "oldResult": "2 FAIL after lifecycle recreation; exact pending selector searched before asynchronous list reload settled",
+      "finalRaw": "api37-final-two-ui.txt",
+      "finalRawSha256": "04d53a5d2996742a4d97d8dbbcaef9b572982fe6d974d056f2646bc68e422020",
+      "finalResult": "2 PASS; bounded10s search of the same exact selector before a single click; other assertion errors are never retried."
+    },
+    "finalCanonicalBuild": {
+      "result": "PASS",
+      "environment": "CONTAINER",
+      "command": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2",
+      "tasks": 4108,
+      "executed": 59,
+      "log": "final-qualification-canonical-check.log",
+      "logSha256": "0f1a11e770b39ad480352c3857f7e2af0f35af6f0bcf46f69eb65897905ea2f0"
+    },
+    "api37AtdSystemMatrixPreflight": {
+      "rawReport": "api37-atd-r3-force_stop/scheduled-reminder-runtime-report.json",
+      "rawReportSha256": "d522059cf832bd68b78b305975e4bad7dc249385d07375b035e425c09ee772ba",
+      "summary": {
+        "result": "FAIL",
+        "environment": "ANDROID_EMULATOR",
+        "scenario": "force_stop",
+        "fixtureId": "50505e01-e7d3-44a3-bb66-7dddb60acd63",
+        "dedicatedTarget": true,
+        "checks": {},
+        "commit": "bab4c1afc217c651cac7bbb4a2b44ae67ac05dd3",
+        "workingTreeDirty": true,
+        "artifactSha256": {
+          "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+          "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+        },
+        "androidRuntimeEvidence": "NON_DEFINITIVE",
+        "apiLevel": "37",
+        "androidBuild": "Android/sdk_slim_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+        "abi": "x86_64",
+        "bootCountBefore": 2,
+        "failureType": "RuntimeError",
+        "failure": "Effective background restriction level is unavailable."
+      },
+      "scope": "Failed before fixture preparation/system mutation because the effective background restriction shell observation returned unknown; no lifecycle success inferred."
+    },
+    "api37OrdinarySystemMatrix": {
+      "result": "SIX_SCOPED_SYSTEM_CASES_PASS",
+      "environment": "ANDROID_EMULATOR",
+      "fullCompatibilityProfileClosed": false,
+      "cases": {
+        "force_stop": {
+          "rawReport": "api37-default-force_stop/scheduled-reminder-runtime-report.json",
+          "rawReportSha256": "b61c044c07fd518f00c6b8d868e1a2aa9194d4f97b2094e686e5d4e0aa270bf8",
+          "summary": {
+            "result": "PASS",
+            "environment": "ANDROID_EMULATOR",
+            "scenario": "force_stop",
+            "fixtureId": "23a9879a-e087-481a-8166-27e44dc60e7c",
+            "dedicatedTarget": true,
+            "checks": {
+              "registered_before_lifecycle_boundary": "PASS",
+              "package_stopped_boundary_observed": "PASS",
+              "explicit_allowed_return": "PASS",
+              "production_notification_before_verification": "PASS",
+              "single_committed_delivery_private_notification_and_cleanup": "PASS",
+              "was_force_stopped_persisted_primary_signal": "PASS"
+            },
+            "commit": "bab4c1afc217c651cac7bbb4a2b44ae67ac05dd3",
+            "workingTreeDirty": true,
+            "artifactSha256": {
+              "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+              "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+            },
+            "sourceSha256": {
+              "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+              "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+            },
+            "androidRuntimeEvidence": "NON_DEFINITIVE",
+            "apiLevel": "37",
+            "androidBuild": "Android/sdk_phone64_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+            "abi": "x86_64",
+            "bootCountBefore": 1,
+            "backgroundRestrictionLevelAtStart": "exempted",
+            "testAccess": {
+              "notificationPreviouslyGranted": false,
+              "exactOriginalMode": "default"
+            },
+            "fixture": {
+              "fixtureId": "23a9879a-e087-481a-8166-27e44dc60e7c",
+              "reminderId": "e2893907-2fa6-3477-9f02-d4781ee069c9",
+              "actionId": "51fea515-8b44-4236-9ec6-a3aa79f93ae4",
+              "generation": 1,
+              "requestCode": 1586093581,
+              "scheduledAtEpochMillis": 1794079967527,
+              "preparedAtEpochMillis": 1794079907527,
+              "previousForceStopDetectedAtEpochMillis": null,
+              "preparedPid": 2845,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "c6fa841c59bdd77647d69af952615dd149d9787c4c341ce73f40a846a9e16a38",
+              "confirmationFingerprint": "ea608a30f0d2b2596a013398174eafd226bf585fe67958d2e6eaea9350ee7ccc"
+            },
+            "productionPidBeforeVerification": "2899",
+            "notificationObservedBeforeVerification": true,
+            "matchingNotificationKeys": [
+              "0|network.orion|0|51fea515-8b44-4236-9ec6-a3aa79f93ae4|10156"
+            ],
+            "lastForceStopDetectedAtMillis": 1794079917338,
+            "exactAccessRestore": "PASS",
+            "notificationPermissionRestore": "PASS"
+          }
+        },
+        "reboot": {
+          "rawReport": "api37-default-reboot/scheduled-reminder-runtime-report.json",
+          "rawReportSha256": "1746317f2aa03ea656ac3f85802ab51a2c11477625646f9e14daaa8a645efdbb",
+          "summary": {
+            "result": "PASS",
+            "environment": "ANDROID_EMULATOR",
+            "scenario": "reboot",
+            "fixtureId": "f6d998cb-bd7b-4490-967a-9e8989e6753a",
+            "dedicatedTarget": true,
+            "checks": {
+              "registered_before_lifecycle_boundary": "PASS",
+              "production_notification_before_verification": "PASS",
+              "automatic_main_start_after_reboot": "PASS",
+              "single_committed_delivery_private_notification_and_cleanup": "PASS"
+            },
+            "commit": "bab4c1afc217c651cac7bbb4a2b44ae67ac05dd3",
+            "workingTreeDirty": true,
+            "artifactSha256": {
+              "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+              "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+            },
+            "sourceSha256": {
+              "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+              "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+            },
+            "androidRuntimeEvidence": "NON_DEFINITIVE",
+            "apiLevel": "37",
+            "androidBuild": "Android/sdk_phone64_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+            "abi": "x86_64",
+            "bootCountBefore": 1,
+            "backgroundRestrictionLevelAtStart": "exempted",
+            "testAccess": {
+              "notificationPreviouslyGranted": false,
+              "exactOriginalMode": "default"
+            },
+            "fixture": {
+              "fixtureId": "f6d998cb-bd7b-4490-967a-9e8989e6753a",
+              "reminderId": "4708e04c-93b6-30b5-ba27-e7cf5545d959",
+              "actionId": "7cd4d4cc-020b-48f0-9491-04892299e9c4",
+              "generation": 1,
+              "requestCode": 1843236242,
+              "scheduledAtEpochMillis": 1794080048454,
+              "preparedAtEpochMillis": 1794079988454,
+              "previousForceStopDetectedAtEpochMillis": 1794079917338,
+              "preparedPid": 3808,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "1825457776a9dc688bfa73ed57892ed622b79a7e63fd8a8b41452a7eac7303d0",
+              "confirmationFingerprint": "4e132e6e1bdae1b79e8673f8c3abdef900ced408a06d0c3fd0de96a53655d08d"
+            },
+            "rebootRequestAcknowledgement": "RETURNED",
+            "bootCountAfter": 2,
+            "productionPidBeforeVerification": "2405",
+            "notificationObservedBeforeVerification": true,
+            "matchingNotificationKeys": [
+              "0|network.orion|0|7cd4d4cc-020b-48f0-9491-04892299e9c4|10156"
+            ],
+            "exactAccessRestore": "PASS",
+            "notificationPermissionRestore": "PASS"
+          }
+        },
+        "background_restriction": {
+          "rawReport": "api37-default-r2-background_restriction/scheduled-reminder-runtime-report.json",
+          "rawReportSha256": "69c8c4f837507b226420d1a4c9b709ba48d759e75c34784237caec39e36acd97",
+          "summary": {
+            "result": "PASS",
+            "environment": "ANDROID_EMULATOR",
+            "scenario": "background_restriction",
+            "fixtureId": "b0624785-6d88-4318-93e2-73df0f4d6fb6",
+            "dedicatedTarget": true,
+            "checks": {
+              "registered_before_lifecycle_boundary": "PASS",
+              "background_restricted_and_explicit_foreground_return": "PASS",
+              "production_notification_before_verification": "PASS",
+              "single_committed_delivery_private_notification_and_cleanup": "PASS",
+              "background_restriction_observable_degradation": "PASS"
+            },
+            "commit": "bab4c1afc217c651cac7bbb4a2b44ae67ac05dd3",
+            "workingTreeDirty": true,
+            "artifactSha256": {
+              "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+              "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+            },
+            "sourceSha256": {
+              "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+              "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+            },
+            "androidRuntimeEvidence": "NON_DEFINITIVE",
+            "apiLevel": "37",
+            "androidBuild": "Android/sdk_phone64_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+            "abi": "x86_64",
+            "bootCountBefore": 1,
+            "backgroundRestrictionLevelAtStart": "exempted",
+            "testAccess": {
+              "notificationPreviouslyGranted": false,
+              "exactOriginalMode": "default"
+            },
+            "fixture": {
+              "fixtureId": "b0624785-6d88-4318-93e2-73df0f4d6fb6",
+              "reminderId": "58d205ee-17b8-321a-88e8-44c33d76ea58",
+              "actionId": "328df2a6-3e04-49aa-8234-2f1911d4cfe2",
+              "generation": 1,
+              "requestCode": 1387213013,
+              "scheduledAtEpochMillis": 1794080620510,
+              "preparedAtEpochMillis": 1794080560510,
+              "previousForceStopDetectedAtEpochMillis": null,
+              "preparedPid": 2482,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "08bfd1ef8c9372ed2fcb49526efd3589ff50dd48e1b4698a904a7f08c497c1df",
+              "confirmationFingerprint": "1e6c65dfe211648bba93acead0763f5458802e001e511291cd557b88f803c494"
+            },
+            "backgroundOriginalLevel": "exempted",
+            "backgroundRestrictionCapability": "OBSERVED",
+            "deliveryContext": "EXPLICIT_ALLOWED_FOREGROUND_RETURN_WHILE_BACKGROUND_RESTRICTED",
+            "productionPidBeforeVerification": "2718",
+            "notificationObservedBeforeVerification": true,
+            "matchingNotificationKeys": [
+              "0|network.orion|0|328df2a6-3e04-49aa-8234-2f1911d4cfe2|10156"
+            ],
+            "backgroundContinuousOperationQualified": false,
+            "backgroundRestrictionRestore": "PASS",
+            "backgroundRestrictionLevelRestore": "PASS",
+            "exactAccessRestore": "PASS",
+            "notificationPermissionRestore": "PASS"
+          }
+        },
+        "timezone_change": {
+          "rawReport": "api37-default-r2-timezone_change/scheduled-reminder-runtime-report.json",
+          "rawReportSha256": "331b933bc0b6c5af446767ee5272c72030e44eb66b1180eb881fcaa36cde2019",
+          "summary": {
+            "result": "PASS",
+            "environment": "ANDROID_EMULATOR",
+            "scenario": "timezone_change",
+            "fixtureId": "c2857edd-d916-4587-a8e7-a17be6ca60b6",
+            "dedicatedTarget": true,
+            "checks": {
+              "registered_before_lifecycle_boundary": "PASS",
+              "alarm_service_timezone_changed": "PASS",
+              "production_notification_before_verification": "PASS",
+              "single_committed_delivery_private_notification_and_cleanup": "PASS",
+              "approved_instant_preserved_after_system_time_change": "PASS"
+            },
+            "commit": "bab4c1afc217c651cac7bbb4a2b44ae67ac05dd3",
+            "workingTreeDirty": true,
+            "artifactSha256": {
+              "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+              "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+            },
+            "sourceSha256": {
+              "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+              "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+            },
+            "androidRuntimeEvidence": "NON_DEFINITIVE",
+            "apiLevel": "37",
+            "androidBuild": "Android/sdk_phone64_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+            "abi": "x86_64",
+            "bootCountBefore": 1,
+            "backgroundRestrictionLevelAtStart": "exempted",
+            "testAccess": {
+              "notificationPreviouslyGranted": false,
+              "exactOriginalMode": "default"
+            },
+            "fixture": {
+              "fixtureId": "c2857edd-d916-4587-a8e7-a17be6ca60b6",
+              "reminderId": "fc942f57-6724-3733-a042-9699fe757594",
+              "actionId": "eb8c812f-63ca-4ca7-9284-aebb8ffcf3f4",
+              "generation": 1,
+              "requestCode": 281255637,
+              "scheduledAtEpochMillis": 1794080699873,
+              "preparedAtEpochMillis": 1794080639873,
+              "previousForceStopDetectedAtEpochMillis": null,
+              "preparedPid": 3702,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "55289e43f1b340f170e3d792b14a04cf3e5e1cf1ed49003450c6868dbf74c07b",
+              "confirmationFingerprint": "fbba59a5e9b9f62c3bfcdede228cd827e32440d9b32fbbd7916c552efbdf5c5e"
+            },
+            "timezoneMutation": {
+              "before": "America/Sao_Paulo",
+              "target": "Asia/Tokyo",
+              "observed": "Asia/Tokyo"
+            },
+            "timezoneChangeCapability": "OBSERVED",
+            "productionPidBeforeVerification": "3754",
+            "notificationObservedBeforeVerification": true,
+            "matchingNotificationKeys": [
+              "0|network.orion|0|eb8c812f-63ca-4ca7-9284-aebb8ffcf3f4|10156"
+            ],
+            "timezoneRestore": "PASS",
+            "exactAccessRestore": "PASS",
+            "notificationPermissionRestore": "PASS"
+          }
+        },
+        "time_change": {
+          "rawReport": "api37-default-r2-time_change/scheduled-reminder-runtime-report.json",
+          "rawReportSha256": "6f8619b99c974fe2758d1918dc8af468f9a62bd4316d3e88ea0216ac84e6b026",
+          "summary": {
+            "result": "PASS",
+            "environment": "ANDROID_EMULATOR",
+            "scenario": "time_change",
+            "fixtureId": "52b58bf3-12c0-4831-9c4d-edd4dc4fb4dc",
+            "dedicatedTarget": true,
+            "checks": {
+              "registered_before_lifecycle_boundary": "PASS",
+              "alarm_service_clock_advanced": "PASS",
+              "production_notification_before_verification": "PASS",
+              "single_committed_delivery_private_notification_and_cleanup": "PASS",
+              "approved_instant_preserved_after_system_time_change": "PASS"
+            },
+            "commit": "bab4c1afc217c651cac7bbb4a2b44ae67ac05dd3",
+            "workingTreeDirty": true,
+            "artifactSha256": {
+              "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+              "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+            },
+            "sourceSha256": {
+              "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+              "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+            },
+            "androidRuntimeEvidence": "NON_DEFINITIVE",
+            "apiLevel": "37",
+            "androidBuild": "Android/sdk_phone64_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+            "abi": "x86_64",
+            "bootCountBefore": 1,
+            "backgroundRestrictionLevelAtStart": "exempted",
+            "testAccess": {
+              "notificationPreviouslyGranted": false,
+              "exactOriginalMode": "default"
+            },
+            "fixture": {
+              "fixtureId": "52b58bf3-12c0-4831-9c4d-edd4dc4fb4dc",
+              "reminderId": "8d9e8c4f-8a65-31c3-9e3e-0adfcbd4222c",
+              "actionId": "cd7accc3-e4b9-40c4-be8a-660ef10ca8d5",
+              "generation": 1,
+              "requestCode": 732416944,
+              "scheduledAtEpochMillis": 1794080770957,
+              "preparedAtEpochMillis": 1794080710957,
+              "previousForceStopDetectedAtEpochMillis": null,
+              "preparedPid": 4828,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "a314c3ed8b07a601fd602c5e5409a4d9f22aab9b2f68c0dab6df461eaa1c3b95",
+              "confirmationFingerprint": "d594655c40e69de37be22d66f46ea35f62f3ec353573be68b22b6c443417ad0a"
+            },
+            "wallMutation": {
+              "beforeMillis": 1794080711000,
+              "targetMillis": 1794080831000,
+              "clockSource": "DEVICE_DATE_SECONDS_PLUS_HOST_MONOTONIC_ELAPSED",
+              "observedMillis": 1794080831000,
+              "restoreTargetMillis": 1794080718250,
+              "restoredObservedMillis": 1794080718000
+            },
+            "timeChangeCapability": "OBSERVED",
+            "productionPidBeforeVerification": "4870",
+            "notificationObservedBeforeVerification": true,
+            "matchingNotificationKeys": [
+              "0|network.orion|0|cd7accc3-e4b9-40c4-be8a-660ef10ca8d5|10156"
+            ],
+            "wallClockRestore": "PASS",
+            "exactAccessRestore": "PASS",
+            "notificationPermissionRestore": "PASS"
+          }
+        },
+        "doze": {
+          "rawReport": "api37-default-r2-doze/scheduled-reminder-runtime-report.json",
+          "rawReportSha256": "61d4330b111e524f894ef33156ca769fbe793c0228ef630b8397a4d556090a93",
+          "summary": {
+            "result": "PASS",
+            "environment": "ANDROID_EMULATOR",
+            "scenario": "doze",
+            "fixtureId": "30017e08-6871-4fc3-b755-502c3180c2e4",
+            "dedicatedTarget": true,
+            "checks": {
+              "registered_before_lifecycle_boundary": "PASS",
+              "deep_idle_observed_before_wait": "PASS",
+              "original_binding_registered_while_deep_idle": "PASS",
+              "production_notification_before_verification": "PASS",
+              "real_exact_notification_observed_in_deep_idle": "PASS",
+              "single_committed_delivery_private_notification_and_cleanup": "PASS"
+            },
+            "commit": "bab4c1afc217c651cac7bbb4a2b44ae67ac05dd3",
+            "workingTreeDirty": true,
+            "artifactSha256": {
+              "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+              "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+            },
+            "sourceSha256": {
+              "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+              "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+            },
+            "androidRuntimeEvidence": "NON_DEFINITIVE",
+            "apiLevel": "37",
+            "androidBuild": "Android/sdk_phone64_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+            "abi": "x86_64",
+            "bootCountBefore": 1,
+            "backgroundRestrictionLevelAtStart": "exempted",
+            "testAccess": {
+              "notificationPreviouslyGranted": false,
+              "exactOriginalMode": "default"
+            },
+            "fixture": {
+              "fixtureId": "30017e08-6871-4fc3-b755-502c3180c2e4",
+              "reminderId": "5f1a1bbd-c21a-3eb7-94a5-2718a8fb88a0",
+              "actionId": "020da622-6180-45c0-9f24-e1ae71b51d12",
+              "generation": 1,
+              "requestCode": 400047451,
+              "scheduledAtEpochMillis": 1794080782990,
+              "preparedAtEpochMillis": 1794080722990,
+              "previousForceStopDetectedAtEpochMillis": null,
+              "preparedPid": 5146,
+              "precision": "EXACT",
+              "normalizedPayloadHash": "a24752b12d7d58b2dbb604bdc91c6b579a3d00430b4c90db558a30487f2905eb",
+              "confirmationFingerprint": "f335fb0d9d05d5dd47af092dc5ea9ffc1a4eb04efafc0cf12e6d6df4f247c93f",
+              "dozeAlarmTemporarilyRemoved": true
+            },
+            "deepIdleTestConfiguration": {
+              "originalEnabled": false,
+              "temporaryEnableRequired": true,
+              "screenOn": false,
+              "charging": false
+            },
+            "deepIdleEntryAttempts": [
+              {
+                "state": "IDLE",
+                "response": "Now forced in to deep idle mode"
+              }
+            ],
+            "deepIdleBeforeNotification": "IDLE",
+            "dozeCapability": "OBSERVED",
+            "productionPidBeforeVerification": "5625",
+            "notificationObservedBeforeVerification": true,
+            "matchingNotificationKeys": [
+              "0|network.orion|0|020da622-6180-45c0-9f24-e1ae71b51d12|10156"
+            ],
+            "deepIdleAtNotificationObservation": "IDLE",
+            "dozeAndBatteryRestore": "PASS",
+            "deepIdleEnabledRestore": "PASS",
+            "exactAccessRestore": "PASS",
+            "notificationPermissionRestore": "PASS"
+          }
+        }
+      },
+      "scope": "Independent cases on two fresh ordinary official API37/4KiB instances. First profile proves ForceStop/explicit return and actual reboot/autonomous delivery. After reboot the shell policy cache returned unknown; its next-case preflight failed before mutation. Four remaining cases ran on a fresh instance with an observed original policy. No policy was normalized to manufacture a baseline; this is not a continuous six-case soak."
+    },
+    "api37DefaultInitialInstallWatchdog": {
+      "rawReport": "api37-default-emulator-start-report.json",
+      "rawReportSha256": "68f20e88b2f1552f4d443dc05f2b775383549499c503469041d557f333e466b7",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "scope": "Official AOSP Default API37/x86_64/4KiB API compatibility; no hardware/OEM/performance claim",
+        "result": "INCOMPLETE",
+        "startedAt": "2026-11-07T19:25:49.625081+00:00",
+        "imageProvenance": {
+          "source": "https://dl.google.com/android/repository/sys-img/android/x86_64-37.0_r06.zip",
+          "catalog": "https://dl.google.com/android/repository/sys-img/android/sys-img2-3.xml",
+          "expected": {
+            "bytes": 907680404,
+            "checksumType": "sha1",
+            "checksum": "8842a57a6b146423debb46c1496a9c0986aa1b9e"
+          },
+          "archiveSha256": "a80ad9f0f8b487df146df1c1412ee4744ba95dde471b601843b8039616be28d2",
+          "archiveSha1": "8842a57a6b146423debb46c1496a9c0986aa1b9e",
+          "allZipEntryCrcsVerified": true,
+          "sparseExtraction": true,
+          "systemImageLogicalBytes": 2528116736,
+          "systemImageAllocatedBytes": 1903165440
+        },
+        "command": [
+          "/home/otavio/Projects/O.R.I.O.N-tools/android-emulator-37.2.13/emulator/emulator",
+          "-avd",
+          "OrionF4Api37Default",
+          "-sysdir",
+          "/tmp/orion-api37-default-image/x86_64",
+          "-datadir",
+          "/dev/shm/orion-api37-default-data",
+          "-data",
+          "/dev/shm/orion-api37-default-data/userdata-small.img",
+          "-partition-size",
+          "2048",
+          "-no-window",
+          "-no-audio",
+          "-no-snapshot",
+          "-memory",
+          "2048",
+          "-cores",
+          "2",
+          "-gpu",
+          "swiftshader",
+          "-no-boot-anim",
+          "-port",
+          "5572"
+        ],
+        "emulatorPid": 3146594,
+        "failure": "Command '['/home/otavio/Android/Sdk/platform-tools/adb', '-s', 'emulator-5572', 'install', '-r', '/tmp/orion-f4-closure/final-qualification-artifacts/app-debug.apk']' timed out after 15 seconds"
+      },
+      "scope": "Booted target; first short15s installation acknowledgement timed out. Later preparation with bounded120s install completed; this initial report is not a passing runtime proof."
+    },
+    "api37FreshInstanceBaseline": {
+      "rawReport": "api37-default-r2-emulator-start-report.json",
+      "rawReportSha256": "b5c62a8aee536e4578519fe33a1a9ed68cd1d73f4f677490c8ebafacadf5f446",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "scope": "Official AOSP default API37/x86_64/4KiB API compatibility; no hardware/OEM/performance claim",
+        "result": "BOOTED_COMPATIBILITY_TARGET",
+        "startedAt": "2026-11-07T19:40:40.322311+00:00",
+        "imageProvenance": {
+          "source": "https://dl.google.com/android/repository/sys-img/android/x86_64-37.0_r06.zip",
+          "catalog": "https://dl.google.com/android/repository/sys-img/android/sys-img2-3.xml",
+          "expected": {
+            "bytes": 907680404,
+            "checksumType": "sha1",
+            "checksum": "8842a57a6b146423debb46c1496a9c0986aa1b9e"
+          },
+          "archiveSha256": "a80ad9f0f8b487df146df1c1412ee4744ba95dde471b601843b8039616be28d2",
+          "archiveSha1": "8842a57a6b146423debb46c1496a9c0986aa1b9e",
+          "allZipEntryCrcsVerified": true,
+          "sparseExtraction": true,
+          "systemImageLogicalBytes": 2528116736,
+          "systemImageAllocatedBytes": 1903165440
+        },
+        "command": [
+          "/home/otavio/Projects/O.R.I.O.N-tools/android-emulator-37.2.13/emulator/emulator",
+          "-avd",
+          "OrionF4Api37DefaultR2",
+          "-sysdir",
+          "/tmp/orion-api37-default-image/x86_64",
+          "-datadir",
+          "/dev/shm/orion-api37-default-r2-data",
+          "-data",
+          "/dev/shm/orion-api37-default-r2-data/userdata-small.img",
+          "-partition-size",
+          "2048",
+          "-no-window",
+          "-no-audio",
+          "-no-snapshot",
+          "-memory",
+          "2048",
+          "-cores",
+          "2",
+          "-gpu",
+          "swiftshader",
+          "-no-boot-anim",
+          "-port",
+          "5572"
+        ],
+        "emulatorPid": 3164029,
+        "backgroundRestrictionLevel": "exempted",
+        "properties": {
+          "ro.build.version.sdk": "37",
+          "ro.build.fingerprint": "Android/sdk_phone64_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+          "ro.kernel.qemu": "1",
+          "ro.product.cpu.abi": "x86_64"
+        },
+        "pageSizeBytes": 4096
+      }
+    },
+    "finalS21SystemObservation": {
+      "rawReport": "s21-final-system-observation.json",
+      "rawReportSha256": "435f345fecb53b8ecab576ac9f3fc930d279a9463af1d3170e6c4484d40f6458",
+      "summary": {
+        "recordedAt": "2026-11-07T19:51:55.639467+00:00",
+        "environment": "PHYSICAL_DEVICE",
+        "scope": "Read-only final system-setting observation; does not launch or mutate the app",
+        "values": {
+          "screen_off_timeout": "60000",
+          "low_power": "0",
+          "auto_time": "1",
+          "auto_time_zone": "1",
+          "timezone": "America/Sao_Paulo",
+          "exactAppOp": "default",
+          "postNotificationsGranted": false,
+          "runAnyInBackgroundAppOp": "allow"
+        },
+        "allObservedValuesMatchSessionOriginals": true
+      }
+    },
+    "taskOwnedEmulatorCleanup": {
+      "rawReport": "owned-emulator-final-cleanup.json",
+      "rawReportSha256": "55fbb7c33bb5756f71bf90373ecf21c7f7ba5aaf4d1c01ebec00f7dd9f54e0a6",
+      "summary": {
+        "recordedAt": "2026-11-07T19:51:07.901730+00:00",
+        "result": "PASS",
+        "scope": "Only stopped task-owned ordinaryAPI37 emulator data and verified downloaded image copies discarded; metadata/proofs retained. No user AVD, phone data or ADB server restart."
+      }
+    }
+  },
+  "physicalF2Review": {
+    "decision": "S21-scoped F2 physical evidence supports issue23 resolution after review/required CI merge",
+    "review": "F2-S21-PhysicalGate.md",
+    "sourceEquivalence": {
+      "baselineCommit": "4253378a79e8467995e1e985229f408bb247f199",
+      "reviewedHead": "705b8e74ce51af7c5db308ee6aafdff657e4138b",
+      "unchangedScopes": [
+        "core/security",
+        "core/actions",
+        "core/ingress",
+        "core/time",
+        "data/database",
+        "data/datastore",
+        "data/repository",
+        "data/actions",
+        "data/tasks",
+        "data/events",
+        "data/reminders"
+      ],
+      "changedFilesWithinScopes": [],
+      "scope": "F2 storage/crypto/migration/transaction source equivalence only. Global app/runtime is not claimed identical.",
+      "runtimeDifferences": "PR66 changes post-recovery maintenance and foreground startup observation; separately physically qualified on app88624cdd... with 314 then318 cases, seven actual SIGKILLs and six lifecycle scenarios."
+    },
+    "installedUpgradeUsesOriginalRecordedAppPair": true,
+    "wholeApplicationEquivalenceClaimed": false
+  },
+  "previousPhysicalEvidence": [
+    "f4-s21-physical-api35-20261107.json",
+    "f4-s21-fixes-physical-api35-20261107.json"
+  ],
+  "retainedFailures": [
+    {
+      "rawReport": "capability-notification_denied/f4-capability-runtime-report.json",
+      "rawReportSha256": "9a2f35d11098d0f0c00a87a5530030c071d8e6e52932995a7d4d6045885e9980",
+      "summary": {
+        "result": "FAIL",
+        "gateClosed": false,
+        "scenario": "notification_denied",
+        "environment": "PHYSICAL_DEVICE",
+        "checks": {
+          "prepare": "PASS"
+        },
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "1bf5fc576ae3f82502a76b1cc67ff6b145f1bb3897fecdfb152d994940eff503"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-f4-capability-runtime.py": "82dd3e83800066b50f781f095013d20c373c17e24e5f3a2919bc06eea4319b4a",
+          "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+        },
+        "fixtureId": "4a3f8ad4-d7e6-4568-951d-1bf89db8ed73",
+        "apiLevel": "35",
+        "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "fixture": {
+          "fixtureId": "4a3f8ad4-d7e6-4568-951d-1bf89db8ed73",
+          "reminderId": "38435a12-ede6-39e2-ac6c-96f14e114bf5",
+          "actionId": "363dd0d4-4e7f-40b7-b752-f172995f5689",
+          "generation": 1,
+          "requestCode": 1517879707,
+          "scheduledAtEpochMillis": 1794067861863,
+          "preparedAtEpochMillis": 1794067741863,
+          "previousForceStopDetectedAtEpochMillis": 1794054158737,
+          "preparedPid": 10439,
+          "precision": "EXACT",
+          "normalizedPayloadHash": "6d6ac1269d29499b875f4923aa56d4f4240fd836b8625818e9b85ddef1a910f1",
+          "confirmationFingerprint": "460f0d4adfe22f7411ad637cd93a8ee8d4a54d2677e03da3bbcd52ff33294bc6"
+        },
+        "failureType": "AttributeError",
+        "failure": "Bounded qualification command failed.",
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS"
+      }
+    },
+    {
+      "rawReport": "capability-exact_access/f4-capability-runtime-report.json",
+      "rawReportSha256": "650c0b10599d1866f25ed186ac4449718bb7c8848bdd87b0ebc89036f91ab1d8",
+      "summary": {
+        "result": "FAIL",
+        "gateClosed": false,
+        "scenario": "exact_access",
+        "environment": "PHYSICAL_DEVICE",
+        "checks": {
+          "prepare": "PASS"
+        },
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "1bf5fc576ae3f82502a76b1cc67ff6b145f1bb3897fecdfb152d994940eff503"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-f4-capability-runtime.py": "82dd3e83800066b50f781f095013d20c373c17e24e5f3a2919bc06eea4319b4a",
+          "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+        },
+        "fixtureId": "9a57ab0d-c930-41ad-abfb-fd0f55adb7bf",
+        "apiLevel": "35",
+        "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "fixture": {
+          "fixtureId": "9a57ab0d-c930-41ad-abfb-fd0f55adb7bf",
+          "reminderId": "06f15cd0-7654-3684-9d06-8226fb4d1c31",
+          "actionId": "3ea5c86c-96a4-4e60-9aab-606e2e17dea8",
+          "generation": 1,
+          "requestCode": 265242037,
+          "scheduledAtEpochMillis": 1794068007880,
+          "preparedAtEpochMillis": 1794067887880,
+          "previousForceStopDetectedAtEpochMillis": 1794054158737,
+          "preparedPid": 13055,
+          "precision": "EXACT",
+          "normalizedPayloadHash": "1218a8a688feafd88d9dca9a8d6cc145b932b9677c8c28d70f2a4fcc1d37cfa9",
+          "confirmationFingerprint": "4d558117896be9dcb4211b483cc54643bd4cf9cc063b50000f8930105c40d736"
+        },
+        "failureType": "AttributeError",
+        "failure": "Bounded qualification command failed.",
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS"
+      }
+    },
+    {
+      "rawReport": "capability-battery_saver/f4-capability-runtime-report.json",
+      "rawReportSha256": "6c631dc696f089b8a4e3db2fb9be9d6c1322df86733d23e7024ccfc4a1afa8e4",
+      "summary": {
+        "result": "FAIL",
+        "gateClosed": false,
+        "scenario": "battery_saver",
+        "environment": "PHYSICAL_DEVICE",
+        "checks": {
+          "prepare": "PASS"
+        },
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "1bf5fc576ae3f82502a76b1cc67ff6b145f1bb3897fecdfb152d994940eff503"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-f4-capability-runtime.py": "82dd3e83800066b50f781f095013d20c373c17e24e5f3a2919bc06eea4319b4a",
+          "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+        },
+        "fixtureId": "d6f72e69-8224-4c60-b180-e48277679134",
+        "apiLevel": "35",
+        "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "fixture": {
+          "fixtureId": "d6f72e69-8224-4c60-b180-e48277679134",
+          "reminderId": "3971c89d-0e10-3d1a-b7f5-f0b8c49e054a",
+          "actionId": "0a2bf50f-1994-49f7-9c63-1c06960080d5",
+          "generation": 1,
+          "requestCode": 1408630904,
+          "scheduledAtEpochMillis": 1794068031261,
+          "preparedAtEpochMillis": 1794067911261,
+          "previousForceStopDetectedAtEpochMillis": 1794054158737,
+          "preparedPid": 13468,
+          "precision": "EXACT",
+          "normalizedPayloadHash": "14a488e22a47030de515aef402d4ad71b1058e9c2d84fb5fe742486c8d96315c",
+          "confirmationFingerprint": "652e558edd1ce30c2f609309848f72331f9fe348bffde2b97e323e0b42196b9c"
+        },
+        "failureType": "AttributeError",
+        "failure": "Bounded qualification command failed.",
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS"
+      }
+    },
+    {
+      "rawReport": "capability-r2-exact_access/f4-capability-runtime-report.json",
+      "rawReportSha256": "c2cd5aab9e107a3a3024f49bf1db9fc11652c1c39e4a93d63481c09334884703",
+      "summary": {
+        "result": "FAIL",
+        "gateClosed": false,
+        "scenario": "exact_access",
+        "environment": "PHYSICAL_DEVICE",
+        "checks": {
+          "prepare": "PASS",
+          "inspect_approximate": "PASS",
+          "inspect_exact": "PASS",
+          "verify": "PASS"
+        },
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "1bf5fc576ae3f82502a76b1cc67ff6b145f1bb3897fecdfb152d994940eff503"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-f4-capability-runtime.py": "ba250684fac3f4819d5cebca1d60f283a5bf4370e869555314bd6a490b240b7e",
+          "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+        },
+        "fixtureId": "c6ea9270-e6ae-4194-a657-d4694e1fd0e2",
+        "apiLevel": "35",
+        "androidBuild": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+        "fixture": {
+          "fixtureId": "c6ea9270-e6ae-4194-a657-d4694e1fd0e2",
+          "reminderId": "fb2a4729-168c-30e0-8295-60017651d92a",
+          "actionId": "1d7efaef-c1e8-4aef-a9ba-9d94f29288be",
+          "generation": 1,
+          "requestCode": 102684177,
+          "scheduledAtEpochMillis": 1794068353664,
+          "preparedAtEpochMillis": 1794068233664,
+          "previousForceStopDetectedAtEpochMillis": 1794054158737,
+          "preparedPid": 16902,
+          "precision": "EXACT",
+          "normalizedPayloadHash": "2e797f4a5282ea24bc545fcbb00ac08462e738cae0b7d937ff21be5a58fd9d39",
+          "confirmationFingerprint": "922e6465027601242de44bb4620d463770cb3d22dd6d75b7162819fc6bc2e2e1"
+        },
+        "failureType": "TimeoutExpired",
+        "failure": "Bounded qualification command failed.",
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS"
+      }
+    },
+    {
+      "rawReport": "channel-runtime/f4-channel-runtime-report.json",
+      "rawReportSha256": "e3d40cda06090a40e55ad1ceca04d26e6b47ce63d3adf00e1f8f26e44541d83a",
+      "summary": {
+        "result": "FAIL",
+        "environment": "PHYSICAL_DEVICE",
+        "checks": {},
+        "gateClosed": false,
+        "artifactSha256": {
+          "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+          "app-debug-androidTest.apk": "74bd1be0ef53bfd3b78e8ea88daa4f190d0617237462fab4ad6d13e0851b67a9"
+        },
+        "sourceSha256": {
+          "verify-f4-channel-runtime.py": "47578d87815fe7caf76e451d0a590dc634272684baf355fbcd796fa3e8cbe293",
+          "verify-f4-capability-runtime.py": "039701c737bd9bc51d050de4d89d071963022c69d26850a1df5db35dd4527133",
+          "OrionF4ChannelQualificationTest.kt": "44a96f5c802ecb99e8c7f61b9ab010990f7a7d50b9955538eb25bc324bcacae2"
+        },
+        "originalImportance": 3,
+        "failureType": "RuntimeError",
+        "failure": "Channel qualification command failed.",
+        "notificationRestore": "PASS"
+      }
+    },
+    {
+      "rawReport": "api37-default-timezone_change/scheduled-reminder-runtime-report.json",
+      "rawReportSha256": "c265e367b4567aa8154a40db62699d54f5973733d99842f5af4a4dd1ac629bb3",
+      "summary": {
+        "result": "FAIL",
+        "environment": "ANDROID_EMULATOR",
+        "scenario": "timezone_change",
+        "fixtureId": "8f51686e-f0e0-48aa-99af-e29c8ef79044",
+        "dedicatedTarget": true,
+        "checks": {},
+        "commit": "bab4c1afc217c651cac7bbb4a2b44ae67ac05dd3",
+        "workingTreeDirty": true,
+        "artifactSha256": {
+          "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+          "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "4b3063b99befb46fc88b3c556e775bd0fa9e7cf7cd7f651c138b6c4f1ad4ba1e"
+        },
+        "androidRuntimeEvidence": "NON_DEFINITIVE",
+        "apiLevel": "37",
+        "androidBuild": "Android/sdk_phone64_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+        "abi": "x86_64",
+        "bootCountBefore": 2,
+        "failureType": "RuntimeError",
+        "failure": "Effective background restriction level is unavailable."
+      }
+    }
+  ],
+  "remainingGates": [
+    "Real24-hour physical soak with task/reminder/heartbeat/reboot/process-death workload, independent queue/UNKNOWN histories and review",
+    "Broader Android API compatibility and actual future-API behavior; emulator evidence cannot replace physical/OEM evidence",
+    "Native compatibility gate remains PENDING; debug static checks do not constitute physical arm64/16KiB and release load approval"
+  ],
+  "limitations": [
+    "The user made the S21 available only a few hours; no real24-hour result is claimed.",
+    "Resource test constrains a disposable SQLite database; it never fills device storage and does not claim LMK/MemoryLimiter qualification.",
+    "Channel automatic AX attempt failed safely on Samsung null-root; separate visually verified official Settings actions plus actual Android probes passed.",
+    "No AI/voice advancement, fullCORE_READY/MVP promotion or release tag follows from this report.",
+    "All six API37 system cases passed independently; the post-reboot missing shell policy observation remains an explicit preflight limitation, not proof of an app failure or a passing combined background/reboot profile."
+  ],
+  "sourceIdentitySemantics": "Current reviewed source freeze; execution-specific source and APK hashes remain in each individual report. Baseline318 cases use test74bd; native probes and later workload use test9434; Espresso3.7 reruns use their separately recorded test APK. No whole-test-APK equivalence is claimed.",
+  "espressoArtifactSha256": {
+    "app-debug-androidTest.apk": "59aabd25c41e192e564193e2d9a14760e0d09e3f85443781fb959bf31b1d69da",
+    "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a"
+  },
+  "nativeProbeArtifactSha256": {
+    "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+    "app-debug-androidTest.apk": "943430df0b8c8527a2c294fbcebe9d2733b4333f6f8483ecc8c04dd8bc7b6ac7"
+  },
+  "productionPayloadEquivalence": {
+    "rawReport": "espresso-main-artifact-diff.json",
+    "rawReportSha256": "9231bd5b9ba66f911721f0c77793495499cec08f553de09b21ab5a6c7749cdc7",
+    "summary": {
+      "oldApk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+      "newApk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+      "added": [],
+      "removed": [],
+      "changed": [],
+      "sourceDiff": "Production runtime/schema sources unchanged; artifact identity must be treated as a new pair.",
+      "nativeEntryLayout": [
+        {
+          "entry": "lib/arm64-v8a/libandroidx.graphics.path.so",
+          "oldHeaderOffset": 35376364,
+          "newHeaderOffset": 35399124,
+          "sameOffset": false,
+          "sameCompression": true,
+          "oldDataOffset": 35389440,
+          "oldDataOffsetAligned16KiB": true,
+          "newDataOffset": 35405824,
+          "newDataOffsetAligned16KiB": true
+        },
+        {
+          "entry": "lib/arm64-v8a/libdatastore_shared_counter.so",
+          "oldHeaderOffset": 35399536,
+          "newHeaderOffset": 35415920,
+          "sameOffset": false,
+          "sameCompression": true,
+          "oldDataOffset": 35405824,
+          "oldDataOffsetAligned16KiB": true,
+          "newDataOffset": 35422208,
+          "newDataOffsetAligned16KiB": true
+        },
+        {
+          "entry": "lib/x86_64/libandroidx.graphics.path.so",
+          "oldHeaderOffset": 35416200,
+          "newHeaderOffset": 35432584,
+          "sameOffset": false,
+          "sameCompression": true,
+          "oldDataOffset": 35422208,
+          "oldDataOffsetAligned16KiB": true,
+          "newDataOffset": 35438592,
+          "newDataOffsetAligned16KiB": true
+        },
+        {
+          "entry": "lib/x86_64/libdatastore_shared_counter.so",
+          "oldHeaderOffset": 35432968,
+          "newHeaderOffset": 35449352,
+          "sameOffset": false,
+          "sameCompression": true,
+          "oldDataOffset": 35438592,
+          "oldDataOffsetAligned16KiB": true,
+          "newDataOffset": 35454976,
+          "newDataOffsetAligned16KiB": true
+        }
+      ],
+      "scope": "All uncompressed package entries identical; new container APK hash is recorded as distinct. This is payload equivalence, not whole APK hash equivalence."
+    }
+  },
+  "espressoFix": {
+    "scope": "androidTestImplementation only; production dependencies unchanged",
+    "version": "3.7.0",
+    "reason": "Use system-service input manager lookup instead of removed reflective InputManager.getInstance. Existing18 real UI failures are the regression; assertions remain unchanged.",
+    "primaryReference": "https://developer.android.com/jetpack/androidx/releases/test#espresso-3.7.0"
+  },
+  "latestQualificationArtifactSha256": {
+    "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+    "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+  },
+  "evidenceArchive": {
+    "localPath": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-closeout-s21-api35-20261107.zip",
+    "archiveSha256": "282b5e6302176ceb9aaea8c39ad777393d54382d1667b862be5f51f2a01c777b",
+    "bytes": 36363361,
+    "verifiedFiles": 474,
+    "uniqueApks": 9,
+    "aliasedApkPaths": 13,
+    "verification": "All ZIP CRCs and every manifest entry SHA256/size passed; images/userdata excluded. Final closeout JSON excluded to avoid self-reference."
+  }
+}

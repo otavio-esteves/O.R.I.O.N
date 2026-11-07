@@ -71,6 +71,16 @@ background restriction. Actual committed-claim SIGKILL verifies no blind replay.
 The reports retain source/artifact hashes and failed attempts; physical/system/soak
 qualification remains open in [issue #64](https://github.com/otavio-esteves/O.R.I.O.N/issues/64).
 
+The later [F4 closeout audit](docs/qualification/F4-Closeout.md) records the physical
+S21 fixes and capability/resource matrix, 318-case S21/API31 baseline evidence and
+the latest 319-case S21/API37 regression suites without failures or skips,
+actual debug native loading on S21 and API37/16KiB emulator, and a completed
+600-second S21 task/timer/reminder workload with actual process death and no
+observation gaps. The failed wireless one-hour attempt and sampler-race attempt are
+retained. A short run never closes the real 24-hour gate; release/native and broader
+compatibility decisions remain separate. Per-run APK hashes distinguish test-only
+revisions, including the Espresso compatibility repair for API37.
+
 The historical [integrated F3 evidence](docs/qualification/f3-integrated-evidence.json) records
 559 Debug JVM, 18 host and 247 Android cases, installed replacement and five actual
 process-death scenarios, with frozen source and matching artifact hashes. Full
@@ -138,11 +148,15 @@ python3 scripts/android/test_scheduled_reminder_runtime_harness.py
 ```
 
 Action preparation, migration and encrypted-storage evidence is recorded in the
-[F2 increment report](docs/qualification/F2-ActionPreparation.md). Its physical qualification remains pending.
+[F2 increment report](docs/qualification/F2-ActionPreparation.md). The later
+[S21 physical review](docs/qualification/F2-S21-PhysicalGate.md) records the scoped
+transaction-core evidence and gate decision; historical deferrals remain retained.
 
 The native gate is active for Compose/DataStore transitive libraries. `check`
-verifies ELF/ABI/APK/AAB packaging, including negative fixtures; physical arm64
-load remains a separate qualification. See the [Foundation gate report](docs/qualification/F1-FoundationGate.md).
+verifies ELF/ABI/APK/AAB packaging, including negative fixtures. Scoped debug loads
+passed on S21 arm64/4KiB and API37 x86_64/16KiB; release/R8 and physical arm64/16KiB
+loads remain separate. See the [scoped load record](docs/compatibility/native-load-scoped-20261107.json)
+and [Foundation gate report](docs/qualification/F1-FoundationGate.md).
 
 Compose preserves its default debug keystore in the project-scoped
 `orion-android-user` volume. Keep that volume to update installed debug APKs across

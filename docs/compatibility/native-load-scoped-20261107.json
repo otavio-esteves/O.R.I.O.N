@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-07T18:27:59.730161+00:00",
+  "scope": "Actual debug APK linker/JNI loading of every packaged library for the running process ABI",
+  "result": "SCOPED_DEBUG_LOADS_PASS_FULL_GATE_PENDING",
+  "fullNativeGateClosed": false,
+  "fullF4GateClosed": false,
+  "source": "app/src/androidTest/kotlin/network/orion/app/compatibility/OrionNativeLibraryLoadTest.kt",
+  "sourceSha256": "705f056af31683f97324d0dbfc5823ffd94767f70062ebed1177a535c6a65d99",
+  "proofs": [
+    {
+      "report": "native-load-s21-report.json",
+      "reportSha256": "0ba29ddac68d299a01f35aa550d83e6082a544eb226022f2113cd4e6fdccc059",
+      "environment": "PHYSICAL_DEVICE",
+      "scope": "Debug APK actual native linker/JNI load only; no release or physical16KiB gate promotion",
+      "result": "PASS",
+      "startedAt": "2026-11-07T18:22:06.601022+00:00",
+      "artifactSha256": {
+        "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+        "app-debug-androidTest.apk": "943430df0b8c8527a2c294fbcebe9d2733b4333f6f8483ecc8c04dd8bc7b6ac7"
+      },
+      "sourceSha256": "705f056af31683f97324d0dbfc5823ffd94767f70062ebed1177a535c6a65d99",
+      "buildFingerprint": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+      "apiLevel": "35",
+      "command": [
+        "shell",
+        "am",
+        "instrument",
+        "-w",
+        "-r",
+        "-e",
+        "class",
+        "network.orion.app.compatibility.OrionNativeLibraryLoadTest",
+        "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+      ],
+      "rawOutputSha256": "c50e843f4a644f9582e1b97c7a07a7c7326dc808f8a6c97ec6b33d07321e6491",
+      "loadedLibraries": [
+        "libandroidx.graphics.path.so",
+        "libdatastore_shared_counter.so"
+      ],
+      "processAbi": "arm64-v8a",
+      "pageSizeBytes": 4096
+    },
+    {
+      "report": "native-load-api37-16k-report.json",
+      "reportSha256": "9592c72ffb5bc51d9ccd8be13ec8c8b3735a23955c32e09d430ed58d2713fea6",
+      "environment": "ANDROID_EMULATOR",
+      "scope": "Debug APK actual native linker/JNI load only; no release or physical16KiB gate promotion",
+      "result": "PASS",
+      "startedAt": "2026-11-07T18:22:25.134070+00:00",
+      "artifactSha256": {
+        "app-debug.apk": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+        "app-debug-androidTest.apk": "943430df0b8c8527a2c294fbcebe9d2733b4333f6f8483ecc8c04dd8bc7b6ac7"
+      },
+      "sourceSha256": "705f056af31683f97324d0dbfc5823ffd94767f70062ebed1177a535c6a65d99",
+      "buildFingerprint": "google/sdk_gphone16k_x86_64/emu64xa16k:17/CE2A.260420.051.A3/16571990:userdebug/dev-keys",
+      "apiLevel": "37",
+      "command": [
+        "shell",
+        "am",
+        "instrument",
+        "-w",
+        "-r",
+        "-e",
+        "class",
+        "network.orion.app.compatibility.OrionNativeLibraryLoadTest",
+        "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+      ],
+      "rawOutputSha256": "9321579166ac082d967f099c81536cea18c47bf0fe1498446eeaf704d3aaead0",
+      "loadedLibraries": [
+        "libandroidx.graphics.path.so",
+        "libdatastore_shared_counter.so"
+      ],
+      "processAbi": "x86_64",
+      "pageSizeBytes": 16384
+    }
+  ],
+  "remaining": [
+    "Release/R8 native loading remains unqualified.",
+    "No physical arm64/16KiB target was available; x86_64 emulator results are compatibility evidence only."
+  ],
+  "aggregateLoadTest": "NOT_RUN in native-compatibility-gate.json refers to the full required load matrix; the executed scoped debug proofs above are preserved separately.",
+  "currentCandidateRegressionLoads": [
+    {
+      "environment": "PHYSICAL_DEVICE",
+      "processAbi": "arm64-v8a",
+      "pageSizeBytes": 4096,
+      "result": "PASS_AS_PART_OF_FULL319",
+      "report": "final-qualified-s21-report.json",
+      "reportSha256": "9c0d7ad52615f0d0579982135a12a7880eb5201d335d687caef7e1a8b20711f4",
+      "rawSha256": "a40d6ca5a4adcf03f6a7521674f9f8f2bd80502723d09f0d8f90239153b85a5e",
+      "artifactSha256": {
+        "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+        "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+      }
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "processAbi": "x86_64",
+      "pageSizeBytes": 4096,
+      "result": "PASS_AS_PART_OF_FULL319",
+      "report": "api37-atd-r3-compatibility-report.json",
+      "reportSha256": "5fb80a1175f2df585bf03504a855a0678d6078853b8b17b0e280518bb742c107",
+      "rawSha256": "b0f544e8b60e9e5540629c37a7695e1cfa0b41dceb316e42dbb241336c2f9a39",
+      "artifactSha256": {
+        "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+        "app-debug-androidTest.apk": "eca6abaa27c688c1f4cd34708b688c120509c75676a4d99347e266c3b1578a67"
+      }
+    }
+  ],
+  "artifactEquivalenceNote": "The newer main APK has a distinct container hash; all uncompressed entries equal the earlier scoped debug APK, with native data offsets still16KiB aligned. These supplementary loads qualify the current candidate on the recorded4KiB targets only."
+}

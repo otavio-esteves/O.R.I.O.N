@@ -47,10 +47,17 @@ class OrionScheduledReminderRuntimeTest {
     @Test fun scheduledReminderSurvivesExplicitHostLifecycleBoundary() = runBlocking {
         val arguments = InstrumentationRegistry.getArguments()
         val mode = arguments.getString("orion_scheduled_mode") ?: return@runBlocking
-        require(mode in setOf("prepare", "verify", "resume_doze"))
+        require(mode in setOf("prepare", "verify", "resume_doze", "inspect_denied", "inspect_approximate", "inspect_exact", "inspect_power_save"))
         val scenario = arguments.getString("orion_scheduled_scenario")
-        require(scenario == null || scenario in setOf("reboot", "force_stop", "time_change", "timezone_change", "doze", "background_restriction"))
+        require(scenario == null || scenario in setOf("reboot", "force_stop", "time_change", "timezone_change", "doze", "background_restriction",
+            "notification_denied", "exact_access", "battery_saver", "soak"))
         require(mode != "resume_doze" || scenario == "doze")
+        require(mode != "inspect_denied" || scenario == "notification_denied")
+        require(mode !in setOf("inspect_approximate", "inspect_exact") || scenario == "exact_access")
+        require(mode != "inspect_power_save" || scenario == "battery_saver")
+        val delaySeconds = arguments.getString("orion_scheduled_delay_seconds")?.toLong() ?: 60L
+        require(delaySeconds in 60L..86_400L)
+        require(delaySeconds == 60L || scenario in setOf("notification_denied", "exact_access", "battery_saver", "soak"))
         val rawFixture = checkNotNull(arguments.getString("orion_scheduled_fixture"))
         val fixture = UUID.fromString(rawFixture).also { require(it.toString() == rawFixture) }
         val id = UUID.nameUUIDFromBytes("$fixture/runtime-reminder".toByteArray(Charsets.UTF_8))
@@ -67,7 +74,7 @@ class OrionScheduledReminderRuntimeTest {
                 require(!metadataFile.exists() && db.reminders().find(id.toString()) == null)
                 val clock = AndroidOrionClock(app.contentResolver)
                 val preparedAt = clock.wallNow()
-                val due = preparedAt.plusSeconds(60)
+                val due = preparedAt.plusSeconds(delaySeconds)
                 val previousForceStop = runtime.schedulingDiagnostics()?.lastForceStopDetectedAt?.toEpochMilli()
                 val store = OrionReminderStore(db,
                     OrionFieldEncryption(AndroidKeystoreFieldKeyProvider.open(app)), clock)
@@ -136,6 +143,37 @@ class OrionScheduledReminderRuntimeTest {
                 InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
                     putString("orion_scheduled_doze_registration", "ORIGINAL_DOZE_BINDING_REGISTERED")
                 })
+            } else if (mode.startsWith("inspect_")) {
+                val metadata = JSONObject(metadataFile.readText())
+                require(metadata.getString("fixtureId") == fixture.toString() && metadata.getString("reminderId") == id.toString())
+                val row = checkNotNull(db.reminders().find(id.toString()))
+                val action = checkNotNull(db.actions().find(metadata.getString("actionId")))
+                assertEquals(metadata.getString("normalizedPayloadHash"), action.normalizedPayloadHash)
+                assertEquals(metadata.getString("confirmationFingerprint"), action.confirmationFingerprint)
+                assertEquals(metadata.getLong("scheduledAtEpochMillis"), row.scheduledAt)
+                assertEquals(ActionStatus.CONFIRMED, action.status)
+                assertEquals(ReminderStatus.PENDING, row.status)
+                assertEquals(0, action.attemptCount)
+                when (mode) {
+                    "inspect_denied" -> {
+                        assertEquals(android.content.pm.PackageManager.PERMISSION_DENIED,
+                            app.checkSelfPermission("android.permission.POST_NOTIFICATIONS"))
+                        assertFalse(app.getSystemService(NotificationManager::class.java).areNotificationsEnabled())
+                        assertFalse(app.getSystemService(NotificationManager::class.java).activeNotifications.any { it.tag == action.actionId })
+                        assertTrue(AndroidOrionClock(app.contentResolver).wallNow().toEpochMilli() >= row.scheduledAt)
+                        assertEquals(OrionHealthStatus.DEGRADED, runtime.health.value.subsystems[OrionSubsystem.PERMISSIONS])
+                    }
+                    "inspect_approximate", "inspect_exact" -> {
+                        val exact = mode == "inspect_exact"
+                        assertEquals(exact, app.getSystemService(android.app.AlarmManager::class.java).canScheduleExactAlarms())
+                        assertEquals(if (exact) ReminderPrecision.EXACT else ReminderPrecision.APPROXIMATE, row.precision)
+                        assertTrue(row.registrationConfirmed)
+                    }
+                    "inspect_power_save" -> assertTrue(app.getSystemService(android.os.PowerManager::class.java).isPowerSaveMode)
+                }
+                InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
+                    putString("orion_scheduled_inspection", mode.uppercase())
+                })
             } else {
                 require(metadataFile.isFile)
                 val metadata = JSONObject(metadataFile.readText())
@@ -150,6 +188,8 @@ class OrionScheduledReminderRuntimeTest {
                     }
                     val row = checkNotNull(db.reminders().find(id.toString()))
                     val action = checkNotNull(db.actions().find(actionId.toString()))
+                    assertEquals(metadata.getString("normalizedPayloadHash"), action.normalizedPayloadHash)
+                    assertEquals(metadata.getString("confirmationFingerprint"), action.confirmationFingerprint)
                     assertEquals(metadata.getLong("generation"), row.fireGeneration)
                     assertEquals(metadata.getLong("scheduledAtEpochMillis"), row.scheduledAt)
                     assertEquals(actionId.toString(), row.deliveryActionId)
@@ -167,6 +207,9 @@ class OrionScheduledReminderRuntimeTest {
                     delay(300)
                     assertEquals(1, db.actions().find(actionId.toString())?.attemptCount)
                     assertEquals(1, manager.activeNotifications.count { it.tag == actionId.toString() && it.id == 0 })
+                    if (scenario == "battery_saver") {
+                        assertTrue(app.getSystemService(android.os.PowerManager::class.java).isPowerSaveMode)
+                    }
                     var forceStopDetectedAt: Long? = null
                     if (scenario == "background_restriction") {
                         withTimeout(5_000) {
