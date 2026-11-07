@@ -1,0 +1,790 @@
+{
+  "recordedAt": "2026-11-07T04:31:37.798138+00:00",
+  "scope": "ORION-F4-RUNTIME-001; operational deterministic scheduler/recovery candidate; formal physical gate remains open",
+  "baseCommit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+  "sourceIdentity": "Base commit plus changed source hashes; reports captured before the delivery commit. All final Android proofs use the same final app/test APK pair and host recorder sources.",
+  "changedSourceSha256": {
+    "app/build.gradle.kts": "a1cd7c06e2a734aac6d7c59fa7f2bf361900cf298840a479c53d9476aec17a69",
+    "app/src/androidTest/kotlin/network/orion/app/ActionPersistenceTest.kt": "75edd9d411aba8c52744eb27de7d1305d64c3b6c75e2b96bb81968d8b7ef4060",
+    "app/src/androidTest/kotlin/network/orion/app/EncryptedActionStoreTest.kt": "88416408216ddadfa3359bfabb3f53b36d908ee5e141e9e96d89fa7602f746bb",
+    "app/src/androidTest/kotlin/network/orion/app/FoundationNavigationTest.kt": "c0602ced2b2525d95178a0ae9ba3f36b66c5343e66d8b1d5e4386e3b51059511",
+    "app/src/androidTest/kotlin/network/orion/app/FoundationRuntimeTest.kt": "bef96d50e55aeccf4a780bec00e1aaa42b68ded097dddc3ba915233c428e2a61",
+    "app/src/androidTest/kotlin/network/orion/app/TransactionCorePersistenceTest.kt": "a2a4f4df3b24181b470b693e661ee0aa3af3cbb96998eb933f14cb3c76eb0791",
+    "app/src/androidTest/kotlin/network/orion/app/UpgradePersistenceTest.kt": "62a5f245714ea915ae602aec3a3f3c8241a24ec6f791216d8be908e1d3b68cc4",
+    "app/src/androidTest/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryPipelineTest.kt": "aa0ca74c2cb948d7fa3124ee2a1b16ce39a63a505fcb19488bc344253e4523f5",
+    "app/src/androidTest/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryProcessDeathTest.kt": "3e3322988e94abffb95e9e8ebabc49ecc8452701991979ab4f1669214cffce0c",
+    "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderQueryTest.kt": "691af94a0c9bdbf8ab60bfe72d2957e4ef73cddaa6d2a2caeba5f063bad4d710",
+    "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderScheduleMigrationTest.kt": "d3c13505e10029460f5a7430226709222a056f707e74047ad6c3ec28fbbb4907",
+    "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderSchedulingPersistenceTest.kt": "08ae2ba99dd69be2a78d2e7fee0aada85d015bcad448541c1c381a8d6ea63b60",
+    "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderSeriesPersistenceTest.kt": "ac853c4d9b2dd4ebb98c2c19e70e27dea52db5b8d7ae3d5fc1244de2357fd6b7",
+    "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderSeriesScreenTest.kt": "d05df703d0cd35255cacbdbc7defa7b0aacd841e55693d5b9948d59024cd3b2b",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionReminderDeliveryPlatformTest.kt": "e44d080fde44aab915a4338e20590c396c2b6909ca005727e4a426bd9f18e36b",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionReminderDeliveryUiLifecycleTest.kt": "fbc0f91f85ef5395eeba50f9d1d19c19c1310d2770d5d0c7bf1dd873a90efe7c",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionSchedulerPlatformTest.kt": "9c93967d84ebafdb9cafd7ce8d3bcc1805d6e35af7d8597af507154f964b064c",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionSchedulingCoordinatorTest.kt": "6c65f3e7d8bf2c396cb9273b311d9cab6b0a4c9d8de8b53fe94ece9347e1d070",
+    "app/src/androidTest/kotlin/network/orion/app/timers/OrionTimerMigrationTest.kt": "8c5545a96015b708fec7c11e0b57438e44647254fca803e2eb541bc9c02a3497",
+    "app/src/debug/kotlin/network/orion/app/testing/OrionBootstrapProbeService.kt": "0ce6ffe03a106945a4525601a7be9eeef2eb5fcf21722d8b0aae3e234729109a",
+    "app/src/main/AndroidManifest.xml": "1026f503c3f021230faf6f4feccc2f959c27be96b609c7a4c842bdef184fc4ee",
+    "app/src/main/kotlin/network/orion/app/MainActivity.kt": "cf969baf850e140c9fefc660de25e8f7c63f593d4e889132bea39d6e53644c6d",
+    "app/src/main/kotlin/network/orion/app/OrionApplication.kt": "953ea423934e4d53ed0efbe27f9d18443c1aeb839fea4605dfedbce385d2ea8b",
+    "app/src/main/kotlin/network/orion/app/OrionFoundationRuntime.kt": "e2a75c65602f69cc69ba552c17ba891a1b5cd4ed5181a4d4713579f27bcea8c7",
+    "app/src/main/kotlin/network/orion/app/notifications/OrionAndroidNotificationPoster.kt": "e4af06a2e9e642a767a4c64072bd6c1146299e8de09e3ef8770290567aafe2c2",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderAuthorizationHandoffs.kt": "87831ec33154aa87c7ca1dbd78d391b5442331fd7dc17c89d2a12006ced485e1",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryAdmissions.kt": "ae6b98e0a0162e05860e235a7f323b2b29903f662eeeb8dc39de0965405de5db",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryPipeline.kt": "b2e7be0d32ef5cc5ffad8c6fa3f4510cb5a7a9785d2b1525b71c4addcd5d12d6",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryPolicy.kt": "5e25a50a18f7fcb6ca87dac3b64eebd3b115dcf7e52550db282abe887b8316d0",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryRetention.kt": "5eb877430dd5ea6b6ded60b6f40f436e1d97da1e07059838fc2216f2c23ecc13",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryRunner.kt": "5b33fe74d13f03bfb78f77f9a42c3ee87eae0be2d7754d96e99cdc9e882858ae",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryWire.kt": "083ea8ad5d9230c314eeb3013db1c3f9a31e390f49f26a814f6ef95a1e9a2bff",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderSeriesAdvancer.kt": "d9fc00b611b3ba998cbfc0dd3d5fbf44d0fdd54b783551deff643c91db81d971",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderSeriesPipeline.kt": "c790f2d165d6b7d31c01d3685260c15b581322351b761d43b6a82a94224e1841",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderSeriesPlan.kt": "c2881ebc454e0d910d2fad51bdc1f06dac2a87abb3ba9f8cb296975fafe17b81",
+    "app/src/main/kotlin/network/orion/app/reminderdelivery/OrionReminderSeriesWire.kt": "b4bbac3c66f387416191866c09529f0cda4ad36e0f5a8b7d70e1228769bf11bc",
+    "app/src/main/kotlin/network/orion/app/reminders/OrionReminderKernel.kt": "e6ac37f7c8d694e5c7b281d4091700899af645fe1d9c726c7a9cc4d300eab78c",
+    "app/src/main/kotlin/network/orion/app/scheduling/OrionReminderDeliveryUiGateway.kt": "d27db565eea70ca872d58267ff51496fed4d48f86d8df5b846c69d5ca072a784",
+    "app/src/main/kotlin/network/orion/app/scheduling/OrionSchedulingComponents.kt": "161161a71a00e39128bff5d32bacdcef0d0a2019875ad0b2641dea37c2db72ad",
+    "app/src/main/kotlin/network/orion/app/scheduling/OrionSchedulingCoordinator.kt": "df04b6c6e5685afddd23cfedd446fe7e963263d3b48743df1a9a433f9a096dad",
+    "app/src/main/kotlin/network/orion/app/tasks/OrionTaskKernel.kt": "a9aab30db5646e6091228da0e5d309ad98ef8d1b11193e2e54bf14e8b5d5bdb2",
+    "app/src/test/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryAdmissionsTest.kt": "90ec5d7cea328d4eaa170f5ac5625a9560ce42ac671b5e336cbac52556de4d47",
+    "app/src/test/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryPolicyTest.kt": "f29bcc1beaae44f54b1d8e1c574a1745db09ba32d38c9865bb6d475170c5fed6",
+    "app/src/test/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryWireTest.kt": "428ec05efd516a74510c7aceacb30795c8af4eb954d73f908a3509d656e762a6",
+    "app/src/test/kotlin/network/orion/app/reminderdelivery/OrionReminderSeriesPlanTest.kt": "4eac7c6edd4f071a0ed4b568ea15835d9bc9574cd20370457804f842f0fd397d",
+    "core/exitinfo/src/main/kotlin/network/orion/core/exitinfo/ApplicationExitMonitor.kt": "78608ea5c51ac8b5c0d03b54418fd37053c3d4322f3754ced3712c71456a4576",
+    "core/exitinfo/src/main/kotlin/network/orion/core/exitinfo/OrionForceStopStartupEvidence.kt": "2cf0116a0f66e57b958e124ea71da50295165de4b6b175db968bbd3318cefd9e",
+    "core/exitinfo/src/main/kotlin/network/orion/core/exitinfo/OrionProcessExitClassifier.kt": "cd1c0b0c7a828c1d236f445586dbb7c65718909cf9575011c5eb23c921d1cb65",
+    "core/exitinfo/src/test/kotlin/network/orion/core/exitinfo/OrionForceStopStartupEvidenceTest.kt": "0da95b09dc1593e57f8f609df8fa8749ed54b335664fdea279bc972b039306ed",
+    "core/exitinfo/src/test/kotlin/network/orion/core/exitinfo/OrionProcessExitClassifierTest.kt": "f5c7d125464d20ab8de7ed7fbc98d469e4064f371bb231f5360ab15c07b86d4a",
+    "core/health/src/main/kotlin/network/orion/core/health/OrionSchedulingDiagnostics.kt": "f50e5eeb12102aaa2db6a2b078aaf3c0e4e3799254a9faf12047e928b2e90bea",
+    "core/model/src/main/kotlin/network/orion/core/model/OrionReminderRecurrenceRule.kt": "5881459e355cae99d420870149d52d367daaf5dbe62baee24e808ed57c86285e",
+    "core/model/src/test/kotlin/network/orion/core/model/OrionReminderRecurrenceRuleTest.kt": "14455c18da063d06ed4f69dce4d27edae20c3e12d81cdd2f5d6206a586ec54c5",
+    "core/orchestrator/build.gradle.kts": "1f955852269cf5e69c23c34e0f5faddb7538bc0d7e6497788f1c5312afb51def",
+    "core/orchestrator/src/main/kotlin/network/orion/core/orchestrator/reminders/ReminderDeliveryGateway.kt": "20952d424e7630cf65e2f43dc4e92946418be343586657f46a020d5a653ab141",
+    "core/queries/src/main/kotlin/network/orion/core/queries/reminders/GetReminders.kt": "5d67fdc55e9bcb4d24e48a5bd3e4d06d2fbadf7a5f997d7632595168bb1ff5d3",
+    "core/skills/metadata/src/main/kotlin/network/orion/core/skills/metadata/reminders/OrionDeliverReminderDescriptor.kt": "b26cee0f80195666b41439366a86e7c1a3f033e2cfa8069270f16efbbe7281d3",
+    "data/database/schemas/network.orion.data.database.OrionDatabase/5.json": "ad03a2d99f4afebef3026c8aa50b8c0b0b80777e96ac6e49b5a78432cbac4fbd",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionDatabase.kt": "9c4fbbef27001f134b190838b24aabeede445602cd1954e690e0902a51130502",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionDatabaseMigrations.kt": "3ccbbc5ea3bfe332f9e2e754b9cf8fdd75d4ac226da43f32dd8869214d78914a",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionRecordDao.kt": "9f962c49a8afb9a4aabe554fb4d27482729e7b13aa8d472199933006bd4c46d8",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionReminderDao.kt": "135b25b64fd57e801fc583309f972b85526fc2a2f14b72b9cb2839088662b31c",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionReminderScheduleDao.kt": "6c314489e357fab35a3d07e0cb29b62694a791994eabaa8f28d16526deb3330c",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionReminderSeriesDao.kt": "a3a63377cca2fffdef4d92fb3bfe6b4882a3932467198cffd00890edaaaa4956",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionReminderSeriesEntities.kt": "6e1b8b07f4cde945f7593509623fe00f5a4feac2c7687f4c70ad887cfba36f83",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionReminderSeriesMutationDao.kt": "b301f7da2c78b2def3f76cfd130a14c5fcfee9811de862f6f0304624cad3a36a",
+    "data/database/src/main/kotlin/network/orion/data/database/TransactionEntities.kt": "41c3f96585accaf6e1abe54e60ae07e57cce23bddb9630fe61f64e529c8a3965",
+    "data/datastore/src/main/kotlin/network/orion/data/datastore/OrionPreferencesStore.kt": "e199bae0a1f5ed62e066641914fc8e9034c86fb0d8e37b85c4f38e8136916c4b",
+    "data/events/src/main/kotlin/network/orion/data/events/OrionTechnicalEventConsumer.kt": "bf220d6ecc8b9e247969e6076b6dd30f5289a5c17c851a8714d5f18b2ab9a04d",
+    "data/reminders/src/main/kotlin/network/orion/data/reminders/OrionReminderQuery.kt": "a834aaa3cb3c74b4cacea541917290ca994c45334f7cb92150997315b6c41d2d",
+    "feature/diagnostics/src/main/kotlin/network/orion/feature/diagnostics/DiagnosticsScreen.kt": "2ccd08cc2c807b529b55f8a5627e91ed34b0f466eef70f7d05e45a71504809c8",
+    "feature/reminders/src/main/kotlin/network/orion/feature/reminders/RemindersScreen.kt": "02dd3f43f216a5f863a899c62dd311809cf2eab1ab48eefccf0bec831286fb3d",
+    "gradle/libs.versions.toml": "72d96c7ee70f46dbac8a77b212ebf012ba201965fcc9f030d34c4cdc2ee25f43",
+    "scheduler/build.gradle.kts": "b68b83b94c19fd0741a41bce01f44bb09680ce9c3c4215355d4865792df50ffb",
+    "scheduler/src/main/kotlin/network/orion/scheduler/alarms/AndroidOrionReminderAlarms.kt": "9988bba313dcc37fe85611faa0d83df0a669ceb8f189e253a9641cffb6468f14",
+    "scheduler/src/main/kotlin/network/orion/scheduler/alarms/OrionReminderAlarms.kt": "e9eb9755d418363c41bb900ef9ab9cbd652f8be2c8e45cdf4cfa32a686dbb181",
+    "scheduler/src/main/kotlin/network/orion/scheduler/workers/OrionMaintenanceScheduler.kt": "ec3d096d6c1528b95384d5a82ff60e67f214b5fa774154e6ffb8f800cf941e38",
+    "scheduler/src/test/kotlin/network/orion/scheduler/alarms/OrionReminderAlarmsTest.kt": "b0e1fe9ce50583b5d8f407d7deb03e59f7847775edb93d371a2a81d0e818a87c",
+    "scripts/android/test_scheduled_reminder_runtime_harness.py": "b2a6b269030b3caae3b666df8f4f7f0ba59847697524b22b223ddbd113b67b30",
+    "scripts/android/test_transaction_process_death_harness.py": "4ee58735beca479587d7b77174e2c47cbf3424ff8c4bf89e9524b1cf3d77fa40",
+    "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+    "scripts/android/verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f",
+    "skills/reminders/src/main/kotlin/network/orion/skills/reminders/OrionDeliverReminderSkill.kt": "bcd4967dc1a8a3037b77bf11cfd86b9277b1e26158077486cbb88fa1d173b98d",
+    "skills/reminders/src/test/kotlin/network/orion/skills/reminders/OrionDeliverReminderSkillTest.kt": "f6905e8959b948cb70d8b0e26774e889914216dbbf4cd4d0fdf0a946a6a9851d"
+  },
+  "artifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6",
+    "app/build/outputs/apk/release/app-release-unsigned.apk": "98d9d40827d7b1e0820a70f9c128d17b2f29569e9d237285f64c6a0f61073554",
+    "app/build/outputs/bundle/release/app-release.aab": "a60ea7a6a124c5d525dd94a44bee8cab8e8b40f3a9be5d6c2ad00099a3f83025",
+    "core/security/build/outputs/apk/androidTest/debug/security-debug-androidTest.apk": "5bc4e88e07cbca3ed2407eb696d874b08f62a770b773fb395d91390a575b57a5"
+  },
+  "container": {
+    "environment": "CONTAINER",
+    "command": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2",
+    "result": "PASS",
+    "actionableTasks": 4108,
+    "debugJvmSuites": 89,
+    "debugJvm": {
+      "tests": 630,
+      "failures": 0,
+      "errors": 0
+    },
+    "lint": "PASS",
+    "moduleBoundaries": "PASS",
+    "nativeElfAbiApkAab16KiBPackaging": "PASS",
+    "physicalNativeLoad": "NOT_EXECUTED"
+  },
+  "host": {
+    "environment": "HOST",
+    "command": "python3 -m unittest discover -s scripts/android -p 'test_*harness.py'",
+    "tests": 35,
+    "failures": 0,
+    "result": "PASS"
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "qualification": "NON_DEFINITIVE",
+    "serial": "emulator-5586",
+    "api": 35,
+    "abi": "x86_64",
+    "pageSize": 4096,
+    "fingerprint": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+    "userdata": "Dedicated disposable API35 emulator instances with owned temporary /dev/shm userdata. The final installed-upgrade proof uses a separate fresh instance of the same image/build; every final proof uses the identical app/test APK hashes. Existing AVD userdata was preserved; only task-owned images were replaced between attempts.",
+    "applicationSuite": {
+      "tests": 313,
+      "failures": 0,
+      "result": "PASS"
+    },
+    "keystoreSuite": {
+      "tests": 4,
+      "failures": 0,
+      "result": "PASS"
+    },
+    "installedUpgrade": {
+      "result": "PASS",
+      "environment": "ANDROID_EMULATOR",
+      "fixtureId": "f5df3ece-17e2-433b-a26a-ed63921ce408",
+      "artifactSha256": {
+        "previous": "8928a0d70b0ae47a68972218c61e2ec592470e97d681d7dd925a518b1f185805",
+        "previousTest": "29c4bd98092a2b74c69db866ab9babf01bbcc3158a0b7c40991b8e0246198637",
+        "candidate": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "candidateTest": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "checks": {
+        "seed_prior_installation": "PASS",
+        "encrypted_records_queues_and_keys_survived": "PASS",
+        "pending_and_unknown_never_replayed": "PASS"
+      },
+      "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+      "workingTreeDirty": true,
+      "sourceSha256": {
+        "scripts/android/verify-installed-upgrade.py": "44ffb201547a44494a9f308a6cbb8bd80b9b3c40b6a64421251812308ea1cd59",
+        "app/src/androidTest/kotlin/network/orion/app/UpgradePersistenceTest.kt": "62a5f245714ea915ae602aec3a3f3c8241a24ec6f791216d8be908e1d3b68cc4"
+      },
+      "androidRuntimeEvidence": "NON_DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+      "abi": "x86_64",
+      "pageSize": "4096",
+      "previousVersionCode": 4,
+      "candidateVersionCode": 5,
+      "verifiedPid": "2353"
+    },
+    "committedReminderDeliverySigkill": {
+      "result": "PASS",
+      "environment": "ANDROID_EMULATOR",
+      "fixtureId": "fa70717a-ccc8-4059-b8bc-0e4f111b807d",
+      "scenario": "reminder_delivery",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checks": {
+        "kill_after_committed_external_claim": "PASS",
+        "uncertain_external_effect_not_replayed": "PASS"
+      },
+      "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+      "workingTreeDirty": true,
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryProcessDeathTest.kt": "3e3322988e94abffb95e9e8ebabc49ecc8452701991979ab4f1669214cffce0c",
+        "scripts/android/verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "checkpointBoundary": "AFTER_COMMITTED_RUNNING_OUTSIDE_ROOM_TRANSACTION",
+      "externalEvidence": "SYNTHETIC_DURABLE_MARKER",
+      "notificationManagerEvidence": "SEPARATE_PLATFORM_TEST",
+      "androidRuntimeEvidence": "NON_DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+      "abi": "x86_64",
+      "pageSize": "4096",
+      "beforePid": "6074",
+      "afterPid": "6137"
+    },
+    "realNotificationLifecycle": {
+      "doze": {
+        "result": "PASS",
+        "environment": "ANDROID_EMULATOR",
+        "scenario": "doze",
+        "fixtureId": "36a9e56a-bcf2-48f9-ac0c-6b9685161ecc",
+        "dedicatedTarget": true,
+        "checks": {
+          "registered_before_lifecycle_boundary": "PASS",
+          "deep_idle_observed_before_wait": "PASS",
+          "production_notification_before_verification": "PASS",
+          "real_exact_notification_observed_in_deep_idle": "PASS",
+          "single_committed_delivery_private_notification_and_cleanup": "PASS"
+        },
+        "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+        "workingTreeDirty": true,
+        "artifactSha256": {
+          "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+          "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+        },
+        "androidRuntimeEvidence": "NON_DEFINITIVE",
+        "apiLevel": "35",
+        "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+        "abi": "x86_64",
+        "bootCountBefore": 1,
+        "testAccess": {
+          "notificationPreviouslyGranted": false,
+          "exactOriginalMode": "default"
+        },
+        "fixture": {
+          "fixtureId": "36a9e56a-bcf2-48f9-ac0c-6b9685161ecc",
+          "reminderId": "902f5166-73fd-3993-bd16-638d45bb3d41",
+          "actionId": "337008dd-b304-43ce-aaaf-6f3a0afc4f21",
+          "generation": 1,
+          "requestCode": 1272027262,
+          "scheduledAtEpochMillis": 1794024486716,
+          "preparedAtEpochMillis": 1794024426716,
+          "previousForceStopDetectedAtEpochMillis": null,
+          "preparedPid": 2540,
+          "precision": "EXACT"
+        },
+        "deepIdleTestConfiguration": {
+          "originalEnabled": false,
+          "temporaryEnableRequired": true,
+          "screenOn": false,
+          "charging": false
+        },
+        "deepIdleBeforeNotification": "IDLE",
+        "dozeCapability": "OBSERVED",
+        "productionPidBeforeVerification": "2943",
+        "notificationObservedBeforeVerification": true,
+        "matchingNotificationKeys": [
+          "0|network.orion|0|337008dd-b304-43ce-aaaf-6f3a0afc4f21|10148"
+        ],
+        "deepIdleAtNotificationObservation": "IDLE",
+        "dozeAndBatteryRestore": "PASS",
+        "deepIdleEnabledRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationPermissionRestore": "PASS"
+      },
+      "force_stop": {
+        "result": "PASS",
+        "environment": "ANDROID_EMULATOR",
+        "scenario": "force_stop",
+        "fixtureId": "9dd2e920-b0bf-43bc-9a63-3c20af2e374a",
+        "dedicatedTarget": true,
+        "checks": {
+          "registered_before_lifecycle_boundary": "PASS",
+          "package_stopped_boundary_observed": "PASS",
+          "explicit_allowed_return": "PASS",
+          "production_notification_before_verification": "PASS",
+          "single_committed_delivery_private_notification_and_cleanup": "PASS",
+          "was_force_stopped_persisted_primary_signal": "PASS"
+        },
+        "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+        "workingTreeDirty": true,
+        "artifactSha256": {
+          "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+          "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+        },
+        "androidRuntimeEvidence": "NON_DEFINITIVE",
+        "apiLevel": "35",
+        "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+        "abi": "x86_64",
+        "bootCountBefore": 1,
+        "testAccess": {
+          "notificationPreviouslyGranted": false,
+          "exactOriginalMode": "default"
+        },
+        "fixture": {
+          "fixtureId": "9dd2e920-b0bf-43bc-9a63-3c20af2e374a",
+          "reminderId": "a9d97956-a288-3b24-9ffd-61261663289b",
+          "actionId": "27e489ec-53b9-424a-a1b9-2a194d54fb90",
+          "generation": 1,
+          "requestCode": 483382549,
+          "scheduledAtEpochMillis": 1794024584190,
+          "preparedAtEpochMillis": 1794024524190,
+          "previousForceStopDetectedAtEpochMillis": null,
+          "preparedPid": 3239,
+          "precision": "EXACT"
+        },
+        "productionPidBeforeVerification": "3291",
+        "notificationObservedBeforeVerification": true,
+        "matchingNotificationKeys": [
+          "0|network.orion|0|27e489ec-53b9-424a-a1b9-2a194d54fb90|10148"
+        ],
+        "lastForceStopDetectedAtMillis": 1794024539389,
+        "exactAccessRestore": "PASS",
+        "notificationPermissionRestore": "PASS"
+      },
+      "reboot": {
+        "result": "PASS",
+        "environment": "ANDROID_EMULATOR",
+        "scenario": "reboot",
+        "fixtureId": "3d9f5788-f23a-44ab-976c-9006c5360f64",
+        "dedicatedTarget": true,
+        "checks": {
+          "registered_before_lifecycle_boundary": "PASS",
+          "production_notification_before_verification": "PASS",
+          "automatic_main_start_after_reboot": "PASS",
+          "single_committed_delivery_private_notification_and_cleanup": "PASS"
+        },
+        "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+        "workingTreeDirty": true,
+        "artifactSha256": {
+          "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+          "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+        },
+        "androidRuntimeEvidence": "NON_DEFINITIVE",
+        "apiLevel": "35",
+        "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+        "abi": "x86_64",
+        "bootCountBefore": 1,
+        "testAccess": {
+          "notificationPreviouslyGranted": false,
+          "exactOriginalMode": "default"
+        },
+        "fixture": {
+          "fixtureId": "3d9f5788-f23a-44ab-976c-9006c5360f64",
+          "reminderId": "134e5cc3-2348-3468-a3c7-af70c2a30c40",
+          "actionId": "f6fdcfe3-08d3-488d-83eb-11b8f4b42567",
+          "generation": 1,
+          "requestCode": 595969207,
+          "scheduledAtEpochMillis": 1794024679866,
+          "preparedAtEpochMillis": 1794024619866,
+          "previousForceStopDetectedAtEpochMillis": 1794024539389,
+          "preparedPid": 4003,
+          "precision": "EXACT"
+        },
+        "bootCountAfter": 2,
+        "productionPidBeforeVerification": "2496",
+        "notificationObservedBeforeVerification": true,
+        "matchingNotificationKeys": [
+          "0|network.orion|0|f6fdcfe3-08d3-488d-83eb-11b8f4b42567|10148"
+        ],
+        "exactAccessRestore": "PASS",
+        "notificationPermissionRestore": "PASS"
+      },
+      "time_change": {
+        "result": "PASS",
+        "environment": "ANDROID_EMULATOR",
+        "scenario": "time_change",
+        "fixtureId": "627f444b-8898-4f02-86c2-a2bf6d490e2b",
+        "dedicatedTarget": true,
+        "checks": {
+          "registered_before_lifecycle_boundary": "PASS",
+          "alarm_service_clock_advanced": "PASS",
+          "production_notification_before_verification": "PASS",
+          "single_committed_delivery_private_notification_and_cleanup": "PASS",
+          "approved_instant_preserved_after_system_time_change": "PASS"
+        },
+        "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+        "workingTreeDirty": true,
+        "artifactSha256": {
+          "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+          "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+        },
+        "androidRuntimeEvidence": "NON_DEFINITIVE",
+        "apiLevel": "35",
+        "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+        "abi": "x86_64",
+        "bootCountBefore": 2,
+        "testAccess": {
+          "notificationPreviouslyGranted": false,
+          "exactOriginalMode": "default"
+        },
+        "fixture": {
+          "fixtureId": "627f444b-8898-4f02-86c2-a2bf6d490e2b",
+          "reminderId": "08e97eab-4b9a-346f-aebd-c9f666b3c8a6",
+          "actionId": "d95c70ef-574b-4190-ad57-1c785e4e1e43",
+          "generation": 1,
+          "requestCode": 1930532961,
+          "scheduledAtEpochMillis": 1794024871327,
+          "preparedAtEpochMillis": 1794024811327,
+          "previousForceStopDetectedAtEpochMillis": 1794024539389,
+          "preparedPid": 2800,
+          "precision": "EXACT"
+        },
+        "wallMutation": {
+          "beforeMillis": 1794024812000,
+          "targetMillis": 1794024932000,
+          "clockSource": "DEVICE_DATE_SECONDS_PLUS_HOST_MONOTONIC_ELAPSED",
+          "observedMillis": 1794024932000,
+          "restoreTargetMillis": 1794024819890,
+          "restoredObservedMillis": 1794024820000
+        },
+        "timeChangeCapability": "OBSERVED",
+        "productionPidBeforeVerification": "2847",
+        "notificationObservedBeforeVerification": true,
+        "matchingNotificationKeys": [
+          "0|network.orion|0|d95c70ef-574b-4190-ad57-1c785e4e1e43|10148"
+        ],
+        "wallClockRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationPermissionRestore": "PASS"
+      },
+      "timezone_change": {
+        "result": "PASS",
+        "environment": "ANDROID_EMULATOR",
+        "scenario": "timezone_change",
+        "fixtureId": "365bd6ad-e9a2-4942-bb47-04ae74233e0d",
+        "dedicatedTarget": true,
+        "checks": {
+          "registered_before_lifecycle_boundary": "PASS",
+          "alarm_service_timezone_changed": "PASS",
+          "production_notification_before_verification": "PASS",
+          "single_committed_delivery_private_notification_and_cleanup": "PASS",
+          "approved_instant_preserved_after_system_time_change": "PASS"
+        },
+        "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+        "workingTreeDirty": true,
+        "artifactSha256": {
+          "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+          "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+        },
+        "androidRuntimeEvidence": "NON_DEFINITIVE",
+        "apiLevel": "35",
+        "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+        "abi": "x86_64",
+        "bootCountBefore": 2,
+        "testAccess": {
+          "notificationPreviouslyGranted": false,
+          "exactOriginalMode": "default"
+        },
+        "fixture": {
+          "fixtureId": "365bd6ad-e9a2-4942-bb47-04ae74233e0d",
+          "reminderId": "87d0f054-7fc5-32b6-8641-4dad4c725682",
+          "actionId": "c8e19e7d-7f79-4a63-8853-7449f2ceb927",
+          "generation": 1,
+          "requestCode": 303011875,
+          "scheduledAtEpochMillis": 1794024884978,
+          "preparedAtEpochMillis": 1794024824978,
+          "previousForceStopDetectedAtEpochMillis": 1794024539389,
+          "preparedPid": 3093,
+          "precision": "EXACT"
+        },
+        "timezoneMutation": {
+          "before": "America/Sao_Paulo",
+          "target": "Asia/Tokyo",
+          "observed": "Asia/Tokyo"
+        },
+        "timezoneChangeCapability": "OBSERVED",
+        "productionPidBeforeVerification": "3137",
+        "notificationObservedBeforeVerification": true,
+        "matchingNotificationKeys": [
+          "0|network.orion|0|c8e19e7d-7f79-4a63-8853-7449f2ceb927|10148"
+        ],
+        "timezoneRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationPermissionRestore": "PASS"
+      },
+      "background_restriction": {
+        "result": "PASS",
+        "environment": "ANDROID_EMULATOR",
+        "scenario": "background_restriction",
+        "fixtureId": "73727efb-5bb0-4d49-a917-582632e0737c",
+        "dedicatedTarget": true,
+        "checks": {
+          "registered_before_lifecycle_boundary": "PASS",
+          "background_restricted_and_explicit_foreground_return": "PASS",
+          "production_notification_before_verification": "PASS",
+          "single_committed_delivery_private_notification_and_cleanup": "PASS",
+          "background_restriction_observable_degradation": "PASS"
+        },
+        "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+        "workingTreeDirty": true,
+        "artifactSha256": {
+          "app-debug.apk": "df86c4e4b76857e7576e0516dabf67c67cde8ffe4546101d8a7bcb016676dabf",
+          "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+        },
+        "sourceSha256": {
+          "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+          "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+        },
+        "androidRuntimeEvidence": "NON_DEFINITIVE",
+        "apiLevel": "35",
+        "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+        "abi": "x86_64",
+        "bootCountBefore": 2,
+        "testAccess": {
+          "notificationPreviouslyGranted": false,
+          "exactOriginalMode": "default"
+        },
+        "fixture": {
+          "fixtureId": "73727efb-5bb0-4d49-a917-582632e0737c",
+          "reminderId": "48b74153-7d3c-3f35-af0f-1321d515e7f6",
+          "actionId": "61a6c4a6-e995-4ea1-961e-90e17134d82e",
+          "generation": 1,
+          "requestCode": 769997065,
+          "scheduledAtEpochMillis": 1794024957135,
+          "preparedAtEpochMillis": 1794024897135,
+          "previousForceStopDetectedAtEpochMillis": 1794024539389,
+          "preparedPid": 4188,
+          "precision": "EXACT"
+        },
+        "backgroundRestrictionCapability": "OBSERVED",
+        "deliveryContext": "EXPLICIT_ALLOWED_FOREGROUND_RETURN_WHILE_BACKGROUND_RESTRICTED",
+        "productionPidBeforeVerification": "4243",
+        "notificationObservedBeforeVerification": true,
+        "matchingNotificationKeys": [
+          "0|network.orion|0|61a6c4a6-e995-4ea1-961e-90e17134d82e|10148"
+        ],
+        "backgroundContinuousOperationQualified": false,
+        "backgroundRestrictionRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationPermissionRestore": "PASS"
+      }
+    }
+  },
+  "previousAttempts": {
+    "installedUpgradeEarlyPackaging": {
+      "report": {
+        "result": "PASS",
+        "environment": "ANDROID_EMULATOR",
+        "fixtureId": "e605d48b-7dbf-4bd6-a830-3b8a2880f5a9",
+        "artifactSha256": {
+          "previous": "8928a0d70b0ae47a68972218c61e2ec592470e97d681d7dd925a518b1f185805",
+          "previousTest": "29c4bd98092a2b74c69db866ab9babf01bbcc3158a0b7c40991b8e0246198637",
+          "candidate": "a264d6c29c292ebbd4ac914a29844d562b4eb504577efa25cd73d1ca3f7700c7",
+          "candidateTest": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+        },
+        "checks": {
+          "seed_prior_installation": "PASS",
+          "encrypted_records_queues_and_keys_survived": "PASS",
+          "pending_and_unknown_never_replayed": "PASS"
+        },
+        "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+        "workingTreeDirty": true,
+        "sourceSha256": {
+          "scripts/android/verify-installed-upgrade.py": "44ffb201547a44494a9f308a6cbb8bd80b9b3c40b6a64421251812308ea1cd59",
+          "app/src/androidTest/kotlin/network/orion/app/UpgradePersistenceTest.kt": "62a5f245714ea915ae602aec3a3f3c8241a24ec6f791216d8be908e1d3b68cc4"
+        },
+        "androidRuntimeEvidence": "NON_DEFINITIVE",
+        "apiLevel": "35",
+        "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+        "abi": "x86_64",
+        "pageSize": "4096",
+        "previousVersionCode": 4,
+        "candidateVersionCode": 5,
+        "verifiedPid": "2396"
+      },
+      "resolution": "Final collection rejected this otherwise successful upgrade because its app hash was the previous candidate: AndroidTest packaging completed before main APK packaging. Only installed4to5 replacement was repeated on another clean disposable instance after the canonical build fully finished. All final reports now match the final app/test hashes."
+    },
+    "finalArtifactSystemUiInterruption": {
+      "tests": 313,
+      "failures": 2,
+      "rawOutputSha256": "0b1bec65d641560846ea947d6ce3485c78726899492dfeeea1ee52444ba3e7b6",
+      "windowDumpSha256": "7bef8520bb506e6b407e8c701d7a6a1e496c3d2dc53b2700dd9b58d397d53c9c",
+      "dialogXmlSha256": "ff469d682b289089c9b9a4ad32d81bb73a3eb13d6dc4a1662c2a18372fbc31ce",
+      "recovery": {
+        "recoveredAt": "2026-11-07T04:21:21.660012+00:00",
+        "environment": "ANDROID_EMULATOR",
+        "intervention": "Selected the Android ANR dialog Close app button for System UI through ordinary input tap after the full suite had ended. No app/test code or assertions changed, no root/direct system-process kill.",
+        "dialogTitle": "System UI isn't responding",
+        "selectedResourceId": "android:id/aerr_close",
+        "selectedBounds": "[70,1110][1010,1236]"
+      },
+      "resolution": "A System UI ANR dialog owned focus, blocking the reminder/task native focus prerequisites. After the full attempt ended, the normal Android Close app button recovered System UI. The entire313-case suite was rerun with unchanged APKs and assertions and passed."
+    },
+    "initialApplicationSuite": {
+      "tests": 310,
+      "failures": 4,
+      "rawOutputSha256": "36bb8d259bc37c74122d24ed27fc8d90d3facc85446fa9b79148400ddeb164d2",
+      "resolution": "Updated obsolete UI-copy assertion and historical schema4 fixture reopening with current Room5. Two focus timeouts occurred with a SystemUI ANR on older userdata; all313 cases subsequently passed on fresh dedicated userdata."
+    },
+    "earlierLintAnalysis": {
+      "result": "FAIL",
+      "rawOutputSha256": "c4cf8c97b2de4b3fe44b98f3a12d36baf085e985a2ae4939a110c42d719c005f",
+      "reason": "Internal FirDeclaration lint analysis exception during an edit window. Final frozen full check passes; no checks disabled."
+    },
+    "initialDoze": {
+      "result": "FAIL",
+      "environment": "ANDROID_EMULATOR",
+      "scenario": "doze",
+      "fixtureId": "8978075b-01eb-4f5d-8ffc-8bd00c6fdd12",
+      "dedicatedTarget": true,
+      "checks": {
+        "registered_before_lifecycle_boundary": "PASS"
+      },
+      "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+      "workingTreeDirty": true,
+      "artifactSha256": {
+        "app-debug.apk": "a264d6c29c292ebbd4ac914a29844d562b4eb504577efa25cd73d1ca3f7700c7",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "d0293dc4183e83e8603c986ee5c63e9b1920b01c23a0cd99d928ae535bd9906d",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "NON_DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+      "abi": "x86_64",
+      "bootCountBefore": 1,
+      "testAccess": {
+        "notificationPreviouslyGranted": false,
+        "exactOriginalMode": "default"
+      },
+      "fixture": {
+        "fixtureId": "8978075b-01eb-4f5d-8ffc-8bd00c6fdd12",
+        "reminderId": "74e47116-bc04-3e99-ac4f-a7eb65825d26",
+        "actionId": "693895a6-1c56-48cd-9bf2-29d54d1df889",
+        "generation": 1,
+        "requestCode": 423409763,
+        "scheduledAtEpochMillis": 1794023091747,
+        "preparedAtEpochMillis": 1794023031747,
+        "previousForceStopDetectedAtEpochMillis": null,
+        "preparedPid": 2574,
+        "precision": "EXACT"
+      },
+      "dozeCapability": "UNAVAILABLE_OR_DENIED",
+      "failureType": "RuntimeError",
+      "failure": "ADB failed: shell cmd deviceidle",
+      "dozeAndBatteryRestore": "PASS",
+      "exactAccessRestore": "PASS",
+      "notificationPermissionRestore": "PASS"
+    },
+    "initialDozeResolution": "Fresh emulator had deep idle disabled. Recorder now captures/temporarily enables/restores that test setting and observes screen-off/unplugged prerequisites; no whitelist or alarm-quota bypass. Failed synthetic fixture was removed by verification-finally cleanup; its timeout is not a qualification pass.",
+    "initialReboot": {
+      "result": "FAIL",
+      "environment": "ANDROID_EMULATOR",
+      "scenario": "reboot",
+      "fixtureId": "3fd5000d-136c-4d30-8276-44e784365bec",
+      "dedicatedTarget": true,
+      "checks": {
+        "registered_before_lifecycle_boundary": "PASS"
+      },
+      "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+      "workingTreeDirty": true,
+      "artifactSha256": {
+        "app-debug.apk": "a264d6c29c292ebbd4ac914a29844d562b4eb504577efa25cd73d1ca3f7700c7",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "d4cb2b3e6a3067ca1cf5e48a7c7682db4766edcedbeed25dd54ec9a0f50d6898",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "NON_DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+      "abi": "x86_64",
+      "bootCountBefore": 1,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "fixture": {
+        "fixtureId": "3fd5000d-136c-4d30-8276-44e784365bec",
+        "reminderId": "8cea7e7c-c5d2-34b6-9734-340eaa77b0a2",
+        "actionId": "834a3ec8-0763-4445-9d5c-af3f162f5327",
+        "generation": 1,
+        "requestCode": 1552443916,
+        "scheduledAtEpochMillis": 1794023692493,
+        "preparedAtEpochMillis": 1794023632493,
+        "previousForceStopDetectedAtEpochMillis": null,
+        "preparedPid": 4147,
+        "precision": "EXACT"
+      },
+      "failureType": "RuntimeError",
+      "failure": "ADB failed: shell reboot",
+      "exactAccessRestore": "FAILED"
+    },
+    "initialRebootResolution": "Shell reboot actually restarted Android but disconnect caused a host failure. Recorder uses the official ADB reboot protocol. After boot, prior exact access was restored and only its owned synthetic fixture cleaned; final reboot is a new successful run.",
+    "forceStopBeforeFix": {
+      "result": "FAIL",
+      "environment": "ANDROID_EMULATOR",
+      "scenario": "force_stop",
+      "fixtureId": "093cdf3b-9976-48e3-88c3-0856cb66b678",
+      "dedicatedTarget": true,
+      "checks": {
+        "registered_before_lifecycle_boundary": "PASS",
+        "package_stopped_boundary_observed": "PASS",
+        "explicit_allowed_return": "PASS",
+        "production_notification_before_verification": "PASS"
+      },
+      "commit": "4d7acdc32fe153fc5e8ee7049ffad7ebfb66666c",
+      "workingTreeDirty": true,
+      "artifactSha256": {
+        "app-debug.apk": "a264d6c29c292ebbd4ac914a29844d562b4eb504577efa25cd73d1ca3f7700c7",
+        "app-debug-androidTest.apk": "b0149ed2204509298a21005a9ed5b014bcbe49beaa813109e07a2236f2798de6"
+      },
+      "sourceSha256": {
+        "scripts/android/verify-scheduled-reminder-runtime.py": "b810b288fe099cc58d091038a71560b78de312d1e5a9a08fbdedc2f5c2f20f05",
+        "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "03ec76efc0fda6c7b6bc447b543a29ec2789d4c515111507eff55af743ab1b7c"
+      },
+      "androidRuntimeEvidence": "NON_DEFINITIVE",
+      "apiLevel": "35",
+      "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+      "abi": "x86_64",
+      "bootCountBefore": 3,
+      "testAccess": {
+        "notificationPreviouslyGranted": true,
+        "exactOriginalMode": "default"
+      },
+      "fixture": {
+        "fixtureId": "093cdf3b-9976-48e3-88c3-0856cb66b678",
+        "reminderId": "550e418f-b01b-35cb-a22a-32f8c01084bc",
+        "actionId": "19b06f1c-18e8-49f3-a158-abf357aa5b7d",
+        "generation": 1,
+        "requestCode": 1854111900,
+        "scheduledAtEpochMillis": 1794023928458,
+        "preparedAtEpochMillis": 1794023868458,
+        "previousForceStopDetectedAtEpochMillis": null,
+        "preparedPid": 2520,
+        "precision": "EXACT"
+      },
+      "productionPidBeforeVerification": "2571",
+      "notificationObservedBeforeVerification": true,
+      "matchingNotificationKeys": [
+        "0|network.orion|0|19b06f1c-18e8-49f3-a158-abf357aa5b7d|10148"
+      ],
+      "failureType": "RuntimeError",
+      "failure": "Production delivery verification failed.",
+      "exactAccessRestore": "PASS"
+    },
+    "forceStopResolution": "Actual notification and allowed return succeeded, but strict verification found missing persisted primary evidence. API35 startup history returned pid0, including the completed wasForceStopped=true record. Runtime now uses the public CURRENT-start completion callback, keeps incomplete negative evidence unavailable, and persists positive evidence only once after successful storage. Seven JVM regressions added; no exit-reason inference or arbitrary historical-record guessing. All final proofs rebuilt and rerun with uniform corrected APKs."
+  },
+  "rawOutputSha256": {
+    "/tmp/orion-f4-final-fixed-build.log": "68c5403ec8656f66ef533eae5fc86454601f4d1c7ab8157ae0984c2d74dea6f8",
+    "/tmp/orion-f4-fixed-android-retry.txt": "10fd9333ed024cf5dbc2fdfb5bf0b260da56fa3c17b88911fe3024a6fcaa989d",
+    "/tmp/orion-f4-fixed-security.txt": "dab75dd8f6f632c327504145f238d04cc7f9e4fb6c09820b41369f78a7471de4",
+    "/tmp/orion-f4-fixed-validation-sequence.log": "d6ea5de36e27e60f3c40c92be5866d1bff116ce783102f4f4cebe76fdec09ed9",
+    "/tmp/orion-f4-fixed-final-retry-sequence.log": "562939a4417db65c1b19442ec2102dd3d17c40fed6ad4ec256ca0ab405eee6fa",
+    "/tmp/orion-f4-uniform-installed-upgrade/prepare-instrumentation.txt": "0ce003e89b030f9e47c6cbab7e21135ebe65ae1343c991e8a656ac3849325415",
+    "/tmp/orion-f4-uniform-installed-upgrade/verify-instrumentation.txt": "5c4e7303433f96cc2991ccc1989fce91e637d2e46367368c9ee5a8493b5912da",
+    "/tmp/orion-f4-fixed-reminder-delivery-death/prepare-instrumentation.txt": "61ea85d51e6fdac5284642f6b16d92a4880ba361363d777a26cd3ef939e660ff",
+    "/tmp/orion-f4-fixed-reminder-delivery-death/verify-instrumentation.txt": "8a889b5dfa62148b02de9cfc8e394bd775fabd5f70f34a92c64c8582f6b9d0ea",
+    "/tmp/orion-f4-fixed-doze/prepare-instrumentation.txt": "32b54a09538f8b62838c821021166534018d63fd0e391afc7884b196969f6843",
+    "/tmp/orion-f4-fixed-doze/verify-instrumentation.txt": "3e07fd5dd064242b416996472ec7d9ee3b606796f05ef453b7e7eaf0bbe4e589",
+    "/tmp/orion-f4-fixed-force_stop/prepare-instrumentation.txt": "8544bd9b0c9f6b740447c33f3fa604c233f3ad6cac930b8c1d9bbcfaf5b73456",
+    "/tmp/orion-f4-fixed-force_stop/verify-instrumentation.txt": "80b8ed9e4fdba03aaa5b21ba53a28d70ed8cc00a8d5b2ad1262f8002e29f1b3e",
+    "/tmp/orion-f4-fixed-reboot/prepare-instrumentation.txt": "bb2629c2ea15dc4616da168155f7a75227d263af7f55b54f9688a44492c636c2",
+    "/tmp/orion-f4-fixed-reboot/verify-instrumentation.txt": "49597c6729001ddfe8ba126674168bbd66e8984dc531ab51cb96c556f7a82427",
+    "/tmp/orion-f4-fixed-time_change/prepare-instrumentation.txt": "6bf29f17249423e0856711241ccce6222da3275adf80937c4b1f469bd4563c43",
+    "/tmp/orion-f4-fixed-time_change/verify-instrumentation.txt": "86e309d0256a43679969e34d13504651f2c30d91453abb87aafdb34aea5c3c68",
+    "/tmp/orion-f4-fixed-timezone_change/prepare-instrumentation.txt": "5d3f1f7ee4c8ab033068b0061da268f7690c5ded3affc97d59b9e1f35efbfa56",
+    "/tmp/orion-f4-fixed-timezone_change/verify-instrumentation.txt": "3bbd756ff1bdd28089475f95d7ba035fbef38895ef0bd32001da2d909b4d1096",
+    "/tmp/orion-f4-fixed-background_restriction/prepare-instrumentation.txt": "c807f2f349a0ed3b7f142cdbb8c5bc0368ebf3fc585e4338d75b9dcbe9f7d321",
+    "/tmp/orion-f4-fixed-background_restriction/verify-instrumentation.txt": "a7aa631c4c8a9dcdda9b36fdb33a09cd42be92b675b440fba7d17b3a8ebb8584"
+  },
+  "physicalQualification": "NOT_EXECUTED; no connected physical target; user explicitly continued with physical qualification pending",
+  "f4Gate": "OPEN; issue64 tracks remaining physical/system/resource/soak work and prerequisite physical gate23. No MVP/24-7/DETERMINISTIC_AGENT_READY or stable release claim.",
+  "remaining": [
+    "Samsung Galaxy S21 physical runtime/Keystore and predecessor issue23",
+    "Broader Android API/OEM matrix, API37 memory-limiter runtime behavior and physical native arm64/16KiB load",
+    "Expanded battery-saver/restriction/capability, storage/resource stress and required long-running soak"
+  ]
+}

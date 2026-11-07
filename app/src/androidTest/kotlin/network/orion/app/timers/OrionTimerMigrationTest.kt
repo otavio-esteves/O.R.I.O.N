@@ -46,7 +46,8 @@ class OrionTimerMigrationTest {
                 upgraded.query("SELECT formatVersion FROM orion_storage_metadata WHERE id=1").use { assertTrue(it.moveToFirst());assertEquals(1,it.getInt(0)) }
                 upgraded.query("SELECT count(*) FROM orion_timers").use { assertTrue(it.moveToFirst());assertEquals(0,it.getInt(0)) }
             }
-            val reopened=Room.databaseBuilder(context,OrionDatabase::class.java,name).build()
+            val reopened=Room.databaseBuilder(context,OrionDatabase::class.java,name)
+                .addMigrations(OrionDatabaseMigrations.MIGRATION_4_5).build()
             try { reopened.verifyStructure() } finally { reopened.close() }
         } finally { context.deleteDatabase(name) }
     }

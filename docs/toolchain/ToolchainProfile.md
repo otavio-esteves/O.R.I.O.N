@@ -80,6 +80,16 @@ The image preserves the SDK/NDK executable set and normalizes owner-only executa
 files for non-root Compose users. No version change or root-owned workspace build.
 Native compilation/inspection and the integrated gates are re-executed with this image.
 
+### F4 scheduling extension
+
+Extension ID: `orion_toolchain_f4_work_2026_11_07` (compiler/SDK/Docker baseline unchanged).
+WorkManager `2.12.0` is pinned for deferrable heartbeat and reconciliation only.
+Its automatic initializer and optional exported diagnostics receiver are removed;
+MAIN initializes its technical scheduler synchronously after process-role and unlocked-storage checks, before Android may create a JobService. Worker reconciliation remains a Core recovery stage; worker execution always re-enters the Startup Barrier. The framework
+JobService remains protected by `android.permission.BIND_JOB_SERVICE`. Dependency,
+native packaging, build/lint and process-ownership checks must pass for this extension.
+Exact civil delivery remains an AlarmManager concern with persisted Room authority.
+
 ### Persistent debug signing
 
 Compose mounts the project-scoped `orion-android-user` volume at ANDROID_USER_HOME

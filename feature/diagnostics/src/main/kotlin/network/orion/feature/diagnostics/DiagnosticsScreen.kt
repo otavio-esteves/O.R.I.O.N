@@ -11,7 +11,7 @@ import network.orion.core.health.*
 import network.orion.core.ipc.OrionIpcProtocol
 
 @Composable
-fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, taskQueues: TaskQueueDiagnostics? = null, onRetry: () -> Unit) {
+fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, taskQueues: TaskQueueDiagnostics? = null, scheduling: OrionSchedulingDiagnostics? = null, onRetry: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Saúde do sistema", style = MaterialTheme.typography.headlineSmall)
@@ -29,6 +29,17 @@ fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, ta
             Text("Ações para revisão manual: ${q.manualReviewActions}")
             Text("Eventos não publicados: ${q.pendingEvents}")
             Text("Recuperação e agendamento completos: qualificação F4 pendente")
+        }
+        scheduling?.let { q ->
+            Text("Lembretes pendentes: ${q.pendingReminders}")
+            Text("Entrega aproximada: ${q.approximateReminders}")
+            Text("Eventos para revisão: ${q.deadLetterEvents}")
+            Text("Alarme exato: ${q.exactAlarmCapability}")
+            Text("Manutenção registrada: ${q.heartbeatRegistered}")
+            Text("Restrição em segundo plano: ${q.backgroundRestricted}")
+            Text("Sinal de Force Stop: ${q.forceStopSignal}")
+            Text("Último Force Stop detectado: ${q.lastForceStopDetectedAt ?: "sem evidência"}")
+            Text("Última saída: ${q.lastExitKind ?: "indisponível"} (${q.lastExitReason ?: "?"})")
         }
         HorizontalDivider()
         for ((subsystem, status) in report.subsystems) {

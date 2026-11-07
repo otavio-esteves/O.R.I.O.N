@@ -23,6 +23,8 @@ SCENARIOS = {
                "app/src/androidTest/kotlin/network/orion/app/memories/OrionMemoryTransactionProcessDeathTest.kt"),
     "notification": ("network.orion.app.notifications.OrionNotificationTransactionProcessDeathTest",
                      "app/src/androidTest/kotlin/network/orion/app/notifications/OrionNotificationTransactionProcessDeathTest.kt"),
+    "reminder_delivery": ("network.orion.app.reminderdelivery.OrionReminderDeliveryProcessDeathTest",
+                          "app/src/androidTest/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryProcessDeathTest.kt"),
 }
 
 
@@ -30,7 +32,7 @@ def scenario_proof(scenario):
     """Declare the fixture's checkpoint/proof; labels never substitute verification."""
     if scenario not in SCENARIOS:
         raise ValueError("Invalid process-death scenario.")
-    if scenario == "notification":
+    if scenario in ("notification", "reminder_delivery"):
         return {
             "killCheck": "kill_after_committed_external_claim",
             "verificationCheck": "uncertain_external_effect_not_replayed",

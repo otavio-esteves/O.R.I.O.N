@@ -23,13 +23,17 @@ internal interface OrionNotificationPoster {
     fun post(actionId:UUID,notification:ValidatedPostNotification,permit:OrionNotificationInvocationPermit):NotificationPostResult
 }
 
-internal class OrionAndroidNotificationPoster(context:Context,private val clock:MonotonicClock):OrionNotificationPoster {
+internal class OrionAndroidNotificationPoster(context:Context,private val clock:MonotonicClock,
+    private val channelId:String=USER_CHANNEL):OrionNotificationPoster {
+    init { require(channelId in setOf(USER_CHANNEL, REMINDER_CHANNEL)) }
     private val app=context.applicationContext
     private val manager=app.getSystemService(NotificationManager::class.java)
     /** MAIN calls this deliberately. Existing user channel choices are preserved by Android. */
     fun initializeChannels() {
         manager?.createNotificationChannels(listOf(
-            NotificationChannel("orion_reminders","Lembretes",NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel(REMINDER_CHANNEL,"Lembretes",NotificationManager.IMPORTANCE_DEFAULT).apply {
+                lockscreenVisibility=Notification.VISIBILITY_PRIVATE
+            },
             NotificationChannel("orion_proactive","Sugestões",NotificationManager.IMPORTANCE_LOW),
             NotificationChannel("orion_voice_service","Voz",NotificationManager.IMPORTANCE_LOW),
             NotificationChannel("orion_system_status","Estado do sistema",NotificationManager.IMPORTANCE_LOW),
@@ -44,8 +48,8 @@ internal class OrionAndroidNotificationPoster(context:Context,private val clock:
             !permissionGranted()->NotificationAvailability.PERMISSION_DENIED
             manager==null->NotificationAvailability.UNAVAILABLE
             !manager.areNotificationsEnabled()->NotificationAvailability.APP_DISABLED
-            manager.getNotificationChannel(USER_CHANNEL)==null->NotificationAvailability.UNAVAILABLE
-            manager.getNotificationChannel(USER_CHANNEL).importance==NotificationManager.IMPORTANCE_NONE->NotificationAvailability.CHANNEL_DISABLED
+            manager.getNotificationChannel(channelId)==null->NotificationAvailability.UNAVAILABLE
+            manager.getNotificationChannel(channelId).importance==NotificationManager.IMPORTANCE_NONE->NotificationAvailability.CHANNEL_DISABLED
             else->NotificationAvailability.AVAILABLE
         }
     } catch(_:Exception) { NotificationAvailability.UNAVAILABLE }
@@ -53,9 +57,9 @@ internal class OrionAndroidNotificationPoster(context:Context,private val clock:
         // Distinguish proven pre-invocation denial from any ambiguous outcome after invoke.
         if(availability()!=NotificationAvailability.AVAILABLE)return NotificationPostResult.NOT_INVOKED
         val service=manager?:return NotificationPostResult.NOT_INVOKED
-        val public=Notification.Builder(app,USER_CHANNEL).setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("O.R.I.O.N.").setContentText("Notificação solicitada").build()
-        val platform=Notification.Builder(app,USER_CHANNEL).setSmallIcon(android.R.drawable.ic_dialog_info)
+        val public=Notification.Builder(app,channelId).setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("O.R.I.O.N.").setContentText(if(channelId==REMINDER_CHANNEL) "Lembrete" else "Notificação solicitada").build()
+        val platform=Notification.Builder(app,channelId).setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(notification.title).setContentText(notification.body)
             .setStyle(Notification.BigTextStyle().bigText(notification.body)).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setPublicVersion(public).setLocalOnly(true).setOnlyAlertOnce(true).setAllowSystemGeneratedContextualActions(false).build()
@@ -75,7 +79,7 @@ internal class OrionAndroidNotificationPoster(context:Context,private val clock:
                 if(age.toMillis()>500)return NotificationPostResult.UNKNOWN
                 val active=service.activeNotifications.singleOrNull { it.tag==actionId.toString()&&it.id==0 }
                 val posted=active?.notification
-                if(posted?.channelId==USER_CHANNEL&&posted.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()==notification.title&&
+                if(posted?.channelId==channelId&&posted.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()==notification.title&&
                     posted.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()==notification.body)return NotificationPostResult.POSTED
                 if(attempt<9)Thread.sleep(25)
             }
@@ -86,5 +90,5 @@ internal class OrionAndroidNotificationPoster(context:Context,private val clock:
         } catch(_:Exception) { NotificationPostResult.UNKNOWN }
     }
 
-    companion object { const val USER_CHANNEL="orion_user_notifications" }
+    companion object { const val USER_CHANNEL="orion_user_notifications"; const val REMINDER_CHANNEL="orion_reminders" }
 }

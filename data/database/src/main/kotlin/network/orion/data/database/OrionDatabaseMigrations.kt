@@ -4,6 +4,39 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object OrionDatabaseMigrations {
+    val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // Historical reminders preserve their logical state and never acquire delivery consent.
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN localDateTime TEXT")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN recurrenceRule TEXT")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN resolutionDecision TEXT")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN resolvedOffsetSeconds INTEGER")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN scheduleMethod TEXT NOT NULL DEFAULT 'UNSCHEDULED'")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN requestCode INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN fireGeneration INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN lastScheduledAt INTEGER")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN lastScheduledGeneration INTEGER")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN registrationConfirmed INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN lastFiredAt INTEGER")
+            db.execSQL("ALTER TABLE orion_reminders ADD COLUMN deliveryActionId TEXT")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS orion_reminder_series (
+                reminderId TEXT NOT NULL, seriesId TEXT NOT NULL, ruleCanonical TEXT NOT NULL,
+                occurrenceCount INTEGER NOT NULL, currentIndex INTEGER NOT NULL, state TEXT NOT NULL,
+                createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, version INTEGER NOT NULL,
+                PRIMARY KEY(reminderId), FOREIGN KEY(reminderId) REFERENCES orion_reminders(reminderId)
+                ON UPDATE NO ACTION ON DELETE CASCADE)""")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_orion_reminder_series_seriesId ON orion_reminder_series(seriesId)")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS orion_reminder_occurrences (
+                reminderId TEXT NOT NULL, occurrenceIndex INTEGER NOT NULL, seriesId TEXT NOT NULL,
+                actionId TEXT NOT NULL, generation INTEGER NOT NULL, scheduledAt INTEGER NOT NULL,
+                requestedLocalDateTime TEXT NOT NULL, resolvedLocalDateTime TEXT NOT NULL, offsetSeconds INTEGER NOT NULL,
+                resolutionDecision TEXT NOT NULL, PRIMARY KEY(reminderId, occurrenceIndex),
+                FOREIGN KEY(seriesId) REFERENCES orion_reminder_series(seriesId) ON UPDATE NO ACTION ON DELETE CASCADE)""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_orion_reminder_occurrences_seriesId ON orion_reminder_occurrences(seriesId)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_orion_reminder_occurrences_actionId ON orion_reminder_occurrences(actionId)")
+        }
+    }
+
     val MIGRATION_3_4: Migration = object : Migration(3, 4) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("""CREATE TABLE IF NOT EXISTS `orion_timers` (

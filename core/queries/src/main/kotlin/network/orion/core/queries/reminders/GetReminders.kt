@@ -10,10 +10,12 @@ data class GetReminders(val after: UUID? = null, val limit: Int = 50) : Query<Re
 }
 
 enum class ReminderState { PENDING, FIRED, CANCELLED }
+enum class ReminderAlertState { DISABLED, AWAITING_SCHEDULE, SCHEDULED, DELIVERED, UNCERTAIN, EXPIRED }
 enum class ReminderContentState { READABLE, UNREADABLE, KEY_UNAVAILABLE }
 
 class ReminderSummary(val reminderId: UUID, val title: String?, val state: ReminderState, val version: Long,
-    val contentState: ReminderContentState, val scheduledAt: java.time.Instant, val zoneId: String, val precision: String) {
+    val contentState: ReminderContentState, val scheduledAt: java.time.Instant, val zoneId: String, val precision: String,
+    val alertState: ReminderAlertState = ReminderAlertState.DISABLED) {
     init { require(version >= 0); require((title != null) == (contentState == ReminderContentState.READABLE)) }
     override fun toString() = "ReminderSummary(<redacted>)"
 }

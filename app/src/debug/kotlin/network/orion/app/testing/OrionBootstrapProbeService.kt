@@ -26,6 +26,7 @@ open class OrionBootstrapProbeService : Service() {
                 putInt("schemaVersion", IpcSchemaVersion(1).value)
                 putString("role", app.processRole.name)
                 putBoolean("mainGraphCreated", app.mainRuntime != null)
+                putBoolean("workManagerInitialized", androidx.work.WorkManager.isInitialized())
                 putBoolean("databaseDenied", denied { OrionDatabaseFactory.open(this@OrionBootstrapProbeService).close() })
                 putBoolean("datastoreDenied", denied { OrionPreferencesStore.open(this@OrionBootstrapProbeService).close() })
             }

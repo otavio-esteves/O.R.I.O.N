@@ -31,7 +31,7 @@ class OrionReminderQueryTest {
     private fun fixture(block: (OrionDatabase, OrionReminderStore, OrionReminderQuery) -> Unit) {
         val name = "orion_query_${UUID.randomUUID()}.db"
         val db = Room.databaseBuilder(context, OrionDatabase::class.java, name).build()
-        try { block(db, OrionReminderStore(db, crypto, clock), OrionReminderQuery(db, crypto)) }
+        try { block(db, OrionReminderStore(db, crypto, clock), OrionReminderQuery(db, crypto, clock)) }
         finally { db.close(); context.deleteDatabase(name) }
     }
     private fun create(store: OrionReminderStore, id: UUID = UUID.randomUUID(), title: String = "Revisar relatório"): UUID {

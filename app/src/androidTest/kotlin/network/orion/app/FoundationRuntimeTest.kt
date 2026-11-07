@@ -34,7 +34,7 @@ class FoundationRuntimeTest {
         assertEquals(OrionHealthStatus.UNAVAILABLE, report.subsystems[OrionSubsystem.CORTEX])
         assertEquals(OrionHealthStatus.UNAVAILABLE, report.subsystems[OrionSubsystem.VOICE])
         assertEquals(1, runtime.databaseFormatVersion)
-        assertEquals(4, runtime.databaseSchemaVersion)
+        assertEquals(5, runtime.databaseSchemaVersion)
         assertEquals(1, runtime.configurationFormatVersion)
         assertNotNull(report.lastRecovery)
     }
@@ -76,7 +76,12 @@ class FoundationRuntimeTest {
     @Test fun componentSurfaceKeepsCorePrivateAndToolingPermissionProtected() {
         val info = app.packageManager.getPackageInfo(app.packageName, PackageManager.GET_ACTIVITIES or
             PackageManager.GET_SERVICES or PackageManager.GET_PROVIDERS or PackageManager.GET_RECEIVERS)
-        info.services.orEmpty().forEach { assertFalse(it.name, it.exported) }
+        info.services.orEmpty().forEach {
+            if (it.exported) {
+                assertEquals("androidx.work.impl.background.systemjob.SystemJobService", it.name)
+                assertEquals("android.permission.BIND_JOB_SERVICE", it.permission)
+            }
+        }
         info.providers.orEmpty().forEach { assertFalse(it.name, it.exported) }
         info.activities.orEmpty().filter { it.exported }.forEach {
             assertEquals(MainActivity::class.java.name, it.name)
@@ -161,6 +166,7 @@ class FoundationRuntimeTest {
                 assertEquals(0, result.getInt("protocolMinor"))
                 assertEquals(expectedRole, result.getString("role"))
                 assertFalse(result.getBoolean("mainGraphCreated"))
+                assertFalse(result.getBoolean("workManagerInitialized"))
                 assertTrue(result.getBoolean("databaseDenied"))
                 assertTrue(result.getBoolean("datastoreDenied"))
             } finally { app.unbindService(connection) }

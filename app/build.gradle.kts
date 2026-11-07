@@ -13,8 +13,8 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 4
-        versionName = "0.3.1"
+        versionCode = 5
+        versionName = "0.4.0-candidate"
     }
 
     buildTypes {
@@ -35,6 +35,8 @@ dependencies {
     debugImplementation(project(":core:ipc"))
     testImplementation(libs.junit4)
     implementation(project(":core:common"))
+    implementation(project(":scheduler"))
+    implementation(libs.work.runtime)
     implementation(project(":core:health"))
     implementation(project(":core:time"))
     implementation(project(":core:observability"))

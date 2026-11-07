@@ -7,7 +7,7 @@ import androidx.room.Transaction
 
 /** MAIN-owned reminder metadata access. No scheduling or authorization. */
 @Dao
-abstract class OrionReminderDao {
+abstract class OrionReminderDao : OrionReminderSeriesMutationDao() {
     @Query("SELECT * FROM orion_reminders WHERE (:after IS NULL OR reminderId > :after) ORDER BY reminderId LIMIT :limit")
     abstract fun page(after: String?, limit: Int): List<ReminderEntity>
     @Query("SELECT * FROM orion_domain_event_outbox WHERE aggregateId = :id AND aggregateVersion = :version AND eventType = :type LIMIT 2")
@@ -15,8 +15,11 @@ abstract class OrionReminderDao {
     @Query("SELECT * FROM orion_reminders WHERE reminderId = :id")
     abstract fun find(id: String): ReminderEntity?
     @Query("""UPDATE orion_reminders SET scheduledAt = :scheduledAt, zoneId = :zoneId,
-        precision = 'UNSCHEDULED', updatedAt = :at, version = version + 1
-        WHERE reminderId = :id AND version = :version AND status = 'PENDING' AND :scheduledAt > scheduledAt""")
+        precision = 'UNSCHEDULED', scheduleMethod = 'UNSCHEDULED', deliveryActionId = NULL, registrationConfirmed = 0,
+        fireGeneration = fireGeneration + 1, localDateTime = NULL, recurrenceRule = NULL,
+        resolutionDecision = NULL, resolvedOffsetSeconds = NULL, updatedAt = :at, version = version + 1
+        WHERE reminderId = :id AND version = :version AND status = 'PENDING' AND :scheduledAt > scheduledAt
+        AND fireGeneration < 9223372036854775807""")
     protected abstract fun snooze(id: String, version: Long, scheduledAt: Long, zoneId: String, at: Long): Int
     @Insert protected abstract fun insertEvent(event: DomainEventOutboxEntity)
     @Query("SELECT count(*) FROM orion_domain_event_outbox") protected abstract fun eventCount(): Int
@@ -35,6 +38,7 @@ abstract class OrionReminderDao {
             event.deliveredAt == null && event.nextAttemptAt == at)
         check(eventCount() < 10_000) { "Durable event capacity reached." }
         if (snooze(id, version, scheduledAt, zoneId, at) != 1) return ActionMutation.CONFLICT
+        invalidateReminderSeries(id, at)
         insertEvent(event)
         return ActionMutation.APPLIED
     }
