@@ -2,6 +2,7 @@
 """HOST contract checks only: no device or process is contacted."""
 import importlib.util
 from pathlib import Path
+import subprocess
 import unittest
 
 SOURCE = Path(__file__).with_name("verify-scheduled-reminder-runtime.py")
@@ -15,7 +16,7 @@ class ScheduledRuntimeContractTest(unittest.TestCase):
 
     def test_fixture_modes_select_only_the_explicit_production_runtime_fixture(self):
         for mode in ("prepare", "verify"):
-            command = RECORDER.instrumentation_command(mode, self.fixture)
+            command = RECORDER.instrumentation_command(mode, self.fixture, "doze")
             self.assertEqual(RECORDER.TEST_CLASS, command[command.index("class") + 1])
             self.assertEqual(mode, command[command.index("orion_scheduled_mode") + 1])
             self.assertEqual(self.fixture, command[command.index("orion_scheduled_fixture") + 1])
@@ -24,6 +25,42 @@ class ScheduledRuntimeContractTest(unittest.TestCase):
         for mode, fixture in (("default", self.fixture), ("prepare", "../unsafe"), ("verify", "0-0-0-0-1")):
             with self.assertRaises(ValueError):
                 RECORDER.instrumentation_command(mode, fixture)
+
+    def test_prepare_cannot_omit_the_scenario_that_controls_its_artifact_setup(self):
+        with self.assertRaises(ValueError):
+            RECORDER.instrumentation_command("prepare", self.fixture)
+        command = RECORDER.instrumentation_command("prepare", self.fixture, "doze")
+        self.assertEqual("doze", command[command.index("orion_scheduled_scenario") + 1])
+
+    def test_doze_resume_cannot_be_used_as_another_scenario_or_new_confirmation(self):
+        command = RECORDER.instrumentation_command("resume_doze", self.fixture, "doze")
+        self.assertIn("resume_doze", command)
+        self.assertNotIn("confirm", command)
+        for scenario in (None, "reboot", "force_stop"):
+            with self.assertRaises(ValueError):
+                RECORDER.instrumentation_command("resume_doze", self.fixture, scenario)
+
+    def test_deep_idle_requires_platform_observation_despite_success_text(self):
+        def adb(*command, **kwargs):
+            if command[-2:] == ("get", "deep"):
+                return "INACTIVE"
+            return "Now forced in to deep idle mode"
+        waits = []
+        with self.assertRaises(RuntimeError):
+            RECORDER.enter_deep_idle(adb, wait=waits.append)
+        self.assertEqual([1, 1], waits)
+
+    def test_deep_idle_accepts_only_actual_idle_after_bounded_transient_failure(self):
+        states = iter(("INACTIVE", "IDLE"))
+        def adb(*command, **kwargs):
+            if command[-2:] == ("get", "deep"):
+                return next(states)
+            self.assertFalse(kwargs["check"])
+            return "technical platform response"
+        waits = []
+        attempts = RECORDER.enter_deep_idle(adb, wait=waits.append)
+        self.assertEqual(["INACTIVE", "IDLE"], [item["state"] for item in attempts])
+        self.assertEqual([1], waits)
 
     def test_optional_scenario_is_validated_and_passed_only_as_a_fixed_instrumentation_argument(self):
         self.assertNotIn("orion_scheduled_scenario", RECORDER.instrumentation_command("verify", self.fixture))
@@ -41,6 +78,77 @@ class ScheduledRuntimeContractTest(unittest.TestCase):
         for scenario in ("", "sigkill", "reboot;unsafe"):
             with self.assertRaises(ValueError):
                 RECORDER.lifecycle_command(scenario)
+
+    def test_reboot_request_has_a_short_transport_deadline_and_is_not_boot_proof(self):
+        calls = []
+        def adb(*command, **kwargs):
+            calls.append((command, kwargs))
+            return ""
+        self.assertEqual("RETURNED", RECORDER.request_reboot(adb))
+        self.assertEqual([(("reboot",), {"timeout": 5})], calls)
+
+    def test_reboot_transport_loss_is_uncertain_and_still_requires_new_boot_observation(self):
+        for error in (subprocess.TimeoutExpired("adb reboot", 5), RuntimeError("transport lost")):
+            def adb(*command, **kwargs):
+                raise error
+            self.assertEqual("UNAVAILABLE", RECORDER.request_reboot(adb))
+
+    def test_reboot_requires_completed_boot_with_strictly_increased_valid_count(self):
+        for completed, count, expected in [("0", "360", None), ("1", "359", None),
+                                           ("1", "358", None), ("1", "invalid", None),
+                                           ("1", "360", 360)]:
+            def adb(*command):
+                return completed if command[-1] == "sys.boot_completed" else count
+            self.assertEqual(expected, RECORDER.observed_new_boot(adb, "359"))
+
+    def test_permitted_return_uses_real_launcher_semantics_for_primary_start_evidence(self):
+        self.assertEqual([
+            "shell", "am", "start", "-W", "-a", "android.intent.action.MAIN",
+            "-c", "android.intent.category.LAUNCHER", "-n",
+            "network.orion/network.orion.app.MainActivity",
+        ], RECORDER.allowed_return_command())
+
+    def test_background_cleanup_restores_effective_level_after_the_appop(self):
+        calls = []
+        def adb(*command, **kwargs):
+            calls.append(command)
+            return "adaptive_bucket" if "get-bg-restriction-level" in command else ""
+        RECORDER.restore_background_policy(adb, "default", "adaptive_bucket")
+        self.assertEqual(("shell", "appops", "set", RECORDER.PACKAGE, "RUN_ANY_IN_BACKGROUND", "default"), calls[0])
+        self.assertEqual(("shell", "am", "set-bg-restriction-level", "--user", "0", RECORDER.PACKAGE, "adaptive_bucket"), calls[1])
+        self.assertIn("get-bg-restriction-level", calls[2])
+
+    def test_background_cleanup_cannot_claim_success_when_the_effective_restriction_remains(self):
+        def adb(*command, **kwargs):
+            return "background_restricted" if "get-bg-restriction-level" in command else ""
+        with self.assertRaises(RuntimeError):
+            RECORDER.restore_background_policy(adb, "default", "adaptive_bucket")
+
+    def test_background_policy_accepts_only_closed_shell_values(self):
+        def unexpected(*command, **kwargs):
+            self.fail("Invalid restoration values must not execute device commands")
+        for mode, level in (("allow;unsafe", "adaptive_bucket"), ("default", "adaptive_bucket;unsafe"), ("default", None)):
+            with self.assertRaises(ValueError):
+                RECORDER.restore_background_policy(unexpected, mode, level)
+        with self.assertRaises(RuntimeError):
+            RECORDER.background_restriction_level(lambda *args: "unsupported")
+
+    def test_absent_appop_restores_its_printed_default_allow_not_explicit_mode_default(self):
+        self.assertEqual("allow", RECORDER.original_appop_mode(
+            "No operations.\nDefault mode: allow", "RUN_ANY_IN_BACKGROUND"))
+        self.assertEqual("default", RECORDER.original_appop_mode(
+            "No operations.\nDefault mode: default", "SCHEDULE_EXACT_ALARM"))
+
+    def test_an_explicit_appop_mode_takes_precedence_over_the_default_mode_footer(self):
+        self.assertEqual("ignore", RECORDER.original_appop_mode(
+            "RUN_ANY_IN_BACKGROUND: ignore\nDefault mode: allow", "RUN_ANY_IN_BACKGROUND"))
+        self.assertEqual("default", RECORDER.original_appop_mode(
+            "RUN_ANY_IN_BACKGROUND: default", "RUN_ANY_IN_BACKGROUND"))
+
+    def test_unknown_original_appop_policy_cannot_silently_fall_back_to_default(self):
+        for raw in ("", "unavailable", "RUN_ANY_IN_BACKGROUND: unsupported"):
+            with self.assertRaises(RuntimeError):
+                RECORDER.original_appop_mode(raw, "RUN_ANY_IN_BACKGROUND")
 
     def test_notification_observation_matches_only_the_exact_package_tag_and_id(self):
         key = "0|network.orion|0|" + self.fixture + "|10123"

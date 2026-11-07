@@ -70,6 +70,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         private set
     private val forceStopEvidence = network.orion.core.exitinfo.OrionForceStopStartupEvidence()
     private var forceStopListenerRegistered = false
+    private var forceStopCompletionListener: java.util.function.Consumer<android.app.ApplicationStartInfo>? = null
     private var forceStopSignal = "UNAVAILABLE"
     private var lastExitReason: Int? = null
     private var lastExitKind: String? = null
@@ -215,9 +216,11 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
 
     @Synchronized fun start() {
         if (startupJob?.isActive == true) return
-        startupJob = scope.launch {
+        startupJob = launchCoreMaintenance {
             registerForceStopCompletionListener()
-            recover()
+            // Recovery returns before delivery. Due confirmed work cannot wait for
+            // a deferrable JobScheduler/WorkManager opportunity after cold startup.
+            requestReconciliation()
         }
     }
 
@@ -406,7 +409,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         mutableHealth.publishSubsystemObservations(clock, mapOf(OrionSubsystem.SCHEDULER to OrionHealthStatus.DEGRADED))
     }
 
-    private fun launchCoreMaintenance(block: suspend () -> Unit) {
+    private fun launchCoreMaintenance(block: suspend () -> Unit): Job =
         scope.launch {
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
@@ -416,7 +419,6 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             }
             catch (_: Exception) { recordMaintenanceFailure() }
         }
-    }
 
     /** UI lifecycle only nudges Core-owned work; cancelling a screen cannot cancel an authorized delivery. */
     internal fun nudgeUiMaintenance() {
@@ -445,8 +447,18 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         }
     }
 
-    internal suspend fun requestReconciliation() = withContext(Dispatchers.IO) {
+    internal suspend fun requestReconciliation(rebuildAlarmArtifacts: Boolean = false) = withContext(Dispatchers.IO) {
         recover()
+        if (rebuildAlarmArtifacts) mutex.withLock {
+            // A system lifecycle/time/capability event can invalidate artifacts
+            // while MAIN is already alive. A prior registration is only an observation.
+            database?.reminderSchedules()?.invalidateRegistrationObservations()
+            preferences?.saveMaintenanceCursor("reminders", null)
+            preferences?.saveMaintenanceCursor("alarm_cleanup", null)
+        }
+        // Framework callbacks are an opportunity to reconcile now, not merely to
+        // enqueue a KEEP worker which may already be deferred by Android.
+        performMaintenance()
         mutex.withLock { maintenance?.requestReconciliation()?.result?.get(5, TimeUnit.SECONDS); Unit }
     }
 
@@ -515,18 +527,31 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         } catch (_: Exception) { /* Missing/incomplete startup evidence stays explicitly unavailable. */ }
     }
 
+    /** A foreground activity can be a new startup after a prior background process start. */
+    internal fun observeForegroundStartup() {
+        // Arm before this activity can draw its first frame. An asynchronously
+        // queued registration can miss completion on Android 15 implementations.
+        // The SDK callback and every durable write still run on Core's IO scope.
+        registerForceStopCompletionListener(replaceExisting = true)
+    }
+
     /**
      * The public callback identifies THIS startup even on builds whose historical
      * records report pid=0. Never associate an old wasForceStopped=true by PID guesswork.
      * Completion is asynchronous and automatically removes the listener after one callback.
      */
-    private fun registerForceStopCompletionListener() {
-        if (Build.VERSION.SDK_INT < 35 || forceStopListenerRegistered) return
+    @Synchronized private fun registerForceStopCompletionListener(replaceExisting: Boolean = false) {
+        if (Build.VERSION.SDK_INT < 35 || forceStopListenerRegistered && !replaceExisting) return
         try {
             val manager = app.getSystemService(ActivityManager::class.java) ?: return
-            manager.addApplicationStartInfoCompletionListener(java.util.concurrent.Executor { task ->
-                launchCoreMaintenance { task.run() }
-            }, java.util.function.Consumer { start ->
+            if (replaceExisting) {
+                // Some framework implementations append a consumer to the old
+                // transport instead of re-arming it for the foreground startup.
+                forceStopCompletionListener?.let { manager.removeApplicationStartInfoCompletionListener(it) }
+                forceStopCompletionListener = null
+                forceStopListenerRegistered = false
+            }
+            val listener = java.util.function.Consumer<android.app.ApplicationStartInfo> { start ->
                 val observed = start.wasForceStopped()
                 launchCoreMaintenance {
                     mutex.withLock {
@@ -534,7 +559,11 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                         preferences?.let { sampleForceStop(it) }
                     }
                 }
-            })
+            }
+            manager.addApplicationStartInfoCompletionListener(java.util.concurrent.Executor { task ->
+                launchCoreMaintenance { task.run() }
+            }, listener)
+            forceStopCompletionListener = listener
             forceStopListenerRegistered = true
         } catch (_: Exception) { /* Public optional startup evidence remains unavailable and retryable. */ }
     }

@@ -21,11 +21,17 @@ import uuid
 PACKAGE = "network.orion"
 TEST_CLASS = "network.orion.app.scheduling.OrionScheduledReminderRuntimeTest"
 SCENARIOS = ("reboot", "force_stop", "time_change", "timezone_change", "doze", "background_restriction")
+BACKGROUND_LEVELS = {"unrestricted", "exempted", "adaptive_bucket", "restricted_bucket", "background_restricted", "hibernation"}
+APP_OP_MODES = {"allow", "ignore", "deny", "default", "foreground", "errored"}
 
 
 def instrumentation_command(mode, fixture, scenario=None):
-    if mode not in ("prepare", "verify") or str(uuid.UUID(fixture)) != fixture or (scenario is not None and scenario not in SCENARIOS):
+    if mode not in ("prepare", "verify", "resume_doze") or str(uuid.UUID(fixture)) != fixture or (scenario is not None and scenario not in SCENARIOS):
         raise ValueError("Invalid scheduled-runtime fixture arguments.")
+    if mode == "resume_doze" and scenario != "doze":
+        raise ValueError("Doze re-registration requires its exact scenario.")
+    if mode == "prepare" and scenario is None:
+        raise ValueError("Preparation requires an explicit scenario.")
     command = ["shell", "am", "instrument", "-w", "-e", "class", TEST_CLASS,
                "-e", "orion_scheduled_mode", mode, "-e", "orion_scheduled_fixture", fixture]
     if scenario is not None:
@@ -57,6 +63,62 @@ def lifecycle_command(scenario, *, epoch_millis=None, zone_id=None):
             return ["shell", "cmd", "deviceidle", "force-idle", "deep"]
         return ["shell", "appops", "set", PACKAGE, "RUN_ANY_IN_BACKGROUND", "ignore"]
     raise ValueError("Unknown lifecycle scenario.")
+
+
+def allowed_return_command():
+    """Model an explicit launcher return, including its platform startup classification."""
+    return ["shell", "am", "start", "-W", "-a", "android.intent.action.MAIN",
+            "-c", "android.intent.category.LAUNCHER", "-n", PACKAGE + "/network.orion.app.MainActivity"]
+
+
+def request_reboot(adb):
+    """Transport acknowledgement is optional; only observed_new_boot proves reboot."""
+    try:
+        adb(*lifecycle_command("reboot"), timeout=5)
+        return "RETURNED"
+    except (subprocess.TimeoutExpired, RuntimeError):
+        # Wireless ADB can disappear without closing its pending reboot request.
+        # Keep the strict boot-count and real-notification checks below mandatory.
+        return "UNAVAILABLE"
+
+
+def observed_new_boot(adb, previous_count):
+    if adb("shell", "getprop", "sys.boot_completed") != "1":
+        return None
+    current = adb("shell", "settings", "get", "global", "boot_count")
+    if not re.fullmatch(r"[0-9]+", current) or int(current) <= int(previous_count):
+        return None
+    return int(current)
+
+
+def background_restriction_level(adb):
+    level = adb("shell", "am", "get-bg-restriction-level", "--user", "0", PACKAGE)
+    if level not in BACKGROUND_LEVELS:
+        raise RuntimeError("Effective background restriction level is unavailable.")
+    return level
+
+
+def original_appop_mode(output, operation):
+    modes = "|".join(sorted(APP_OP_MODES))
+    explicit = re.search(r"(?m)^\s*" + re.escape(operation) + r":\s*(" + modes + r")\b", output)
+    if explicit:
+        return explicit.group(1)
+    # An absent operation uses opToDefaultMode (often ALLOWED), not MODE_DEFAULT.
+    default = re.search(r"(?m)^\s*Default mode:\s*(" + modes + r")\b", output)
+    if default:
+        return default.group(1)
+    raise RuntimeError("Original AppOps policy could not be observed.")
+
+
+def restore_background_policy(adb, mode, level):
+    if mode not in APP_OP_MODES or level not in BACKGROUND_LEVELS:
+        raise ValueError("Invalid background restoration policy.")
+    adb("shell", "appops", "set", PACKAGE, "RUN_ANY_IN_BACKGROUND", mode, timeout=10)
+    # On some builds, restoring AppOps.DEFAULT alone leaves AppRestrictionController
+    # at background_restricted. Restore the original effective policy as well.
+    adb("shell", "am", "set-bg-restriction-level", "--user", "0", PACKAGE, level, timeout=10)
+    if background_restriction_level(adb) != level:
+        raise RuntimeError("Effective background restriction was not restored.")
 
 
 def restored_wall_millis(original_device_millis, elapsed_monotonic_seconds):
@@ -100,6 +162,20 @@ def idle_prerequisites(screen, charging):
     if screen not in ("true", "false") or charging not in ("true", "false"):
         raise RuntimeError("Device idle power prerequisites were not observable.")
     return screen == "false" and charging == "false"
+
+
+def enter_deep_idle(adb, wait=time.sleep):
+    """Bounded public-shell attempts; only an observed IDLE state is evidence."""
+    attempts = []
+    for attempt in range(3):
+        response = adb("shell", "cmd", "deviceidle", "force-idle", "deep", check=False)
+        state = adb("shell", "cmd", "deviceidle", "get", "deep")
+        attempts.append({"state": state, "response": response[:256]})
+        if state == "IDLE":
+            return attempts
+        if attempt < 2:
+            wait(1)
+    raise RuntimeError("Deep Doze not reached after bounded attempts; last state=" + state)
 
 
 def matching_notification_keys(output, action_id):
@@ -150,6 +226,7 @@ def main():
     original_wall_monotonic = None
     original_timezone = None
     background_mode = None
+    background_level = None
     doze_started = False
     original_deep_idle_enabled = None
 
@@ -183,21 +260,21 @@ def main():
         if not re.fullmatch(r"[0-9]+", initial_boot_count):
             raise RuntimeError("Target does not expose a valid boot session count.")
         report["bootCountBefore"] = int(initial_boot_count)
+        report["backgroundRestrictionLevelAtStart"] = background_restriction_level(adb)
         for artifact in artifacts:
             adb("install", "-r", "-t", str(artifact))
         package_state = adb("shell", "dumpsys", "package", PACKAGE)
         granted = re.search(r"android\.permission\.POST_NOTIFICATIONS: granted=(true|false)", package_state)
         notification_was_granted = granted.group(1) == "true" if granted else None
         raw_mode = adb("shell", "appops", "get", PACKAGE, "SCHEDULE_EXACT_ALARM")
-        match = re.search(r"SCHEDULE_EXACT_ALARM:\s*(allow|ignore|deny|default|foreground|errored)", raw_mode)
-        exact_mode = match.group(1) if match else "default"
+        exact_mode = original_appop_mode(raw_mode, "SCHEDULE_EXACT_ALARM")
         report["testAccess"] = {"notificationPreviouslyGranted": notification_was_granted, "exactOriginalMode": exact_mode}
         adb("shell", "pm", "grant", PACKAGE, "android.permission.POST_NOTIFICATIONS")
         adb("shell", "appops", "set", PACKAGE, "SCHEDULE_EXACT_ALARM", "allow")
         adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
         adb("shell", "wm", "dismiss-keyguard")
         progress("Preparing a synthetic explicitly confirmed reminder through the production Core.")
-        output = adb(*instrumentation_command("prepare", fixture))
+        output = adb(*instrumentation_command("prepare", fixture, args.scenario))
         (args.evidence_dir / "prepare-instrumentation.txt").write_text(output + "\n")
         if not instrumentation_passed(output):
             raise RuntimeError("Production reminder preparation failed.")
@@ -264,7 +341,9 @@ def main():
                     if time.monotonic() >= power_deadline:
                         raise RuntimeError("Screen-off and unplugged state did not become observable before Doze.")
                     time.sleep(0.1)
-                adb(*lifecycle_command("doze"))
+                if metadata.get("dozeAlarmTemporarilyRemoved") is not True:
+                    raise RuntimeError("Doze preparation did not suspend its derived test alarm.")
+                report["deepIdleEntryAttempts"] = enter_deep_idle(adb)
             except RuntimeError:
                 report["dozeCapability"] = "UNAVAILABLE_OR_DENIED"
                 raise
@@ -274,10 +353,21 @@ def main():
                 raise RuntimeError("Device did not enter observed deep Doze.")
             report["dozeCapability"] = "OBSERVED"
             report["checks"]["deep_idle_observed_before_wait"] = "PASS"
+            # Rebuild the original approved artifact AFTER idle entry. Some OEMs
+            # refuse idle entry when a near wake-from-idle alarm is already present.
+            # This mode only reconciles an existing binding; it cannot confirm one.
+            output = adb(*instrumentation_command("resume_doze", fixture, "doze"))
+            (args.evidence_dir / "resume-doze-instrumentation.txt").write_text(output + "\n")
+            if not instrumentation_passed(output) or "ORIGINAL_DOZE_BINDING_REGISTERED" not in output:
+                raise RuntimeError("Original Doze binding was not re-registered.")
+            if adb("shell", "cmd", "deviceidle", "get", "deep") != "IDLE":
+                raise RuntimeError("Deep Doze did not remain active after re-registration.")
+            report["checks"]["original_binding_registered_while_deep_idle"] = "PASS"
         elif args.scenario == "background_restriction":
+            background_level = background_restriction_level(adb)
+            report["backgroundOriginalLevel"] = background_level
             raw_background = adb("shell", "appops", "get", PACKAGE, "RUN_ANY_IN_BACKGROUND")
-            match = re.search(r"RUN_ANY_IN_BACKGROUND:\s*(allow|ignore|deny|default|foreground|errored)", raw_background)
-            background_mode = match.group(1) if match else "default"
+            background_mode = original_appop_mode(raw_background, "RUN_ANY_IN_BACKGROUND")
             try:
                 adb(*lifecycle_command("background_restriction"))
             except RuntimeError:
@@ -286,10 +376,12 @@ def main():
             observed = adb("shell", "appops", "get", PACKAGE, "RUN_ANY_IN_BACKGROUND")
             if not re.search(r"RUN_ANY_IN_BACKGROUND:\s*ignore\b", observed):
                 raise RuntimeError("Background restriction was not observable in AppOps.")
-            adb("shell", "am", "start", "-W", "-n", PACKAGE + "/network.orion.app.MainActivity")
+            adb(*allowed_return_command())
             report["backgroundRestrictionCapability"] = "OBSERVED"
             report["deliveryContext"] = "EXPLICIT_ALLOWED_FOREGROUND_RETURN_WHILE_BACKGROUND_RESTRICTED"
             report["checks"]["background_restricted_and_explicit_foreground_return"] = "PASS"
+        elif args.scenario == "reboot":
+            report["rebootRequestAcknowledgement"] = request_reboot(adb)
         else:
             adb(*lifecycle_command(args.scenario))
         if args.scenario == "force_stop":
@@ -300,7 +392,7 @@ def main():
             time.sleep(2)
             if adb("shell", "pidof", PACKAGE, check=False):
                 raise RuntimeError("Package unexpectedly restarted while Force Stopped.")
-            adb("shell", "am", "start", "-W", "-n", PACKAGE + "/network.orion.app.MainActivity")
+            adb(*allowed_return_command())
             report["checks"]["explicit_allowed_return"] = "PASS"
         deadline = time.monotonic() + 180
         def poll(*command, check=True):
@@ -317,15 +409,12 @@ def main():
                 last_progress = time.monotonic()
             try:
                 if poll("get-state", check=False) == "device":
-                    if args.scenario == "reboot" and poll("shell", "getprop", "sys.boot_completed") != "1":
-                        time.sleep(min(1, max(0, deadline - time.monotonic())))
-                        continue
                     if args.scenario == "reboot":
-                        boot_count = poll("shell", "settings", "get", "global", "boot_count")
-                        if not re.fullmatch(r"[0-9]+", boot_count) or int(boot_count) <= report["bootCountBefore"]:
+                        boot_count = observed_new_boot(poll, initial_boot_count)
+                        if boot_count is None:
                             time.sleep(min(1, max(0, deadline - time.monotonic())))
                             continue
-                        report["bootCountAfter"] = int(boot_count)
+                        report["bootCountAfter"] = boot_count
                     if args.scenario != "doze":
                         poll("shell", "input", "keyevent", "KEYCODE_WAKEUP", check=False)
                         poll("shell", "wm", "dismiss-keyguard", check=False)
@@ -405,8 +494,9 @@ def main():
                     report["result"] = "FAIL"
         if background_mode is not None:
             try:
-                adb("shell", "appops", "set", PACKAGE, "RUN_ANY_IN_BACKGROUND", background_mode, timeout=10)
+                restore_background_policy(adb, background_mode, background_level)
                 report["backgroundRestrictionRestore"] = "PASS"
+                report["backgroundRestrictionLevelRestore"] = "PASS"
             except Exception:
                 report["backgroundRestrictionRestore"] = "FAILED"
                 report["result"] = "FAIL"

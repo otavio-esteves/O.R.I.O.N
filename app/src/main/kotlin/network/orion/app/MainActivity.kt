@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val runtime = checkNotNull((application as OrionApplication).mainRuntime)
+        runtime.observeForegroundStartup()
         taskChannel = runtime.taskAdmissions.openUiChannel()
         taskChannel.onWindowFocus(hasWindowFocus())
         val tasks = runtime.taskGateway(taskChannel)

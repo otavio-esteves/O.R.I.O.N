@@ -34,6 +34,9 @@ class OrionReminderScreenTest {
         ready()
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Título do lembrete"))
         compose.onNodeWithText("Título do lembrete").performTextInput(title)
+        // Synchronize with the accepted draft, not only the preceding list reload.
+        // The button's enabled assertion below must still hold after scrolling.
+        compose.onNodeWithText("Título do lembrete").assertTextContains(title)
     }
     @Test fun reminderRequiresExplicitConfirmationAndSurvivesRecreationBeforeCompletion() {
         compose.waitUntil(30_000) {

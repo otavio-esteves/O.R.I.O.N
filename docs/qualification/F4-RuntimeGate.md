@@ -50,7 +50,7 @@ transaction-core physical gate still tracked in issue #23.
   dead letters, background restriction, sanitized previous exits and Force Stop evidence.
   Resource policy keeps inference disabled; no microphone/AI/voice startup is added.
 
-## Validation record
+## Prior emulator validation
 
 Canonical Docker validation passed with 4,108 tasks: 630 Debug JVM cases across 89
 suites, lint, module boundaries and ELF/ABI/APK/AAB/16 KiB packaging gates. The exact
@@ -92,6 +92,43 @@ artifact identities, environment, preserved failed attempts and remediation. All
 final Android proofs use app `df86c4e4…` and test `b0149ed2…`; the report stores their
 full SHA-256 values. Physical S21 qualification remains open; the disposable emulator
 uses temporary RAM-backed userdata and provides NON_DEFINITIVE runtime evidence.
+
+## S21 physical fixes and targeted qualification
+
+The [initial physical attempt](f4-s21-physical-api35-20261107.json) retains the S21
+failures. The [follow-up evidence](f4-s21-fixes-physical-api35-20261107.json) records
+the fixes on Samsung SM-G991B, Android 15/API35, arm64 and 4 KiB pages. MAIN now
+reconciles authorized due work directly after recovery and rebuilds stale alarm
+observations on system events. The public current-start Force Stop listener is
+re-armed before the foreground activity's first frame. Room ownership, the Startup
+Barrier, original confirmation bindings and uncertainty recovery are unchanged.
+
+The frozen app/test pair `88624cdd…` / `c64839c9…` passed all 314 application Android
+cases, seven actual SIGKILL scenarios and all six real-notification system scenarios:
+deep Doze, Force Stop/allowed return, time/timezone change, foreground return under
+background restriction and reboot/unlock. Every system proof observed the real
+notification before verification instrumentation. Ten additional Force Stops and
+three ordinary SIGKILL returns verified fresh primary evidence and negative controls.
+An isolated UI repetition interrupted with the device asleep/locked is retained;
+the unchanged rerun and the complete Android suite passed.
+
+Docker check/lint/Debug/Release packaging passed on the frozen Android source.
+The recorder was subsequently hardened for wireless ADB losing its reboot request
+acknowledgement: only completed boot with an increased boot count plus autonomous
+notification qualifies the attempt. That host-only revision passed 49 Docker host
+contracts, including 29 scheduled-recorder cases. The first physical reboot attempt
+timed out in the transport; its failure and later fixture/settings cleanup are
+retained separately from the successful rerun. The APK pair was unchanged.
+
+The recorder also restores an absent AppOp's actual printed default and the original
+effective background level; explicit `MODE_DEFAULT` is not assumed to mean `allow`.
+Doze preparation temporarily removes only its derived test alarm, then reconciles
+the original approved binding after actual idle entry. No new confirmation,
+whitelist or production restriction workaround is introduced.
+
+These targeted physical proofs do not close F4: the 24-hour recovery soak, broader
+API/OEM matrix, physical 16 KiB runtime and resource/storage stress remain pending.
+Core readiness remains `DEGRADED_SAFE`; AI, voice and resilient 24/7 claims remain gated.
 
 ## F4 gate checklist
 
