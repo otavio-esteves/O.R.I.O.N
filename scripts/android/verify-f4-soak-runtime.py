@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -15,6 +16,9 @@ import uuid
 SPEC = importlib.util.spec_from_file_location("orion_capabilities", Path(__file__).with_name("verify-f4-capability-runtime.py"))
 CAP = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(CAP)
+RECOVERY_SPEC = importlib.util.spec_from_file_location("orion_soak_recovery", Path(__file__).with_name("recover-f4-soak-runtime.py"))
+RECOVERY = importlib.util.module_from_spec(RECOVERY_SPEC)
+RECOVERY_SPEC.loader.exec_module(RECOVERY)
 STATE_CLASS = "network.orion.app.scheduling.OrionF4SoakStateTest"
 
 
@@ -37,7 +41,7 @@ def workload_command(kind, mode, fixture, delay=None):
         return ["shell", "am", "instrument", "-w", "-e", "class", STATE_CLASS,
                 "-e", "orion_soak_mode", mode, "-e", "orion_soak_fixture", fixture,
                 "network.orion.test/androidx.test.runner.AndroidJUnitRunner"]
-    if kind != "reminder" or mode not in ("prepare", "verify") or type(delay) is not int or not 60 <= delay <= 86400:
+    if kind != "reminder" or mode not in ("prepare", "verify", "cleanup") or type(delay) is not int or not 60 <= delay <= 86400:
         raise ValueError("Invalid original reminder workload.")
     return ["shell", "am", "instrument", "-w", "-e", "class", CAP.BASE.TEST_CLASS,
             "-e", "orion_scheduled_mode", mode, "-e", "orion_scheduled_fixture", fixture,
@@ -90,6 +94,7 @@ def main():
     if not args.adb or args.evidence_dir.exists() or not all(p.is_file() for p in (args.app_apk, args.test_apk, observer)):
         parser.error("Install the exact APK pair, include the passive observer, and use a new evidence directory.")
     args.evidence_dir.mkdir(parents=True)
+    run_lock = RECOVERY.acquire_lock(args.evidence_dir)
     fixture = str(uuid.uuid4())
     report = {"result": "INCOMPLETE", "fullF4GateClosed": False, "fullSoakGateClosed": False,
               "durationRequestedSeconds": args.duration_seconds, "eligibleFor24HourReview": False,
@@ -102,13 +107,18 @@ def main():
                               "Boot/unlock, passive backlog histories and actual heartbeat execution need separate qualification evidence."],
               "artifactSha256": {"app-debug.apk": hashlib.sha256(args.app_apk.read_bytes()).hexdigest(),
                                  "app-debug-androidTest.apk": hashlib.sha256(args.test_apk.read_bytes()).hexdigest()},
-              "sourceSha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (Path(__file__), observer, Path(CAP.__file__))},
+              "sourceSha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (Path(__file__), observer, Path(CAP.__file__), Path(RECOVERY.__file__))},
               "manifestDelaysSeconds": delays, "reminders": [], "observedNotifications": {}}
     state_prepared = False
     telemetry = telemetry_output = None
     original_power = original_exact = original_notifications = None
     original_timeout = None
     verified = set()
+
+    def persist():
+        RECOVERY.atomic_json(args.evidence_dir / "f4-soak-runtime-report.json", report)
+
+    persist()
 
     def adb(*command, check=True, timeout=15):
         result = subprocess.run([args.adb, "-s", args.serial, *command], capture_output=True,
@@ -122,12 +132,17 @@ def main():
         (args.evidence_dir / (kind + "-" + mode + "-" + item + ".txt")).write_text(output + "\n")
         if not CAP.BASE.instrumentation_passed(output):
             raise RuntimeError("Workload checkpoint failed: " + kind + "/" + mode)
-        marker = "orion_soak_state=" + mode.upper() if kind == "state" else "REAL_NOTIFICATION_AND_COMMITTED_FIRED" if mode == "verify" else None
+        marker = ("orion_soak_state=" + mode.upper() if kind == "state" else
+                  "REAL_NOTIFICATION_AND_COMMITTED_FIRED" if mode == "verify" else
+                  "orion_scheduled_cleanup=OWNED_FIXTURE_REMOVED" if mode == "cleanup" else None)
         if marker and marker not in output:
             raise RuntimeError("Workload checkpoint marker is absent.")
 
     try:
-        emulated = adb("shell", "getprop", "ro.kernel.qemu") == "1"
+        qemu = adb("shell", "getprop", "ro.kernel.qemu")
+        if qemu not in ("", "0", "1"):
+            raise RuntimeError("Environment property is unavailable.")
+        emulated = qemu == "1"
         if emulated != (args.environment == "ANDROID_EMULATOR"):
             raise RuntimeError("Environment mismatch.")
         if adb("shell", "am", "get-current-user") != "0":
@@ -155,13 +170,27 @@ def main():
         if not uid:
             raise RuntimeError("The scoped application UID is unavailable.")
         own_uid = int(uid.group(1))
+        report["deviceIdentitySha256"] = RECOVERY.device_identity(adb)
+        journal = {"schemaVersion": 1, "environment": args.environment, "fixtureId": fixture,
+                   "deviceIdentitySha256": report["deviceIdentitySha256"], "artifactSha256": report["artifactSha256"],
+                   "originalPolicies": {"exact": original_exact, "power": original_power,
+                                        "notifications": original_notifications, "screenTimeout": original_timeout},
+                   "stateCleanupRequired": False, "reminders": []}
+        RECOVERY.validate_journal(journal)
+        RECOVERY.atomic_json(args.evidence_dir / RECOVERY.JOURNAL, journal)
+        persist()
         adb("shell", "pm", "grant", "network.orion", "android.permission.POST_NOTIFICATIONS")
         adb("shell", "appops", "set", "network.orion", "SCHEDULE_EXACT_ALARM", "allow")
+        journal["stateCleanupRequired"] = True
+        RECOVERY.atomic_json(args.evidence_dir / RECOVERY.JOURNAL, journal)
         state_prepared = True
         checkpoint("state", "prepare", fixture)
         for delay in delays:
             item = str(uuid.uuid4())
             report["reminders"].append({"fixtureId": item, "delaySeconds": delay})
+            journal["reminders"].append({"fixtureId": item, "delaySeconds": delay})
+            RECOVERY.atomic_json(args.evidence_dir / RECOVERY.JOURNAL, journal)
+            persist()
             checkpoint("reminder", "prepare", item, delay)
             metadata = CAP.retained_binding(json.loads(adb("shell", "run-as", "network.orion", "cat", "files/orion_scheduled_runtime_" + item + ".json")))
             report["reminders"][-1]["binding"] = metadata
@@ -197,6 +226,7 @@ def main():
                     stream.write(json.dumps(row) + "\n"); stream.flush()
                     print(str(round(elapsed)) + "s: " + str(len(report["observedNotifications"])) + "/" + str(len(delays)) + " real notifications observed", flush=True)
                     next_metrics = time.monotonic() + 60
+                    persist()
                 if not injected and elapsed >= args.duration_seconds / 2:
                     process = adb("shell", "pidof", "network.orion", check=False)
                     if process:
@@ -211,6 +241,7 @@ def main():
                     else:
                         report["controlledProcessDeath"] = {"result": "NOT_RUNNING_NO_INJECTION"}
                     injected = True
+                    persist()
                 time.sleep(min(10, max(0, args.duration_seconds - (time.monotonic() - start))))
         report["elapsedWorkloadSeconds"] = round(time.monotonic() - start, 3)
         if len(report["observedNotifications"]) != len(delays):
@@ -250,8 +281,12 @@ def main():
         if telemetry_output: telemetry_output.close()
         for item in report["reminders"]:
             if item["fixtureId"] not in verified:
-                try: checkpoint("reminder", "verify", item["fixtureId"], item["delaySeconds"])
-                except Exception: pass
+                try:
+                    checkpoint("reminder", "cleanup", item["fixtureId"], item["delaySeconds"])
+                    report.setdefault("reminderFixtureCleanup", {})[item["fixtureId"]] = "PASS"
+                except Exception:
+                    report.setdefault("reminderFixtureCleanup", {})[item["fixtureId"]] = "FAIL"
+                    report["result"] = "INCOMPLETE"
         if state_prepared:
             try: checkpoint("state", "cleanup", fixture); report["stateFixtureCleanup"] = "PASS"
             except Exception: report["stateFixtureCleanup"] = "FAIL"; report["result"] = "INCOMPLETE"
@@ -265,7 +300,8 @@ def main():
                     raise RuntimeError("Screen timeout was not restored.")
                 report["screenTimeoutRestore"] = "PASS"
             except Exception: report["screenTimeoutRestore"] = "FAIL"; report["result"] = "INCOMPLETE"
-        (args.evidence_dir / "f4-soak-runtime-report.json").write_text(json.dumps(report, indent=2) + "\n")
+        try: persist()
+        finally: os.close(run_lock)
     print(json.dumps(report, indent=2))
     return 0 if report["result"] in ("SHORT_RUN_COMPLETE_REVIEW_REQUIRED", "SOAK_RUN_COMPLETE_REVIEW_REQUIRED") else 1
 

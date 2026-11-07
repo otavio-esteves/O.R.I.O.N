@@ -56,14 +56,25 @@ class SoakWorkloadTest(unittest.TestCase):
             with self.assertRaises(ValueError): RECORDER.system_metrics(thermal,power,10369)
 
     def test_full_control_flow_is_bounded_and_a_short_run_never_closes_the_gate(self):
+        self.exercise_recorder()
+
+    def test_interrupted_preparation_has_a_durable_journal_and_cleanup_never_verifies_delivery(self):
+        self.exercise_recorder(interrupted=True)
+
+    def exercise_recorder(self, interrupted=False):
         with tempfile.TemporaryDirectory() as tmp:
             directory=Path(tmp); app=directory/"app-debug.apk"; test=directory/"app-debug-androidTest.apk"
             app.write_bytes(b"synthetic artifact"); test.write_bytes(app.read_bytes()); digest=hashlib.sha256(app.read_bytes()).hexdigest()
-            clock=[0.0]; state={"power":"0","notifications":False,"exact":"default","timeout":"60000","killed":False,"passiveComplete":False,"reminders":{}}
+            clock=[0.0]; state={"power":"0","notifications":False,"exact":"default","timeout":"17000","killed":False,"passiveComplete":False,"reminders":{}}
             observed=[]
             def run(command,**kwargs):
                 args=command[3:]; output=""
+                if args[:3] in (["shell","pm","grant"], ["shell","appops","set"]):
+                    journal=json.loads((directory/"evidence/soak-recovery-journal.json").read_text())
+                    self.assertEqual("17000",journal["originalPolicies"]["screenTimeout"])
+                    self.assertEqual("INCOMPLETE",json.loads((directory/"evidence/f4-soak-runtime-report.json").read_text())["result"])
                 if args[:3]==["shell","getprop","ro.kernel.qemu"]:output="0"
+                elif args[:3]==["shell","getprop","ro.serialno"]:output="synthetic-device"
                 elif args[:3]==["shell","getprop","ro.build.version.sdk"]:output="35"
                 elif args[:3]==["shell","getprop","ro.build.fingerprint"]:output="synthetic/build"
                 elif args==["shell","am","get-current-user"]:output="0"
@@ -81,10 +92,19 @@ class SoakWorkloadTest(unittest.TestCase):
                 elif args[:4]==["shell","cmd","power","set-mode"]:state["power"]=args[-1]
                 elif args[:3]==["shell","am","instrument"]:
                     output="OK (1 test)\n"
-                    if "orion_soak_mode" in args:output+="orion_soak_state="+args[args.index("orion_soak_mode")+1].upper()
+                    if "orion_soak_mode" in args:
+                        mode=args[args.index("orion_soak_mode")+1]
+                        if mode=="prepare":self.assertTrue(json.loads((directory/"evidence/soak-recovery-journal.json").read_text())["stateCleanupRequired"])
+                        output+="orion_soak_state="+mode.upper()
                     else:
                         item=args[args.index("orion_scheduled_fixture")+1];mode=args[args.index("orion_scheduled_mode")+1]
-                        if mode=="prepare":state["reminders"][item]=int(args[args.index("orion_scheduled_delay_seconds")+1])
+                        if mode=="prepare":
+                            self.assertIn(item,[entry["fixtureId"] for entry in json.loads((directory/"evidence/soak-recovery-journal.json").read_text())["reminders"]])
+                            if interrupted:raise KeyboardInterrupt()
+                            state["reminders"][item]=int(args[args.index("orion_scheduled_delay_seconds")+1])
+                        elif mode=="cleanup":
+                            self.assertTrue(interrupted)
+                            output+="orion_scheduled_cleanup=OWNED_FIXTURE_REMOVED"
                         else:
                             self.assertIn(item,observed,"Verification cannot precede independent notification observation")
                             self.assertTrue(state["passiveComplete"],"Endpoint instrumentation must await the final passive sample")
@@ -115,13 +135,17 @@ class SoakWorkloadTest(unittest.TestCase):
                   "--duration-seconds","600","--reminder-interval-seconds","300","--dedicated-target"]
             with patch("sys.argv",argv),patch.object(RECORDER.subprocess,"run",run),patch.object(RECORDER.subprocess,"Popen",Telemetry), \
                  patch.object(RECORDER.time,"monotonic",lambda:clock[0]),patch.object(RECORDER.time,"sleep",lambda seconds:clock.__setitem__(0,clock[0]+seconds)),patch("sys.stdout",io.StringIO()):
-                self.assertEqual(0,RECORDER.main())
+                self.assertEqual(1 if interrupted else 0,RECORDER.main())
             report=json.loads((directory/"evidence/f4-soak-runtime-report.json").read_text())
-            self.assertEqual("SHORT_RUN_COMPLETE_REVIEW_REQUIRED",report["result"])
+            self.assertEqual("INCOMPLETE" if interrupted else "SHORT_RUN_COMPLETE_REVIEW_REQUIRED",report["result"])
             self.assertFalse(report["fullSoakGateClosed"]);self.assertFalse(report["eligibleFor24HourReview"])
-            self.assertEqual(2,len(report["observedNotifications"]))
-            self.assertEqual("RUN_AS_SIGKILL",report["controlledProcessDeath"]["method"])
-            self.assertEqual("60000",state["timeout"]);self.assertFalse(state["notifications"]);self.assertEqual("default",state["exact"])
+            if interrupted:
+                self.assertEqual("KeyboardInterrupt",report["failureType"])
+                self.assertEqual(["PASS"],list(report["reminderFixtureCleanup"].values()))
+            else:
+                self.assertEqual(2,len(report["observedNotifications"]))
+                self.assertEqual("RUN_AS_SIGKILL",report["controlledProcessDeath"]["method"])
+            self.assertEqual("17000",state["timeout"]);self.assertFalse(state["notifications"]);self.assertEqual("default",state["exact"])
 
 
 if __name__=='__main__':unittest.main()

@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-07T22:22:06.093325+00:00",
+  "workPackage": "ORION-F4-SOAK-002",
+  "parentIssue": 64,
+  "baseCommit": "3d548b30d68402d8a7273cd09f9578c7d3c8cb06",
+  "result": "SCOPED_TOOLING_VALIDATION_WITH_OPEN_GATES",
+  "fullF4GateClosed": false,
+  "fullSoakGateClosed": false,
+  "productionRuntimeChanged": false,
+  "schemaChanged": false,
+  "sourceSha256": {
+    "scripts/android/recover-f4-soak-runtime.py": "61029627126ddbcfdef9da0d4cd31da87b406944826d34ea9201722fb9d784de",
+    "scripts/android/verify-f4-soak-runtime.py": "50006ce162dff12835e9cd1ec215a8fea1012d53ad3aea8c909bbe89894de57a",
+    "scripts/android/test_f4_soak_recovery_harness.py": "95a4ea61fa73e463eb7abb03ada76487992f1bcd4160a0cfacb53f5906a43f60",
+    "scripts/android/test_f4_soak_runtime_harness.py": "40f0ed0b79cdaa58edb3986facbbe6f3b39a0c7fb7de0a4e3b77cbaeea4a14e8",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionF4SoakStateTest.kt": "c871e10ce1f73ddd586a4f601be6fc5ac5d1cb885534dd1c94498ff560f29245",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionSoakFixtureCleanup.kt": "0088a17b505d5aca53faec2aa490b8ecc821a2effb1487cf2c121d7cca5256f3",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionSoakFixtureCleanupTest.kt": "f21c3b602434d199564231aaccbdd04299568771cd6ab33c8e1f06ff42718fc9",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionScheduledReminderRuntimeTest.kt": "3c02db1becb94f1f08be56d6d21dc19233826ea2fa0200935bcc83dc3340a03c"
+  },
+  "artifactSha256": {
+    "app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+    "app-debug-androidTest.apk": "801e6c6655150d99da15b537b457492fcd6ecdab37a5ed4408bf344479c94f1a"
+  },
+  "hostContracts": {
+    "environment": "CONTAINER",
+    "command": "docker compose run --rm host-harness-check",
+    "result": "PASS",
+    "tests": 110,
+    "logSha256": "82d01a70a98b8ad4f4a56fcc5b450c37e633549d71e14411e3d0f10afc2da9f9",
+    "actualHostSigkill": "Recorder OS process killed while synthetic ADB blocks its first policy mutation; persisted journal/incomplete report and lock release verified. No Android runtime claim."
+  },
+  "canonicalChecks": {
+    "environment": "CONTAINER",
+    "command": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2 --console=plain",
+    "result": "PASS",
+    "durationSeconds": 424,
+    "logSha256": "f832622f3411fbc6c977503e9bbe121211f847dfb71749db22d0ed4e2e7708a3",
+    "imageId": "sha256:4e1b776c374c4ba3064323ff3106bd004e7946551e2d86ee0ff86a5d38777371",
+    "scope": "Gradle check/build/lint, module/benchmark/static native gates; unchanged tasks may reuse up-to-date results."
+  },
+  "physical": {
+    "environment": "PHYSICAL_DEVICE",
+    "device": "Samsung SM-G991B",
+    "apiLevel": 35,
+    "abi": "arm64-v8a",
+    "pageSize": 4096,
+    "focusedAndroid": {
+      "result": "PASS",
+      "tests": 2,
+      "outputSha256": "f73d9823eb4e1fec54dbd4a006845caf2ef77324718916b71eb80fb4fd48fe9c",
+      "scope": "Real Android/SQLite cleanup of disposable in-memory fixtures, unconfirmed proposal, unrelated ciphertext preservation, ownership refusal and idempotency; not primary-database process-death qualification."
+    },
+    "recoveryCli": {
+      "explicit-cleanup": {
+        "reportSha256": "d5d06a4618013e8923d274ac09906b247fde1eaca5f61b990a44fcd54b14f4bd",
+        "summary": {
+          "result": "CLEANUP_COMPLETE_NOT_QUALIFICATION",
+          "fullF4GateClosed": false,
+          "fullSoakGateClosed": false,
+          "environment": "PHYSICAL_DEVICE",
+          "instrumentationCheckpointsRestartMain": true,
+          "originalRunUnchanged": true,
+          "qualificationResumed": false,
+          "journalSha256": "b1d2f78b57e8def22e9a9de39d275786058c09ea555088ae7c03c56f2594b6b3",
+          "collectorSha256": "61029627126ddbcfdef9da0d4cd31da87b406944826d34ea9201722fb9d784de",
+          "identityVerified": true,
+          "fixtureCleanup": {
+            "state-cdaaf14b-7841-420a-95d9-3d091a350618": "PASS"
+          },
+          "policyRestoration": {
+            "powerSaverRestore": "PASS",
+            "exactAccessRestore": "PASS",
+            "notificationRestore": "PASS",
+            "screenTimeoutRestore": "PASS"
+          }
+        }
+      },
+      "explicit-cleanup-idempotent": {
+        "reportSha256": "d5d06a4618013e8923d274ac09906b247fde1eaca5f61b990a44fcd54b14f4bd",
+        "summary": {
+          "result": "CLEANUP_COMPLETE_NOT_QUALIFICATION",
+          "fullF4GateClosed": false,
+          "fullSoakGateClosed": false,
+          "environment": "PHYSICAL_DEVICE",
+          "instrumentationCheckpointsRestartMain": true,
+          "originalRunUnchanged": true,
+          "qualificationResumed": false,
+          "journalSha256": "b1d2f78b57e8def22e9a9de39d275786058c09ea555088ae7c03c56f2594b6b3",
+          "collectorSha256": "61029627126ddbcfdef9da0d4cd31da87b406944826d34ea9201722fb9d784de",
+          "identityVerified": true,
+          "fixtureCleanup": {
+            "state-cdaaf14b-7841-420a-95d9-3d091a350618": "PASS"
+          },
+          "policyRestoration": {
+            "powerSaverRestore": "PASS",
+            "exactAccessRestore": "PASS",
+            "notificationRestore": "PASS",
+            "screenTimeoutRestore": "PASS"
+          }
+        }
+      }
+    },
+    "scope": "Idempotent cleanup/restoration against a failed preparation already cleaned by recorder finally; does not prove cleanup of a persisted post-SIGKILL physical workload.",
+    "originalResultAfterCleanup": "INCOMPLETE"
+  },
+  "retainedIncompleteAttempts": [
+    {
+      "archivePath": "f4-soak-recovery-20261107T221313Z/physical-smoke-report.json",
+      "sha256": "c6ab51872679f815f59c00db8e4e6ebdfabfe321dce33f051de1d38a54603b29",
+      "result": "INCOMPLETE",
+      "failure": "Focused Android assertions failed"
+    },
+    {
+      "archivePath": "f4-soak-recovery-20261107T221359Z/physical-smoke-report.json",
+      "sha256": "073fe8aa1286ca57f0daf6758aa1a13f4255145eb09c5e6cb8758699e765a4eb",
+      "result": "INCOMPLETE",
+      "failure": "Recorder ended before the planned host SIGKILL",
+      "recorderReportSha256": "b9f94b1067a473654272e637e7aface1f7ffa901f5579f9b89a7f3f3adc3ec73",
+      "recorderFailure": "Workload checkpoint failed: state/prepare",
+      "restoration": {
+        "stateFixtureCleanup": "PASS",
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS",
+        "screenTimeoutRestore": "PASS"
+      }
+    },
+    {
+      "archivePath": "f4-soak-recovery-20261107T221536Z/physical-smoke-report.json",
+      "sha256": "073fe8aa1286ca57f0daf6758aa1a13f4255145eb09c5e6cb8758699e765a4eb",
+      "result": "INCOMPLETE",
+      "failure": "Recorder ended before the planned host SIGKILL",
+      "recorderReportSha256": "eccbc69d928d1c1d2cece4955b5cedd4f0b6cbd78036add7c1e66b1f66338726",
+      "recorderFailure": "Workload checkpoint failed: state/prepare",
+      "restoration": {
+        "stateFixtureCleanup": "PASS",
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS",
+        "screenTimeoutRestore": "PASS"
+      }
+    },
+    {
+      "archivePath": "f4-soak-recovery-20261107T221719Z/physical-smoke-report.json",
+      "sha256": "073fe8aa1286ca57f0daf6758aa1a13f4255145eb09c5e6cb8758699e765a4eb",
+      "result": "INCOMPLETE",
+      "failure": "Recorder ended before the planned host SIGKILL",
+      "recorderReportSha256": "b3e626995f16a1bfcbb484d0f10ef051a002ff526c036d3da7fb79546268ebbd",
+      "recorderFailure": "Workload checkpoint failed: state/prepare",
+      "restoration": {
+        "stateFixtureCleanup": "PASS",
+        "powerSaverRestore": "PASS",
+        "exactAccessRestore": "PASS",
+        "notificationRestore": "PASS",
+        "screenTimeoutRestore": "PASS"
+      }
+    }
+  ],
+  "limitations": [
+    "User supplied only a short physical window. No 24-hour collection or F4 closure.",
+    "First smoke driver applied a one-test parser to an actually passing two-test suite; original failed driver report retained.",
+    "Locked-screen preparation refusals retained with scoped cleanup and all policy-restoration checks passing.",
+    "Unlocked preparation returned QUEUED where the existing probe requires APPLIED. Cause not established; no automatic re-confirmation or assertion relaxation. Original incomplete attempt retained.",
+    "No physical host SIGKILL workload, autonomous return or reminder delivery claimed by this increment.",
+    "Production main APK hash unchanged. Native release/physical arm64 16KiB and broader API decisions remain separate."
+  ],
+  "evidenceArchive": {
+    "localPath": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-soak-recovery-20261107.zip",
+    "sha256": "2714250d8e5d509100b91c36bffcd551dd445ea346ca517911636dc13605305a",
+    "bytes": 13908417,
+    "verifiedEntries": 62,
+    "layout": "Raw failed/partial attempts, explicit cleanup outcomes and driver sources; identical APK copies deduplicated under artifacts; source snapshots and validation logs; every manifest entry hash/size and ZIP CRC verified."
+  }
+}

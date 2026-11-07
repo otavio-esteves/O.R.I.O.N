@@ -102,6 +102,9 @@ Host ADB recorder contracts run without a device using
 [passive soak observer](docs/qualification/F4-SoakObservation.md) prepares bounded
 technical observations for the pending long-running recovery qualification; a
 completed collection never automatically approves that gate.
+New controlled runs retain an atomic recovery journal. After an interruption,
+`recover-f4-soak-runtime.py` performs scoped cleanup against the same device/APKs
+and preserves the failed run; see the recovery section in that observer document.
 
 The earlier [F4 preparation report](docs/qualification/F4-Preparation.md) describes
 PR #62 before production activation. The runtime candidate builds on those contracts;

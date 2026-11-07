@@ -120,8 +120,15 @@ class OrionF4SoakStateTest {
                     write(metadataFile, metadata)
                 } finally { taskChannel.close(); timerChannel.close() }
             } else if (mode == "cleanup") {
-                require(metadataFile.isFile)
-                require(JSONObject(metadataFile.readText()).getString("fixtureId") == raw)
+                if (!metadataFile.isFile) {
+                    require(db.tasks().find(taskId.toString()) == null && db.timers().find(timerId.toString()) == null)
+                    require(!snapshotFile.exists())
+                    InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply { putString("orion_soak_state", "CLEANUP") })
+                    return@runBlocking
+                }
+                val metadata = JSONObject(metadataFile.readText())
+                require(metadata.getString("fixtureId") == raw && metadata.getString("taskId") == taskId.toString() &&
+                    metadata.getString("timerId") == timerId.toString())
                 db.runInTransaction {
                     val sql = db.openHelper.writableDatabase
                     sql.execSQL("DELETE FROM orion_action_audit WHERE actionId IN (SELECT actionId FROM orion_action_requests WHERE correlationId = ?)", arrayOf(raw))
@@ -132,7 +139,8 @@ class OrionF4SoakStateTest {
                     sql.execSQL("DELETE FROM orion_tasks WHERE taskId = ?", arrayOf(taskId.toString()))
                     sql.execSQL("DELETE FROM orion_timers WHERE timerId = ?", arrayOf(timerId.toString()))
                 }
-                metadataFile.delete(); snapshotFile.delete()
+                android.util.AtomicFile(metadataFile).delete(); android.util.AtomicFile(snapshotFile).delete()
+                check(!metadataFile.exists() && !snapshotFile.exists())
             } else {
                 val metadata = JSONObject(metadataFile.readText())
                 require(metadata.getString("fixtureId") == raw)
