@@ -10,7 +10,7 @@ The target-specific physical obligations have supporting evidence:
 | --- | --- |
 | Canonical build/source/APK identity | Original and runtime-fix reports record Docker commands, commit/source hashes and exact APK identities |
 | Real Keystore lifecycle/failure behavior | Four physical Keystore cases passed, zero failures/skips |
-| Persistence, reopening and atomic rollback | Full physical application suites passed; the latest rerun passed 318 cases without skips |
+| Persistence, reopening and atomic rollback | Full physical application suites passed; the latest rerun passed 319 cases without skips |
 | Actual transaction/external-claim death | Seven real run-as SIGKILL scenarios passed, including conservative reminder delivery uncertainty |
 | Installed version replacement | Physical 4→5 install replacement passed with original ciphertext, keys and queues; PENDING/UNKNOWN never replayed |
 | Process recreation and permitted Force Stop return | Physical recreation plus fresh public primary startup evidence, real notification and conservative recovery passed |

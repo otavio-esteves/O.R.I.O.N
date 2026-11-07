@@ -215,6 +215,12 @@ def main():
         report["elapsedWorkloadSeconds"] = round(time.monotonic() - start, 3)
         if len(report["observedNotifications"]) != len(delays):
             raise RuntimeError("Not every approved notification was independently observed.")
+        # The observer takes its final sample at the duration boundary. Instrumentation
+        # restarts MAIN, so it must not race that sample's PID/memory reads.
+        telemetry.wait(timeout=90)
+        passive = json.loads((args.evidence_dir / "telemetry/soak-observation-report.json").read_text())
+        if passive["result"] != "OBSERVATION_COMPLETE_REVIEW_REQUIRED":
+            raise RuntimeError("Passive observation contains gaps or identity mismatches.")
         final_pid = adb("shell", "pidof", "network.orion", check=False)
         # An idle process may have been reclaimed after posting; residency at the end is not required.
         report["productionPidBeforeVerification"] = final_pid if re.fullmatch(r"[1-9][0-9]{0,9}", final_pid) else None
@@ -230,10 +236,6 @@ def main():
         checkpoint("state", "verify", fixture)
         final = adb("shell", "run-as", "network.orion", "cat", "files/orion_soak_snapshot_" + fixture + ".json")
         (args.evidence_dir / "final-state.json").write_text(final + "\n")
-        telemetry.wait(timeout=90)
-        passive = json.loads((args.evidence_dir / "telemetry/soak-observation-report.json").read_text())
-        if passive["result"] != "OBSERVATION_COMPLETE_REVIEW_REQUIRED":
-            raise RuntimeError("Passive observation contains gaps or identity mismatches.")
         report["checks"].update(originalBindingsAndSingleCommittedDelivery="PASS", taskTimerAndUncertaintyPreserved="PASS", passiveObservation="PASS")
         report["real24HourDurationObserved"] = args.duration_seconds >= 86400 and report["elapsedWorkloadSeconds"] >= 86400
         report["result"] = "SOAK_RUN_COMPLETE_REVIEW_REQUIRED" if report["real24HourDurationObserved"] else "SHORT_RUN_COMPLETE_REVIEW_REQUIRED"

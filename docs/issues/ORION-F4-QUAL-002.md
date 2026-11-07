@@ -7,7 +7,10 @@ soak protocol. The currently available S21 window is only a few hours; a short r
 must never be promoted to the required real 24-hour soak.
 
 FILES ALLOWED: focused app/src/androidTest qualification probes; new host qualification
-and soak recorders plus their contracts; qualification/compatibility documentation.
+and soak recorders plus their contracts; qualification/compatibility documentation;
+the README qualification-status pointers; test-only dependency declarations in
+app/build.gradle.kts and gradle/libs.versions.toml
+for the reproduced API37 Espresso InputManager reflection failure.
 Production runtime, schema, process topology, policy and confirmation semantics are
 outside this package unless a reproduced in-scope defect needs a separate fix.
 
@@ -20,7 +23,9 @@ INVARIANTS INVOLVED: INV-001/004/005/006/007/008/011/014/015/016/018/019/021/022
 TESTS REQUIRED: Real permission denial then grant without changed consent; exact
 access loss with persisted approximate fallback then grant; actual battery saver
 delivery; bounded disposable SQLite SQLITE_FULL/rollback and retention/resource
-tests; synthetic task/timer/reminder persistence and scoped queue/UNKNOWN observations
+tests; actual packaged native linker/JNI loading on the S21 and scoped emulator
+compatibility targets (debug load never substitutes for release or physical16KiB
+approval); synthetic task/timer/reminder persistence and scoped queue/UNKNOWN observations
 during soak. Existing runtime regression tests remain mandatory.
 
 ACCEPTANCE CRITERIA: Matching APK/source identities and explicit execution environments;

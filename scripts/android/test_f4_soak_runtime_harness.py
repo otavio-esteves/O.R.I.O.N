@@ -59,7 +59,7 @@ class SoakWorkloadTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             directory=Path(tmp); app=directory/"app-debug.apk"; test=directory/"app-debug-androidTest.apk"
             app.write_bytes(b"synthetic artifact"); test.write_bytes(app.read_bytes()); digest=hashlib.sha256(app.read_bytes()).hexdigest()
-            clock=[0.0]; state={"power":"0","notifications":False,"exact":"default","timeout":"60000","killed":False,"reminders":{}}
+            clock=[0.0]; state={"power":"0","notifications":False,"exact":"default","timeout":"60000","killed":False,"passiveComplete":False,"reminders":{}}
             observed=[]
             def run(command,**kwargs):
                 args=command[3:]; output=""
@@ -87,6 +87,7 @@ class SoakWorkloadTest(unittest.TestCase):
                         if mode=="prepare":state["reminders"][item]=int(args[args.index("orion_scheduled_delay_seconds")+1])
                         else:
                             self.assertIn(item,observed,"Verification cannot precede independent notification observation")
+                            self.assertTrue(state["passiveComplete"],"Endpoint instrumentation must await the final passive sample")
                             output+="REAL_NOTIFICATION_AND_COMMITTED_FIRED"
                 elif args[:3]==["shell","run-as","network.orion"]:
                     if args[3]=="cat":
@@ -108,7 +109,7 @@ class SoakWorkloadTest(unittest.TestCase):
                     path=Path(command[command.index("--evidence-dir")+1]);path.mkdir()
                     (path/"soak-observation-report.json").write_text(json.dumps({"result":"OBSERVATION_COMPLETE_REVIEW_REQUIRED"}))
                 def poll(self):return 0
-                def wait(self,**kwargs):return 0
+                def wait(self,**kwargs):state["passiveComplete"]=True;return 0
             argv=[RECORDER.__file__,"--adb","synthetic-adb","--serial","synthetic","--environment","PHYSICAL_DEVICE",
                   "--app-apk",str(app),"--test-apk",str(test),"--evidence-dir",str(directory/"evidence"),
                   "--duration-seconds","600","--reminder-interval-seconds","300","--dedicated-target"]

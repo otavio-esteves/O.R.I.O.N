@@ -21,8 +21,41 @@ class OrionTaskScreenTest {
     private fun click(label: String, title: String? = null, tag: String = "orion_task_confirmation") {
         ready()
         val target = if (title == null) hasText(label) else hasText(label) and hasAnyAncestor(within(title, tag))
-        compose.onNode(hasScrollToIndexAction()).performScrollToNode(target)
-        compose.onNode(target).assertIsEnabled().performClick()
+        try {
+            // An idle first frame after recreation can precede the asynchronous pending read.
+            // Only retry absence of the same exact scoped selector; never replay a click.
+            var missing: AssertionError? = null
+            try {
+                compose.waitUntil(10_000) {
+                    try {
+                        compose.onNode(hasScrollToIndexAction()).performScrollToNode(target)
+                        true
+                    } catch (failure: AssertionError) {
+                        if (!failure.message.orEmpty().startsWith("No node found that matches")) throw failure
+                        missing = failure
+                        false
+                    }
+                }
+            } catch (timeout: ComposeTimeoutException) {
+                throw missing ?: timeout
+            }
+            compose.onNode(target).assertIsEnabled().performClick()
+        } catch (failure: AssertionError) {
+            if (title != null) {
+                try {
+                    val runtime = checkNotNull((compose.activity.application as OrionApplication).mainRuntime)
+                    val selected = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                        runtime.taskKernel?.pending().orEmpty()
+                    }
+                    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply {
+                        putString("orion_ui_pending_total", selected.size.toString())
+                        putString("orion_ui_pending_fixture_matches", selected.count { it.display.title == title }.toString())
+                        putString("orion_ui_pending_unreadable", selected.count { it.display.title == null }.toString())
+                    })
+                } catch (_: Exception) { /* The original UI assertion remains the failure. */ }
+            }
+            throw failure
+        }
         ready()
         if (label.startsWith("Confirmar")) {
             compose.onNode(hasScrollToIndexAction()).performScrollToIndex(0)

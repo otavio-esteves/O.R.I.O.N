@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "gate": "NATIVE_COMPATIBILITY_GATE",
   "status": "PENDING",
-  "reason": "Compose graphics-path and DataStore introduce transitive native libraries. Physical arm64 load qualification remains pending; static checks run in Docker.",
+  "reason": "Full native load matrix remains unqualified. Scoped debug loads passed on S21 arm64/4KiB and API37 x86_64/16KiB emulator; release/R8 and physical arm64/16KiB loading remain pending. See native-load-scoped-20261107.json. Static checks run in Docker.",
   "activationIssue": "ORION-FND-001",
   "requiredChecksWhenApplicable": [
     "ELF_16_KIB_ALIGNMENT",
