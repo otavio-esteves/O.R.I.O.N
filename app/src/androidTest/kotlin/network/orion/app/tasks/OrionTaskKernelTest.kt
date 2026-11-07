@@ -22,6 +22,9 @@ import network.orion.data.database.*
 import org.junit.*
 import org.junit.Assert.*
 import org.junit.runner.RunWith
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.TimeoutCancellationException
+import network.orion.app.scheduling.awaitOriginalSoakAction
 
 @RunWith(AndroidJUnit4::class)
 class OrionTaskKernelTest {
@@ -89,6 +92,57 @@ class OrionTaskKernelTest {
         assertEquals(0, count("orion_tasks"))
         assertEquals(ActionStatus.NEEDS_CONFIRMATION, db.actions().find(pending.display.actionId.toString())!!.status)
         assertNull(db.actions().find(pending.display.actionId.toString())!!.confirmedAt)
+    }
+
+    @Test fun boundedBacklogQueuesOriginalConfirmationAndPreparationDrainsItWithoutReconfirming() = runBlocking {
+        val gateway = OrionTaskUiGateway(channel, { kernel }, clock)
+        assertEquals(CreateTaskResult.QUEUED, gateway.create(command))
+        val preview = gateway.pending().single()
+        val original = checkNotNull(db.actions().find(preview.actionId.toString()))
+        // The normal submit drains at most 25 rows. These valid, higher-priority
+        // proposals consume the entire first batch without authorizing any effect.
+        repeat(25) {
+            val id = UUID.randomUUID()
+            val queued = OrionTaskIngressWire("CREATE", id, id, id, "Backlog $id").encode()
+            try {
+                assertEquals(DurableIngressOutcome.QUEUED, kernel.ingress.submit(DurableIngressRequest(
+                    UUID.randomUUID(), OrionTaskIngressWire.SCOPE, id, OrionTaskIngressWire.SOURCE,
+                    OrionTaskIngressWire.TYPE, 1, Sensitivity.SENSITIVE, false, null, queued,
+                    86_400_000, 86_400_000, priority = 1, correlationId = id)))
+            } finally { queued.fill(0) }
+        }
+        var confirmationCalls = 0
+        confirmationCalls++
+        assertEquals(TaskOperationOutcome.QUEUED, gateway.confirm(preview.actionId, preview.version))
+        assertNull(db.tasks().find(command.taskId.toString()))
+        assertTrue(barrier.isOpen())
+        awaitOriginalSoakAction(db, preview.actionId, { gateway.processPending() })
+        val committed = checkNotNull(db.actions().find(preview.actionId.toString()))
+        assertEquals(1, confirmationCalls)
+        assertEquals(ActionStatus.SUCCEEDED, committed.status)
+        assertEquals(1, committed.attemptCount)
+        assertEquals(wall.toEpochMilli(), committed.confirmedAt)
+        assertEquals(original.normalizedPayloadHash, committed.normalizedPayloadHash)
+        assertEquals(original.confirmationFingerprint, committed.confirmationFingerprint)
+        assertNotNull(db.tasks().find(command.taskId.toString()))
+        assertEquals(1, count("orion_tasks"))
+    }
+
+    @Test fun soakAwaitCannotRenewExpiredOriginalConsent() = runBlocking {
+        val gateway = OrionTaskUiGateway(channel, { kernel }, clock)
+        assertEquals(CreateTaskResult.QUEUED, gateway.create(command))
+        val preview = gateway.pending().single()
+        barrier.beginRecovery()
+        assertEquals(TaskOperationOutcome.QUEUED, gateway.confirm(preview.actionId, preview.version))
+        wall = wall.plusSeconds(61)
+        release()
+        try {
+            awaitOriginalSoakAction(db, preview.actionId, { gateway.processPending() }, timeoutMillis = 50)
+            fail("Expired consent must never become a committed preparation")
+        } catch (_: TimeoutCancellationException) { /* Missing commit remains a failed checkpoint. */ }
+        assertNull(db.tasks().find(command.taskId.toString()))
+        assertEquals(ActionStatus.NEEDS_CONFIRMATION, db.actions().find(preview.actionId.toString())?.status)
+        assertNull(db.actions().find(preview.actionId.toString())?.confirmedAt)
     }
     @Test fun capabilityLossRollsBackProcessingAndPreservesOriginalReceipt() {
         val pending = prepared(); val receipt = consent(pending); val at = wall

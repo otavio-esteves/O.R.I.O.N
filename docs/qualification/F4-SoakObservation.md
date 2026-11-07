@@ -199,5 +199,20 @@ preparation prerequisite before another complete workload is attempted. The
 available device window was only a few minutes, so the real 24-hour gate remains
 open, along with the independently tracked compatibility obligations.
 
+### Bounded preparation after a queued confirmation
+
+[ORION-F4-QUAL-003](../issues/ORION-F4-QUAL-003.md) reproduces a valid `QUEUED`
+confirmation with the barrier open: 25 higher-priority proposals exhaust submit's
+bounded first drain. The preparation probe now accepts `APPLIED`/`QUEUED` admission
+but requires the same action to commit `SUCCEEDED`, with unchanged original
+payload/fingerprint/ciphertext, confirmed binding and exactly one execution attempt.
+It explicitly processes the original durable receipt for at most ten seconds;
+it never calls confirmation again or extends its expiry. Terminal failure, changed
+binding or missing progress still fails the checkpoint. No production semantics
+changed, and this reproduction does not establish the cause of the historical S21
+attempt. The [scoped record](f4-soak-preparation-evidence.json) contains twelve passing
+task-kernel cases and actual prepare/snapshot/cleanup on a disposable API35/x86_64
+emulator. These remain non-definitive for physical behavior and the 24-hour gate.
+
 Parser references: Android's [dumpsys documentation](https://developer.android.com/tools/dumpsys)
 and the AOSP [ApplicationExitInfo dump implementation](https://github.com/aosp-mirror/platform_frameworks_base/blob/android15-release/core/java/android/app/ApplicationExitInfo.java).

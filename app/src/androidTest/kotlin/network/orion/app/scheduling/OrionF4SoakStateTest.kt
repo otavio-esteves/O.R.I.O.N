@@ -111,10 +111,14 @@ class OrionF4SoakStateTest {
                     val timerTitle = "O.R.I.O.N. soak timer $fixture"
                     assertEquals(CreateTaskResult.QUEUED, tasks.create(CreateTask(taskId, taskTitle, taskId, fixture)))
                     val task = tasks.pending().single { it.title == taskTitle }
-                    assertEquals(TaskOperationOutcome.APPLIED, tasks.confirm(task.actionId, task.version))
+                    val taskSubmission = tasks.confirm(task.actionId, task.version)
+                    assertTrue(taskSubmission in setOf(TaskOperationOutcome.APPLIED, TaskOperationOutcome.QUEUED))
+                    awaitOriginalSoakAction(db, task.actionId, { tasks.processPending() })
                     assertEquals(CreateTimerResult.QUEUED, timers.create(CreateTimer(timerId, timerTitle, 60_000, timerId, fixture)))
                     val timer = timers.pending().single { it.title == timerTitle }
-                    assertEquals(TimerOperationOutcome.APPLIED, timers.confirm(timer.actionId, timer.version))
+                    val timerSubmission = timers.confirm(timer.actionId, timer.version)
+                    assertTrue(timerSubmission in setOf(TimerOperationOutcome.APPLIED, TimerOperationOutcome.QUEUED))
+                    awaitOriginalSoakAction(db, timer.actionId, { timers.processPending() })
                     metadata.put("taskEnvelopeSha256", hash(checkNotNull(db.tasks().find(taskId.toString())).contentEnvelope))
                         .put("timerEnvelopeSha256", hash(checkNotNull(db.timers().find(timerId.toString())).contentEnvelope))
                     write(metadataFile, metadata)
