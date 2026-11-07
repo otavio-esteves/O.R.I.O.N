@@ -134,5 +134,70 @@ retained. All owned fixtures and temporary policies were restored. This scoped
 short result supplies no 24-hour, battery-drain, continuous-backlog or full-profile
 approval.
 
+## Recovering an interrupted controlled workload
+
+[ORION-F4-SOAK-002](../issues/ORION-F4-SOAK-002.md) adds a flushed, atomically
+replaced `soak-recovery-journal.json` to new controlled runs. The initial report is
+`INCOMPLETE`; the original policies and device/APK identities are saved before the
+first policy change, and each intended fixture is saved before its preparation.
+The recorder also retains progress reports. A host SIGKILL or lost ADB connection
+therefore does not require guessing the original policies or fixture identities.
+
+After the recorder has exited and the same target reconnects, use the same exact
+installed app/test APK pair and a new directory for the cleanup attempt:
+
+```bash
+python3 scripts/android/recover-f4-soak-runtime.py \
+  --adb /path/to/Android/Sdk/platform-tools/adb \
+  --serial DEVICE_SERIAL --dedicated-target \
+  --run-dir /path/to/interrupted-run \
+  --evidence-dir /path/to/new-cleanup-evidence
+```
+
+The Linux host tools lock the original run directory; recovery refuses an active
+recorder or competing recovery for that directory. Run only one qualification
+operation per device. A recovery validates the journal, primary user, hashed device
+identity, environment and both installed APK hashes before any mutation. It never
+installs an APK, clears app data, prepares an action or manufactures confirmation.
+Malformed/incomplete journals and replaced APKs stop recovery rather than guessing
+or relaxing identity checks. Old runs without this journal require their original
+documented manual cleanup; this tool does not infer a recovery plan from old logs.
+
+Explicit test-only cleanup modes remove only fixtures with matching ownership
+markers, including an unconfirmed proposal left by interrupted preparation. Missing
+ownership for a remaining row and still-running execution fail cleanup and preserve
+the marker. Already cleaned fixtures are idempotent. Each fixture is attempted
+independently, and all four original policies are restored and checked even when
+another cleanup operation fails. Failed or disconnected cleanup remains incomplete;
+retry into another new evidence directory after resolving the actual failure.
+
+Cleanup runs instrumentation and may restart MAIN and its ordinary recovery;
+already authorized due work can therefore progress. These are intervention
+checkpoints, never passive/autonomous delivery evidence. A cleanup does not resume
+the abandoned workload or erase its `INCOMPLETE` report. It writes a separate
+`f4-soak-cleanup-report.json` with journal/source hashes and individual outcomes.
+`CLEANUP_COMPLETE_NOT_QUALIFICATION` certifies scoped cleanup/restoration only and
+keeps both phase/soak approval fields false. A fresh full-duration run and the rest
+of the approved physical profile are still required for F4 review.
+
+The [recovery validation record](f4-soak-recovery-evidence.json) records 110 passing
+Docker host contracts, including an actual recorder-process SIGKILL with synthetic
+ADB, and the passing canonical Docker check/build/lint/static/native checks. Two
+focused Android cleanup tests passed on the S21/API35/arm64/4KiB using disposable
+SQLite fixtures. Explicit recovery and a repeated idempotent recovery also passed
+on the real target, including all four policy restoration checks; that run's
+preparation had already been cleaned by its `finally` path. This supplies no actual
+physical post-SIGKILL workload or delivery evidence.
+
+The short physical attempts remain incomplete. The first driver used a single-test
+parser on a passing two-test suite; its failure is retained. Later preparation
+refused a locked screen, and an unlocked attempt observed `QUEUED` where the
+existing task-confirmation probe asserts `APPLIED`. The cause of that queued result
+is not established. Cleanup/restoration passed; no second confirmation or assertion
+relaxation was used to manufacture qualification. A follow-up must resolve the
+preparation prerequisite before another complete workload is attempted. The
+available device window was only a few minutes, so the real 24-hour gate remains
+open, along with the independently tracked compatibility obligations.
+
 Parser references: Android's [dumpsys documentation](https://developer.android.com/tools/dumpsys)
 and the AOSP [ApplicationExitInfo dump implementation](https://github.com/aosp-mirror/platform_frameworks_base/blob/android15-release/core/java/android/app/ApplicationExitInfo.java).

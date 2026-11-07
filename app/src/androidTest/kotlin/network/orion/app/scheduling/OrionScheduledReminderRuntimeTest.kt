@@ -10,7 +10,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
-import java.io.FileOutputStream
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
@@ -47,7 +46,7 @@ class OrionScheduledReminderRuntimeTest {
     @Test fun scheduledReminderSurvivesExplicitHostLifecycleBoundary() = runBlocking {
         val arguments = InstrumentationRegistry.getArguments()
         val mode = arguments.getString("orion_scheduled_mode") ?: return@runBlocking
-        require(mode in setOf("prepare", "verify", "resume_doze", "inspect_denied", "inspect_approximate", "inspect_exact", "inspect_power_save"))
+        require(mode in setOf("prepare", "verify", "cleanup", "resume_doze", "inspect_denied", "inspect_approximate", "inspect_exact", "inspect_power_save"))
         val scenario = arguments.getString("orion_scheduled_scenario")
         require(scenario == null || scenario in setOf("reboot", "force_stop", "time_change", "timezone_change", "doze", "background_restriction",
             "notification_denied", "exact_access", "battery_saver", "soak"))
@@ -55,6 +54,7 @@ class OrionScheduledReminderRuntimeTest {
         require(mode != "inspect_denied" || scenario == "notification_denied")
         require(mode !in setOf("inspect_approximate", "inspect_exact") || scenario == "exact_access")
         require(mode != "inspect_power_save" || scenario == "battery_saver")
+        require(mode != "cleanup" || scenario == "soak")
         val delaySeconds = arguments.getString("orion_scheduled_delay_seconds")?.toLong() ?: 60L
         require(delaySeconds in 60L..86_400L)
         require(delaySeconds == 60L || scenario in setOf("notification_denied", "exact_access", "battery_saver", "soak"))
@@ -67,11 +67,17 @@ class OrionScheduledReminderRuntimeTest {
         withTimeout(30_000) { while (!runtime.taskStartupBarrier.isOpen() || runtime.reminderDelivery == null) delay(10) }
         val db = OrionDatabaseFactory.open(app)
         try {
-            if (mode == "prepare") {
+            if (mode == "cleanup") {
+                cleanupSoakRuntimeReminder(app, db, fixture)
+                InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
+                    putString("orion_scheduled_cleanup", "OWNED_FIXTURE_REMOVED")
+                })
+            } else if (mode == "prepare") {
                 assertTrue("Unlock the dedicated target before preparing a new confirmation",
                     app.getSystemService(android.os.PowerManager::class.java).isInteractive &&
                         !app.getSystemService(android.app.KeyguardManager::class.java).isDeviceLocked)
                 require(!metadataFile.exists() && db.reminders().find(id.toString()) == null)
+                writeRuntimeFixtureMetadata(metadataFile, JSONObject().put("fixtureId", rawFixture).put("reminderId", id.toString()))
                 val clock = AndroidOrionClock(app.contentResolver)
                 val preparedAt = clock.wallNow()
                 val due = preparedAt.plusSeconds(delaySeconds)
@@ -109,9 +115,7 @@ class OrionScheduledReminderRuntimeTest {
                         assertTrue(alarms.cancel(OrionAlarmToken(id, row.fireGeneration, row.requestCode)))
                         metadata.put("dozeAlarmTemporarilyRemoved", true)
                     }
-                    FileOutputStream(metadataFile).use {
-                        it.write(metadata.toString().toByteArray(Charsets.UTF_8)); it.fd.sync()
-                    }
+                    writeRuntimeFixtureMetadata(metadataFile, metadata)
                     InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
                         putString("orion_scheduled_prepared_pid", Process.myPid().toString())
                     })
