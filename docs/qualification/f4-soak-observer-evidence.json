@@ -1,0 +1,118 @@
+{
+  "recordedAt": "2026-11-07T15:10:29.398161+00:00",
+  "workPackage": "docs/issues/ORION-F4-SOAK-001.md",
+  "result": "HOST_AND_PHYSICAL_SMOKE_VALIDATED_FULL_SOAK_NOT_RUN",
+  "fullSoakGateClosed": false,
+  "environment": "CONTAINER",
+  "branch": "tooling/orion-f4-soak-observer",
+  "baseCommit": "4253378a79e8467995e1e985229f408bb247f199",
+  "sourceSha256": {
+    ".github/workflows/ci.yml": "3b26c35a085919b4255c0dd8eda1a16370ed28da295c2ced8d8c00b516168cff",
+    "README.md": "ef6f5899ffbde299879b62736e446c4cb355a5ecef749f6c3a3d24407ccbd9c7",
+    "compose.yaml": "27ccfbe7140eebafdbd0ce78870869ad80aa066491303e3d2b4c0e27f2c01a82",
+    "docs/issues/ORION-F4-SOAK-001.md": "7de8264758a1ea560ee09e6fe229083a1bb9026aa4e3f1c1f664935815ed55c7",
+    "docs/qualification/F4-SoakObservation.md": "e4f643dae87877737e603622b35a4d8d8629f00990aa79aaab51385f910a025a",
+    "scripts/android/record-soak-observation.py": "d0ad00af0b10fa43bc1d3f5d4021d0e98b3be85d228cd52e9e69ec8fc98bd18a",
+    "scripts/android/test_soak_observation_harness.py": "f26594c77d38147c6b0f8186abbfe2669a41b58b4d6e055e0166c13a57b3848b"
+  },
+  "container": [
+    "python@sha256:7415fbc3c9e4979cc717d92377ab2bc7b2b4a2af1ac03cc52b5f3f88efedaf3a"
+  ],
+  "checks": {
+    "branchHostContracts": {
+      "command": "docker compose run --rm host-harness-check",
+      "tests": 59,
+      "newObserverTests": 24,
+      "result": "PASS"
+    },
+    "integratedHostContracts": {
+      "tests": 70,
+      "result": "PASS",
+      "scope": "Read-only temporary copy of the pending S21 scripts plus the new observer; no app/source mutation.",
+      "log": "/tmp/orion-f4-soak-validation/integrated-host-contracts.log",
+      "logSha256": "d014e2cfe19c8c454c04b190d2f1429965816e046aa71d8ad5ea35d11c2f969c",
+      "scriptSha256": {
+        "record-soak-observation.py": "d0ad00af0b10fa43bc1d3f5d4021d0e98b3be85d228cd52e9e69ec8fc98bd18a",
+        "test_foundation_runtime_harness.py": "3e5c19e4669553be6eecd6abe659b4e2974878bcdbf4997875a76868fa83e0be",
+        "test_installed_upgrade_harness.py": "aa4d8120b0c9e1cb8e0ac299881c2f0422f52e657bcc0762a9c3e6b2f24757ad",
+        "test_scheduled_reminder_runtime_harness.py": "491d6a8fa6eb83b2abcd8a296b9a8a109f3ac8fd0ebb5aa981ad25fcba620d95",
+        "test_soak_observation_harness.py": "f26594c77d38147c6b0f8186abbfe2669a41b58b4d6e055e0166c13a57b3848b",
+        "test_transaction_process_death_harness.py": "4ee58735beca479587d7b77174e2c47cbf3424ff8c4bf89e9524b1cf3d77fa40",
+        "verify-foundation-runtime.py": "d16cafc0b7b9b00d07fd342fa4a917d67a12b4e01a3ff898c6de6dfd7ba8f1a5",
+        "verify-installed-upgrade.py": "44ffb201547a44494a9f308a6cbb8bd80b9b3c40b6a64421251812308ea1cd59",
+        "verify-scheduled-reminder-runtime.py": "78ddf422a937fb89ba2ff6d154c696d3261265c32ae908c5eb0e169060657f3f",
+        "verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f"
+      }
+    },
+    "composeConfig": "PASS",
+    "actionlint": "PASS",
+    "gitDiffCheck": "PASS",
+    "frozenS21SourceAndApksUnchanged": true,
+    "integratedLatestS21Contracts": {
+      "tests": 73,
+      "result": "PASS",
+      "log": "/tmp/orion-f4-soak-validation/integrated-after-reboot-host-contracts.log",
+      "logSha256": "1a28ba02dbf5bec56742cc2c6b023d92bab9e1a5e09a4a17aa4e82f20fa3825a",
+      "scriptSha256": {
+        "record-soak-observation.py": "d0ad00af0b10fa43bc1d3f5d4021d0e98b3be85d228cd52e9e69ec8fc98bd18a",
+        "test_foundation_runtime_harness.py": "3e5c19e4669553be6eecd6abe659b4e2974878bcdbf4997875a76868fa83e0be",
+        "test_installed_upgrade_harness.py": "aa4d8120b0c9e1cb8e0ac299881c2f0422f52e657bcc0762a9c3e6b2f24757ad",
+        "test_scheduled_reminder_runtime_harness.py": "1139b38a60336d58052c2ce27b898f5ad4553e24b1ab3f7827dee5de50c6b816",
+        "test_soak_observation_harness.py": "f26594c77d38147c6b0f8186abbfe2669a41b58b4d6e055e0166c13a57b3848b",
+        "test_transaction_process_death_harness.py": "4ee58735beca479587d7b77174e2c47cbf3424ff8c4bf89e9524b1cf3d77fa40",
+        "verify-foundation-runtime.py": "d16cafc0b7b9b00d07fd342fa4a917d67a12b4e01a3ff898c6de6dfd7ba8f1a5",
+        "verify-installed-upgrade.py": "44ffb201547a44494a9f308a6cbb8bd80b9b3c40b6a64421251812308ea1cd59",
+        "verify-scheduled-reminder-runtime.py": "762de84ac23c464cba742c561474d253249fb36b6d0290678c953b4ed5c76581",
+        "verify-transaction-process-death.py": "9cb6bc7c205436fbd9f3c64576f5eca23fcc80ebe814eb51417f70436b090f4f"
+      }
+    }
+  },
+  "recoveryImpact": "No execution, retry, process lifecycle, confirmation or business state changes. Passive observation only.",
+  "securityPrivacyImpact": "Only allowlisted technical fields persist; no raw device dumps, exit descriptions, business payload, direct Room opening or setting writes. Endpoint device serial is hashed.",
+  "migrationUpgradeImpact": "No schema, APK, Gradle or runtime changes.",
+  "remaining": [
+    "Carry out and assess the full recovery soak with separate delivery, queue, uncertainty, thermal and resource evidence.",
+    "This 10-second smoke validates parsers only; it does not qualify a full soak or other OEM/API formats."
+  ],
+  "outOfScope": [
+    "AI/voice",
+    "Physical soak execution now",
+    "Automatic gate approval",
+    "Domain diagnostics API or queue extraction"
+  ],
+  "updatedAt": "2026-11-07T15:35:06.398909+00:00",
+  "physicalSmoke": {
+    "report": {
+      "result": "OBSERVATION_COMPLETE_REVIEW_REQUIRED",
+      "fullSoakGateClosed": false,
+      "environment": "PHYSICAL_DEVICE",
+      "expectedApkSha256": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+      "requestedSeconds": 10.0,
+      "intervalSeconds": 5.0,
+      "samples": 3,
+      "samplesWithGaps": 0,
+      "samplingGaps": 0,
+      "artifactMismatch": false,
+      "deviceMismatch": false,
+      "startedAtUtc": "2026-11-07T15:32:37.128954+00:00",
+      "collectorSha256": "d0ad00af0b10fa43bc1d3f5d4021d0e98b3be85d228cd52e9e69ec8fc98bd18a",
+      "limitations": [
+        "Passive sampled telemetry requires human review; completion is not PASS.",
+        "No queue, UNKNOWN, delivery, retention or wakelock proof is collected.",
+        "Retained exit snapshots can truncate history and include pre-run exits.",
+        "ADB polling affects battery/idle behavior; it is not battery qualification.",
+        "Missing-process snapshots do not prove a crash, Force Stop or restart loop."
+      ],
+      "androidRuntimeEvidence": "PHYSICAL_OBSERVATION_ONLY",
+      "apiLevel": 35,
+      "deviceIdentitySha256": "fcb921ffd88273dafa74b43f483785c816b78fbed07d2e04a7ec3b3abba47e5e",
+      "installedApkSha256Before": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+      "installedApkSha256After": "88624cdd6a132b7bd58f17af7e3ad646fdbe1fa08e32683dac7fbf0a42f7c99d",
+      "elapsedSeconds": 11.579,
+      "samplesSha256": "2f85e49b49d7614312336a7e064c8ac07a6b422b70585c824bf8b9cc3d251c23"
+    },
+    "path": "/home/otavio/Projects/O.R.I.O.N-evidence/soak-observer-s21-smoke-20261107/soak-observation-report.json",
+    "reportSha256": "9e4f0cb5a082f7232f7abe061495d44b21707053ab04650f6e2ca9b54d66433c",
+    "samplesPath": "/home/otavio/Projects/O.R.I.O.N-evidence/soak-observer-s21-smoke-20261107/samples.jsonl"
+  }
+}
