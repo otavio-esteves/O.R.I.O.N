@@ -11,7 +11,8 @@ import network.orion.core.health.*
 import network.orion.core.ipc.OrionIpcProtocol
 
 @Composable
-fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, taskQueues: TaskQueueDiagnostics? = null, scheduling: OrionSchedulingDiagnostics? = null, onRetry: () -> Unit) {
+fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, taskQueues: TaskQueueDiagnostics? = null, scheduling: OrionSchedulingDiagnostics? = null,
+    platform: OrionPlatformDiagnostics? = null, onRetry: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Saúde do sistema", style = MaterialTheme.typography.headlineSmall)
@@ -21,6 +22,17 @@ fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, ta
         val protocol = OrionIpcProtocol.CURRENT
         Text("Contrato IPC: ${protocol.protocolMajor}.${protocol.protocolMinor}")
         Text("Última inicialização local: ${report.lastRecovery ?: "não concluída"}")
+        Text("Compatibilidade nativa: ${platform?.nativeQualification ?: OrionNativeQualification.UNAVAILABLE}")
+        Text("Classificação do Memory Limiter: " + when (platform?.memoryLimiterClassification) {
+            OrionMemoryLimiterClassification.DEDICATED_REASON_AVAILABLE -> "motivo dedicado disponível"
+            OrionMemoryLimiterClassification.DESCRIPTION_FALLBACK_ONLY -> "identificação alternativa por descrição"
+            null -> "indisponível"
+        })
+        Text("Evidência recente de Memory Limiter: " + when (platform?.memoryLimiterEvidence) {
+            OrionMemoryLimiterEvidence.OBSERVED -> "observada"
+            OrionMemoryLimiterEvidence.NOT_OBSERVED -> "não observada"
+            else -> "indisponível"
+        })
         taskQueues?.let { q ->
             Text("Ingressos na fila: ${q.queuedIngress}")
             Text("Aguardando confirmação: ${q.pendingConfirmation}")

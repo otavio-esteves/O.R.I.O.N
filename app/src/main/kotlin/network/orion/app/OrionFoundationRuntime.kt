@@ -74,6 +74,11 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     private var forceStopSignal = "UNAVAILABLE"
     private var lastExitReason: Int? = null
     private var lastExitKind: String? = null
+    @Volatile private var recentMemoryLimiterObserved: Boolean? = null
+    private val memoryLimiterReason = dedicatedMemoryLimiterReason()
+    private val maintenanceObservationSequence = java.util.concurrent.atomic.AtomicLong()
+    internal fun platformDiagnostics() = OrionPlatformDiagnostics.from(
+        app.getString(R.string.orion_native_qualification_status), memoryLimiterReason != null, recentMemoryLimiterObserved)
     internal fun deliveryGateway() = OrionReminderDeliveryUiGateway({ reminderDelivery },
         { id -> reconcileAuthorizedReminder(id) }, { nudgeUiMaintenance() })
     internal val deviceGateway = network.orion.app.device.OrionDeviceUiGateway(app, clock)
@@ -284,6 +289,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             }
             lastExitReason = exits.firstOrNull()?.reason
             lastExitKind = exits.firstOrNull()?.kind?.name
+            recentMemoryLimiterObserved = if (states[OrionSubsystem.EXIT_MONITOR] == OrionHealthStatus.HEALTHY)
+                exits.any { it.kind == network.orion.core.exitinfo.ProcessExitKind.MEMORY_LIMITER } else null
             sampleForceStop(config)
             if (keyState == FieldKeyInitialization.READY) {
                 taskStorageReady = true
@@ -463,7 +470,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     }
 
     /** Recovery has returned and released its monitor before this method invokes external delivery. */
-    internal suspend fun performMaintenance(): Boolean = withContext(Dispatchers.IO) {
+    internal suspend fun performMaintenance(origin: OrionMaintenanceOrigin = OrionMaintenanceOrigin.SYSTEM_TRIGGER): Boolean = withContext(Dispatchers.IO) {
         recover()
         mutex.withLock {
             if (!taskStartupBarrier.isOpen() || !taskWriteReady) return@withLock false
@@ -474,7 +481,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             // Existing facts and eligible retention must progress before expiry adds
             // cancellation facts; a full outbox must not block its own cleanup.
             scheduler.publishEvents()
-            network.orion.data.repository.OrionRetentionMaintenance(db.retention(), clock).runBatch()
+            val pruned = network.orion.data.repository.OrionRetentionMaintenance(db.retention(), clock).runBatch()
             val delivery = reminderDelivery
             if (delivery != null)
                 network.orion.app.reminderdelivery.OrionReminderDeliveryRetention(db, delivery.actions, clock).expireBatch(100)
@@ -493,7 +500,15 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             // Retry only unfinished internal batches. Denied permission/UNKNOWN remain observable,
             // and await a later capability event/heartbeat instead of creating a tight retry loop.
             maintenanceNeedsContinuation = !reconciled.complete || !delivered.complete || scheduler.hasDueEvents()
-            !maintenanceNeedsContinuation && reconciled.healthy && delivered.healthy
+            val healthy = !maintenanceNeedsContinuation && reconciled.healthy && delivered.healthy
+            try {
+                Log.i(OrionMaintenanceSnapshot.LOG_TAG, readMaintenanceSnapshot(app, db, clock, origin, healthy, pruned,
+                    maintenanceObservationSequence.incrementAndGet()).toLogLine())
+            } catch (_: Exception) {
+                // Diagnostics are sampled, optional evidence. Never change authority, retry or recovery due to logging.
+                Log.w(OrionMaintenanceSnapshot.LOG_TAG, "SNAPSHOT_UNAVAILABLE")
+            }
+            healthy
         }
     }
 
@@ -609,12 +624,14 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
 
 private class AndroidApplicationExitMonitor(context: Context) : ApplicationExitMonitor {
     private val manager = context.getSystemService(ActivityManager::class.java)
-    private val memoryLimiterReason = try {
-        android.app.ApplicationExitInfo::class.java.getField("REASON_MEMORY_LIMITER").getInt(null)
-    } catch (_: ReflectiveOperationException) { null }
+    private val memoryLimiterReason = dedicatedMemoryLimiterReason()
     override suspend fun recentExits(): List<ProcessExitSignal> =
         manager.getHistoricalProcessExitReasons(null, 0, 8).map {
             network.orion.core.exitinfo.OrionProcessExitClassifier.classify(it.reason, Instant.ofEpochMilli(it.timestamp),
                 it.description, memoryLimiterReason)
         }
 }
+
+private fun dedicatedMemoryLimiterReason(): Int? = try {
+    android.app.ApplicationExitInfo::class.java.getField("REASON_MEMORY_LIMITER").getInt(null).takeIf { it > 16 }
+} catch (_: ReflectiveOperationException) { null } catch (_: SecurityException) { null }
