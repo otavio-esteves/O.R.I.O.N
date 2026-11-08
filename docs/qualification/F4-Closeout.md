@@ -1,8 +1,11 @@
-# F4 closeout audit — pending long-run approval
+# F4 closeout — functional exit and open qualification
 
 Work package: [ORION-F4-QUAL-002](../issues/ORION-F4-QUAL-002.md); parent
 [issue #64](https://github.com/otavio-esteves/O.R.I.O.N/issues/64).
-This is an evidence audit, not an F4/MVP approval or release tag.
+Latest decision: [functional exit audit](F4-FunctionalAudit.md) approves the
+§10.11 deterministic exit and governor-first F5 work. Stability/native qualification
+remains open; Cortex activation and a release tag are not approved. The historical
+measurements below retain their original scope and outcomes.
 The [machine-readable closeout record](f4-closeout-s21-api35-20261107.json)
 binds each result and retained failed attempt to its artifact/source identities.
 
@@ -121,9 +124,11 @@ instance with an observed original policy; no restriction was normalized to crea
 that baseline. Both failed preflights remain retained. ATD app-surface results
 never stand in for ordinary-platform events or physical/OEM behavior.
 
-F4 remains open until required qualification evidence, the real 24-hour soak and
-its review are complete. No AI/voice phase advancement, readiness promotion or
-`v0.1.0-core` tag is authorized by this audit alone.
+The wider stability qualification remains open until the required real-duration
+workload and review are complete. The blanket F5 prohibition previously derived
+from that obligation is superseded by the scoped functional audit above, which
+uses Master Plan §§10.11/31. No inference, readiness promotion or release tag is
+authorized by this historical evidence alone.
 
 The native compatibility gate also remains `PENDING`. A separate-identity,
 non-debuggable R8 qualification APK now passed scoped native loading on physical
@@ -134,4 +139,5 @@ the two-import test-environment correction and the complete 325-case API37 pass.
 This does not approve physical arm64/16KiB or production
 release distribution. The API compatibility matrix and native gate retain
 separate decisions. The real-duration, complete physical workload and review gates
-remain open; short results never promote Core readiness or authorize F5.
+remain open; short results never promote Core readiness or enable Cortex.
+Governor-first F5 implementation follows the separate functional exit decision.

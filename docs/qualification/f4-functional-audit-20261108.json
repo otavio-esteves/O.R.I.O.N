@@ -1,0 +1,293 @@
+{
+  "auditedCommit": "3f8774384edbad9c1e8831d75c3099c24943fcc4",
+  "records": [
+    {
+      "record": "docs/qualification/f4-closeout-s21-api35-20261107.json",
+      "sha256": "2a2a55f8afba186b6c04e9c6a77c828782a3adfe3aa8a646b9dc0993ad87e8a5",
+      "sourceChecks": []
+    },
+    {
+      "record": "docs/qualification/f4-s21-physical-api35-20261107.json",
+      "sha256": "e9c3f6bdaf2ccd0eb1169a74134c076ba399c563dace05b529df9412b7b3dc09",
+      "sourceChecks": []
+    },
+    {
+      "record": "docs/qualification/f4-s21-fixes-physical-api35-20261107.json",
+      "sha256": "f3d20ce61bde0aa378b2ade40e4cbf5d740c36e722cc5a459dc2773a433a508c",
+      "sourceChecks": []
+    },
+    {
+      "record": "docs/qualification/f4-diagnostics-evidence.json",
+      "sha256": "1b99f2aa8335d2ad451b705ca822efcfd3dbd445cb9a239fed4df1b822bb8a58",
+      "sourceChecks": [
+        {
+          "path": "app/build.gradle.kts",
+          "recorded": "02811b688abe38cbf08ff2811703471e19b663eab040efa30bf0bee1a4ab7cf9",
+          "current": "aabc510e8a14bba89f188fbb81cf36a2b9a7e5ea909b428b437841bb03f40d3d",
+          "matches": false
+        },
+        {
+          "path": "app/src/main/kotlin/network/orion/app/MainActivity.kt",
+          "recorded": "f284f28fd24e817c0f14daf183164614180356504567bb4121df9bbc3629cdc8",
+          "current": "f284f28fd24e817c0f14daf183164614180356504567bb4121df9bbc3629cdc8",
+          "matches": true
+        },
+        {
+          "path": "app/src/main/kotlin/network/orion/app/OrionFoundationRuntime.kt",
+          "recorded": "3e723fa48abd690237e4b994f28201ed1cfe0972d047ab5896bee99cc100678e",
+          "current": "3e723fa48abd690237e4b994f28201ed1cfe0972d047ab5896bee99cc100678e",
+          "matches": true
+        },
+        {
+          "path": "app/src/main/kotlin/network/orion/app/scheduling/OrionSchedulingComponents.kt",
+          "recorded": "1e64917ca67aee5f4bbb6a6261b5afccee879fb26c8356c688d128c94737afc2",
+          "current": "1e64917ca67aee5f4bbb6a6261b5afccee879fb26c8356c688d128c94737afc2",
+          "matches": true
+        },
+        {
+          "path": "feature/diagnostics/src/main/kotlin/network/orion/feature/diagnostics/DiagnosticsScreen.kt",
+          "recorded": "3d1e8a59913cd1444aebc1b5cc7619930986080df773050650f874625d3004e4",
+          "current": "3d1e8a59913cd1444aebc1b5cc7619930986080df773050650f874625d3004e4",
+          "matches": true
+        },
+        {
+          "path": "app/src/main/kotlin/network/orion/app/OrionMaintenanceSnapshotReader.kt",
+          "recorded": "650fa79d8c9a5472743ca46e31a65db2d7fde4b56eaec19f1f13b137ef032c18",
+          "current": "650fa79d8c9a5472743ca46e31a65db2d7fde4b56eaec19f1f13b137ef032c18",
+          "matches": true
+        },
+        {
+          "path": "app/src/androidTest/kotlin/network/orion/app/OrionMaintenanceSnapshotReaderTest.kt",
+          "recorded": "ebfaf2ac0ee901b3f1e51abe7de80a72acf9a26472b124288530e401427d52ba",
+          "current": "ebfaf2ac0ee901b3f1e51abe7de80a72acf9a26472b124288530e401427d52ba",
+          "matches": true
+        },
+        {
+          "path": "app/src/androidTest/kotlin/network/orion/app/OrionPlatformDiagnosticsScreenTest.kt",
+          "recorded": "ea9cfffae52fe2423558f5ca7f75acd8431c0c3100ed538831d478012eab9652",
+          "current": "ea9cfffae52fe2423558f5ca7f75acd8431c0c3100ed538831d478012eab9652",
+          "matches": true
+        },
+        {
+          "path": "core/health/src/main/kotlin/network/orion/core/health/OrionPlatformDiagnostics.kt",
+          "recorded": "bc357721e46cf2725d3a544d3d9043504844bab0b7007861a08dda62d8734a1c",
+          "current": "bc357721e46cf2725d3a544d3d9043504844bab0b7007861a08dda62d8734a1c",
+          "matches": true
+        },
+        {
+          "path": "core/health/src/test/kotlin/network/orion/core/health/OrionPlatformDiagnosticsTest.kt",
+          "recorded": "96d680d552a8601b6f30172d927534bc7e8ccbc8e2ce63bd577a67a5bd1d8de1",
+          "current": "96d680d552a8601b6f30172d927534bc7e8ccbc8e2ce63bd577a67a5bd1d8de1",
+          "matches": true
+        },
+        {
+          "path": "core/observability/src/main/kotlin/network/orion/core/observability/OrionMaintenanceSnapshot.kt",
+          "recorded": "ca41b3be0d72fa7a910cee9fec6808ae01556cebb6eae04eb9aeaf99ca9c15b1",
+          "current": "ca41b3be0d72fa7a910cee9fec6808ae01556cebb6eae04eb9aeaf99ca9c15b1",
+          "matches": true
+        },
+        {
+          "path": "core/observability/src/test/kotlin/network/orion/core/observability/OrionMaintenanceSnapshotTest.kt",
+          "recorded": "324594d9bc39bafff1eea5de68d9b1e0b3f90dc3bba08620b4cbdf08bca273f8",
+          "current": "324594d9bc39bafff1eea5de68d9b1e0b3f90dc3bba08620b4cbdf08bca273f8",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "record": "docs/qualification/f4-maintenance-history-evidence.json",
+      "sha256": "99eef2840396c2a14967cd8f600d59eeb4e1ed584827478a57c7a998e315a7e1",
+      "sourceChecks": [
+        {
+          "path": "scripts/android/record-maintenance-history.py",
+          "recorded": "ebf6f2c8f2c0d3d6530a19123a6eaa15731ce13ec87bf72798e6395e67149388",
+          "current": "ebf6f2c8f2c0d3d6530a19123a6eaa15731ce13ec87bf72798e6395e67149388",
+          "matches": true
+        },
+        {
+          "path": "scripts/android/test_maintenance_history_harness.py",
+          "recorded": "a5819d900dd96b972bbcbba111a3c9474ff9699fade7bb3438139305571884c8",
+          "current": "a5819d900dd96b972bbcbba111a3c9474ff9699fade7bb3438139305571884c8",
+          "matches": true
+        },
+        {
+          "path": "scripts/android/testdata/maintenance-snapshot-v1.json",
+          "recorded": "bda36e52be367bfe9bc56a265a612891fe36e9794f200da371abcd985d20f72b",
+          "current": "bda36e52be367bfe9bc56a265a612891fe36e9794f200da371abcd985d20f72b",
+          "matches": true
+        },
+        {
+          "path": "scripts/android/verify-f4-soak-runtime.py",
+          "recorded": "a21f1d8283eb2ba311e271ec847214f895bae280f4aeb0a740aed86ba3000532",
+          "current": "a21f1d8283eb2ba311e271ec847214f895bae280f4aeb0a740aed86ba3000532",
+          "matches": true
+        },
+        {
+          "path": "scripts/android/test_f4_soak_runtime_harness.py",
+          "recorded": "c252162530db947a5b2d6e5d5db6636aa66f8c20f7a3c929583a7a2c99c06023",
+          "current": "c252162530db947a5b2d6e5d5db6636aa66f8c20f7a3c929583a7a2c99c06023",
+          "matches": true
+        },
+        {
+          "path": "scripts/android/recover-f4-soak-runtime.py",
+          "recorded": "94ae1c8cf1d847c17204f2a081cfac563bbb6000c10069e8fab4b4ae661c9e5a",
+          "current": "94ae1c8cf1d847c17204f2a081cfac563bbb6000c10069e8fab4b4ae661c9e5a",
+          "matches": true
+        },
+        {
+          "path": "scripts/android/test_f4_soak_recovery_harness.py",
+          "recorded": "3345c07c53f687032ee992cb54382ed92f51021bcbcf0598d754f2a65742bf3b",
+          "current": "3345c07c53f687032ee992cb54382ed92f51021bcbcf0598d754f2a65742bf3b",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "record": "docs/qualification/f4-minified-native-evidence.json",
+      "sha256": "b97b739cb3065ccc021d6b06f2a721ee09db8f50e6d51df1a4a6f2bbedaca948",
+      "sourceChecks": [
+        {
+          "path": "app/build.gradle.kts",
+          "recorded": "aabc510e8a14bba89f188fbb81cf36a2b9a7e5ea909b428b437841bb03f40d3d",
+          "current": "aabc510e8a14bba89f188fbb81cf36a2b9a7e5ea909b428b437841bb03f40d3d",
+          "matches": true
+        },
+        {
+          "path": "app/src/qualificationRelease/AndroidManifest.xml",
+          "recorded": "f503a5c5284def43d0419c9e33ad133a62b531e42a2e842aa6f172a754c9202e",
+          "current": "f503a5c5284def43d0419c9e33ad133a62b531e42a2e842aa6f172a754c9202e",
+          "matches": true
+        },
+        {
+          "path": "app/src/qualificationAndroidTest/java/network/orion/app/compatibility/OrionQualificationInstrumentation.java",
+          "recorded": "9079776419c4c83b43c03b756946286e90051edd4fd185acba31ff55a2c9100a",
+          "current": "9079776419c4c83b43c03b756946286e90051edd4fd185acba31ff55a2c9100a",
+          "matches": true
+        },
+        {
+          "path": "app/src/androidTest/kotlin/network/orion/app/compatibility/OrionNativeLibraryLoadTest.kt",
+          "recorded": "0b8ca8ed2ef3b9e6a9d55153c58222e2cb7724fb092f3d3ba76fefbc956c1507",
+          "current": "0b8ca8ed2ef3b9e6a9d55153c58222e2cb7724fb092f3d3ba76fefbc956c1507",
+          "matches": true
+        },
+        {
+          "path": "scripts/benchmark/check-native-packages.sh",
+          "recorded": "4adfa985ee61464141e502d6819f37aa504e988540eec3605a94652daa0f8ab4",
+          "current": "4adfa985ee61464141e502d6819f37aa504e988540eec3605a94652daa0f8ab4",
+          "matches": true
+        },
+        {
+          "path": "scripts/benchmark/test-native-packages.sh",
+          "recorded": "74ed4fd3d77a4798e5e7946957ad4b2adc85b5981ad3632f51ac26e2604acf27",
+          "current": "74ed4fd3d77a4798e5e7946957ad4b2adc85b5981ad3632f51ac26e2604acf27",
+          "matches": true
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "recorded": "dbfa80d96c11a9fd2c4c0294f7308ee4fe2370918f45fdb5bc123b8aea3f60b0",
+          "current": "dbfa80d96c11a9fd2c4c0294f7308ee4fe2370918f45fdb5bc123b8aea3f60b0",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "record": "docs/qualification/f4-soak-preparation-evidence.json",
+      "sha256": "6cb4ec2b00877cba74f20d18f9a521018a617b2fc4c9b75f067ee116eafdf45f",
+      "sourceChecks": [
+        {
+          "path": "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionSoakPreparation.kt",
+          "recorded": "6c0ab1fe4807769026d0edc963d29d24d292cfe560634215f0c7eb56751c072d",
+          "current": "6c0ab1fe4807769026d0edc963d29d24d292cfe560634215f0c7eb56751c072d",
+          "matches": true
+        },
+        {
+          "path": "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionF4SoakStateTest.kt",
+          "recorded": "f74f9b5f5112ca9a61af3ce15a8bfbc6fd3be164d056ecc9e45f9e9396a8f4ed",
+          "current": "f74f9b5f5112ca9a61af3ce15a8bfbc6fd3be164d056ecc9e45f9e9396a8f4ed",
+          "matches": true
+        },
+        {
+          "path": "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskKernelTest.kt",
+          "recorded": "b198c3bbee2c11a4be045eee7def2e251dc7d867bfb989f94f3096927182f94f",
+          "current": "b198c3bbee2c11a4be045eee7def2e251dc7d867bfb989f94f3096927182f94f",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "record": "docs/qualification/f4-ui-recreation-evidence.json",
+      "sha256": "0d70d0ea2a2fa8d2e71d3b2229d4bebb9365615d24e924b42d3920b0c502c2c4",
+      "sourceChecks": [
+        {
+          "path": "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskScreenTest.kt",
+          "recorded": "f0edb50119d9a04458cf436ecafee61fdde7d86301fd75503dd9c32d85490a65",
+          "current": "f0edb50119d9a04458cf436ecafee61fdde7d86301fd75503dd9c32d85490a65",
+          "matches": true
+        },
+        {
+          "path": "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderScreenTest.kt",
+          "recorded": "c8ac662bae5379327e79e1811f6a3f4bb489c782f29249f3d3e0c7eb9328e05f",
+          "current": "c8ac662bae5379327e79e1811f6a3f4bb489c782f29249f3d3e0c7eb9328e05f",
+          "matches": true
+        }
+      ]
+    }
+  ],
+  "archives": [
+    {
+      "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-closeout-s21-api35-20261107.zip",
+      "sha256": "282b5e6302176ceb9aaea8c39ad777393d54382d1667b862be5f51f2a01c777b",
+      "bytes": 36363361,
+      "crc": "PASS",
+      "entries": 475
+    },
+    {
+      "path": "/home/otavio/Projects/O.R.I.O.N-evidence/s21-api35-20261107.zip",
+      "sha256": "9830d15e42b5f9f8143ee06a83d54a576e82a781978eb0bd869ed77d2ec5ee16",
+      "bytes": 15619624,
+      "crc": "PASS",
+      "entries": 122
+    },
+    {
+      "path": "/home/otavio/Projects/O.R.I.O.N-evidence/s21-fixes-api35-20261107.zip",
+      "sha256": "5f3f6e4a270908b1848542aeee9e7fc8eb6170459bd552e6a418a93b2f4b071a",
+      "bytes": 57834254,
+      "crc": "PASS",
+      "entries": 373
+    }
+  ],
+  "currentArtifacts": {
+    "app/build/outputs/apk/debug/app-debug.apk": "6d61cb8ba9c39c054327781d8329a8d209a89104b88325945b9ac64e64f049b2",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "98e95949d97d0b5e9264ccb3599ed1d5d3587bc2377c92bebc5bccfeef2148cc"
+  },
+  "limitations": [
+    "No new physical or emulator execution; recorded runs are reused only for their original scope.",
+    "Historical source differences are recorded, never silently rebound to newer binaries."
+  ],
+  "recorded325CasePairMatchesCurrent": true,
+  "dockerChecks": {
+    "canonical": {
+      "sha256": "40aec973a33aeac6b870951d56dd8f8dd00c1b22255843b68c3950ff78161219",
+      "result": "PASS"
+    },
+    "host": {
+      "sha256": "5fbd15052a90bad97f9340856c49e43b524e040868462c49decb9a975e514bdd",
+      "result": "PASS"
+    }
+  },
+  "schemaVersion": 1,
+  "workPackage": "ORION-F4-AUDIT-001",
+  "functionalExitGate": "PASS",
+  "f5Entry": "RESOURCE_GOVERNOR_FIRST",
+  "cortexActivationAllowed": false,
+  "fullStabilityQualification": "PENDING",
+  "nativeReleaseQualification": "PENDING",
+  "soak24HourQualification": "PENDING",
+  "normativeBasis": {
+    "functionalExit": "2-plano-mestre.md \u00a710.11",
+    "postMvpSoak": "2-plano-mestre.md \u00a731; 1-orion.md \u00a7118",
+    "governorBeforeCortex": "1-orion.md \u00a733; AGENTS.md \u00a77; 2-plano-mestre.md \u00a711.9",
+    "nativeRiskAndRelease": "2-plano-mestre.md \u00a7\u00a76.7/32"
+  },
+  "sourceOfRuntimeEvidence": "Existing scoped physical and emulator records; no new runtime execution in this audit."
+}
