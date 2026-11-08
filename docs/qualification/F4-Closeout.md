@@ -129,8 +129,9 @@ The native compatibility gate also remains `PENDING`. A separate-identity,
 non-debuggable R8 qualification APK now passed scoped native loading on physical
 S21/arm64/4KiB and startup/storage checks on API35/API37 x86_64/4KiB emulators.
 See [minified qualification](F4-MinifiedNative.md) for exact artifact identities,
-retained incomplete attempts and the separate default-suite UI failures still
-under investigation. This does not approve physical arm64/16KiB or production
+retained incomplete attempts. [Recreation qualification](F4-UiRecreation.md) records
+the two-import test-environment correction and the complete 325-case API37 pass.
+This does not approve physical arm64/16KiB or production
 release distribution. The API compatibility matrix and native gate retain
 separate decisions. The real-duration, complete physical workload and review gates
 remain open; short results never promote Core readiness or authorize F5.

@@ -69,3 +69,8 @@ unchanged by this package; the cause remains unproven and requires a separate
 focused investigation. Cleanup and original emulator settings/display restoration
 passed. This run does not supply complete compatibility approval. See the
 [artifact-bound results and retained attempts](f4-minified-native-evidence.json).
+
+The subsequent [recreation qualification](F4-UiRecreation.md) resolves the two
+legacy test-environment failures through a two-import v2 setup change, preserving
+all original assertions. Its final default API37 manifest passed 325/325 with zero
+skips. The earlier incomplete run above remains historical evidence.

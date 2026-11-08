@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F4-UI-001",
+  "productionImplementationChanged": false,
+  "dependencyVersionsChanged": false,
+  "assertionsRelaxed": false,
+  "fullF4GateClosed": false,
+  "nativeGateClosed": false,
+  "environment": "ANDROID_EMULATOR",
+  "apiLevel": 37,
+  "abi": "x86_64",
+  "pageSizeBytes": 4096,
+  "runtimeScope": "API/test compatibility; no physical/OEM/duration approval",
+  "runs": [
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-default-api37-suite-20261108",
+      "reportSha256": "4ee78aa157959d8304d42f9b06a53900b40cfd770de40f8f70dd7df0e7de8ffe",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "fullF4GateClosed": false,
+        "nativeGateClosed": false,
+        "result": "INCOMPLETE",
+        "expectedTests": 325,
+        "artifactSha256": {
+          "app-debug.apk": "1df4651ebae617cf724c59b253dd83128785f46d5ecb7e1831e54ba56de26328",
+          "app-debug-androidTest.apk": "441e003db16a84f7d9787b40c883e8070552aab0392ba0a115bc8cd5ce989b86"
+        },
+        "originalSettings": {
+          "system:screen_off_timeout": "2147483647",
+          "global:window_animation_scale": "1.0",
+          "global:transition_animation_scale": "1.0",
+          "global:animator_duration_scale": "null"
+        },
+        "display": "1080x2400/420dpi",
+        "procedureSha256": "7445acdf3398696dc2b8cc56ba293a0ceaa736fa3fe6e894c035e093c499738a",
+        "suiteResult": "INCOMPLETE",
+        "passed": 323,
+        "skipped": 0,
+        "failed": 2,
+        "suiteReportSha256": "70a17c95e48646d451733cf729b9586cb838b239502dca38d0b389f9f641076a",
+        "failure": "AssertionError: ",
+        "cleanup": {
+          "network.orion.test": "PASS",
+          "network.orion": "PASS",
+          "settingsAndDisplayRestore": "PASS"
+        }
+      }
+    },
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-ui-probe-focused-20261108",
+      "reportSha256": "a50b5146755a1e42eb800575d902d81c7ea9850124b32bef2d0a4b34bdb3056d",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "fullF4GateClosed": false,
+        "nativeGateClosed": false,
+        "result": "INCOMPLETE",
+        "expectedTests": 2,
+        "artifactSha256": {
+          "app-debug.apk": "ec162dd87112fdd91ae1e7da9b409ed10610acdef10add1f538eb90324e4abb1",
+          "app-debug-androidTest.apk": "441e003db16a84f7d9787b40c883e8070552aab0392ba0a115bc8cd5ce989b86"
+        },
+        "originalSettings": {
+          "system:screen_off_timeout": "2147483647",
+          "global:window_animation_scale": "1.0",
+          "global:transition_animation_scale": "1.0",
+          "global:animator_duration_scale": "null"
+        },
+        "display": "1080x2400/420dpi",
+        "procedureSha256": "0eceb65ee02f17a2af0e46c99c7f223475c4a70c5a9e07ef92821e25d75e04f2",
+        "suiteResult": "INCOMPLETE",
+        "passed": 0,
+        "skipped": 0,
+        "failed": 2,
+        "suiteReportSha256": "a383ac68c1999f2adb8fa61ddc9af4c70b3aac52452b6cff851075eb202e8c1d",
+        "failure": "AssertionError: ",
+        "cleanup": {
+          "network.orion.test": "PASS",
+          "network.orion": "PASS",
+          "settingsAndDisplayRestore": "PASS"
+        }
+      }
+    },
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-ui-v2-focused-20261108",
+      "reportSha256": "47cea47916d5649db6817856b70c2f5bde96d09aeb34280e4547c356791eeb8a",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "fullF4GateClosed": false,
+        "nativeGateClosed": false,
+        "result": "SCOPED_PASS",
+        "expectedTests": 2,
+        "artifactSha256": {
+          "app-debug.apk": "6d61cb8ba9c39c054327781d8329a8d209a89104b88325945b9ac64e64f049b2",
+          "app-debug-androidTest.apk": "98e95949d97d0b5e9264ccb3599ed1d5d3587bc2377c92bebc5bccfeef2148cc"
+        },
+        "originalSettings": {
+          "system:screen_off_timeout": "2147483647",
+          "global:window_animation_scale": "1.0",
+          "global:transition_animation_scale": "1.0",
+          "global:animator_duration_scale": "null"
+        },
+        "display": "1080x2400/420dpi",
+        "procedureSha256": "0eceb65ee02f17a2af0e46c99c7f223475c4a70c5a9e07ef92821e25d75e04f2",
+        "suiteResult": "PASS",
+        "passed": 2,
+        "skipped": 0,
+        "failed": 0,
+        "suiteReportSha256": "538f7461901ba45932819c344e2e5972d61f260297045c1a5117c283c9c8f188",
+        "cleanup": {
+          "network.orion.test": "PASS",
+          "network.orion": "PASS",
+          "settingsAndDisplayRestore": "PASS"
+        }
+      }
+    },
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-ui-legacy-control-20261108",
+      "reportSha256": "971d02b06c719624ed0dabafa2724b1dc488846b031410a9fcdc317225f5ca63",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "fullF4GateClosed": false,
+        "nativeGateClosed": false,
+        "result": "INCOMPLETE",
+        "expectedTests": 2,
+        "artifactSha256": {
+          "app-debug.apk": "6d61cb8ba9c39c054327781d8329a8d209a89104b88325945b9ac64e64f049b2",
+          "app-debug-androidTest.apk": "441e003db16a84f7d9787b40c883e8070552aab0392ba0a115bc8cd5ce989b86"
+        },
+        "originalSettings": {
+          "system:screen_off_timeout": "2147483647",
+          "global:window_animation_scale": "1.0",
+          "global:transition_animation_scale": "1.0",
+          "global:animator_duration_scale": "null"
+        },
+        "display": "1080x2400/420dpi",
+        "procedureSha256": "0eceb65ee02f17a2af0e46c99c7f223475c4a70c5a9e07ef92821e25d75e04f2",
+        "suiteResult": "INCOMPLETE",
+        "passed": 0,
+        "skipped": 0,
+        "failed": 2,
+        "suiteReportSha256": "abe52ddb852d024a99bd57109052e163b34c6cc8edf77969f9ca5e8f763d17a0",
+        "failure": "AssertionError: ",
+        "cleanup": {
+          "network.orion.test": "PASS",
+          "network.orion": "PASS",
+          "settingsAndDisplayRestore": "PASS"
+        }
+      }
+    },
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-ui-v2-full-20261108",
+      "reportSha256": "8432115a9dc8366a2eed8e23a2eedb468c1eb3fb2d8c496126816dc5c32bb29e",
+      "summary": {
+        "environment": "ANDROID_EMULATOR",
+        "fullF4GateClosed": false,
+        "nativeGateClosed": false,
+        "result": "SCOPED_PASS",
+        "expectedTests": 325,
+        "artifactSha256": {
+          "app-debug.apk": "6d61cb8ba9c39c054327781d8329a8d209a89104b88325945b9ac64e64f049b2",
+          "app-debug-androidTest.apk": "98e95949d97d0b5e9264ccb3599ed1d5d3587bc2377c92bebc5bccfeef2148cc"
+        },
+        "originalSettings": {
+          "system:screen_off_timeout": "2147483647",
+          "global:window_animation_scale": "1.0",
+          "global:transition_animation_scale": "1.0",
+          "global:animator_duration_scale": "null"
+        },
+        "display": "1080x2400/420dpi",
+        "procedureSha256": "7445acdf3398696dc2b8cc56ba293a0ceaa736fa3fe6e894c035e093c499738a",
+        "suiteResult": "PASS",
+        "passed": 325,
+        "skipped": 0,
+        "failed": 0,
+        "suiteReportSha256": "1c3cbac51e99b7fbf944e8ae5e55846309f88aa3871dfc449eb2e7e83a901f2f",
+        "cleanup": {
+          "network.orion.test": "PASS",
+          "network.orion": "PASS",
+          "settingsAndDisplayRestore": "PASS"
+        }
+      }
+    }
+  ],
+  "testSourceSha256": {
+    "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskScreenTest.kt": "f0edb50119d9a04458cf436ecafee61fdde7d86301fd75503dd9c32d85490a65",
+    "app/src/androidTest/kotlin/network/orion/app/reminders/OrionReminderScreenTest.kt": "c8ac662bae5379327e79e1811f6a3f4bb489c782f29249f3d3e0c7eb9328e05f"
+  },
+  "removedTechnicalProbes": {
+    "source": "TEMPORARY_COUNT_ONLY_NO_USER_CONTENT",
+    "trace": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-ui-probe-focused-20261108/technical-ui-probes.txt",
+    "traceSha256": "64e9a3d4f02cc6f65396e790df4b256a2930f663e8c372df423b90305fd27117",
+    "observation": "Each recreated gateway read one pending item and each screen composed one pending item; legacy lookup continued to show the earlier empty semantic state.",
+    "exactUpstreamCauseProven": false,
+    "finalApplicationDexDiagnosticTagAbsent": "PASS_CONTAINER_CHECK"
+  },
+  "sameApplicationControl": {
+    "appSha256": "6d61cb8ba9c39c054327781d8329a8d209a89104b88325945b9ac64e64f049b2",
+    "v2Focused": "2_PASS_0_FAIL_0_SKIP",
+    "subsequentLegacyFocused": "0_PASS_2_FAIL_0_SKIP",
+    "v2Full": "325_PASS_0_FAIL_0_SKIP"
+  },
+  "canonicalDockerCheck": {
+    "environment": "CONTAINER",
+    "result": "PASS",
+    "actionableTasks": 4111,
+    "logSha256": "3ff8cc5ef153d01092ac1674b5cb82042ab08de3c50f18f5722ccf96e51465bd"
+  },
+  "recordedHostProcedureDirectory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-ui-v2-procedures-20261108",
+  "limitations": [
+    "API37 AOSP ATD emulator is compatibility evidence only.",
+    "No S21/OEM, physical16KiB, autonomous24-hour, battery/thermal, retention or complete F4 approval.",
+    "Legacy failures are retained; no production-state defect or exact upstream framework cause is claimed."
+  ]
+}
