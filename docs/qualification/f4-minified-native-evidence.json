@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F4-NATIVE-001",
+  "fullF4GateClosed": false,
+  "nativeGateClosed": false,
+  "productionReleaseQualified": false,
+  "qualificationIdentity": "network.orion.qualification",
+  "signingScope": "TEST_DEBUG_CERTIFICATE_SEPARATE_IDENTITY",
+  "r8Minification": true,
+  "debuggable": false,
+  "applicationKeepRulesAdded": false,
+  "missingClassSuppressionsAdded": false,
+  "productionAbiPolicyChanged": false,
+  "runtimeMeasurements": [
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-minified-api35-platform-20261108",
+      "reportSha256": "58692c270fd9cf3bb3d97d0859dc60be629c122609d78d78964fd45d4aa8d267",
+      "instrumentationSha256": "1e68d65d6e94fd3fef31a427c4f9c05ae0ca913482de79a1f44f01fe4b5fb0e6",
+      "summary": {
+        "schemaVersion": 1,
+        "environment": "ANDROID_EMULATOR",
+        "result": "SCOPED_PASS",
+        "fullF4GateClosed": false,
+        "nativeGateClosed": false,
+        "productionReleaseQualified": false,
+        "productionPackageModified": false,
+        "nativeOnly": false,
+        "procedureSha256": "63ec89e71c5f73a9286eca4e9f6cffe118ee428e75ff16d74289674e10b875ed",
+        "primaryAppApkBeforeSha256": "1df4651ebae617cf724c59b253dd83128785f46d5ecb7e1831e54ba56de26328",
+        "preexistingPackagesAbsent": true,
+        "device": {
+          "apiLevel": "35",
+          "fingerprint": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+          "abi": "x86_64"
+        },
+        "pageSizeBytes": 4096,
+        "artifactSha256": {
+          "network.orion.qualification": "6856f9883e4f9b27849fe8e0043192762b56f2c21ce6208b15a547f8293ba926",
+          "network.orion.qualification.test": "d70514a93308929ac0348e8531fa1ce392ab2202f90f9820f984e9089d99bb4b"
+        },
+        "r8MappingSha256": "1f8759a2d12f663a7e21566f3e674a2804dd009df9561697d02e0a6c75d39845",
+        "testsPassed": 2,
+        "primaryAppApkAfterSha256": "1df4651ebae617cf724c59b253dd83128785f46d5ecb7e1831e54ba56de26328",
+        "primaryAppArtifactPreserved": true,
+        "cleanup": {
+          "network.orion.qualification.test": "PASS",
+          "network.orion.qualification": "PASS"
+        }
+      }
+    },
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-minified-s21-platform-20261108",
+      "reportSha256": "16b8a228268e1453621a55cdc7a303d18202b39dd61e77fa600dbb1e71ac91c5",
+      "instrumentationSha256": "29cac43f8c458ad9ae791ee6fe18a5942744eb6edb884547aaa1017c6285de0b",
+      "summary": {
+        "schemaVersion": 1,
+        "environment": "PHYSICAL_DEVICE",
+        "result": "SCOPED_PASS",
+        "fullF4GateClosed": false,
+        "nativeGateClosed": false,
+        "productionReleaseQualified": false,
+        "productionPackageModified": false,
+        "nativeOnly": true,
+        "procedureSha256": "63ec89e71c5f73a9286eca4e9f6cffe118ee428e75ff16d74289674e10b875ed",
+        "primaryAppApkBeforeSha256": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+        "preexistingPackagesAbsent": true,
+        "device": {
+          "apiLevel": "35",
+          "fingerprint": "samsung/o1sxxx/o1s:15/AP3A.240905.015.A2/G991BXXSJHZC2:user/release-keys",
+          "abi": "arm64-v8a"
+        },
+        "pageSizeBytes": 4096,
+        "artifactSha256": {
+          "network.orion.qualification": "6856f9883e4f9b27849fe8e0043192762b56f2c21ce6208b15a547f8293ba926",
+          "network.orion.qualification.test": "d70514a93308929ac0348e8531fa1ce392ab2202f90f9820f984e9089d99bb4b"
+        },
+        "r8MappingSha256": "1f8759a2d12f663a7e21566f3e674a2804dd009df9561697d02e0a6c75d39845",
+        "testsPassed": 1,
+        "primaryAppApkAfterSha256": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+        "primaryAppArtifactPreserved": true,
+        "cleanup": {
+          "network.orion.qualification.test": "PASS",
+          "network.orion.qualification": "PASS"
+        }
+      }
+    },
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-minified-api37-platform-r2-20261108",
+      "reportSha256": "019ba451b13d380b5925b9728ac948100248ec9a73eb68e032c0922e321d8020",
+      "instrumentationSha256": "1e68d65d6e94fd3fef31a427c4f9c05ae0ca913482de79a1f44f01fe4b5fb0e6",
+      "summary": {
+        "schemaVersion": 1,
+        "environment": "ANDROID_EMULATOR",
+        "result": "SCOPED_PASS",
+        "fullF4GateClosed": false,
+        "nativeGateClosed": false,
+        "productionReleaseQualified": false,
+        "productionPackageModified": false,
+        "nativeOnly": false,
+        "procedureSha256": "63ec89e71c5f73a9286eca4e9f6cffe118ee428e75ff16d74289674e10b875ed",
+        "primaryAppApkBeforeSha256": null,
+        "preexistingPackagesAbsent": true,
+        "device": {
+          "apiLevel": "37",
+          "fingerprint": "Android/sdk_slim_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/test-keys",
+          "abi": "x86_64"
+        },
+        "pageSizeBytes": 4096,
+        "artifactSha256": {
+          "network.orion.qualification": "6856f9883e4f9b27849fe8e0043192762b56f2c21ce6208b15a547f8293ba926",
+          "network.orion.qualification.test": "0f061a9b1820b331012168221ae31053bc3e64a5e2a54ddff92b14d5dd4418c9"
+        },
+        "r8MappingSha256": "1f8759a2d12f663a7e21566f3e674a2804dd009df9561697d02e0a6c75d39845",
+        "testsPassed": 2,
+        "primaryAppApkAfterSha256": null,
+        "primaryAppArtifactPreserved": true,
+        "cleanup": {
+          "network.orion.qualification.test": "PASS",
+          "network.orion.qualification": "PASS"
+        }
+      }
+    }
+  ],
+  "retainedIncompleteAttempts": [
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-minified-api35-20261108",
+      "reportSha256": "3a4b2e6c549e9cc5a786e76308c217a01b89682397253d539241758ff5e52c0e",
+      "result": "INCOMPLETE",
+      "failure": "RuntimeError: Instrumentation not successful",
+      "cleanup": {
+        "network.orion.qualification.test": "PASS",
+        "network.orion.qualification": "PASS"
+      },
+      "primaryAppArtifactPreserved": true
+    },
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-minified-s21-20261108",
+      "reportSha256": "9417bc6142f4bd978ed2b1cb126a7dcf04ad91377d50d81598d84d6f46f3bdff",
+      "result": "INCOMPLETE",
+      "failure": "RuntimeError: Instrumentation not successful",
+      "cleanup": {
+        "network.orion.qualification.test": "PASS",
+        "network.orion.qualification": "PASS"
+      },
+      "primaryAppArtifactPreserved": true
+    },
+    {
+      "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-minified-api37-platform-20261108",
+      "reportSha256": "9ab448bffa2aa233b7f97ebcda36a0c5490deb57ff8888089094874c8291b507",
+      "result": "INCOMPLETE",
+      "failure": "RuntimeError: Instrumentation not successful",
+      "nativeLoadMarkersPassed": true,
+      "startupFailure": "Exact healthy database UI assertion not observed after asynchronous accessibility scrolling.",
+      "cleanup": {
+        "network.orion.qualification.test": "PASS",
+        "network.orion.qualification": "PASS"
+      }
+    }
+  ],
+  "hostProcedure": {
+    "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-minified-native-procedure-20261108",
+    "environment": "CONTAINER",
+    "guardChecksPassed": 8
+  },
+  "limitations": [
+    "Separate qualification identity/test signing is not production release distribution qualification.",
+    "S21 probe is native-only, arm64/4KiB; no physical16KiB qualification.",
+    "Emulator startup/native evidence is compatibility evidence, never physical/OEM/runtime performance approval.",
+    "Existing debug API37/16KiB evidence remains separate from this minified4KiB artifact.",
+    "No duration, battery/thermal, retention, soak or F4 approval."
+  ],
+  "canonicalDockerCheck": {
+    "environment": "CONTAINER",
+    "result": "PASS",
+    "actionableTasks": 4111,
+    "logSha256": "dff6591b5feceed7db96da6bbc5b248ba4f8d2e53f0ec348c95a468a60e7ea1b"
+  },
+  "minifiedDockerBuild": {
+    "environment": "CONTAINER",
+    "result": "PASS",
+    "logSha256": "f97b22f5a3b3df840eb96eff199b717858928f36fa7cf81fc45dd1128addf8e9"
+  },
+  "defaultDebugCompatibilityRegression": {
+    "directory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-default-api37-suite-20261108",
+    "reportSha256": "4ee78aa157959d8304d42f9b06a53900b40cfd770de40f8f70dd7df0e7de8ffe",
+    "result": "INCOMPLETE",
+    "passed": 323,
+    "failed": 2,
+    "skipped": 0,
+    "scope": "Full default suite, distinct from minified qualification. Existing task/reminder recreation selectors failed; pending fixture remained readable in DB. Cause requires separate investigation; no complete compatibility approval.",
+    "cleanup": {
+      "network.orion.test": "PASS",
+      "network.orion": "PASS",
+      "settingsAndDisplayRestore": "PASS"
+    }
+  },
+  "finalProfileSourceSha256": {
+    "app/build.gradle.kts": "aabc510e8a14bba89f188fbb81cf36a2b9a7e5ea909b428b437841bb03f40d3d",
+    "app/src/qualificationRelease/AndroidManifest.xml": "f503a5c5284def43d0419c9e33ad133a62b531e42a2e842aa6f172a754c9202e",
+    "app/src/qualificationAndroidTest/java/network/orion/app/compatibility/OrionQualificationInstrumentation.java": "9079776419c4c83b43c03b756946286e90051edd4fd185acba31ff55a2c9100a",
+    "app/src/androidTest/kotlin/network/orion/app/compatibility/OrionNativeLibraryLoadTest.kt": "0b8ca8ed2ef3b9e6a9d55153c58222e2cb7724fb092f3d3ba76fefbc956c1507",
+    "scripts/benchmark/check-native-packages.sh": "4adfa985ee61464141e502d6819f37aa504e988540eec3605a94652daa0f8ab4",
+    "scripts/benchmark/test-native-packages.sh": "74ed4fd3d77a4798e5e7946957ad4b2adc85b5981ad3632f51ac26e2604acf27",
+    ".github/workflows/ci.yml": "dbfa80d96c11a9fd2c4c0294f7308ee4fe2370918f45fdb5bc123b8aea3f60b0"
+  },
+  "artifactScopeNote": "All three scoped passes use identical minified application APK and R8 mapping. The API37 test APK differs only by bounded accessibility scroll synchronization; each exact test APK digest is recorded per run."
+}

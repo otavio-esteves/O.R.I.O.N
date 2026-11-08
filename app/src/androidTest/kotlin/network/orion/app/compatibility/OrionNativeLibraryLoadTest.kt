@@ -32,12 +32,15 @@ class OrionNativeLibraryLoadTest {
         assertTrue("The active native gate must exercise packaged libraries", libraries.isNotEmpty())
         libraries.forEach { name ->
             require(Regex("lib[A-Za-z0-9_.-]+\\.so").matches(name))
-            System.loadLibrary(name.removePrefix("lib").removeSuffix(".so"))
+            // Pin the target APK entry, rather than allowing a test dependency's
+            // similarly named library to satisfy the probe through search paths.
+            System.load(context.applicationInfo.sourceDir + "!/lib/$abi/" + name)
         }
         val pageSize = Os.sysconf(OsConstants._SC_PAGESIZE)
         assertTrue(pageSize == 4096L || pageSize == 16384L)
         InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
             putString("orion_native_load", "LOADED_ALL_PACKAGED_LIBRARIES")
+            putString("orion_native_load_source", "EXACT_TARGET_APK_ENTRY")
             putString("orion_native_abi", abi)
             putString("orion_native_page_size", pageSize.toString())
             putString("orion_native_libraries", libraries.joinToString(","))

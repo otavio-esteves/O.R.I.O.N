@@ -19,6 +19,10 @@ build_fixture() {
 }
 build_fixture 16384
 sh "$checker" "$fixtures/release/fixture.apk"
+if sh "$checker" --qualification "$fixtures/release/fixture.apk" >/dev/null 2>&1; then
+    echo 'Unidentified APK incorrectly accepted as qualification' >&2
+    exit 1
+fi
 if sh "$checker" "$fixtures/raw.apk" >/dev/null 2>&1; then
     echo 'unaligned APK incorrectly accepted' >&2
     exit 1
