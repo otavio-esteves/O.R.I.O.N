@@ -68,3 +68,18 @@ initial diagnosis of absence was corrected. Journal v2 now preserves valid signe
 setting, restored by deletion. V1 numeric journals remain readable under their
 original bounds. Overflow, malformed and otherwise unknown policies still fail;
 no effective default is guessed. All incomplete attempts remain retained.
+
+A further 900.801-second API35/x86_64 collection completed with 31 polls, no
+sequence/metric/cadence gaps and one heartbeat-origin pass first seen after baseline.
+No job was forced by this session. That observation does not prove continuous
+coverage, unobserved queue behavior or autonomous delivery.
+
+After correcting the valid ten-digit timeout bound, the integrated 600-second
+emulator workload completed: two independently observed notifications, a controlled
+main-process SIGKILL followed by autonomous return, preserved original confirmation
+bindings and a single committed delivery per fixture. Task/timer/uncertainty checks,
+passive observation, concurrent maintenance history, fixture cleanup and all four
+policy restorations passed. The original `2147483647` timeout was restored exactly.
+This short run remains `SHORT_RUN_COMPLETE_REVIEW_REQUIRED`; it does not close
+the physical, 24-hour, battery/thermal, reboot/unlock or retention gates. The earlier
+incomplete attempts are preserved alongside the successful report.
