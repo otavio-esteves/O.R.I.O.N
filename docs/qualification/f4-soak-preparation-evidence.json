@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F4-QUAL-003",
+  "environment": "ANDROID_EMULATOR",
+  "androidRuntimeEvidence": "NON_DEFINITIVE",
+  "apiLevel": 35,
+  "abi": "x86_64",
+  "fullF4GateClosed": false,
+  "fullSoakGateClosed": false,
+  "productionRuntimeChanged": false,
+  "sourceSha256": {
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionSoakPreparation.kt": "6c0ab1fe4807769026d0edc963d29d24d292cfe560634215f0c7eb56751c072d",
+    "app/src/androidTest/kotlin/network/orion/app/scheduling/OrionF4SoakStateTest.kt": "f74f9b5f5112ca9a61af3ce15a8bfbc6fd3be164d056ecc9e45f9e9396a8f4ed",
+    "app/src/androidTest/kotlin/network/orion/app/tasks/OrionTaskKernelTest.kt": "b198c3bbee2c11a4be045eee7def2e251dc7d867bfb989f94f3096927182f94f"
+  },
+  "artifactSha256": {
+    "app/build/outputs/apk/debug/app-debug.apk": "412f59aa7e6b03c7d7947dcd046c8f0accacbe925291bdb48c3f8701cf74513a",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "c8b199c9b44ca1b2eab592d6c4e44b26d288748438e1fd71cb600800259a468d"
+  },
+  "checks": {
+    "canonicalAssemble": {
+      "environment": "CONTAINER",
+      "result": "PASS",
+      "command": "docker compose run --rm android-build :app:assembleDebug :app:assembleDebugAndroidTest --max-workers=2 --console=plain",
+      "logSha256": "4c3749987f924ef9bd725cc380d925dcfd678f587647afd6de109d84240d8942"
+    },
+    "taskKernel": {
+      "result": "PASS",
+      "tests": 12,
+      "logSha256": "40737b057b70eea25d1371fdbaf4da50732cb70b48efa6af8e9836b58c21b672"
+    },
+    "soakPreparation": {
+      "prepare": "PASS",
+      "snapshot": "PASS",
+      "cleanup": "PASS",
+      "summarySha256": "213e02c62158435fcd3781933037ddde8ed8afbf03559c01a619604245cdd382"
+    }
+  },
+  "evidenceDirectory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-soak-preparation-emulator-20261107",
+  "limitations": [
+    "No physical or duration qualification.",
+    "The deterministic high-priority backlog proves one valid QUEUED path, not the cause of the historical S21 attempt.",
+    "The original receipt is processed without additional confirmation; expiry still fails preparation."
+  ]
+}
