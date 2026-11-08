@@ -61,11 +61,17 @@ class SoakWorkloadTest(unittest.TestCase):
     def test_interrupted_preparation_has_a_durable_journal_and_cleanup_never_verifies_delivery(self):
         self.exercise_recorder(interrupted=True)
 
-    def exercise_recorder(self, interrupted=False):
+    def test_optional_history_finishes_before_endpoint_instrumentation(self):
+        self.exercise_recorder(maintenance_history=True)
+
+    def test_missing_history_cannot_pass_and_still_restores_owned_fixtures(self):
+        self.exercise_recorder(maintenance_history=True, history_available=False)
+
+    def exercise_recorder(self, interrupted=False, maintenance_history=False, history_available=True):
         with tempfile.TemporaryDirectory() as tmp:
             directory=Path(tmp); app=directory/"app-debug.apk"; test=directory/"app-debug-androidTest.apk"
             app.write_bytes(b"synthetic artifact"); test.write_bytes(app.read_bytes()); digest=hashlib.sha256(app.read_bytes()).hexdigest()
-            clock=[0.0]; state={"power":"0","notifications":False,"exact":"default","timeout":"17000","killed":False,"passiveComplete":False,"reminders":{}}
+            clock=[0.0]; state={"power":"0","notifications":False,"exact":"default","timeout":"17000","killed":False,"passiveComplete":False,"historyComplete":False,"reminders":{}}
             observed=[]
             def run(command,**kwargs):
                 args=command[3:]; output=""
@@ -103,11 +109,12 @@ class SoakWorkloadTest(unittest.TestCase):
                             if interrupted:raise KeyboardInterrupt()
                             state["reminders"][item]=int(args[args.index("orion_scheduled_delay_seconds")+1])
                         elif mode=="cleanup":
-                            self.assertTrue(interrupted)
+                            self.assertTrue(interrupted or not history_available)
                             output+="orion_scheduled_cleanup=OWNED_FIXTURE_REMOVED"
                         else:
                             self.assertIn(item,observed,"Verification cannot precede independent notification observation")
                             self.assertTrue(state["passiveComplete"],"Endpoint instrumentation must await the final passive sample")
+                            if maintenance_history:self.assertTrue(state["historyComplete"])
                             output+="REAL_NOTIFICATION_AND_COMMITTED_FIRED"
                 elif args[:3]==["shell","run-as","network.orion"]:
                     if args[3]=="cat":
@@ -127,17 +134,23 @@ class SoakWorkloadTest(unittest.TestCase):
             class Telemetry:
                 def __init__(self,command,**kwargs):
                     path=Path(command[command.index("--evidence-dir")+1]);path.mkdir()
-                    (path/"soak-observation-report.json").write_text(json.dumps({"result":"OBSERVATION_COMPLETE_REVIEW_REQUIRED"}))
+                    self.history="record-maintenance-history.py" in command[1]
+                    if self.history:
+                        (path/"maintenance-history-report.json").write_text(json.dumps({"result":"HISTORY_COLLECTION_COMPLETE_REVIEW_REQUIRED",
+                            "queueHistoryAvailable":history_available,"heartbeatPassesFirstSeenAfterBaseline":0,
+                            "continuousCoverageProven":False,"heartbeatAutonomyProven":False,"historySha256":"c"*64}))
+                    else:(path/"soak-observation-report.json").write_text(json.dumps({"result":"OBSERVATION_COMPLETE_REVIEW_REQUIRED"}))
                 def poll(self):return 0
-                def wait(self,**kwargs):state["passiveComplete"]=True;return 0
+                def wait(self,**kwargs):state["historyComplete" if self.history else "passiveComplete"]=True;return 0
             argv=[RECORDER.__file__,"--adb","synthetic-adb","--serial","synthetic","--environment","PHYSICAL_DEVICE",
                   "--app-apk",str(app),"--test-apk",str(test),"--evidence-dir",str(directory/"evidence"),
                   "--duration-seconds","600","--reminder-interval-seconds","300","--dedicated-target"]
+            if maintenance_history:argv.append("--maintenance-history")
             with patch("sys.argv",argv),patch.object(RECORDER.subprocess,"run",run),patch.object(RECORDER.subprocess,"Popen",Telemetry), \
                  patch.object(RECORDER.time,"monotonic",lambda:clock[0]),patch.object(RECORDER.time,"sleep",lambda seconds:clock.__setitem__(0,clock[0]+seconds)),patch("sys.stdout",io.StringIO()):
-                self.assertEqual(1 if interrupted else 0,RECORDER.main())
+                self.assertEqual(1 if interrupted or not history_available else 0,RECORDER.main())
             report=json.loads((directory/"evidence/f4-soak-runtime-report.json").read_text())
-            self.assertEqual("INCOMPLETE" if interrupted else "SHORT_RUN_COMPLETE_REVIEW_REQUIRED",report["result"])
+            self.assertEqual("INCOMPLETE" if interrupted or not history_available else "SHORT_RUN_COMPLETE_REVIEW_REQUIRED",report["result"])
             self.assertFalse(report["fullSoakGateClosed"]);self.assertFalse(report["eligibleFor24HourReview"])
             if interrupted:
                 self.assertEqual("KeyboardInterrupt",report["failureType"])

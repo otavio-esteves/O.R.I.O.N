@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F4-SOAK-003",
+  "fullF4GateClosed": false,
+  "fullSoakGateClosed": false,
+  "productionRuntimeChanged": false,
+  "sourceSha256": {
+    "scripts/android/record-maintenance-history.py": "ebf6f2c8f2c0d3d6530a19123a6eaa15731ce13ec87bf72798e6395e67149388",
+    "scripts/android/test_maintenance_history_harness.py": "a5819d900dd96b972bbcbba111a3c9474ff9699fade7bb3438139305571884c8",
+    "scripts/android/testdata/maintenance-snapshot-v1.json": "bda36e52be367bfe9bc56a265a612891fe36e9794f200da371abcd985d20f72b",
+    "scripts/android/verify-f4-soak-runtime.py": "c7c4f70f75d5d4e4eb4ca1694e552675e40cb3f2871321bdb42c3a9ab1f33074",
+    "scripts/android/test_f4_soak_runtime_harness.py": "a24cdf66e65d1973f8d4f3ec6e15b1258aac2dd71db86c9875f62710dc4949e8"
+  },
+  "hostContracts": {
+    "environment": "CONTAINER",
+    "result": "PASS",
+    "cases": 121,
+    "logSha256": "d8edbd98b026e0df9b605c051ff2f45828cebcf375d5cacaa739ac7ab3a13ef0"
+  },
+  "shortCollection": {
+    "environment": "ANDROID_EMULATOR",
+    "apiLevel": 35,
+    "abi": "x86_64",
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "reportSha256": "721c4b2419c75fc2f2d84959d128f459aaf2743c6f2e3c10a4ac5612580e148c",
+    "summary": {
+      "result": "HISTORY_COLLECTION_COMPLETE_REVIEW_REQUIRED",
+      "environment": "ANDROID_EMULATOR",
+      "fullSoakGateClosed": false,
+      "fullF4GateClosed": false,
+      "continuousCoverageProven": false,
+      "heartbeatAutonomyProven": false,
+      "requestedSeconds": 10.0,
+      "intervalSeconds": 5.0,
+      "startedAtUtc": "2026-11-08T00:13:02.553097+00:00",
+      "samples": 3,
+      "samplesWithGaps": 0,
+      "samplingGaps": 0,
+      "baselineEvents": 2,
+      "firstSeenSubsequentEvents": 0,
+      "heartbeatPassesFirstSeenAfterBaseline": 0,
+      "expectedApkSha256": "1df4651ebae617cf724c59b253dd83128785f46d5ecb7e1831e54ba56de26328",
+      "collectorSha256": "ebf6f2c8f2c0d3d6530a19123a6eaa15731ce13ec87bf72798e6395e67149388",
+      "identityCheckedAtEndpointsOnly": true,
+      "limitations": [
+        "Logcat is a bounded buffer; events before baseline are not new progress.",
+        "Subsequent means first seen after baseline, not independently proven event time or autonomy.",
+        "A heartbeat-origin record proves an observed worker maintenance pass, not exact scheduling or successful external delivery.",
+        "Queue/UNKNOWN and database sizes are sampled; no observations between passes are inferred.",
+        "Pruning counters describe the explicit maintenance-policy batch, not every recovery cleanup.",
+        "ADB polling changes battery/idle conditions; this is not undisturbed battery qualification."
+      ],
+      "deviceIdentitySha256": "af6411bb7472b62d0a1a81508e8f40813bdd47fa63041add8a9f47f3d3e25c5c",
+      "androidRuntimeEvidence": "NON_DEFINITIVE",
+      "elapsedHostSeconds": 10.609,
+      "sequenceGaps": 0,
+      "duplicateObservations": 4,
+      "queueHistoryAvailable": true,
+      "historySha256": "521f248324195e639b4518eb7d71600c2e33e5104ec74b4018f066c53162dfde"
+    }
+  },
+  "evidenceDirectory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-maintenance-history-short-emulator-20261107",
+  "limitations": [
+    "Sampled log-buffer observations; no uninterrupted queue/UNKNOWN, heartbeat autonomy, retention or 24-hour approval.",
+    "First-seen subsequent heartbeat count in this short collection is zero; baseline history is not new execution."
+  ]
+}
