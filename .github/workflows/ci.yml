@@ -20,3 +20,5 @@ jobs:
         run: env UID="$(id -u)" GID="$(id -g)" docker compose build android-build
       - name: Check and assemble application
         run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2
+      - name: Build scoped minified native qualification artifacts
+        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build -PorionQualificationRelease=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2

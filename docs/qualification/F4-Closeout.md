@@ -125,7 +125,12 @@ F4 remains open until required qualification evidence, the real 24-hour soak and
 its review are complete. No AI/voice phase advancement, readiness promotion or
 `v0.1.0-core` tag is authorized by this audit alone.
 
-The native compatibility gate also remains `PENDING`. Passing static alignment and
-packaging checks or a debug x86_64 emulator load does not approve physical arm64/
-16 KiB runtime or release/R8 native loading. The API compatibility matrix and this
-native gate retain separate decisions.
+The native compatibility gate also remains `PENDING`. A separate-identity,
+non-debuggable R8 qualification APK now passed scoped native loading on physical
+S21/arm64/4KiB and startup/storage checks on API35/API37 x86_64/4KiB emulators.
+See [minified qualification](F4-MinifiedNative.md) for exact artifact identities,
+retained incomplete attempts and the separate default-suite UI failures still
+under investigation. This does not approve physical arm64/16KiB or production
+release distribution. The API compatibility matrix and native gate retain
+separate decisions. The real-duration, complete physical workload and review gates
+remain open; short results never promote Core readiness or authorize F5.
