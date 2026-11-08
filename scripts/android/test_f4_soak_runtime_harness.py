@@ -70,18 +70,21 @@ class SoakWorkloadTest(unittest.TestCase):
     def test_absent_original_screen_timeout_is_restored_as_absent(self):
         self.exercise_recorder(absent_timeout=True)
 
-    def exercise_recorder(self, interrupted=False, maintenance_history=False, history_available=True, absent_timeout=False):
+    def test_emulator_never_timeout_is_accepted_and_restored_exactly(self):
+        self.exercise_recorder(large_timeout=True)
+
+    def exercise_recorder(self, interrupted=False, maintenance_history=False, history_available=True, absent_timeout=False, large_timeout=False):
         with tempfile.TemporaryDirectory() as tmp:
             directory=Path(tmp); app=directory/"app-debug.apk"; test=directory/"app-debug-androidTest.apk"
             app.write_bytes(b"synthetic artifact"); test.write_bytes(app.read_bytes()); digest=hashlib.sha256(app.read_bytes()).hexdigest()
-            original_timeout = "null" if absent_timeout else "17000"
+            original_timeout = "null" if absent_timeout else "2147483647" if large_timeout else "17000"
             clock=[0.0]; state={"power":"0","notifications":False,"exact":"default","timeout":original_timeout,"killed":False,"passiveComplete":False,"historyComplete":False,"reminders":{}}
             observed=[]
             def run(command,**kwargs):
                 args=command[3:]; output=""
                 if args[:3] in (["shell","pm","grant"], ["shell","appops","set"]):
                     journal=json.loads((directory/"evidence/soak-recovery-journal.json").read_text())
-                    self.assertEqual(None if absent_timeout else "17000",journal["originalPolicies"]["screenTimeout"])
+                    self.assertEqual(None if absent_timeout else original_timeout,journal["originalPolicies"]["screenTimeout"])
                     self.assertEqual("INCOMPLETE",json.loads((directory/"evidence/f4-soak-runtime-report.json").read_text())["result"])
                 if args[:3]==["shell","getprop","ro.kernel.qemu"]:output="0"
                 elif args[:3]==["shell","getprop","ro.serialno"]:output="synthetic-device"

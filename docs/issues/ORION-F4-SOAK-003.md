@@ -7,7 +7,8 @@ sequence/transport/cadence gaps for later review.
 
 FILES ALLOWED: scripts/android/record-maintenance-history.py and focused host
 contracts/schema fixture; optional integration in the controlled soak recorder;
-recovery journal/host contracts for an observed absent screen-timeout setting;
+recovery journal/host contracts for an observed ten-digit timeout and the separate
+explicit-absence edge case;
 related qualification documentation/evidence.
 
 CONTRACTS INVOLVED: ORION-F4-DIAG-001 log schema v1; ADR-0001; sampled evidence

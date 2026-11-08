@@ -143,11 +143,12 @@ first policy change, and each intended fixture is saved before its preparation.
 The recorder also retains progress reports. A host SIGKILL or lost ADB connection
 therefore does not require guessing the original policies or fixture identities.
 
-Journal version 2 also preserves an explicitly observed absent screen-timeout
-setting as JSON null and restores it with `settings delete`, checking that it is
-absent again. It never guesses the effective Android default. Version 1 numeric
-journals remain readable; null in a v1 journal is rejected. Other unavailable or
-malformed policies still stop preflight before mutation.
+Journal version 2 supports nonnegative signed-32-bit screen timeout values,
+including `2147483647`, and also preserves an explicitly observed absent setting
+as JSON null. Absence is restored with `settings delete` and checked again; the
+effective Android default is never guessed. Version 1 numeric journals remain
+readable under their original bounds; null in v1 is rejected. Other unavailable
+or malformed policies still stop preflight before mutation.
 
 After the recorder has exited and the same target reconnects, use the same exact
 installed app/test APK pair and a new directory for the cleanup attempt:

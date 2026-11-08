@@ -8,16 +8,16 @@
     "scripts/android/record-maintenance-history.py": "ebf6f2c8f2c0d3d6530a19123a6eaa15731ce13ec87bf72798e6395e67149388",
     "scripts/android/test_maintenance_history_harness.py": "a5819d900dd96b972bbcbba111a3c9474ff9699fade7bb3438139305571884c8",
     "scripts/android/testdata/maintenance-snapshot-v1.json": "bda36e52be367bfe9bc56a265a612891fe36e9794f200da371abcd985d20f72b",
-    "scripts/android/verify-f4-soak-runtime.py": "245f4ec1bbdf613f67f4ab5e6e887ffc934fc78e8e06899af9aabb790e8fdaef",
-    "scripts/android/test_f4_soak_runtime_harness.py": "ec3836235b757f02f380dfecac2c4c814cddbb89d1bbece56651e26d9def5f82",
-    "scripts/android/recover-f4-soak-runtime.py": "8bdb1b8b6ca210566ffe72ac8c4e315d7081c563ab4a64957b94ba7f76de9230",
-    "scripts/android/test_f4_soak_recovery_harness.py": "86561546693c125aed96ac16efe295b71509bd842c49542c7a17451a7d693e91"
+    "scripts/android/verify-f4-soak-runtime.py": "a21f1d8283eb2ba311e271ec847214f895bae280f4aeb0a740aed86ba3000532",
+    "scripts/android/test_f4_soak_runtime_harness.py": "c252162530db947a5b2d6e5d5db6636aa66f8c20f7a3c929583a7a2c99c06023",
+    "scripts/android/recover-f4-soak-runtime.py": "94ae1c8cf1d847c17204f2a081cfac563bbb6000c10069e8fab4b4ae661c9e5a",
+    "scripts/android/test_f4_soak_recovery_harness.py": "3345c07c53f687032ee992cb54382ed92f51021bcbcf0598d754f2a65742bf3b"
   },
   "hostContracts": {
     "environment": "CONTAINER",
     "result": "PASS",
-    "cases": 123,
-    "logSha256": "c232748320f9c5e30ff0ca5ebc7a88b722a5c1ff8cdeb2b90577c3a3e8e78d53"
+    "cases": 125,
+    "logSha256": "b6a2fcd9c329967c88e6c6c81c37b75664e27c47f00804d71eae814d5ff1a31c"
   },
   "shortCollection": {
     "environment": "ANDROID_EMULATOR",
@@ -66,8 +66,25 @@
     "Sampled log-buffer observations; no uninterrupted queue/UNKNOWN, heartbeat autonomy, retention or 24-hour approval.",
     "First-seen subsequent heartbeat count in this short collection is zero; baseline history is not new execution."
   ],
-  "retainedIncompleteAttempt": {
-    "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-integrated-history-emulator-20261107/f4-soak-runtime-report.json",
-    "reason": "Explicit screen timeout setting absent; preflight refused before fixtures. Journal v2 now preserves/restores observed absence instead of guessing a default."
+  "retainedIncompleteAttempts": [
+    {
+      "report": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-integrated-history-emulator-20261107/f4-soak-runtime-report.json",
+      "sha256": "baa0a46aeed2adeda138fe87bce4a71767f00a065c5d40a129fe2a15b6dd1cf6",
+      "failure": "Original screen timeout is unavailable.",
+      "result": "INCOMPLETE"
+    },
+    {
+      "report": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-integrated-history-emulator-20261107-r2/f4-soak-runtime-report.json",
+      "sha256": "ccd87eb06bc501c93b474414c88bf4f57a2ac371d801bca2a9b309843288d525",
+      "failure": "Original screen timeout is unavailable.",
+      "result": "INCOMPLETE"
+    }
+  ],
+  "validTenDigitTimeoutCapture": {
+    "journal": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-integrated-history-emulator-20261107-r3/soak-recovery-journal.json",
+    "sha256": "46bbac13f6ea01cfe548ebfad74ec0986b1a802a4ffc59d38f9495468a3ead3f",
+    "schemaVersion": 2,
+    "screenTimeout": "2147483647",
+    "scope": "Pre-mutation capture; completed workload/restoration recorded separately."
   }
 }

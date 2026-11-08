@@ -163,7 +163,7 @@ def main():
             raise RuntimeError("Original power policy is unavailable.")
         original_power = observed_power
         observed_timeout = adb("shell", "settings", "get", "system", "screen_off_timeout")
-        if observed_timeout != "null" and not re.fullmatch(r"[0-9]{1,9}", observed_timeout):
+        if not RECOVERY.valid_screen_timeout(None if observed_timeout == "null" else observed_timeout):
             raise RuntimeError("Original screen timeout is unavailable.")
         original_timeout = None if observed_timeout == "null" else observed_timeout
         timeout_captured = True

@@ -81,12 +81,16 @@ def validate_journal(value):
         if policies["exact"] not in CAP.BASE.APP_OP_MODES or policies["power"] not in ("0", "1"):
             raise ValueError()
         timeout = policies["screenTimeout"]
-        if type(policies["notifications"]) is not bool or (timeout is None and value["schemaVersion"] != 2) or \
-                (timeout is not None and not re.fullmatch(r"[0-9]{1,9}", timeout)):
+        if type(policies["notifications"]) is not bool or not valid_screen_timeout(timeout, value["schemaVersion"]):
             raise ValueError()
     except (KeyError, TypeError, AttributeError, ValueError):
         raise ValueError("Recovery journal is missing or has invalid bounded fields.") from None
     return value
+
+
+def valid_screen_timeout(value, version=2):
+    if value is None: return version == 2
+    return type(value) is str and re.fullmatch(r"[0-9]{1," + ("9" if version == 1 else "10") + r"}", value) is not None and int(value) <= 2**31 - 1
 
 
 def read_journal(path):
@@ -143,7 +147,7 @@ def restore_policies(adb, policies):
 
 
 def restore_screen_timeout(adb, timeout):
-    if timeout is not None and (type(timeout) is not str or not re.fullmatch(r"[0-9]{1,9}", timeout)):
+    if not valid_screen_timeout(timeout):
         raise ValueError("Invalid screen-timeout restoration value.")
     try:
         if timeout is None: adb("shell", "settings", "delete", "system", "screen_off_timeout")

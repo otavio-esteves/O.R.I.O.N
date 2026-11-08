@@ -129,6 +129,14 @@ class SoakRecoveryTest(unittest.TestCase):
         journal["schemaVersion"] = 1
         with self.assertRaises(ValueError): RECOVERY.validate_journal(journal)
 
+    def test_valid_ten_digit_screen_timeout_preserves_the_exact_value_and_rejects_overflow(self):
+        journal = self.journal(); journal["schemaVersion"] = 2
+        journal["originalPolicies"]["screenTimeout"] = "2147483647"
+        RECOVERY.validate_journal(journal)
+        for bad in ("2147483648", "99999999999", "-1", 60000, True, "60000\nunsafe"):
+            self.assertFalse(RECOVERY.valid_screen_timeout(bad))
+        self.assertFalse(RECOVERY.valid_screen_timeout("2147483647", version=1))
+
     def test_failed_atomic_replacement_retains_the_previous_recovery_plan(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / RECOVERY.JOURNAL
