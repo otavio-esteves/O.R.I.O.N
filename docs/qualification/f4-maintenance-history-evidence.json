@@ -63,8 +63,8 @@
   },
   "evidenceDirectory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-maintenance-history-short-emulator-20261107",
   "limitations": [
-    "Sampled log-buffer observations; no uninterrupted queue/UNKNOWN, heartbeat autonomy, retention or 24-hour approval.",
-    "First-seen subsequent heartbeat count in this short collection is zero; baseline history is not new execution."
+    "Emulator evidence remains non-definitive for Android runtime/hardware qualification.",
+    "Sampled log-buffer observations do not establish continuous queue/UNKNOWN, heartbeat autonomy, retention or 24-hour approval."
   ],
   "retainedIncompleteAttempts": [
     {
@@ -85,6 +85,86 @@
     "sha256": "46bbac13f6ea01cfe548ebfad74ec0986b1a802a4ffc59d38f9495468a3ead3f",
     "schemaVersion": 2,
     "screenTimeout": "2147483647",
-    "scope": "Pre-mutation capture; completed workload/restoration recorded separately."
+    "scope": "Exact pre-mutation capture; workload and all restorations passed in integratedTenMinuteWorkload."
+  },
+  "fifteenMinuteCollection": {
+    "report": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-maintenance-history-emulator-20261107/maintenance-history-report.json",
+    "reportSha256": "97485da2150233285116022fc26cd8dfc1a83238568d8e65f218985f8f151b1f",
+    "summary": {
+      "result": "HISTORY_COLLECTION_COMPLETE_REVIEW_REQUIRED",
+      "environment": "ANDROID_EMULATOR",
+      "fullSoakGateClosed": false,
+      "fullF4GateClosed": false,
+      "continuousCoverageProven": false,
+      "heartbeatAutonomyProven": false,
+      "requestedSeconds": 900.0,
+      "intervalSeconds": 30.0,
+      "startedAtUtc": "2026-11-08T00:10:03.875828+00:00",
+      "samples": 31,
+      "samplesWithGaps": 0,
+      "samplingGaps": 0,
+      "baselineEvents": 2,
+      "firstSeenSubsequentEvents": 16,
+      "heartbeatPassesFirstSeenAfterBaseline": 1,
+      "expectedApkSha256": "1df4651ebae617cf724c59b253dd83128785f46d5ecb7e1831e54ba56de26328",
+      "collectorSha256": "ebf6f2c8f2c0d3d6530a19123a6eaa15731ce13ec87bf72798e6395e67149388",
+      "identityCheckedAtEndpointsOnly": true,
+      "limitations": [
+        "Logcat is a bounded buffer; events before baseline are not new progress.",
+        "Subsequent means first seen after baseline, not independently proven event time or autonomy.",
+        "A heartbeat-origin record proves an observed worker maintenance pass, not exact scheduling or successful external delivery.",
+        "Queue/UNKNOWN and database sizes are sampled; no observations between passes are inferred.",
+        "Pruning counters describe the explicit maintenance-policy batch, not every recovery cleanup.",
+        "ADB polling changes battery/idle conditions; this is not undisturbed battery qualification."
+      ],
+      "deviceIdentitySha256": "af6411bb7472b62d0a1a81508e8f40813bdd47fa63041add8a9f47f3d3e25c5c",
+      "androidRuntimeEvidence": "NON_DEFINITIVE",
+      "elapsedHostSeconds": 900.801,
+      "sequenceGaps": 0,
+      "duplicateObservations": 154,
+      "queueHistoryAvailable": true,
+      "historySha256": "8b3ebef516e5be39b9a159614cc5a56448eabef896c87688cf29173e09a5f185"
+    }
+  },
+  "integratedTenMinuteWorkload": {
+    "report": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-integrated-history-emulator-20261107-r3/f4-soak-runtime-report.json",
+    "reportSha256": "22ca912cdfaca90186a4301ccb84df2c73c6ace92927789689a83ecbbcccc5b7",
+    "summary": {
+      "result": "SHORT_RUN_COMPLETE_REVIEW_REQUIRED",
+      "environment": "ANDROID_EMULATOR",
+      "durationRequestedSeconds": 600,
+      "checks": {
+        "controlledDeathAndAutonomousReturn": "PASS",
+        "originalBindingsAndSingleCommittedDelivery": "PASS",
+        "taskTimerAndUncertaintyPreserved": "PASS",
+        "passiveObservation": "PASS"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "1df4651ebae617cf724c59b253dd83128785f46d5ecb7e1831e54ba56de26328",
+        "app-debug-androidTest.apk": "07a1c78a1d9e5285c5b05bcf926320a3804031fe63edf832cce7b908d16d7450"
+      },
+      "maintenanceHistory": {
+        "result": "HISTORY_COLLECTION_COMPLETE_REVIEW_REQUIRED",
+        "queueHistoryAvailable": true,
+        "heartbeatPassesFirstSeenAfterBaseline": 0,
+        "continuousCoverageProven": false,
+        "heartbeatAutonomyProven": false,
+        "historySha256": "ec451f7bdd9142638e4afdef26a73b84fc87f09ace85edcde2f0a9782c40e9be"
+      },
+      "controlledProcessDeath": {
+        "method": "RUN_AS_SIGKILL",
+        "beforePid": "3498",
+        "elapsedSeconds": 303.824
+      },
+      "elapsedWorkloadSeconds": 600.0,
+      "real24HourDurationObserved": false,
+      "stateFixtureCleanup": "PASS",
+      "powerSaverRestore": "PASS",
+      "exactAccessRestore": "PASS",
+      "notificationRestore": "PASS",
+      "screenTimeoutRestore": "PASS",
+      "fullF4GateClosed": false,
+      "fullSoakGateClosed": false
+    }
   }
 }
