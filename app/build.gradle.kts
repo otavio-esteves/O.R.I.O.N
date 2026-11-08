@@ -3,6 +3,13 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val nativeGateText = providers.fileContents(rootProject.layout.projectDirectory.file(
+    "docs/compatibility/native-compatibility-gate.json")).asText.get()
+val nativeStatusMatches = Regex("\"status\"\\s*:\\s*\"(PENDING|PASS|FAIL|NOT_APPLICABLE_NO_NATIVE_ARTIFACTS)\"")
+    .findAll(nativeGateText).toList()
+check(nativeStatusMatches.size == 1) { "Native qualification metadata must have one recognized status." }
+val nativeQualificationStatus = nativeStatusMatches.single().groupValues[1]
+
 android {
     namespace = "network.orion.app"
     ndkVersion = libs.versions.ndk.get()
@@ -15,6 +22,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 5
         versionName = "0.4.0-candidate"
+        resValue("string", "orion_native_qualification_status", nativeQualificationStatus)
     }
 
     buildTypes {
@@ -24,6 +32,7 @@ android {
 
     buildFeatures {
         compose = true
+        resValues = true
     }
 
     sourceSets.getByName("androidTest").assets.directories.add("$rootDir/data/database/schemas")

@@ -143,7 +143,8 @@ class MainActivity : ComponentActivity() {
                             "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
                             "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
-                            "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics, onRetry = { runtime.start() })
+                            "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
+                                platform = runtime.platformDiagnostics(), onRetry = { runtime.start() })
                             "Ajustes" -> SettingsScreen(report)
                             else -> HomeScreen(report, onOpenDevice = { destination = "Dispositivo" },
                                 onOpenActivity = { destination = "Atividade" }, onOpenReminders = { destination = "Lembretes" },

@@ -10,6 +10,9 @@ import java.util.UUID
 import kotlinx.coroutines.*
 import network.orion.app.OrionApplication
 import network.orion.scheduler.alarms.AndroidOrionAlarmBackend
+import network.orion.core.observability.OrionMaintenanceOrigin
+import network.orion.scheduler.workers.OrionMaintenanceScheduler
+import java.util.concurrent.TimeUnit
 
 /** Framework callback carries references only; the Core persists/validates them before any delivery. */
 class OrionReminderAlarmReceiver : BroadcastReceiver() {
@@ -57,7 +60,17 @@ class OrionMaintenanceWorker(context: Context, parameters: WorkerParameters) : C
     override suspend fun doWork(): Result {
         val runtime = (applicationContext as? OrionApplication)?.mainRuntime ?: return Result.failure()
         return try {
-            val healthy = runtime.performMaintenance()
+            val origin = withContext(Dispatchers.IO) {
+                try {
+                    val work = androidx.work.WorkManager.getInstance(applicationContext)
+                    val heartbeat = work.getWorkInfosForUniqueWork(OrionMaintenanceScheduler.HEARTBEAT_NAME).get(3, TimeUnit.SECONDS)
+                    val reconciliation = work.getWorkInfosForUniqueWork(OrionMaintenanceScheduler.RECONCILE_NAME).get(3, TimeUnit.SECONDS)
+                    OrionMaintenanceOrigin.forWorker(id, heartbeat.map { it.id }.toSet(), reconciliation.map { it.id }.toSet())
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); throw interrupted }
+                catch (_: Exception) { OrionMaintenanceOrigin.WORKER_UNCLASSIFIED }
+            }
+            val healthy = runtime.performMaintenance(origin)
             when {
                 healthy -> Result.success()
                 runtime.maintenanceNeedsContinuation -> Result.retry() // A persisted cursor advances; this is not retrying an external effect.

@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F4-DIAG-001",
+  "fullF4GateClosed": false,
+  "fullSoakGateClosed": false,
+  "schemaChanged": false,
+  "productionScope": "Read-only UI diagnostics and bounded maintenance log samples; no scheduling/authority changes.",
+  "sourceSha256": {
+    "app/build.gradle.kts": "02811b688abe38cbf08ff2811703471e19b663eab040efa30bf0bee1a4ab7cf9",
+    "app/src/main/kotlin/network/orion/app/MainActivity.kt": "f284f28fd24e817c0f14daf183164614180356504567bb4121df9bbc3629cdc8",
+    "app/src/main/kotlin/network/orion/app/OrionFoundationRuntime.kt": "3e723fa48abd690237e4b994f28201ed1cfe0972d047ab5896bee99cc100678e",
+    "app/src/main/kotlin/network/orion/app/scheduling/OrionSchedulingComponents.kt": "1e64917ca67aee5f4bbb6a6261b5afccee879fb26c8356c688d128c94737afc2",
+    "feature/diagnostics/src/main/kotlin/network/orion/feature/diagnostics/DiagnosticsScreen.kt": "3d1e8a59913cd1444aebc1b5cc7619930986080df773050650f874625d3004e4",
+    "app/src/main/kotlin/network/orion/app/OrionMaintenanceSnapshotReader.kt": "650fa79d8c9a5472743ca46e31a65db2d7fde4b56eaec19f1f13b137ef032c18",
+    "app/src/androidTest/kotlin/network/orion/app/OrionMaintenanceSnapshotReaderTest.kt": "ebfaf2ac0ee901b3f1e51abe7de80a72acf9a26472b124288530e401427d52ba",
+    "app/src/androidTest/kotlin/network/orion/app/OrionPlatformDiagnosticsScreenTest.kt": "ea9cfffae52fe2423558f5ca7f75acd8431c0c3100ed538831d478012eab9652",
+    "core/health/src/main/kotlin/network/orion/core/health/OrionPlatformDiagnostics.kt": "bc357721e46cf2725d3a544d3d9043504844bab0b7007861a08dda62d8734a1c",
+    "core/health/src/test/kotlin/network/orion/core/health/OrionPlatformDiagnosticsTest.kt": "96d680d552a8601b6f30172d927534bc7e8ccbc8e2ce63bd577a67a5bd1d8de1",
+    "core/observability/src/main/kotlin/network/orion/core/observability/OrionMaintenanceSnapshot.kt": "ca41b3be0d72fa7a910cee9fec6808ae01556cebb6eae04eb9aeaf99ca9c15b1",
+    "core/observability/src/test/kotlin/network/orion/core/observability/OrionMaintenanceSnapshotTest.kt": "324594d9bc39bafff1eea5de68d9b1e0b3f90dc3bba08620b4cbdf08bca273f8"
+  },
+  "artifactSha256": {
+    "app-debug.apk": "1df4651ebae617cf724c59b253dd83128785f46d5ecb7e1831e54ba56de26328",
+    "app-debug-androidTest.apk": "07a1c78a1d9e5285c5b05bcf926320a3804031fe63edf832cce7b908d16d7450"
+  },
+  "checks": {
+    "scopedJvm": {
+      "environment": "CONTAINER",
+      "result": "PASS",
+      "cases": 60
+    },
+    "assemble": {
+      "environment": "CONTAINER",
+      "result": "PASS",
+      "logSha256": "2b891c534db0b24d578b7bf2f8101ced940b510054092e0ef1be5e82467a39ab"
+    },
+    "lintAndBoundaries": {
+      "environment": "CONTAINER",
+      "result": "PASS",
+      "moduleContracts": 36,
+      "logSha256": "da865616603502685c26c68c35af84cf39f0cc89f61701b00c2c547cbbddeee6"
+    },
+    "android": {
+      "environment": "ANDROID_EMULATOR",
+      "apiLevel": 35,
+      "abi": "x86_64",
+      "androidRuntimeEvidence": "NON_DEFINITIVE",
+      "result": "PASS",
+      "cases": 2,
+      "logSha256": "251e31e61ec5bdc0b42cbcc085e545948ddb0720457ac60f631ac5e95d260fe9"
+    }
+  },
+  "evidenceDirectory": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-diagnostics-emulator-20261107",
+  "limitations": [
+    "No physical/runtime performance or 24-hour approval.",
+    "Native status is build qualification metadata, not a per-device load result.",
+    "Only fixed technical aggregates enter the bounded OS log buffer; missing samples are not zero or inferred progress."
+  ]
+}
