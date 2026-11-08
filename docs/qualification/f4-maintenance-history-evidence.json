@@ -8,14 +8,16 @@
     "scripts/android/record-maintenance-history.py": "ebf6f2c8f2c0d3d6530a19123a6eaa15731ce13ec87bf72798e6395e67149388",
     "scripts/android/test_maintenance_history_harness.py": "a5819d900dd96b972bbcbba111a3c9474ff9699fade7bb3438139305571884c8",
     "scripts/android/testdata/maintenance-snapshot-v1.json": "bda36e52be367bfe9bc56a265a612891fe36e9794f200da371abcd985d20f72b",
-    "scripts/android/verify-f4-soak-runtime.py": "c7c4f70f75d5d4e4eb4ca1694e552675e40cb3f2871321bdb42c3a9ab1f33074",
-    "scripts/android/test_f4_soak_runtime_harness.py": "a24cdf66e65d1973f8d4f3ec6e15b1258aac2dd71db86c9875f62710dc4949e8"
+    "scripts/android/verify-f4-soak-runtime.py": "245f4ec1bbdf613f67f4ab5e6e887ffc934fc78e8e06899af9aabb790e8fdaef",
+    "scripts/android/test_f4_soak_runtime_harness.py": "ec3836235b757f02f380dfecac2c4c814cddbb89d1bbece56651e26d9def5f82",
+    "scripts/android/recover-f4-soak-runtime.py": "8bdb1b8b6ca210566ffe72ac8c4e315d7081c563ab4a64957b94ba7f76de9230",
+    "scripts/android/test_f4_soak_recovery_harness.py": "86561546693c125aed96ac16efe295b71509bd842c49542c7a17451a7d693e91"
   },
   "hostContracts": {
     "environment": "CONTAINER",
     "result": "PASS",
-    "cases": 121,
-    "logSha256": "d8edbd98b026e0df9b605c051ff2f45828cebcf375d5cacaa739ac7ab3a13ef0"
+    "cases": 123,
+    "logSha256": "c232748320f9c5e30ff0ca5ebc7a88b722a5c1ff8cdeb2b90577c3a3e8e78d53"
   },
   "shortCollection": {
     "environment": "ANDROID_EMULATOR",
@@ -63,5 +65,9 @@
   "limitations": [
     "Sampled log-buffer observations; no uninterrupted queue/UNKNOWN, heartbeat autonomy, retention or 24-hour approval.",
     "First-seen subsequent heartbeat count in this short collection is zero; baseline history is not new execution."
-  ]
+  ],
+  "retainedIncompleteAttempt": {
+    "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f4-integrated-history-emulator-20261107/f4-soak-runtime-report.json",
+    "reason": "Explicit screen timeout setting absent; preflight refused before fixtures. Journal v2 now preserves/restores observed absence instead of guessing a default."
+  }
 }

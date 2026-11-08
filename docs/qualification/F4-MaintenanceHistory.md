@@ -52,10 +52,16 @@ text are never persisted. Interruptions preserve flushed samples and an incomple
 summary. Sequence/transport/cadence/identity gaps remain retained even if subsequent
 polls recover.
 
-Validation: 121 Docker host contracts passed, including schema/privacy, duplicate
+Validation: 123 Docker host contracts passed, including schema/privacy, duplicate
 and conflicting delivery, boot/time changes, missing history, interruption,
 integration ordering and restoration after failed collection. An actual ten-second
 API35/x86_64 collection completed with three polls, no sequence/metric/cadence gaps
 and matching identity. No subsequent heartbeat was observed in that short interval;
 the collector reported zero first-seen heartbeat passes without inventing empty
 queue measurements. See the [scoped evidence](f4-maintenance-history-evidence.json).
+
+An integrated emulator attempt refused a genuinely absent screen-timeout setting
+before fixture preparation. Its incomplete report is retained. Recovery journal v2
+now distinguishes that observed absence from an unavailable policy, restores it by
+deleting the setting and verifies absence; v1 numeric journals remain supported.
+No effective timeout value or other unknown policy is guessed.

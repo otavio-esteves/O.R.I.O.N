@@ -118,6 +118,7 @@ def main():
     history = history_output = None
     original_power = original_exact = original_notifications = None
     original_timeout = None
+    timeout_captured = False
     verified = set()
 
     def persist():
@@ -162,9 +163,10 @@ def main():
             raise RuntimeError("Original power policy is unavailable.")
         original_power = observed_power
         observed_timeout = adb("shell", "settings", "get", "system", "screen_off_timeout")
-        if not re.fullmatch(r"[0-9]{1,9}", observed_timeout):
+        if observed_timeout != "null" and not re.fullmatch(r"[0-9]{1,9}", observed_timeout):
             raise RuntimeError("Original screen timeout is unavailable.")
-        original_timeout = observed_timeout
+        original_timeout = None if observed_timeout == "null" else observed_timeout
+        timeout_captured = True
         original_exact = CAP.BASE.original_appop_mode(adb("shell", "appops", "get", "network.orion", "SCHEDULE_EXACT_ALARM"), "SCHEDULE_EXACT_ALARM")
         permissions = adb("shell", "dumpsys", "package", "network.orion")
         match = re.search(r"android\.permission\.POST_NOTIFICATIONS: granted=(true|false)", permissions)
@@ -176,7 +178,7 @@ def main():
             raise RuntimeError("The scoped application UID is unavailable.")
         own_uid = int(uid.group(1))
         report["deviceIdentitySha256"] = RECOVERY.device_identity(adb)
-        journal = {"schemaVersion": 1, "environment": args.environment, "fixtureId": fixture,
+        journal = {"schemaVersion": 2, "environment": args.environment, "fixtureId": fixture,
                    "deviceIdentitySha256": report["deviceIdentitySha256"], "artifactSha256": report["artifactSha256"],
                    "originalPolicies": {"exact": original_exact, "power": original_power,
                                         "notifications": original_notifications, "screenTimeout": original_timeout},
@@ -316,13 +318,9 @@ def main():
         restored = CAP.restore_policy(adb, original_exact, original_power, original_notifications)
         report.update(restored)
         if "FAIL" in restored.values(): report["result"] = "INCOMPLETE"
-        if original_timeout is not None:
-            try:
-                adb("shell", "settings", "put", "system", "screen_off_timeout", original_timeout)
-                if adb("shell", "settings", "get", "system", "screen_off_timeout") != original_timeout:
-                    raise RuntimeError("Screen timeout was not restored.")
-                report["screenTimeoutRestore"] = "PASS"
-            except Exception: report["screenTimeoutRestore"] = "FAIL"; report["result"] = "INCOMPLETE"
+        if timeout_captured:
+            report.update(RECOVERY.restore_screen_timeout(adb, original_timeout))
+            if report["screenTimeoutRestore"] != "PASS": report["result"] = "INCOMPLETE"
         try: persist()
         finally: os.close(run_lock)
     print(json.dumps(report, indent=2))

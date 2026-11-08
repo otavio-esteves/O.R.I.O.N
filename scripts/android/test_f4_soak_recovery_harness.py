@@ -115,6 +115,20 @@ class SoakRecoveryTest(unittest.TestCase):
         self.assertEqual("PASS", checks["screenTimeoutRestore"])
         self.assertEqual(3, list(checks.values()).count("FAIL"))
 
+    def test_v2_preserves_an_absent_screen_setting_without_guessing_its_effective_default(self):
+        journal = self.journal(); journal["schemaVersion"] = 2
+        journal["originalPolicies"]["screenTimeout"] = None
+        RECOVERY.validate_journal(journal)
+        calls = []
+        def adb(*command, **kwargs):
+            calls.append(command)
+            return "null" if command[:3] == ("shell", "settings", "get") else ""
+        self.assertEqual({"screenTimeoutRestore": "PASS"}, RECOVERY.restore_screen_timeout(adb, None))
+        self.assertIn(("shell", "settings", "delete", "system", "screen_off_timeout"), calls)
+        self.assertFalse(any("put" in command for command in calls))
+        journal["schemaVersion"] = 1
+        with self.assertRaises(ValueError): RECOVERY.validate_journal(journal)
+
     def test_failed_atomic_replacement_retains_the_previous_recovery_plan(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / RECOVERY.JOURNAL
