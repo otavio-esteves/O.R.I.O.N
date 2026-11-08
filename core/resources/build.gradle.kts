@@ -13,6 +13,7 @@ android {
 
 dependencies {
     api(project(":core:exitinfo"))
+    api(project(":core:time"))
 
     testImplementation(libs.junit4)
 }

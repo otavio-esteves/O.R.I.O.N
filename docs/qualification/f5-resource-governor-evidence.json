@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F5-RES-001",
+  "phase": "F5_RESOURCE_POLICY_FIRST",
+  "functionalEntryAudit": "ORION-F4-AUDIT-001",
+  "entryAuditMergedCommit": "849989e",
+  "environment": "CONTAINER",
+  "runtimeWired": false,
+  "cortexActivated": false,
+  "fullF5GateClosed": false,
+  "realModelProfilesQualified": false,
+  "physicalEvidenceClaimed": false,
+  "schemaChanged": false,
+  "ipcChanged": false,
+  "processTopologyChanged": false,
+  "nativeCodeChanged": false,
+  "sourceSha256": {
+    "core/resources/build.gradle.kts": "abf2cc72d67940e3b5d6b952588b463a66f07b70eb9db39982174e218f72b633",
+    "core/resources/src/main/kotlin/network/orion/core/resources/OrionMinimumResourceGovernor.kt": "ae48a571908f748aebe0ba7e1b28b762b6b194bdc28ddcc1cdbe8d4a11c4007b",
+    "core/resources/src/test/kotlin/network/orion/core/resources/OrionMinimumResourceGovernorTest.kt": "1f232176c4f7c689aa5543a6ac7634c7912b8618c885a3383cef356acfd6347e"
+  },
+  "tests": [
+    {
+      "suite": "network.orion.core.resources.OrionMinimumResourceGovernorTest",
+      "cases": 22,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "sha256": "8b4b5a12938c4b1d9119f5d45b96856258cbf916f20886de48f409911d9dc85f"
+    },
+    {
+      "suite": "network.orion.core.resources.UnavailableResourceGovernorTest",
+      "cases": 1,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "sha256": "36936d65762558a88a9752c9969a6821ab0f20e709b76a899fc4befd18ffe725"
+    }
+  ],
+  "logs": {
+    "orion-f5-res-final-check.log": {
+      "sha256": "1f60140c32789cc7f4e35048ae8fdfe94adc7623f7777dd42bd0f2df1f9572bf"
+    },
+    "orion-f5-res-focused-r3.log": {
+      "sha256": "1d3934cf0166cfcea439f17e5994fb2e0f245557931e6b2442f873d642d162f1"
+    },
+    "orion-f5-res-unknown-red.log": {
+      "sha256": "59269b3a3e21853c295784f470a56675877ad3da3128319f6219ab991e6fd730"
+    }
+  },
+  "canonicalChecks": {
+    "result": "PASS",
+    "actionableTasks": 4111,
+    "scope": "Canonical Docker check, debug/release/APK/AAB assembly, lint, module graph and native static checks; no new Android runtime execution."
+  },
+  "negativeRegression": {
+    "test": "unclassified exits cannot be treated as healthy evidence",
+    "beforeFix": {
+      "cases": 1,
+      "failures": 1,
+      "errors": 0,
+      "failure": "Unexpected resource approval, observed at assertFalse."
+    },
+    "afterFix": "Included in the complete passing23-case resource suite.",
+    "rawLog": "orion-f5-res-unknown-red.log"
+  },
+  "limitations": [
+    "Android observation adapter, app wiring and qualified real-model plans remain absent; UnavailableResourceGovernor remains active.",
+    "No inference, Cortex service/JNI, model registry/import or restart-loop coordinator implemented by this package.",
+    "No performance/native16KiB/system/24-hour qualification is inferred from container tests."
+  ],
+  "evidenceDirectory": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-res-minimum-20261108"
+}
