@@ -54,7 +54,7 @@ def device_identity(adb):
 
 def validate_journal(value):
     try:
-        if type(value["schemaVersion"]) is not int or value["schemaVersion"] != 1:
+        if type(value["schemaVersion"]) is not int or value["schemaVersion"] not in (1, 2):
             raise ValueError()
         if value["environment"] not in ("PHYSICAL_DEVICE", "ANDROID_EMULATOR"):
             raise ValueError()
@@ -80,11 +80,17 @@ def validate_journal(value):
             raise ValueError()
         if policies["exact"] not in CAP.BASE.APP_OP_MODES or policies["power"] not in ("0", "1"):
             raise ValueError()
-        if type(policies["notifications"]) is not bool or not re.fullmatch(r"[0-9]{1,9}", policies["screenTimeout"]):
+        timeout = policies["screenTimeout"]
+        if type(policies["notifications"]) is not bool or not valid_screen_timeout(timeout, value["schemaVersion"]):
             raise ValueError()
     except (KeyError, TypeError, AttributeError, ValueError):
         raise ValueError("Recovery journal is missing or has invalid bounded fields.") from None
     return value
+
+
+def valid_screen_timeout(value, version=2):
+    if value is None: return version == 2
+    return type(value) is str and re.fullmatch(r"[0-9]{1," + ("9" if version == 1 else "10") + r"}", value) is not None and int(value) <= 2**31 - 1
 
 
 def read_journal(path):
@@ -136,12 +142,20 @@ def cleanup_fixtures(adb, journal, evidence):
 
 def restore_policies(adb, policies):
     checks = CAP.restore_policy(adb, policies["exact"], policies["power"], policies["notifications"])
-    try:
-        adb("shell", "settings", "put", "system", "screen_off_timeout", policies["screenTimeout"])
-        checks["screenTimeoutRestore"] = "PASS" if adb("shell", "settings", "get", "system", "screen_off_timeout") == policies["screenTimeout"] else "FAIL"
-    except (OSError, RuntimeError, subprocess.TimeoutExpired):
-        checks["screenTimeoutRestore"] = "FAIL"
+    checks.update(restore_screen_timeout(adb, policies["screenTimeout"]))
     return checks
+
+
+def restore_screen_timeout(adb, timeout):
+    if not valid_screen_timeout(timeout):
+        raise ValueError("Invalid screen-timeout restoration value.")
+    try:
+        if timeout is None: adb("shell", "settings", "delete", "system", "screen_off_timeout")
+        else: adb("shell", "settings", "put", "system", "screen_off_timeout", timeout)
+        restored = adb("shell", "settings", "get", "system", "screen_off_timeout") == ("null" if timeout is None else timeout)
+        return {"screenTimeoutRestore": "PASS" if restored else "FAIL"}
+    except Exception:
+        return {"screenTimeoutRestore": "FAIL"}
 
 
 def main():

@@ -85,20 +85,24 @@ def main():
     parser.add_argument("--duration-seconds", type=int, default=3600)
     parser.add_argument("--reminder-interval-seconds", type=int, default=600)
     parser.add_argument("--dedicated-target", action="store_true", required=True)
+    parser.add_argument("--maintenance-history", action="store_true", help="Also collect the typed, read-only MAIN maintenance log protocol.")
     args = parser.parse_args()
     try:
         delays = reminder_delays(args.duration_seconds, args.reminder_interval_seconds)
     except ValueError as error:
         parser.error(str(error))
     observer = Path(__file__).with_name("record-soak-observation.py")
+    history_observer = Path(__file__).with_name("record-maintenance-history.py")
     if not args.adb or args.evidence_dir.exists() or not all(p.is_file() for p in (args.app_apk, args.test_apk, observer)):
         parser.error("Install the exact APK pair, include the passive observer, and use a new evidence directory.")
+    if args.maintenance_history and not history_observer.is_file(): parser.error("Include the maintenance history collector.")
     args.evidence_dir.mkdir(parents=True)
     run_lock = RECOVERY.acquire_lock(args.evidence_dir)
     fixture = str(uuid.uuid4())
     report = {"result": "INCOMPLETE", "fullF4GateClosed": False, "fullSoakGateClosed": False,
               "durationRequestedSeconds": args.duration_seconds, "eligibleFor24HourReview": False,
               "fullSoakProfileComplete": False,
+              "maintenanceHistoryRequested": args.maintenance_history,
               "environment": args.environment, "fixtureId": fixture, "checks": {},
               "instrumentationCheckpointsRestartMain": True,
               "limitations": ["Short runs cannot substitute for 24 hours.",
@@ -111,8 +115,10 @@ def main():
               "manifestDelaysSeconds": delays, "reminders": [], "observedNotifications": {}}
     state_prepared = False
     telemetry = telemetry_output = None
+    history = history_output = None
     original_power = original_exact = original_notifications = None
     original_timeout = None
+    timeout_captured = False
     verified = set()
 
     def persist():
@@ -157,9 +163,10 @@ def main():
             raise RuntimeError("Original power policy is unavailable.")
         original_power = observed_power
         observed_timeout = adb("shell", "settings", "get", "system", "screen_off_timeout")
-        if not re.fullmatch(r"[0-9]{1,9}", observed_timeout):
+        if not RECOVERY.valid_screen_timeout(None if observed_timeout == "null" else observed_timeout):
             raise RuntimeError("Original screen timeout is unavailable.")
-        original_timeout = observed_timeout
+        original_timeout = None if observed_timeout == "null" else observed_timeout
+        timeout_captured = True
         original_exact = CAP.BASE.original_appop_mode(adb("shell", "appops", "get", "network.orion", "SCHEDULE_EXACT_ALARM"), "SCHEDULE_EXACT_ALARM")
         permissions = adb("shell", "dumpsys", "package", "network.orion")
         match = re.search(r"android\.permission\.POST_NOTIFICATIONS: granted=(true|false)", permissions)
@@ -171,7 +178,7 @@ def main():
             raise RuntimeError("The scoped application UID is unavailable.")
         own_uid = int(uid.group(1))
         report["deviceIdentitySha256"] = RECOVERY.device_identity(adb)
-        journal = {"schemaVersion": 1, "environment": args.environment, "fixtureId": fixture,
+        journal = {"schemaVersion": 2, "environment": args.environment, "fixtureId": fixture,
                    "deviceIdentitySha256": report["deviceIdentitySha256"], "artifactSha256": report["artifactSha256"],
                    "originalPolicies": {"exact": original_exact, "power": original_power,
                                         "notifications": original_notifications, "screenTimeout": original_timeout},
@@ -200,6 +207,14 @@ def main():
         # Preparation is complete. Restore normal timeout; the unattended phase needs no fresh consent.
         adb("shell", "settings", "put", "system", "screen_off_timeout", "60000")
         adb("shell", "input", "keyevent", "KEYCODE_HOME")
+        if args.maintenance_history:
+            report["sourceSha256"][history_observer.name] = hashlib.sha256(history_observer.read_bytes()).hexdigest()
+            history_output = (args.evidence_dir / "maintenance-history-observer.txt").open("w")
+            history = subprocess.Popen(["python3", str(history_observer), "--adb", args.adb, "--serial", args.serial,
+                                        "--environment", args.environment, "--apk", str(args.app_apk),
+                                        "--duration-seconds", str(args.duration_seconds), "--interval-seconds", "60",
+                                        "--evidence-dir", str(args.evidence_dir / "maintenance-history")],
+                                       stdout=history_output, stderr=subprocess.STDOUT)
         telemetry_output = (args.evidence_dir / "passive-observer.txt").open("w")
         telemetry = subprocess.Popen(["python3", str(observer), "--adb", args.adb, "--serial", args.serial,
                                       "--environment", args.environment, "--apk", str(args.app_apk),
@@ -252,6 +267,14 @@ def main():
         passive = json.loads((args.evidence_dir / "telemetry/soak-observation-report.json").read_text())
         if passive["result"] != "OBSERVATION_COMPLETE_REVIEW_REQUIRED":
             raise RuntimeError("Passive observation contains gaps or identity mismatches.")
+        if history is not None:
+            history.wait(timeout=90)
+            observed_history = json.loads((args.evidence_dir / "maintenance-history/maintenance-history-report.json").read_text())
+            if observed_history["result"] != "HISTORY_COLLECTION_COMPLETE_REVIEW_REQUIRED" or not observed_history["queueHistoryAvailable"]:
+                raise RuntimeError("Maintenance history is missing or contains observation gaps.")
+            report["maintenanceHistory"] = {key: observed_history[key] for key in (
+                "result", "queueHistoryAvailable", "heartbeatPassesFirstSeenAfterBaseline", "continuousCoverageProven",
+                "heartbeatAutonomyProven", "historySha256")}
         final_pid = adb("shell", "pidof", "network.orion", check=False)
         # An idle process may have been reclaimed after posting; residency at the end is not required.
         report["productionPidBeforeVerification"] = final_pid if re.fullmatch(r"[1-9][0-9]{0,9}", final_pid) else None
@@ -274,11 +297,13 @@ def main():
         report["failureType"] = type(error).__name__
         report["failure"] = str(error) if isinstance(error, RuntimeError) else "Workload interrupted or bounded command unavailable."
     finally:
-        if telemetry and telemetry.poll() is None:
-            telemetry.send_signal(signal.SIGINT)
-            try: telemetry.wait(timeout=20)
-            except subprocess.TimeoutExpired: telemetry.kill(); telemetry.wait()
-        if telemetry_output: telemetry_output.close()
+        for process, output in ((telemetry, telemetry_output), (history, history_output)):
+            if process and process.poll() is None:
+                try: process.send_signal(signal.SIGINT)
+                except ProcessLookupError: pass
+                try: process.wait(timeout=20)
+                except subprocess.TimeoutExpired: process.kill(); process.wait()
+            if output: output.close()
         for item in report["reminders"]:
             if item["fixtureId"] not in verified:
                 try:
@@ -293,13 +318,9 @@ def main():
         restored = CAP.restore_policy(adb, original_exact, original_power, original_notifications)
         report.update(restored)
         if "FAIL" in restored.values(): report["result"] = "INCOMPLETE"
-        if original_timeout is not None:
-            try:
-                adb("shell", "settings", "put", "system", "screen_off_timeout", original_timeout)
-                if adb("shell", "settings", "get", "system", "screen_off_timeout") != original_timeout:
-                    raise RuntimeError("Screen timeout was not restored.")
-                report["screenTimeoutRestore"] = "PASS"
-            except Exception: report["screenTimeoutRestore"] = "FAIL"; report["result"] = "INCOMPLETE"
+        if timeout_captured:
+            report.update(RECOVERY.restore_screen_timeout(adb, original_timeout))
+            if report["screenTimeoutRestore"] != "PASS": report["result"] = "INCOMPLETE"
         try: persist()
         finally: os.close(run_lock)
     print(json.dumps(report, indent=2))
