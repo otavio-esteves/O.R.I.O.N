@@ -21,6 +21,7 @@ rules are recorded in [ADR-0001](docs/adr/ADR-0001-docker-first-host-device.md).
 ## Bootstrap
 
 ```bash
+git submodule update --init --recursive
 docker compose build android-build
 docker compose run --rm android-build toolchainInfo
 docker compose run --rm android-build check
@@ -31,6 +32,26 @@ and `make check`.
 
 The F0 benchmark harness and its versioned profile contract live under `benchmark/`.
 Run `make benchmark-validate` to validate committed evidence and the negative fixtures.
+
+The F5 software foundation adds a MAIN-owned GGUF registry (Room schema 6), fresh
+resource admission and a private disposable Cortex in `:ai`, backed by pinned
+llama.cpp source in `third_party/llama.cpp`. Production qualified model plans remain
+empty. The default Android observer explicitly reports missing complete fresh
+aggregate-memory evidence; neither importing a model nor passing a software test
+enables production inference. Physical resource/performance/native qualification
+and the 24-hour stability soak remain open. See the [F5 software audit](docs/qualification/F5-SoftwareAudit.md).
+
+An opt-in, separate instrumentation scope exercises a pinned tiny GGUF through
+the real registry/Binder/JNI pipeline using synthetic test-only resource inputs:
+
+```bash
+docker compose run --rm android-build -PorionNativeSmoke=true :app:assembleDebug :app:assembleDebugAndroidTest --max-workers=2
+```
+
+This builds the test model into the instrumentation APK only. Install/run that scope
+on an explicitly selected disposable emulator/device using host ADB; it is software
+integration evidence, not a real-model resource profile or S21 qualification.
+Rebuild without the flag to restore the complete application instrumentation suite.
 
 The deterministic F3 candidate now includes native task, reminder, timer, personal
 memory and manual notification workflows, plus device information and activity

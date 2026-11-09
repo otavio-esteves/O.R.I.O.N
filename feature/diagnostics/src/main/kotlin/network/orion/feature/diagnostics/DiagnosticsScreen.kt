@@ -12,7 +12,7 @@ import network.orion.core.ipc.OrionIpcProtocol
 
 @Composable
 fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, taskQueues: TaskQueueDiagnostics? = null, scheduling: OrionSchedulingDiagnostics? = null,
-    platform: OrionPlatformDiagnostics? = null, onRetry: () -> Unit) {
+    platform: OrionPlatformDiagnostics? = null, inference: OrionInferenceDiagnostics? = null, onRetry: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Saúde do sistema", style = MaterialTheme.typography.headlineSmall)
@@ -22,6 +22,13 @@ fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, ta
         val protocol = OrionIpcProtocol.CURRENT
         Text("Contrato IPC: ${protocol.protocolMajor}.${protocol.protocolMinor}")
         Text("Última inicialização local: ${report.lastRecovery ?: "não concluída"}")
+        inference?.let { ai ->
+            Text("Cortex: ${ai.cortexState}")
+            Text("Modelos registrados: ${ai.registeredModels ?: "indisponível"}")
+            Text("Modelos com integridade validada: ${ai.structurallyReadyModels ?: "indisponível"}")
+            Text("Perfis de recursos qualificados: ${ai.qualifiedModelPlans}")
+            Text("Bloqueio de recursos: ${ai.resourceBlock ?: "sem observação"}")
+        }
         Text("Compatibilidade nativa: ${platform?.nativeQualification ?: OrionNativeQualification.UNAVAILABLE}")
         Text("Classificação do Memory Limiter: " + when (platform?.memoryLimiterClassification) {
             OrionMemoryLimiterClassification.DEDICATED_REASON_AVAILABLE -> "motivo dedicado disponível"

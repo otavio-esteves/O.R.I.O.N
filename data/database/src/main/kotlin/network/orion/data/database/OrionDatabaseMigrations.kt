@@ -4,6 +4,19 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object OrionDatabaseMigrations {
+    val MIGRATION_5_6: Migration = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // Additive technical registry only. Existing domain, consent, ciphertext and outbox rows are untouched.
+            db.execSQL("""CREATE TABLE IF NOT EXISTS orion_model_registry (
+                modelId TEXT NOT NULL, displayName TEXT NOT NULL, filePath TEXT NOT NULL,
+                sha256 TEXT NOT NULL, sizeBytes INTEGER NOT NULL, architecture TEXT,
+                quantization TEXT, contextLimit INTEGER, status TEXT NOT NULL, importToken TEXT NOT NULL,
+                createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, lastValidatedAt INTEGER,
+                version INTEGER NOT NULL, lastErrorCode TEXT, PRIMARY KEY(modelId))""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_orion_model_registry_status_updatedAt ON orion_model_registry(status, updatedAt)")
+        }
+    }
+
     val MIGRATION_4_5: Migration = object : Migration(4, 5) {
         override fun migrate(db: SupportSQLiteDatabase) {
             // Historical reminders preserve their logical state and never acquire delivery consent.

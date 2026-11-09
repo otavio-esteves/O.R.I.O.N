@@ -1,0 +1,2 @@
+-keep class network.orion.ai.llama.OrionLlamaEngine { native <methods>; }
+-keep class network.orion.ai.llama.OrionNativeCallbacks { *; }

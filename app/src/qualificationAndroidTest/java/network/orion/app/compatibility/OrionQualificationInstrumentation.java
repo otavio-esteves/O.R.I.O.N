@@ -66,7 +66,7 @@ public final class OrionQualificationInstrumentation extends Instrumentation {
                 String entry = entries.nextElement().getName();
                 if (entry.startsWith(prefix) && entry.endsWith(".so")) {
                     String name = entry.substring(prefix.length());
-                    check(name.matches("lib[A-Za-z0-9_.-]+\\.so"), "Unsupported native entry");
+                    check(name.matches("lib[A-Za-z0-9_+.-]+\\.so"), "Unsupported native entry");
                     libraries.add(name);
                 }
             }

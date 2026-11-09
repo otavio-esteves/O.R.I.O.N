@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
                 var destination by rememberSaveable { mutableStateOf("Início") }
                 var taskQueues by remember { mutableStateOf<network.orion.core.health.TaskQueueDiagnostics?>(null) }
                 var schedulingDiagnostics by remember { mutableStateOf<network.orion.core.health.OrionSchedulingDiagnostics?>(null) }
+                var inferenceDiagnostics by remember { mutableStateOf<network.orion.core.health.OrionInferenceDiagnostics?>(null) }
                 LaunchedEffect(report.lastRecovery) {
                     if (report.lastRecovery != null) {
                         deliveryAlerts.onCoreRecovered()
@@ -84,6 +85,7 @@ class MainActivity : ComponentActivity() {
                 }
                 LaunchedEffect(destination, report.lastRecovery) {
                     if (destination == "Diagnóstico") {
+                        inferenceDiagnostics = runtime.inferenceDiagnostics()
                         schedulingDiagnostics = runtime.schedulingDiagnostics()
                         taskQueues = try {
                         withContext(Dispatchers.IO) { runtime.taskKernel?.diagnostics() }
@@ -144,7 +146,7 @@ class MainActivity : ComponentActivity() {
                             "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
-                                platform = runtime.platformDiagnostics(), onRetry = { runtime.start() })
+                                platform = runtime.platformDiagnostics(), inference = inferenceDiagnostics, onRetry = { runtime.start() })
                             "Ajustes" -> SettingsScreen(report)
                             else -> HomeScreen(report, onOpenDevice = { destination = "Dispositivo" },
                                 onOpenActivity = { destination = "Atividade" }, onOpenReminders = { destination = "Lembretes" },

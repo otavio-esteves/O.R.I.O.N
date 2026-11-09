@@ -46,6 +46,10 @@ import network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor
 import network.orion.core.observability.*
 import network.orion.core.recovery.RecoveryCoordinator
 import network.orion.core.resources.UnavailableResourceGovernor
+import network.orion.core.resources.ResourceGovernor
+import network.orion.app.resources.AndroidOrionResourceObserver
+import network.orion.app.cortex.OrionMainCortexAccess
+import network.orion.ai.api.OrionCortexHealth
 import network.orion.core.security.*
 import network.orion.core.time.AndroidOrionClock
 import network.orion.data.database.OrionDatabase
@@ -57,6 +61,24 @@ import network.orion.data.repository.OrionPrivatePayloadStore
 class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCoordinator {
     private val app = context.applicationContext
     private val clock = AndroidOrionClock(app.contentResolver)
+    private val resourceObservations = try {
+        AndroidOrionResourceObserver(app, clock, pressureHoldMillis = 60_000).also(app::registerComponentCallbacks)
+    } catch (cancelled: CancellationException) { throw cancelled }
+    catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); throw interrupted }
+    catch (_: Exception) { null } // Optional observation failure cannot take down the deterministic Core.
+    @Volatile internal var cortexAccess: OrionMainCortexAccess? = null
+        private set
+    internal fun setInferenceForeground(value: Boolean) { resourceObservations?.setForeground(value) }
+    internal suspend fun inferenceDiagnostics(): OrionInferenceDiagnostics = withContext(Dispatchers.IO) {
+        val access = cortexAccess
+        val models = try { access?.registry?.records() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); throw interrupted }
+            catch (_: Exception) { null }
+        OrionInferenceDiagnostics(access?.status()?.name ?: "UNAVAILABLE", models?.size,
+            models?.count { it.status == network.orion.data.database.ModelRegistryStatus.READY },
+            access?.qualifiedModelPlanCount ?: 0, access?.lastResourceBlock?.name)
+    }
     private val notificationPoster = OrionAndroidNotificationPoster(app, clock)
     private val reminderPoster = OrionAndroidNotificationPoster(app, clock, OrionAndroidNotificationPoster.REMINDER_CHANNEL)
     private val alarmBackend = AndroidOrionAlarmBackend(app, ComponentName(app, OrionReminderAlarmReceiver::class.java))
@@ -95,6 +117,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     private val mutex = Mutex()
     private val initial = OrionSubsystem.entries.associateWith { OrionHealthStatus.UNAVAILABLE }
     private val mutableHealth = MutableStateFlow(OrionHealthAggregator.aggregate(initial, clock.wallNow()))
+    private val cortexHealthObservations = OrionHealthObservationOwner(mutableHealth, clock)
     val health: StateFlow<OrionHealthReport> = mutableHealth.asStateFlow()
     val ingress: IngressCoordinator get() = taskKernel?.ingress ?: FoundationIngressCoordinator { health.value.core.readiness }
     val actions = UnavailableActionEngine()
@@ -195,10 +218,11 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     } catch (_: Exception) {
         OrionPolicyEvidence.UNAVAILABLE
     }
-    private var governor = UnavailableResourceGovernor()
+    private var governor: ResourceGovernor = UnavailableResourceGovernor()
     private var database: OrionDatabase? = null
     private var preferences: OrionPreferencesStore? = null
     private var startupJob: Job? = null
+    private var modelRecoveryJob: Job? = null
     @Volatile var databaseFormatVersion: Int? = null
         private set
     @Volatile var databaseSchemaVersion: Int? = null
@@ -234,6 +258,11 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             memoryKernel != null && notificationKernel != null && health.value.core.readiness.isStartupBarrierOpen &&
             health.value.subsystems[OrionSubsystem.FIELD_KEYS] == OrionHealthStatus.HEALTHY) return@withLock health.value.core.readiness
         val ticket = taskStartupBarrier.beginRecovery()
+        val cortexHealthSource = cortexHealthObservations.replaceSource()
+        modelRecoveryJob?.cancel()
+        modelRecoveryJob = null
+        try { cortexAccess?.close() } catch (_: Exception) { /* Optional inference cannot prevent Core recovery. */ }
+        cortexAccess = null
         taskWriteReady = false
         taskStorageReady = false
         taskAdmissions.invalidateAdmissions()
@@ -365,9 +394,27 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     notificationPermissionEvidence() != OrionPolicyEvidence.SATISFIED)
                     OrionHealthStatus.DEGRADED else OrionHealthStatus.HEALTHY
             }
-            // Optional inference remains disabled; hardware/system qualification is still pending.
+            // Open the optional registry cheaply. Hashing a multi-GB interrupted
+            // import is deferred so it cannot delay deterministic Core readiness.
+            if (keyState == FieldKeyInitialization.READY && cortexAccess == null && resourceObservations != null) {
+              try {
+                val registry = network.orion.data.modelregistry.OrionModelRegistry.open(app, db, clock)
+                cortexAccess = OrionMainCortexAccess(app, clock, taskStartupBarrier, resourceObservations, registry,
+                    onHealth = { observed -> cortexHealthObservations.publish(cortexHealthSource, mapOf(
+                        OrionSubsystem.CORTEX to when (observed) {
+                            OrionCortexHealth.READY, OrionCortexHealth.INFERENCING, OrionCortexHealth.UNLOADED -> OrionHealthStatus.HEALTHY
+                            OrionCortexHealth.CONNECTING, OrionCortexHealth.LOADING, OrionCortexHealth.UNLOADING -> OrionHealthStatus.RECOVERING
+                            OrionCortexHealth.DEGRADED -> OrionHealthStatus.DEGRADED
+                            else -> OrionHealthStatus.UNAVAILABLE
+                        })) })
+              } catch (cancelled: CancellationException) { throw cancelled }
+              catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); throw interrupted }
+              catch (_: Exception) { states[OrionSubsystem.CORTEX] = OrionHealthStatus.DEGRADED }
+            }
+            // Empty qualified plans preserve fail-closed behavior while S21 budgets
+            // and complete fresh aggregate-memory observations remain unqualified.
             states[OrionSubsystem.RESOURCES] = OrionHealthStatus.DEGRADED
-            governor = UnavailableResourceGovernor(exits)
+            governor = cortexAccess?.governor ?: UnavailableResourceGovernor(exits)
             check(!governor.canRunInference())
             taskStartupBarrier.completeRecovery(ticket,
                 calculateAndPublishHealth = { publish(states, clock.wallNow()); health.value.core.readiness },
@@ -386,6 +433,19 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 })
             // Recovery's bounded UI drain ran under the admission monitor; hand off committed consent only after release.
             reminderDelivery?.flushAuthorized()
+            cortexAccess?.let { access ->
+                modelRecoveryJob = scope.launch {
+                    try {
+                        val result = runInterruptible { access.recoverRegistry() }
+                        if (cortexAccess === access && result.blockedArtifacts > 0)
+                            cortexHealthObservations.publish(cortexHealthSource, mapOf(OrionSubsystem.CORTEX to OrionHealthStatus.DEGRADED))
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) {
+                        if (cortexAccess === access) cortexHealthObservations.publish(cortexHealthSource,
+                            mapOf(OrionSubsystem.CORTEX to OrionHealthStatus.DEGRADED))
+                    }
+                }
+            }
             val event = readyLogEvent(health.value.core.readiness)
             logger.record(correlation, OrionLogComponent.RECOVERY, event,
                 if (event == OrionLogEvent.CORE_DEGRADED) OrionLogSeverity.WARN else OrionLogSeverity.INFO)

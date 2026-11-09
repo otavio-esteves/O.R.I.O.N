@@ -170,3 +170,11 @@ val testNativePackageArtifacts = tasks.register<Exec>("testNativePackageArtifact
 }
 
 tasks.named("check") { dependsOn(testNativePackageArtifacts) }
+
+val testJniContract = tasks.register<Exec>("testJniContract") {
+    group = "verification"
+    description = "Checks actual DEX JNI signatures against positive and deliberately broken fixtures."
+    inputs.files("scripts/benchmark/verify-jni-contract.sh", "scripts/benchmark/test-jni-contract.sh")
+    commandLine("sh", "scripts/benchmark/test-jni-contract.sh")
+}
+tasks.named("check") { dependsOn(testJniContract) }
