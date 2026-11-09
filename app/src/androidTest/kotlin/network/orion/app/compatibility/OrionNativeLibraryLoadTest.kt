@@ -31,7 +31,7 @@ class OrionNativeLibraryLoadTest {
         }
         assertTrue("The active native gate must exercise packaged libraries", libraries.isNotEmpty())
         libraries.forEach { name ->
-            require(Regex("lib[A-Za-z0-9_.-]+\\.so").matches(name))
+            require(Regex("lib[A-Za-z0-9_+.-]+\\.so").matches(name))
             // Pin the target APK entry, rather than allowing a test dependency's
             // similarly named library to satisfy the probe through search paths.
             System.load(context.applicationInfo.sourceDir + "!/lib/$abi/" + name)

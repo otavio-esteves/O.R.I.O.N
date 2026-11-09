@@ -17,4 +17,12 @@ dependencies {
     implementation(project(":core:security"))
     implementation(project(":core:time"))
     implementation(project(":data:database"))
+    testImplementation(libs.junit4)
+}
+
+// Explicit opt-in fixture verification: a requested missing/invalid artifact fails.
+val modelFixture = providers.gradleProperty("orionModelFixture")
+tasks.withType<Test>().configureEach {
+    if (modelFixture.isPresent) systemProperty("orionModelFixture", modelFixture.get())
+    else exclude("**/OrionQwenGgufFixtureTest.class")
 }

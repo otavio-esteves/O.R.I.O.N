@@ -97,3 +97,23 @@ Compose mounts the project-scoped `orion-android-user` volume at ANDROID_USER_HO
 host `adb install -r` does not rotate certificates between builds. No private key
 is stored in Git or used for release signing. Older ephemeral-key APKs require
 explicit developer handling; tooling never uninstalls them automatically.
+
+### F5 Cortex native extension — 2026-11-09
+
+Extension ID: `orion_toolchain_f5_llama_2026_11_09`; compiler/SDK/NDK/CMake and
+Docker baseline unchanged. `ai/llama` fetches source-only llama.cpp commit
+`7d7f0287530bc8981690f361d8c1627dbae1c99a`, archive SHA256
+`2f15b173875f53cb2a3d099b65875a24824859b0b9a7ede276d58ec2881ae085`.
+The upstream MIT license is bundled. CPU-only static upstream libraries link into
+`liborion_llama.so`; Android's `libc++_shared.so` supplies the C++ runtime. Debug
+and qualification support arm64/x86_64; the production release app remains arm64.
+Ninja compile/link pools are bounded to two/one jobs. GPU, network, server, tools,
+examples, OpenMP and native host-CPU tuning are disabled. Link alignment is 16KiB.
+
+The optional official Qwen fixture is independently pinned and licensed in
+`ai/llama/test-fixtures/model-manifest.json`; it is never downloaded by Gradle or
+packaged with the application. Fixture inference is emulator-only test evidence,
+not selection/qualification of a production model. New native/static, Debug and
+R8 load checks must run independently of the prior F4 Compose/DataStore evidence.
+Physical inference/resource/performance qualification remains pending; production
+resource approval and Cortex UI/routing remain disabled.

@@ -31,8 +31,9 @@ interface OrionStorageMetadataDao {
     TaskEntity::class, TimerEntity::class, ReminderEntity::class, MemoryEntity::class, MemoryClaimEntity::class,
     AuditEntity::class, TechnicalEventEntity::class, DomainEventOutboxEntity::class,
     EventConsumerReceiptEntity::class, IngressEnvelopeEntity::class,
-    OrionReminderSeriesEntity::class, OrionReminderOccurrenceEntity::class], version = 5, exportSchema = true)
+    OrionReminderSeriesEntity::class, OrionReminderOccurrenceEntity::class, ModelRegistryEntity::class], version = 6, exportSchema = true)
 abstract class OrionDatabase : RoomDatabase() {
+    abstract fun models(): OrionModelRegistryDao
     abstract fun metadata(): OrionStorageMetadataDao
     abstract fun actions(): OrionActionDao
     abstract fun timers(): OrionTimerDao
@@ -65,7 +66,8 @@ object OrionDatabaseFactory {
         )
         return Room.databaseBuilder(app, OrionDatabase::class.java, "orion.db")
             .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2, OrionDatabaseMigrations.MIGRATION_2_3,
-                OrionDatabaseMigrations.MIGRATION_3_4, OrionDatabaseMigrations.MIGRATION_4_5)
+                OrionDatabaseMigrations.MIGRATION_3_4, OrionDatabaseMigrations.MIGRATION_4_5,
+                OrionDatabaseMigrations.MIGRATION_5_6)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     db.execSQL("INSERT INTO orion_storage_metadata (id, formatVersion) VALUES (1, 1)")

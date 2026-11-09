@@ -67,3 +67,6 @@ include(":skills:memory")
 include(":feature:memories")
 include(":skills:notifications")
 include(":feature:notifications")
+
+include(":ai:llama")
+include(":ai:service")
