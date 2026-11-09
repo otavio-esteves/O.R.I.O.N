@@ -25,6 +25,7 @@ import org.junit.runner.RunWith
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.TimeoutCancellationException
 import network.orion.app.scheduling.awaitOriginalSoakAction
+import network.orion.app.drainIngressMaintenance
 
 @RunWith(AndroidJUnit4::class)
 class OrionTaskKernelTest {
@@ -70,6 +71,31 @@ class OrionTaskKernelTest {
         assertEquals(0, count("orion_action_requests")); assertEquals(0, count("orion_tasks"))
         release(); assertEquals(1, kernel.ingress.drain(25)); assertEquals(1, kernel.pending().size)
         assertEquals(0, count("orion_tasks"))
+    }
+    @Test fun persistedBacklogBeyondRecoveryBatchContinuesThroughMaintenance() {
+        barrier.beginRecovery()
+        repeat(80) {
+            val id = UUID.randomUUID()
+            val bytes = OrionTaskIngressWire("CREATE", id, id, id, "Maintenance $id").encode()
+            try {
+                assertEquals(DurableIngressOutcome.QUEUED, kernel.ingress.submit(DurableIngressRequest(
+                    UUID.randomUUID(), OrionTaskIngressWire.SCOPE, id, OrionTaskIngressWire.SOURCE,
+                    OrionTaskIngressWire.TYPE, 1, Sensitivity.SENSITIVE, false, null, bytes,
+                    86_400_000, 86_400_000, correlationId = id)))
+            } finally { bytes.fill(0) }
+        }
+        db.close()
+        bind() // The queue survives storage/kernel recreation; authority still comes from the existing owner.
+        assertFalse(drainIngressMaintenance(listOf(kernel.ingress::drain)))
+        assertEquals(80, db.ingress().queued(100).size)
+        release()
+        assertEquals(25, kernel.ingress.drain(25))
+        assertTrue(drainIngressMaintenance(listOf(kernel.ingress::drain)))
+        assertTrue(drainIngressMaintenance(listOf(kernel.ingress::drain)))
+        assertFalse(drainIngressMaintenance(listOf(kernel.ingress::drain)))
+        assertTrue(db.ingress().queued(100).isEmpty())
+        assertEquals(80, count("orion_action_requests"))
+        assertEquals(0, count("orion_tasks")) // Preparation never substitutes for human confirmation.
     }
     @Test fun actualIngressCommitsConfirmationTaskEventSuccessAndReplayTogether() {
         val pending = prepared(); val receipt = consent(pending); val key = UUID.randomUUID()

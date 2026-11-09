@@ -5,7 +5,13 @@ import androidx.room.Query
 import androidx.room.Transaction
 
 /** Per-table batch is bounded; domain user data, UNKNOWN, MANUAL_REVIEW and DEAD_LETTER are preserved. */
-data class RetentionResult(val events: Int, val ingress: Int, val actions: Int, val audit: Int, val technical: Int)
+data class RetentionResult(val events: Int, val ingress: Int, val actions: Int, val audit: Int, val technical: Int) {
+    /** A saturated table needs another bounded pass; this never selects unresolved data for retry. */
+    fun needsContinuation(batchSize: Int): Boolean {
+        require(batchSize in 1..100)
+        return listOf(events, ingress, actions, audit, technical).any { it >= batchSize }
+    }
+}
 
 @Dao
 abstract class OrionRetentionDao {
