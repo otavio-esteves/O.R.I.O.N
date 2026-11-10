@@ -399,7 +399,7 @@ class TransactionCorePersistenceTest {
         return OrionFieldEncryption(keys)
     }
     private fun openDatabase() = Room.databaseBuilder(context, OrionDatabase::class.java, name)
-        .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2, OrionDatabaseMigrations.MIGRATION_2_3, OrionDatabaseMigrations.MIGRATION_3_4, OrionDatabaseMigrations.MIGRATION_4_5)
+        .addMigrations(OrionDatabaseMigrations.MIGRATION_1_2, OrionDatabaseMigrations.MIGRATION_2_3, OrionDatabaseMigrations.MIGRATION_3_4, OrionDatabaseMigrations.MIGRATION_4_5, OrionDatabaseMigrations.MIGRATION_5_6)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) { db.execSQL("INSERT INTO orion_storage_metadata(id, formatVersion) VALUES(1, 1)") }
         }).build()

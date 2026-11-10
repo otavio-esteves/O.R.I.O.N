@@ -25,8 +25,8 @@ android {
         testInstrumentationRunner = if (qualificationEnabled)
             "network.orion.app.compatibility.OrionQualificationInstrumentation"
         else "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 5
-        versionName = "0.4.0-candidate"
+        versionCode = 6
+        versionName = "0.5.0-development"
         resValue("string", "orion_native_qualification_status", nativeQualificationStatus)
     }
 
@@ -79,6 +79,8 @@ if (qualificationEnabled) {
 }
 
 dependencies {
+    implementation(project(":ai:api"))
+    implementation(project(":ai:service"))
     // AGP aligns tests with their target APK. Room's schema serializers require the newer default methods.
     debugImplementation(libs.serialization.test.runtime)
     debugImplementation(project(":core:ipc"))

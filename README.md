@@ -2,6 +2,21 @@
 
 Operational Reasoning & Intelligent Orchestration Network.
 
+## F5 runtime candidate
+
+The F5 implementation adds a MAIN-owned model registry (Room6, additive5→6
+migration), bounded private GGUF import/recovery, pinned llama.cpp/JNI, private
+versioned Cortex Binder service, streaming/cancellation/deadlines and explicit
+rebind. The MAIN owner combines current native-inclusive resource observations,
+qualified configuration and memory-exit restart protection. Its shipped qualified
+profile set is empty; normal inference remains unavailable.
+
+Debug real-model and process-death results are scoped emulator evidence. Physical
+S21/model/resource/performance approval and stability remain independent gates;
+this candidate does not declare F5 qualified or production inference enabled.
+Current evidence and remaining criteria are in the
+[F5 runtime gate](docs/qualification/F5-RuntimeGate.md).
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,
@@ -91,7 +106,7 @@ Build both APK variants, the release AAB, and the instrumentation APKs, and exec
 unit, lint, benchmark, native-compatibility, and module-boundary gates with:
 
 ```bash
-docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2
+docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest :ai:llama:assembleDebugAndroidTest :ai:service:assembleDebugAndroidTest --max-workers=2
 ```
 
 The GitHub Actions baseline runs this same Compose flow. Android device installation

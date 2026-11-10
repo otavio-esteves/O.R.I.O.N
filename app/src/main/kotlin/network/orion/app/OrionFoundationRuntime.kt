@@ -197,6 +197,22 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     }
     private var governor = UnavailableResourceGovernor()
     private var database: OrionDatabase? = null
+    private val cortexOwnershipLock = Any()
+    private var cortexOwner: network.orion.app.ai.OrionCortexRuntimeOwner? = null
+
+    /** Optional on-demand port. No approved production profile ships with this candidate. */
+    internal suspend fun cortexRuntime(): network.orion.app.ai.OrionCortexRuntimeOwner? = withContext(Dispatchers.IO) {
+        synchronized(cortexOwnershipLock) {
+            if (!taskStartupBarrier.isOpen() || !health.value.core.readiness.isStartupBarrierOpen) return@synchronized null
+            val db = database ?: return@synchronized null
+            cortexOwner ?: network.orion.app.ai.OrionCortexRuntimeOwner(app,
+                network.orion.data.repository.models.OrionModelImportCoordinator.open(app, db, clock,
+                    maximumModelBytes = 4L * 1024 * 1024 * 1024, reserveBytes = 512L * 1024 * 1024),
+                db, clock, coreReady = { taskStartupBarrier.isOpen() && health.value.core.readiness.isStartupBarrierOpen })
+                .also { cortexOwner = it }
+        }
+    }
+
     private var preferences: OrionPreferencesStore? = null
     private var startupJob: Job? = null
     @Volatile var databaseFormatVersion: Int? = null

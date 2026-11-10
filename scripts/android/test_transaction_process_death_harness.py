@@ -108,6 +108,33 @@ class TransactionRecorderContractTest(unittest.TestCase):
         self.assertNotEqual(local["killCheck"], proof["killCheck"])
         self.assertNotEqual(local["verificationCheck"], proof["verificationCheck"])
 
+    def test_model_scenarios_select_exact_owned_checkpoint_methods(self):
+        fixture = "00000000-0000-0000-0000-000000000001"
+        expected = {
+            "model_file": "verifiedFileBeforeRegistryCommitRemainsUnregistered",
+            "model_registered": "importedRegistryBeforeReadyRequiresSelectedValidation",
+        }
+        for scenario, method in expected.items():
+            for mode in ("prepare", "verify"):
+                command = RECORDER.instrumentation_command(mode, fixture, scenario)
+                self.assertEqual("network.orion.app.models.OrionModelImportProcessDeathTest#" + method,
+                                 command[command.index("class") + 1])
+
+    def test_model_proofs_describe_committed_files_and_rows_not_open_room_transactions(self):
+        expected = {
+            "model_file": ("AFTER_VERIFIED_FILE_COMMIT_BEFORE_REGISTRY", "kill_after_verified_model_file_commit",
+                           "unregistered_model_not_adopted_and_orphan_removed"),
+            "model_registered": ("AFTER_IMPORTED_REGISTRY_COMMIT_BEFORE_READY", "kill_after_imported_model_registry_commit",
+                                 "pending_model_verified_before_ready"),
+        }
+        for scenario, (boundary, kill, verification) in expected.items():
+            proof = RECORDER.scenario_proof(scenario)
+            self.assertEqual(boundary, proof["metadata"]["checkpointBoundary"])
+            self.assertEqual(kill, proof["killCheck"])
+            self.assertEqual(verification, proof["verificationCheck"])
+            self.assertEqual("SYNTHETIC_TINY_GGUF_NO_INFERENCE", proof["metadata"]["modelEvidence"])
+            self.assertNotEqual("OPEN_ROOM_TRANSACTION", boundary)
+
     def test_unknown_scenario_cannot_select_a_checkpoint_or_verification_claim(self):
         for scenario in ["", "arbitrary.class", "notification;echo unsafe", "new_external_boundary"]:
             with self.subTest(scenario=scenario):

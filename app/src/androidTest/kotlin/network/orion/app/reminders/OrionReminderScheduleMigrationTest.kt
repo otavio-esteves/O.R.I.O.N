@@ -66,7 +66,8 @@ class OrionReminderScheduleMigrationTest {
                     assertEquals(9L, row.getLong(1)); assertArrayEquals(byteArrayOf(7, 8, 9), row.getBlob(2))
                 }
             }
-            val reopened = Room.databaseBuilder(context, OrionDatabase::class.java, name).build()
+            val reopened = Room.databaseBuilder(context, OrionDatabase::class.java, name)
+                .addMigrations(OrionDatabaseMigrations.MIGRATION_5_6).build()
             try {
                 reopened.verifyStructure()
                 assertTrue(reopened.reminderSchedules().schedulingPage().isEmpty())
