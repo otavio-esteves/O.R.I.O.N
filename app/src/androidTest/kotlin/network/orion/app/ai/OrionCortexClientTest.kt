@@ -15,6 +15,8 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +43,17 @@ class OrionCortexClientTest {
     }
 
     private class Endpoint : IOrionCortex.Stub() {
+        private val identities = OrionIssuedRequestHistory<Unit> { true }
+        var protocolMajor = 1
+        var protocolMinor = 1
+        var historyCapability = true
+        var capabilitiesReply: Bundle? = null
+        var capabilitiesUnavailable = false
+        val capabilityQueries = AtomicInteger()
+        val issued = AtomicInteger()
+        var holdInferenceIssue = false
+        val issueHeld = CountDownLatch(1)
+        val releaseIssue = CountDownLatch(1)
         val loads = AtomicInteger()
         val inferences = AtomicInteger()
         val unloads = AtomicInteger()
@@ -53,7 +66,24 @@ class OrionCortexClientTest {
         private var loadId = ""
         private var inferenceId = ""
         private var callback: IOrionInferenceCallback? = null
-        override fun getProtocolInfo() = OrionCortexWire.reply("OK").apply { putInt("major", 1); putInt("minor", 0) }
+        override fun getProtocolInfo() = OrionCortexWire.reply("OK").apply {
+            putInt("major", protocolMajor); putInt("minor", protocolMinor)
+        }
+        override fun getCapabilities(): Bundle {
+            capabilityQueries.incrementAndGet()
+            if (capabilitiesUnavailable) throw android.os.RemoteException("Capability extension unavailable.")
+            return capabilitiesReply?.let(::Bundle) ?: OrionCortexWire.reply("OK").apply {
+                if (historyCapability) putString("capabilities", OrionCortexProtocol.ISSUED_HISTORY.value)
+            }
+        }
+        override fun issueRequestId() = OrionCortexWire.reply("OK").apply {
+            check(capabilityQueries.get() == 1) { "Identity issued before capability negotiation." }
+            if (issued.incrementAndGet() == 2 && holdInferenceIssue) {
+                issueHeld.countDown()
+                check(releaseIssue.await(5, TimeUnit.SECONDS))
+            }
+            putString("requestId", identities.issue())
+        }
         override fun loadModel(model: ParcelFileDescriptor?, specification: Bundle): Bundle {
             loads.incrementAndGet(); loadId = specification.getString("requestId")!!
             loadedModelId = specification.getString("modelId")!!
@@ -91,11 +121,22 @@ class OrionCortexClientTest {
         var autoConnect = true
         var completeInference = true
         var delayModelReadiness = false
+        var protocolMajor = 1
+        var protocolMinor = 1
+        var historyCapability = true
+        var capabilitiesReply: Bundle? = null
+        var capabilitiesUnavailable = false
+        var holdInferenceIssue = false
         val unbinds = AtomicInteger()
         private val component get() = ComponentName(packageName, "network.orion.ai.service.OrionCortexService")
         override fun getApplicationContext(): Context = this
         override fun bindService(service: Intent, connection: ServiceConnection, flags: Int): Boolean {
-            val endpoint = Endpoint().also { it.autoComplete = completeInference; it.modelReady = !delayModelReadiness }
+            val endpoint = Endpoint().also {
+                it.autoComplete = completeInference; it.modelReady = !delayModelReadiness
+                it.protocolMajor = protocolMajor; it.protocolMinor = protocolMinor; it.historyCapability = historyCapability
+                it.capabilitiesReply = capabilitiesReply; it.capabilitiesUnavailable = capabilitiesUnavailable
+                it.holdInferenceIssue = holdInferenceIssue
+            }
             endpoints.add(endpoint); connections.add(connection); bound.complete(Unit)
             if (autoConnect) connection.onServiceConnected(component, endpoint)
             return true
@@ -126,7 +167,7 @@ class OrionCortexClientTest {
             { guard.evaluate(OrionAiExitHistory(clock.mark, if (denyRestart) listOf(
                 network.orion.core.exitinfo.ProcessExitSignal(3, Instant.EPOCH,
                     network.orion.core.exitinfo.ProcessExitKind.LOW_MEMORY)) else emptyList())) }, availability::add)
-        fun request(id: String = UUID.randomUUID().toString(), modelId: String = hash,
+        fun request(id: String = client.newRequestId(), modelId: String = hash,
             deadline: MonotonicDeadline = clock.mark.deadlineAfter(30_000)) = OrionInferenceRequest(id, 1, modelId,
             "test", "context", 8, 0.0, OrionInferencePriority.INTERACTIVE, deadline, id)
         suspend fun run(request: OrionInferenceRequest = request(), contextTokens: Int = 128, threads: Int = 1) =
@@ -142,6 +183,80 @@ class OrionCortexClientTest {
             assertEquals(OrionInferenceTerminal.FAILED, fixture.run().terminal)
             assertEquals(0, fixture.context.endpoints.sumOf { it.loads.get() })
             assertEquals(0, fixture.context.endpoints.sumOf { it.inferences.get() })
+        }
+    }
+
+    @Test fun sustainedSessionsPassBothOldLimitsAndRetiredReplayCannotBindOrInfer() = runBlocking {
+        Fixture().use { fixture ->
+            val first = fixture.request()
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run(first).terminal)
+            repeat(128) { assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal) }
+            assertEquals(129, fixture.context.endpoints.sumOf { it.loads.get() })
+            assertEquals(129, fixture.context.endpoints.sumOf { it.inferences.get() })
+            val bindings = fixture.context.connections.size
+            assertTrue(runCatching { fixture.run(first) }.exceptionOrNull() is OrionRetiredRequestException)
+            assertEquals(bindings, fixture.context.connections.size)
+            assertEquals(129, fixture.context.endpoints.sumOf { it.inferences.get() })
+        }
+    }
+
+    @Test fun missingNegotiatedExtensionFailsBeforeIssuanceOrHeavyWork() = runBlocking {
+        for ((major, minor, capability) in listOf(Triple(2, 1, true), Triple(1, 0, true), Triple(1, 1, false))) Fixture().use { fixture ->
+            fixture.context.protocolMajor = major
+            fixture.context.protocolMinor = minor
+            fixture.context.historyCapability = capability
+            assertEquals(OrionInferenceTerminal.FAILED, fixture.run().terminal)
+            assertEquals(if (major == 1 && minor >= 1) 1 else 0,
+                fixture.context.endpoints.sumOf { it.capabilityQueries.get() })
+            assertEquals(0, fixture.context.endpoints.sumOf { it.issued.get() })
+            assertEquals(0, fixture.context.endpoints.sumOf { it.loads.get() })
+            assertEquals(0, fixture.context.endpoints.sumOf { it.inferences.get() })
+        }
+    }
+
+    @Test fun newClientDiscoversCapabilitySeparatelyBeforeIssuingIds() = runBlocking {
+        Fixture().use { fixture ->
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal)
+            val endpoint = fixture.context.endpoints.single()
+            assertEquals(setOf("schemaVersion", "status", "major", "minor"), endpoint.getProtocolInfo().keySet())
+            assertEquals(1, endpoint.capabilityQueries.get())
+            assertEquals(2, endpoint.issued.get())
+            assertEquals(1, endpoint.loads.get())
+            assertEquals(1, endpoint.inferences.get())
+        }
+    }
+
+    @Test fun invalidOrUnavailableCapabilityReplyNeverIssuesIdsOrStartsHeavyWork() = runBlocking {
+        val replies = listOf(
+            OrionCortexWire.reply("UNAVAILABLE"),
+            OrionCortexWire.reply("OK").apply { putInt("capabilities", 1) },
+            OrionCortexWire.reply("OK").apply { putString("unexpected", "field") },
+        )
+        for (reply in replies + listOf(null)) Fixture().use { fixture ->
+            fixture.context.capabilitiesReply = reply
+            fixture.context.capabilitiesUnavailable = reply == null
+            assertEquals(OrionInferenceTerminal.FAILED, fixture.run().terminal)
+            val endpoint = fixture.context.endpoints.single()
+            assertEquals(1, endpoint.capabilityQueries.get())
+            assertEquals(0, endpoint.issued.get())
+            assertEquals(0, endpoint.loads.get())
+            assertEquals(0, endpoint.inferences.get())
+        }
+    }
+
+    @Test fun cancellingDuringTransportIdentityIssueNeverStartsInference() = runBlocking {
+        Fixture().use { fixture ->
+            fixture.context.holdInferenceIssue = true
+            val result = async(Dispatchers.Default) { fixture.run() }
+            withTimeout(3_000) { fixture.context.bound.await() }
+            val endpoint = fixture.context.endpoints.single()
+            try {
+                assertTrue(endpoint.issueHeld.await(3, TimeUnit.SECONDS))
+                fixture.client.cancel()
+            } finally { endpoint.releaseIssue.countDown() }
+            assertEquals(OrionInferenceTerminal.CANCELLED, withTimeout(3_000) { result.await() }.terminal)
+            assertEquals(1, endpoint.loads.get())
+            assertEquals(0, endpoint.inferences.get())
         }
     }
 

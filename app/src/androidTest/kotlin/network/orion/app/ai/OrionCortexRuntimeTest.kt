@@ -50,6 +50,36 @@ class OrionCortexRuntimeTest {
     private val stageStart by lazy { clock.monotonicNow() }
     private val stageCount = AtomicInteger()
 
+    @Test(timeout = 1_800_000) fun thirtyThreeRealLoadInferUnloadCyclesKeepBothProcessesAndContinueAdmission() = fixture { db, importer, row ->
+        runBlocking(Dispatchers.IO) {
+            val decisions = AtomicInteger()
+            val availability = CopyOnWriteArrayList<Boolean>()
+            val mainPid = Process.myPid()
+            var originalAiPid: Int? = null
+            client(decisions, availability).use { client ->
+                repeat(33) {
+                    val request = request(client, "Hello", tokens = 1)
+                    val chunks = mutableListOf<OrionInferenceChunk>()
+                    val result = checkNotNull(importer.openReadOnly(row.modelId)).use { descriptor ->
+                        client.runInference(row, descriptor, request, 128, 2) { chunks.addAll(it) }
+                    }
+                    assertEquals(OrionInferenceTerminal.SUCCEEDED, result.terminal)
+                    assertEquals(1, chunks.count { it.isFinal })
+                    assertTrue(chunks.all { it.requestId == request.requestId })
+                    assertEquals(mainPid, Process.myPid())
+                    val aiPid = checkNotNull(aiProcess()).pid
+                    if (originalAiPid == null) originalAiPid = aiPid else assertEquals(originalAiPid, aiPid)
+                    assertServiceUnloaded()
+                    stage("SUSTAINED_CYCLE_COMPLETE")
+                }
+                assertEquals(1, availability.count { it })
+                assertTrue(decisions.get() >= 66)
+                db.verifyStructure()
+                assertEquals(1, db.tasks().page(null, 10).size)
+            }
+        }
+    }
+
     // Whole-test budgets include private copy/hash/import and cleanup. Each request still expires at 120s.
     @Test(timeout = 240_000) fun importedRealModelStreamsThroughPrivateAiProcessAndUnloads() = fixture { db, importer, row ->
         runBlocking(Dispatchers.IO) {
@@ -58,7 +88,7 @@ class OrionCortexRuntimeTest {
             client(decisions, availability).use { client ->
                 val chunks = mutableListOf<OrionInferenceChunk>()
                 val firstDelta = AtomicBoolean()
-                val request = request("The capital of France is")
+                val request = request(client, "The capital of France is")
                 stage("OPEN_FD_BEGIN")
                 val result = checkNotNull(importer.openReadOnly(row.modelId)).use { descriptor ->
                     stage("OPEN_FD_END")
@@ -94,7 +124,7 @@ class OrionCortexRuntimeTest {
                 val killed = AtomicBoolean()
                 val delivered = AtomicInteger()
                 var killedPid = 0
-                val original = request("Count from one to one hundred:")
+                val original = request(client, "Count from one to one hundred:")
                 stage("OPEN_FD_BEGIN")
                 val result = checkNotNull(importer.openReadOnly(row.modelId)).use { descriptor ->
                     stage("OPEN_FD_END")
@@ -153,7 +183,7 @@ class OrionCortexRuntimeTest {
                 assertEquals(bindsBeforeReplay, availability.count { it })
                 assertNull(aiProcess())
 
-                val next = request("Hello, my name is")
+                val next = request(client, "Hello, my name is")
                 var nextChunks = 0
                 stage("NEW_REQUEST_OPEN_FD_BEGIN")
                 val nextResult = checkNotNull(importer.openReadOnly(row.modelId)).use { descriptor ->
@@ -204,7 +234,7 @@ class OrionCortexRuntimeTest {
                         check(restartGuard.evaluate(OrionAiExitHistory(clock.monotonicNow(), emptyList()))
                             .eligibleForResourceEvaluation)
                         check(fixtureDecision(plan, 512, 2, 1).allowed)
-                        val loadId = UUID.randomUUID().toString()
+                        val loadId = service.issueRequestId().getString("requestId")!!
                         val loadStart = clock.monotonicNow()
                         val loadDeadline = loadStart.deadlineAfter(120_000)
                         val load = Bundle().apply {
@@ -234,7 +264,7 @@ class OrionCortexRuntimeTest {
                             check(restartGuard.evaluate(OrionAiExitHistory(clock.monotonicNow(), emptyList()))
                                 .eligibleForResourceEvaluation)
                             check(fixtureDecision(plan, 512, 2, 16).allowed)
-                            val inferenceId = UUID.randomUUID().toString()
+                            val inferenceId = service.issueRequestId().getString("requestId")!!
                             stage("TIMEOUT_INFERENCE_BEGIN")
                             val start = clock.monotonicNow()
                             val specification = Bundle().apply {
@@ -303,9 +333,9 @@ class OrionCortexRuntimeTest {
         }, listOf(plan), 1000, 1000).evaluate()
     }
 
-    private fun request(prompt: String) = OrionInferenceRequest(UUID.randomUUID().toString(), 1, MODEL_SHA256,
+    private fun request(client: OrionCortexClient, prompt: String, tokens: Int = 4) = OrionInferenceRequest(client.newRequestId(), 1, MODEL_SHA256,
         // Short functional fixture: preserve streaming/death checkpoints without claiming performance qualification.
-        prompt, "", 4, 0.0, OrionInferencePriority.INTERACTIVE,
+        prompt, "", tokens, 0.0, OrionInferencePriority.INTERACTIVE,
         clock.monotonicNow().deadlineAfter(120_000), UUID.randomUUID().toString())
 
     private fun aiProcess(): ActivityManager.RunningAppProcessInfo? =

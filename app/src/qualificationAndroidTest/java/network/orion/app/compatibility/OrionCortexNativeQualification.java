@@ -18,7 +18,6 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -26,16 +25,19 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Platform-only black-box probe of the minified :ai service and its kept JNI.
  * Never constructs a native runtime in MAIN and never supplies a usable model.
- * Stable AIDL protocol 1.0 transaction order avoids depending on R8 class names.
+ * Original AIDL transaction order plus the negotiated 1.1 append avoids R8 names.
  */
 final class OrionCortexNativeQualification {
     private static final String DESCRIPTOR = "network.orion.ai.api.IOrionCortex";
     private static final String SERVICE = "network.orion.ai.service.OrionCortexService";
     private static final int PROTOCOL = IBinder.FIRST_CALL_TRANSACTION;
     private static final int LOAD = IBinder.FIRST_CALL_TRANSACTION + 1;
+    private static final int CANCEL = IBinder.FIRST_CALL_TRANSACTION + 3;
     private static final int REQUEST_STATUS = IBinder.FIRST_CALL_TRANSACTION + 4;
     private static final int STATUS = IBinder.FIRST_CALL_TRANSACTION + 5;
     private static final int HEALTH = IBinder.FIRST_CALL_TRANSACTION + 7;
+    private static final int ISSUE_ID = IBinder.FIRST_CALL_TRANSACTION + 8;
+    private static final int CAPABILITIES = IBinder.FIRST_CALL_TRANSACTION + 9;
 
     static Bundle run(Context context) throws Exception {
         final int mainPid = Process.myPid();
@@ -60,9 +62,21 @@ final class OrionCortexNativeQualification {
             IBinder service = remote.get();
             check(service != null && DESCRIPTOR.equals(service.getInterfaceDescriptor()), "Wrong Cortex descriptor");
             Bundle protocol = call(service, PROTOCOL, null);
+            // Original 1.0 envelope/transaction: a legacy client must accept it.
             envelope(protocol, "status", "major", "minor");
             check("OK".equals(protocol.getString("status")) && protocol.getInt("major") == 1
-                    && protocol.getInt("minor") == 0, "Wrong Cortex protocol");
+                    && protocol.getInt("minor") == 1, "Wrong Cortex protocol");
+            Bundle capabilities = call(service, CAPABILITIES, null);
+            envelope(capabilities, "status", "capabilities");
+            check("OK".equals(capabilities.getString("status"))
+                    && "orion_issued_request_history_v1".equals(capabilities.getString("capabilities")),
+                    "Cortex issued history unavailable");
+            String retired = issue(service);
+            cancel(service, retired);
+            for (int index = 0; index < 96; index++) cancel(service, issue(service));
+            Bundle duplicate = call(service, REQUEST_STATUS, data -> data.writeString(retired));
+            envelope(duplicate, "status");
+            check("DUPLICATE_REQUEST".equals(duplicate.getString("status")), "Retired R8 identity became executable");
 
             // The real hash passes transport integrity checks; invalid GGUF bytes
             // must reach JNI metadata validation after the actual native constructor.
@@ -71,7 +85,7 @@ final class OrionCortexNativeQualification {
             try (FileOutputStream output = new FileOutputStream(corrupt)) { output.write(bytes); output.getFD().sync(); }
             StringBuilder hash = new StringBuilder();
             for (byte value : MessageDigest.getInstance("SHA-256").digest(bytes)) hash.append(String.format("%02x", value));
-            String requestId = "orion_r8_probe_" + UUID.randomUUID();
+            String requestId = issue(service);
             Bundle specification = new Bundle();
             specification.putInt("schemaVersion", 1);
             specification.putString("requestId", requestId);
@@ -131,6 +145,25 @@ final class OrionCortexNativeQualification {
     }
 
     private interface Writer { void write(Parcel data); }
+
+    private static String issue(IBinder service) throws Exception {
+        Bundle receipt = call(service, ISSUE_ID, null);
+        envelope(receipt, "status", "requestId");
+        String id = receipt.getString("requestId");
+        check("OK".equals(receipt.getString("status")) && id != null && id.startsWith("orion_request/"),
+                "Issued R8 identity unavailable");
+        return id;
+    }
+
+    private static void cancel(IBinder service, String id) throws Exception {
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(DESCRIPTOR); data.writeString(id);
+            check(service.transact(CANCEL, data, reply, 0), "Cortex cancellation unavailable");
+            reply.readException();
+        } finally { data.recycle(); reply.recycle(); }
+    }
 
     private static Bundle call(IBinder service, int transaction, Writer writer) throws Exception {
         Parcel data = Parcel.obtain();

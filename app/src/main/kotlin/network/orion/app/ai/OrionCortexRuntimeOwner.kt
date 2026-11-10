@@ -30,7 +30,7 @@ internal data class OrionCortexResourceTiming(val maximumObservationAgeMillis: L
 
 internal enum class OrionCortexUnavailable {
     CLOSED, NO_QUALIFIED_PROFILE, RESOURCE_CONFIGURATION_UNAVAILABLE, CORE_NOT_READY,
-    PROCESS_INVENTORY_UNAVAILABLE, MODEL_NOT_READY, MODEL_UNAVAILABLE, PROFILE_MISMATCH,
+    PROCESS_INVENTORY_UNAVAILABLE, MODEL_NOT_READY, MODEL_UNAVAILABLE, PROFILE_MISMATCH, REQUEST_RETIRED,
 }
 
 internal sealed interface OrionCortexRunResult {
@@ -62,6 +62,8 @@ internal class OrionCortexRuntimeOwner(
     private var copiesClean = false
     private var unregisteredAfter: String? = null
     private var unregisteredClean = false
+    private val requestHistory = OrionInferenceRequestLedger()
+    fun newRequestId(): String { check(!closed); return requestHistory.newRequestId() }
     private val governor = timing?.takeIf { plans.isNotEmpty() }?.let {
         OrionMinimumResourceGovernor(clock, { observation }, plans, it.maximumObservationAgeMillis, it.memoryExitCooldownMillis)
     }
@@ -136,12 +138,14 @@ internal class OrionCortexRuntimeOwner(
                             checkNotNull(governor).evaluate()
                         } },
                         restart = { checkNotNull(restart).evaluate(if (coreReady() && discoverInventory() != null)
-                            observer?.observe(null, 1, 32, 1)?.aiExitHistory else null) }).also { client = it }
+                            observer?.observe(null, 1, 32, 1)?.aiExitHistory else null) },
+                        requestHistory = requestHistory).also { client = it }
                 } ?: return@withContext unavailable(OrionCortexUnavailable.CLOSED)
                 OrionCortexRunResult.Completed(ownedClient.runInference(checkNotNull(selected), it, request,
                     contextTokens, threads, onChunks))
             }
         } catch (cancelled: CancellationException) { throw cancelled }
+          catch (_: network.orion.ai.api.OrionRetiredRequestException) { unavailable(OrionCortexUnavailable.REQUEST_RETIRED) }
           catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); throw interrupted }
           catch (_: Exception) { unavailable(OrionCortexUnavailable.MODEL_UNAVAILABLE) }
     }

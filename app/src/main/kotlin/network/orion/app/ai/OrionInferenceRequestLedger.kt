@@ -6,25 +6,27 @@ import network.orion.ai.api.OrionInferenceFailure
 import network.orion.ai.api.OrionInferenceStage
 import network.orion.ai.api.OrionInferenceStatus
 import network.orion.ai.api.OrionInferenceTerminal
+import network.orion.ai.api.OrionIssuedRequestHistory
 
 /** Bounded ephemeral identity ownership shared by active, queued and terminal requests. */
 internal class OrionInferenceRequestLedger {
     private class Entry(val fingerprint: String) { val result = CompletableDeferred<OrionInferenceStatus>() }
     private val monitor = Any()
-    private val entries = linkedMapOf<String, Entry>()
+    private val entries = OrionIssuedRequestHistory<Entry> { it.result.isCompleted }
+
+    fun newRequestId(): String = entries.issue()
 
     suspend fun runOnce(id: String, fingerprint: String,
         cancelledStatus: () -> OrionInferenceStatus = {
             OrionInferenceStatus(OrionInferenceStage.TERMINAL, OrionInferenceTerminal.CANCELLED, null)
         }, operation: suspend () -> OrionInferenceStatus): OrionInferenceStatus {
         val (entry, owns) = synchronized(monitor) {
-            val existing = entries[id]
+            val existing = entries.find(id)
             if (existing != null) {
                 check(existing.fingerprint == fingerprint) { "Inference request identity conflict." }
                 existing to false
             } else {
-                check(entries.size < 64) { "Inference history capacity reached." }
-                Entry(fingerprint).also { entries[id] = it } to true
+                Entry(fingerprint).also { entries.put(id, it) } to true
             }
         }
         if (!owns) return entry.result.await()

@@ -1,11 +1,14 @@
 package network.orion.ai.api
 
 import network.orion.core.ipc.OrionIpcProtocol
+import network.orion.core.ipc.ProtocolInfo
+import network.orion.core.ipc.IpcCapabilityId
 import network.orion.core.time.MonotonicDeadline
 
 /** Uses the existing baseline major/minor negotiation; no subsystem-specific authority. */
 object OrionCortexProtocol {
-    val CURRENT = OrionIpcProtocol.CURRENT
+    val ISSUED_HISTORY = IpcCapabilityId("orion_issued_request_history_v1")
+    val CURRENT = ProtocolInfo(OrionIpcProtocol.CURRENT.protocolMajor, 1, setOf(ISSUED_HISTORY))
     const val SCHEMA_VERSION = 1
 }
 
