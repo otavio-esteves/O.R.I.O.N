@@ -61,7 +61,9 @@ class OrionCortexRuntimeTest {
                     val request = request(client, "Hello", tokens = 1)
                     val chunks = mutableListOf<OrionInferenceChunk>()
                     val result = checkNotNull(importer.openReadOnly(row.modelId)).use { descriptor ->
-                        client.runInference(row, descriptor, request, 128, 2) { chunks.addAll(it) }
+                        // Match the real-model fixture plan: llama.cpp pads context
+                        // to 256 tokens; the native budget guard must reject 128.
+                        client.runInference(row, descriptor, request, 512, 2) { chunks.addAll(it) }
                     }
                     assertEquals(OrionInferenceTerminal.SUCCEEDED, result.terminal)
                     assertEquals(1, chunks.count { it.isFinal })

@@ -55,3 +55,12 @@ guards remain strict and existing transaction IDs remain unchanged.
 
 OUT OF SCOPE: Other pending audit fixes, the long real-model cycle qualification,
 physical gate closure, production inference enablement, commits and publishing.
+
+## Sustained native fixture calibration
+
+The 33-cycle acceptance case uses the same 512-token context as the existing
+real-model fixture plan. The pinned llama.cpp rounds contexts up to multiples of
+256; requesting 128 correctly trips the native guard against allocating a larger
+context than approved. This corrects the test configuration, preserving the guard,
+all 33 iterations, both PID checks, one terminal result per request, fresh resource
+approval, and the original deadlines. It grants no production profile approval.
