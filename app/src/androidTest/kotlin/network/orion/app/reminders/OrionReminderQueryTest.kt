@@ -74,6 +74,25 @@ class OrionReminderQueryTest {
         unavailable = false
         assertEquals(ReminderContentState.READABLE, query.get(GetReminders()).items.single().contentState)
     }
+    @Test fun missingActionRequiresCommittedFiredTimestampAndCurrentGenerationForDeliveredHistory() = fixture { db, store, query ->
+        val id = create(store)
+        val missingAction = UUID.randomUUID().toString()
+        fun change(state: String, firedAt: Long?, generation: Long = 1) {
+            db.openHelper.writableDatabase.execSQL("""UPDATE orion_reminders SET status=?, deliveryActionId=?,
+                scheduledAt=100, lastFiredAt=?, fireGeneration=? WHERE reminderId=?""",
+                arrayOf<Any?>(state, missingAction, firedAt, generation, id.toString()))
+        }
+        change("PENDING", 101)
+        assertEquals(ReminderAlertState.EXPIRED, query.find(id)?.alertState)
+        change("FIRED", null)
+        assertEquals(ReminderAlertState.EXPIRED, query.find(id)?.alertState)
+        change("FIRED", 99)
+        assertEquals(ReminderAlertState.EXPIRED, query.find(id)?.alertState)
+        change("FIRED", 101, 0)
+        assertEquals(ReminderAlertState.EXPIRED, query.find(id)?.alertState)
+        change("FIRED", 100)
+        assertEquals(ReminderAlertState.DELIVERED, query.find(id)?.alertState)
+    }
     private fun count(db: OrionDatabase, table: String) = db.openHelper.readableDatabase.query("SELECT count(*) FROM $table").use {
         assertTrue(it.moveToFirst()); it.getInt(0)
     }

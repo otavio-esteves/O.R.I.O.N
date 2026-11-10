@@ -47,7 +47,7 @@ class OrionTimerMigrationTest {
                 upgraded.query("SELECT count(*) FROM orion_timers").use { assertTrue(it.moveToFirst());assertEquals(0,it.getInt(0)) }
             }
             val reopened=Room.databaseBuilder(context,OrionDatabase::class.java,name)
-                .addMigrations(OrionDatabaseMigrations.MIGRATION_4_5).build()
+                .addMigrations(OrionDatabaseMigrations.MIGRATION_4_5, OrionDatabaseMigrations.MIGRATION_5_6).build()
             try { reopened.verifyStructure() } finally { reopened.close() }
         } finally { context.deleteDatabase(name) }
     }

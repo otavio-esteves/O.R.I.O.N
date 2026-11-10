@@ -68,6 +68,51 @@ class OrionReminderKernelTest {
         release(); assertEquals(1, kernel.ingress.drain(25)); assertEquals(1, kernel.pending().size)
         assertEquals(0, count("orion_reminders"))
     }
+    @Test fun sameTitlePendingTimesRemainExactAndDistinctAcrossReopenAndDstOverlap() {
+        val times = listOf("2027-11-07T05:30:00.001Z", "2027-11-07T06:30:00.999Z")
+        val expected = listOf(
+            "Preparar viagem — 07/11/2027 01:30:00.001 -04:00 [America/New_York]",
+            "Preparar viagem — 07/11/2027 01:30:00.999 -05:00 [America/New_York]",
+        )
+        val ids = times.map { time ->
+            val id = UUID.randomUUID(); val key = UUID.randomUUID()
+            assertEquals(ReminderOperationOutcome.QUEUED, kernel.submit(OrionReminderIngressWire(
+                "CREATE", id, key, UUID.randomUUID(), command.title,
+                scheduledAtMillis = Instant.parse(time).toEpochMilli(), zoneId = "America/New_York"), key))
+            id
+        }
+        fun displays() = ids.map { id -> kernel.pending().single { it.create?.reminder?.reminderId == id }.display.title }
+        assertEquals(expected, displays())
+        val before = kernel.pending().associate { it.display.actionId to
+            db.actions().find(it.display.actionId.toString())!!.confirmationFingerprint }
+        db.close(); bind(); release()
+        assertEquals(expected, displays())
+        for ((id, fingerprint) in before) {
+            val row = db.actions().find(id.toString())!!
+            assertEquals(fingerprint, row.confirmationFingerprint)
+            assertEquals(ActionStatus.NEEDS_CONFIRMATION, row.status)
+            assertNull(row.confirmedAt)
+        }
+        assertEquals(0, count("orion_reminders"))
+    }
+
+    @Test fun snoozePendingDisplayShowsExactNewTimeAndZoneAfterReopen() {
+        val created = prepared()
+        assertEquals(ReminderOperationOutcome.APPLIED, kernel.submit(consent(created), UUID.randomUUID()))
+        val key = UUID.randomUUID()
+        assertEquals(ReminderOperationOutcome.QUEUED, kernel.submit(OrionReminderIngressWire(
+            "SNOOZE", command.reminderId, key, UUID.randomUUID(), expectedVersion = 0,
+            scheduledAtMillis = Instant.parse("2026-11-05T06:10:00.123Z").toEpochMilli(),
+            zoneId = "Asia/Kathmandu"), key))
+        val expected = "Preparar viagem — 05/11/2026 11:55:00.123 +05:45 [Asia/Kathmandu]"
+        assertEquals(expected, kernel.pending().single().display.title)
+        db.close(); bind(); release()
+        val pending = kernel.pending().single()
+        assertEquals(expected, pending.display.title)
+        assertEquals(ReminderOperation.SNOOZE, pending.display.operation)
+        assertNull(db.actions().find(pending.display.actionId.toString())!!.confirmedAt)
+        assertEquals(command.scheduledAt.toEpochMilli(), db.reminders().find(command.reminderId.toString())!!.scheduledAt)
+    }
     @Test fun actualIngressCommitsConfirmationReminderEventSuccessAndReplayTogether() {
         val pending = prepared(); val receipt = consent(pending); val key = UUID.randomUUID()
         val replayTrace = OrionReminderIngressWire("CREATE", command.reminderId, command.idempotencyKey, UUID.randomUUID(), command.title, scheduledAtMillis = command.scheduledAt.toEpochMilli(), zoneId = command.zoneId.id)

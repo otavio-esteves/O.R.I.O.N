@@ -1,0 +1,43 @@
+cmake_minimum_required(VERSION 4.0.2)
+project(orion_llama LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set_property(GLOBAL PROPERTY JOB_POOLS orion_compile=2 orion_link=1)
+set(CMAKE_JOB_POOL_COMPILE orion_compile)
+set(CMAKE_JOB_POOL_LINK orion_link)
+
+# Source-only development dependency; pinned archive is verified before extraction.
+# FetchContent's cache is under the ignored module .cxx directory, never in APK runtime.
+include(FetchContent)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_COMMON OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+set(LLAMA_OPENSSL OFF CACHE BOOL "" FORCE)
+set(LLAMA_CURL OFF CACHE BOOL "" FORCE)
+set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
+set(GGML_LLAMAFILE OFF CACHE BOOL "" FORCE)
+set(GGML_BACKEND_DL OFF CACHE BOOL "" FORCE)
+set(GGML_CPU_KLEIDIAI OFF CACHE BOOL "" FORCE)
+set(GGML_RPC OFF CACHE BOOL "" FORCE)
+set(GGML_CUDA OFF CACHE BOOL "" FORCE)
+set(GGML_VULKAN OFF CACHE BOOL "" FORCE)
+set(GGML_OPENCL OFF CACHE BOOL "" FORCE)
+set(GGML_METAL OFF CACHE BOOL "" FORCE)
+set(GGML_AVX OFF CACHE BOOL "" FORCE)
+set(GGML_AVX2 OFF CACHE BOOL "" FORCE)
+set(GGML_FMA OFF CACHE BOOL "" FORCE)
+set(GGML_F16C OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(llama
+    URL https://codeload.github.com/ggml-org/llama.cpp/tar.gz/7d7f0287530bc8981690f361d8c1627dbae1c99a
+    URL_HASH SHA256=2f15b173875f53cb2a3d099b65875a24824859b0b9a7ede276d58ec2881ae085
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+FetchContent_MakeAvailable(llama)
+
+add_library(orion_llama SHARED orion_llama_jni.cpp)
+target_link_libraries(orion_llama PRIVATE llama)
+target_compile_options(orion_llama PRIVATE -Wall -Wextra -Werror -fvisibility=hidden)
+target_link_options(orion_llama PRIVATE -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384)
