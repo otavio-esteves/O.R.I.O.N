@@ -126,6 +126,43 @@ class OrionReminderDeliveryPipelineTest {
         assertEquals(1, invocations)
     }
 
+    @Test fun committedDeliveryRemainsVisibleAfterActualActionRetentionAndDatabaseReopen() = runBlocking {
+        val id = create(); val preview = enable(id); wall = preview.scheduledAt
+        assertEquals(ReminderDeliveryOutcome.POSTED, pipeline.executeDue(id, preview.generation))
+        val before = checkNotNull(db.reminders().find(id.toString()))
+        wall = wall.plus(java.time.Duration.ofDays(91))
+        val pruned = network.orion.data.repository.OrionRetentionMaintenance(db.retention(), clock).runBatch()
+        assertEquals(1, pruned.actions)
+        assertNull(db.actions().find(preview.actionId.toString()))
+        fun assertHistory() {
+            val summary = checkNotNull(network.orion.data.reminders.OrionReminderQuery(db, encryption, clock).find(id))
+            assertEquals(network.orion.core.queries.reminders.ReminderAlertState.DELIVERED, summary.alertState)
+            assertEquals(network.orion.core.queries.reminders.ReminderState.FIRED, summary.state)
+            val retained = checkNotNull(db.reminders().find(id.toString()))
+            assertEquals(before.version, retained.version)
+            assertEquals(before.lastFiredAt, retained.lastFiredAt)
+            assertArrayEquals(before.contentEnvelope, retained.contentEnvelope)
+            assertEquals(1, invocations)
+        }
+        assertHistory()
+        db.close()
+        db = Room.databaseBuilder(context, OrionDatabase::class.java, name).build()
+        assertHistory()
+    }
+
+    @Test fun retentionKeepsUncertainDeliveryAndNeverCreatesSuccessfulHistoryOrReplay() = runBlocking {
+        val id = create(); val preview = enable(id); wall = preview.scheduledAt
+        result = NotificationPostResult.UNKNOWN
+        assertEquals(ReminderDeliveryOutcome.UNKNOWN, pipeline.executeDue(id, preview.generation))
+        wall = wall.plus(java.time.Duration.ofDays(91))
+        assertEquals(0, network.orion.data.repository.OrionRetentionMaintenance(db.retention(), clock).runBatch().actions)
+        assertEquals(ActionStatus.UNKNOWN, db.actions().find(preview.actionId.toString())?.status)
+        assertEquals(network.orion.core.queries.reminders.ReminderAlertState.UNCERTAIN,
+            network.orion.data.reminders.OrionReminderQuery(db, encryption, clock).find(id)?.alertState)
+        assertEquals(ReminderDeliveryOutcome.UNKNOWN, pipeline.executeDue(id, preview.generation))
+        assertEquals(1, invocations)
+    }
+
     @Test fun revokedPermissionAndStartupBarrierNeverMarkReminderDelivered() = runBlocking {
         val id = create(); val preview = enable(id); wall = preview.scheduledAt
         permission = false

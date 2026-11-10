@@ -42,6 +42,12 @@ class OrionReminderQuery(private val database: OrionDatabase, private val encryp
     private fun alertState(row: network.orion.data.database.ReminderEntity): ReminderAlertState {
         val actionId = row.deliveryActionId ?: return ReminderAlertState.DISABLED
         val action = database.actions().find(actionId)
+        // Completed action history is prunable. The same committed delivery wrote
+        // FIRED and lastFiredAt on the authoritative reminder; legacy rows lack it.
+        // This is display evidence only and never grants delivery/retry authority.
+        if (action == null && row.status == network.orion.data.database.ReminderStatus.FIRED &&
+            row.fireGeneration > 0 && row.lastFiredAt?.let { it >= row.scheduledAt } == true)
+            return ReminderAlertState.DELIVERED
         if (action?.status == network.orion.core.actions.ActionStatus.CONFIRMED &&
             action.confirmationExpiresAt?.let { clock.wallNow().toEpochMilli() >= it } == true) return ReminderAlertState.EXPIRED
         return when (action?.status) {
