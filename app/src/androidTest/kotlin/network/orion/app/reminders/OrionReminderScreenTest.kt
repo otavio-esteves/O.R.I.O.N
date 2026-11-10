@@ -71,6 +71,24 @@ class OrionReminderScreenTest {
         // The button's enabled assertion below must still hold after scrolling.
         compose.onNodeWithText("Título do lembrete").assertTextContains(title)
     }
+    private fun pendingDisplay(title: String): String = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+        val runtime = checkNotNull((compose.activity.application as OrionApplication).mainRuntime)
+        checkNotNull(runtime.reminderKernel).pending().single { it.display.title?.startsWith("$title — ") == true }
+            .display.title!!
+    }
+    private fun assertPendingDisplay(display: String) {
+        ready()
+        compose.waitUntil(10_000) {
+            try {
+                compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(display))
+                true
+            } catch (failure: AssertionError) {
+                if (!failure.message.orEmpty().startsWith("No node found that matches")) throw failure
+                false
+            }
+        }
+        compose.onNodeWithText(display).assertIsDisplayed()
+    }
     @Test fun reminderRequiresExplicitConfirmationAndSurvivesRecreationBeforeCompletion() {
         compose.waitUntil(30_000) {
             checkNotNull((compose.activity.application as OrionApplication).mainRuntime).taskStartupBarrier.isOpen()
@@ -80,12 +98,20 @@ class OrionReminderScreenTest {
         val second = "Cancelar UI ${java.util.UUID.randomUUID()}"
         type(first)
         click("Preparar criação")
+        val creationDisplay = pendingDisplay(first)
+        assertPendingDisplay(creationDisplay)
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(within(first, "orion_reminder_confirmation"))
         compose.onNode(within(first, "orion_reminder_row")).assertDoesNotExist()
         compose.activityRule.scenario.recreate()
         ready()
+        assertPendingDisplay(creationDisplay)
         click("Confirmar criação", first)
         click("Adiar 10 min", first, "orion_reminder_row")
+        val snoozeDisplay = pendingDisplay(first)
+        org.junit.Assert.assertNotEquals(creationDisplay, snoozeDisplay)
+        assertPendingDisplay(snoozeDisplay)
+        compose.activityRule.scenario.recreate()
+        assertPendingDisplay(snoozeDisplay)
         click("Confirmar adiamento", first)
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Pendente") and hasAnyAncestor(within(first, "orion_reminder_row")))
         type(second)
