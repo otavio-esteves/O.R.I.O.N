@@ -481,11 +481,21 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             // Existing facts and eligible retention must progress before expiry adds
             // cancellation facts; a full outbox must not block its own cleanup.
             scheduler.publishEvents()
-            val pruned = network.orion.data.repository.OrionRetentionMaintenance(db.retention(), clock).runBatch()
+            val retentionPolicy = network.orion.data.repository.OrionRetentionPolicy()
+            val pruned = network.orion.data.repository.OrionRetentionMaintenance(db.retention(), clock, retentionPolicy).runBatch()
             val delivery = reminderDelivery
-            if (delivery != null)
-                network.orion.app.reminderdelivery.OrionReminderDeliveryRetention(db, delivery.actions, clock).expireBatch(100)
-            reminderDelivery?.drainUi(100)
+            val expirationBatchSize = 100
+            val expiredProposals = if (delivery != null)
+                network.orion.app.reminderdelivery.OrionReminderDeliveryRetention(db, delivery.actions, clock).expireBatch(expirationBatchSize)
+                else 0
+            val ingressNeedsContinuation = drainIngressMaintenance(listOfNotNull(
+                taskKernel?.ingress?.let { it::drain },
+                reminderKernel?.ingress?.let { it::drain },
+                timerKernel?.ingress?.let { it::drain },
+                memoryKernel?.ingress?.let { it::drain },
+                notificationKernel?.ingress?.let { it::drain },
+                reminderDelivery?.let { it::drainUi },
+            ))
             val reconciled = scheduler.reconcileRegistrations()
             val delivered = scheduler.deliverDue()
             val published = scheduler.publishEvents()
@@ -499,8 +509,10 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 OrionSubsystem.SCHEDULER to if (reconciled.healthy && reconciled.complete && delivered.healthy) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED))
             // Retry only unfinished internal batches. Denied permission/UNKNOWN remain observable,
             // and await a later capability event/heartbeat instead of creating a tight retry loop.
-            maintenanceNeedsContinuation = !reconciled.complete || !delivered.complete || scheduler.hasDueEvents()
-            val healthy = !maintenanceNeedsContinuation && reconciled.healthy && delivered.healthy
+            val outcome = maintenanceOutcome(pruned, retentionPolicy.batchSize, expiredProposals, expirationBatchSize,
+                ingressNeedsContinuation, reconciled, delivered, published, scheduler.hasDueEvents())
+            maintenanceNeedsContinuation = outcome.needsContinuation
+            val healthy = outcome.healthy
             try {
                 Log.i(OrionMaintenanceSnapshot.LOG_TAG, readMaintenanceSnapshot(app, db, clock, origin, healthy, pruned,
                     maintenanceObservationSequence.incrementAndGet()).toLogLine())

@@ -366,6 +366,25 @@ class TransactionCorePersistenceTest {
         }
     }
 
+    @Test fun retentionContinuationDrainsEligibleBacklogAndStopsWithoutPruningReviewData() {
+        repeat(105) { index ->
+            database.records().appendTechnical(TechnicalEventEntity(uuid(), "CORE", "TASK_INDEXED", 100L + index, uuid()))
+        }
+        val unknown = uuid()
+        insertOldAction(database.openHelper.writableDatabase, unknown, "UNKNOWN")
+        var passes = 0
+        var removed = 0
+        do {
+            val batch = database.retention().prune(10_000, 5000, 5000, 5000, 5000, 5000, 100, 50)
+            removed += batch.technical
+            passes++
+            assertTrue("Cleanup must terminate", passes <= 3)
+        } while (batch.needsContinuation(50))
+        assertEquals(3, passes)
+        assertEquals(105, removed)
+        assertNotNull(database.actions().find(unknown))
+    }
+
     private fun task() = TaskEntity(uuid(), byteArrayOf(1, 2), Sensitivity.SECRET, 100, 100)
     private fun event(id: String, type: String = "TASK_CREATED", version: Long = 0, at: Long = 100) =
         DomainEventOutboxEntity(uuid(), id, version, type, 1, Sensitivity.SECRET, at, uuid())

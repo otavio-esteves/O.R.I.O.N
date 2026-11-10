@@ -112,6 +112,27 @@ class OrionSchedulingCoordinatorTest {
     }
     @After fun close() { channel.close(); db.close(); context.deleteDatabase(name) }
 
+    @Test fun deadLetterKeepsMaintenanceDegradedWithoutRetryingTheEventOrInvokingEffects() = runBlocking {
+        val event = DomainEventOutboxEntity(UUID.randomUUID().toString(), UUID.randomUUID().toString(), 0,
+            "TASK_CREATED", 1, Sensitivity.SENSITIVE, wall.toEpochMilli(), UUID.randomUUID().toString())
+        db.events().append(event)
+        assertTrue(db.events().deadLetter(event.eventId, 0))
+        val before = db.events().find(event.eventId)!!
+        repeat(3) {
+            val published = coordinator.publishEvents()
+            val result = network.orion.app.maintenanceOutcome(RetentionResult(0, 0, 0, 0, 0), 50,
+                0, 100, false, coordinator.reconcileRegistrations(), coordinator.deliverDue(),
+                published, coordinator.hasDueEvents())
+            assertFalse(result.healthy)
+            assertFalse(result.needsContinuation)
+        }
+        val after = db.events().find(event.eventId)!!
+        assertEquals(DomainEventDeliveryStatus.DEAD_LETTER, after.status)
+        assertEquals(before.attemptCount, after.attemptCount)
+        assertEquals(before.version, after.version)
+        assertEquals(0, invocations)
+    }
+
     @Test fun staleEarlyCallbacksNeverPoisonValidKeyAndGatedFactDrainsWithoutExternalExecution() = runBlocking {
         val preview = enable()
         assertNull(coordinator.acceptAlarm(preview.reminderId, preview.generation))

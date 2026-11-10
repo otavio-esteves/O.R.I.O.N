@@ -74,8 +74,7 @@ class OrionMaintenanceWorker(context: Context, parameters: WorkerParameters) : C
             when {
                 healthy -> Result.success()
                 runtime.maintenanceNeedsContinuation -> Result.retry() // A persisted cursor advances; this is not retrying an external effect.
-                runAttemptCount < 2 -> Result.retry()
-                else -> Result.success() // Keep observable degradation; the next heartbeat/capability event can reevaluate.
+                else -> Result.failure() // Stable degradation is not success; heartbeat/capability events may reevaluate.
             }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { runtime.recordMaintenanceFailure(); if (runAttemptCount < 2) Result.retry() else Result.failure() }

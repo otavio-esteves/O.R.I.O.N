@@ -16,6 +16,7 @@ internal enum class OrionMemoryActionFailure {
     STARTUP_GATED, POLICY_DENIED, POLICY_UNAVAILABLE, POLICY_CHANGED,
     IDEMPOTENCY_CONFLICT, CONFLICT, NOT_FOUND, INVALID_STATE, UNREADABLE,
     KEY_UNAVAILABLE, CONFIRMATION_MISMATCH, CONFIRMATION_STALE, CONFIRMATION_EXPIRED,
+    CAPACITY_EXCEEDED,
 }
 
 /** Selected display content and exact binding, never proof of a gesture or authority. */
@@ -61,6 +62,12 @@ internal class OrionCreateMemoryActionStore(
     fun prepare(admission: OrionCreateMemoryAdmission): OrionMemoryActionResult = admittedTransaction {
         val version = policyVersion(admission)
         val memory = admission.memory
+        // Writer-owned admission cap. Replays, confirmations, dismissal and forget
+        // keep working at capacity; unresolved actions are never silently pruned.
+        if (database.actions().findByKey(idempotency.scope, memory.idempotencyKey.toString()) == null &&
+            (database.memories().pendingCreationActionCount() >= MAX_PENDING_PROPOSALS ||
+                database.memories().retainedCreationActionCount() >= MAX_RETAINED_PROPOSALS))
+            abort(OrionMemoryActionFailure.CAPACITY_EXCEEDED)
         val incoming = normalized(UUID.randomUUID(), memory, version)
         val registration = actions.register(incoming, idempotency, memory.idempotencyKey.toString(),
             memory.correlationId, Sensitivity.SENSITIVE, true)
@@ -162,6 +169,8 @@ internal class OrionCreateMemoryActionStore(
     }
 
     companion object {
+        internal const val MAX_PENDING_PROPOSALS = 1000
+        internal const val MAX_RETAINED_PROPOSALS = 10_000
         internal fun normalized(id: UUID, memory: ValidatedCreateMemory, policyVersion: String): NormalizedActionRequest {
             val descriptor = OrionCreateMemoryDescriptor.value
             return NormalizedActionRequest(id, descriptor.name, memory.canonicalNormalizedArguments, memory.normalizedTarget,

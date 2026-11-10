@@ -24,10 +24,11 @@ internal class OrionMemoryPayloadErasure(private val db: OrionDatabase,
     fun erase(id: UUID) {
         check(db.inTransaction())
         val dao = db.memories()
-        val actionRows = dao.creationActions()
-        val ingressRows = dao.memoryIngress()
-        if (actionRows.size > 10_000 || ingressRows.size > 10_000) unavailable()
-        for (row in actionRows) {
+        // Capture finite high-water marks under this same writer transaction.
+        // Legacy histories above the new admission cap must remain forgettable.
+        val lastAction = dao.lastCreationActionId()
+        val lastIngress = dao.lastMemoryIngressId()
+        for (row in creationActions(lastAction)) {
             if (row.argumentsEnvelope.isEmpty() && row.targetEnvelope.isEmpty()) {
                 if (row.status !in terminalActions) unavailable()
                 continue
@@ -49,7 +50,7 @@ internal class OrionMemoryPayloadErasure(private val db: OrionDatabase,
             val current = db.actions().find(row.actionId) ?: unavailable()
             if (dao.eraseTerminalCreate(current.actionId, current.version) != 1) unavailable()
         }
-        for (row in ingressRows) {
+        for (row in memoryIngress(lastIngress)) {
             if (row.payloadEnvelope.isEmpty()) {
                 if (row.status !in terminalIngress) unavailable()
                 continue
@@ -79,6 +80,30 @@ internal class OrionMemoryPayloadErasure(private val db: OrionDatabase,
             if (dao.eraseTerminalIngress(current.ingressId, current.version) != 1) unavailable()
         }
     }
+
+    private fun creationActions(through: String?): Sequence<ActionRequestEntity> = sequence {
+        if (through == null) return@sequence
+        var after = ""
+        while (true) {
+            val page = db.memories().creationActionPage(after, through, PAGE_SIZE)
+            if (page.isEmpty()) break
+            yieldAll(page)
+            after = page.last().actionId
+            if (page.size < PAGE_SIZE) break
+        }
+    }
+
+    private fun memoryIngress(through: String?): Sequence<IngressEnvelopeEntity> = sequence {
+        if (through == null) return@sequence
+        var after = ""
+        while (true) {
+            val page = db.memories().memoryIngressPage(after, through, PAGE_SIZE)
+            if (page.isEmpty()) break
+            yieldAll(page)
+            after = page.last().ingressId
+            if (page.size < PAGE_SIZE) break
+        }
+    }
     private fun hash(row: IngressEnvelopeEntity, wire: ByteArray): String {
         val bytes = ByteArrayOutputStream().also { bytes ->
             DataOutputStream(bytes).use { out ->
@@ -95,6 +120,7 @@ internal class OrionMemoryPayloadErasure(private val db: OrionDatabase,
     }
     private fun unavailable(): Nothing = throw OrionMemoryTransactionBlocked.Execution(OrionMemoryExecutionFailure.STORAGE_UNAVAILABLE)
     private companion object {
+        const val PAGE_SIZE = 100
         val terminalActions = setOf(ActionStatus.SUCCEEDED,ActionStatus.FAILED,ActionStatus.CANCELLED)
         val terminalIngress = setOf(DurableIngressStatus.CONSUMED,DurableIngressStatus.REJECTED,DurableIngressStatus.EXPIRED,DurableIngressStatus.FAILED)
     }

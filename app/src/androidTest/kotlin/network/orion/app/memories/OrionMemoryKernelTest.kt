@@ -224,8 +224,111 @@ class OrionMemoryKernelTest {
         assertEquals(ActionStatus.NEEDS_CONFIRMATION,kept.status); assertArrayEquals(unrelated.argumentsEnvelope,kept.argumentsEnvelope)
         assertEquals("Unrelated personal statement",kernel.pending().single().display.content)
     }
+
+    /** Legacy history deliberately exceeds the former whole-table erasure limit. */
+    @Test fun forgetPagesBeyondTenThousandHistoricalActionsWithoutLeavingTargetCiphertext() {
+        val original = created()
+        seedHistoricalActions(original.display.actionId, 10_001, "SUCCEEDED")
+        val originalIngress = db.memories().memoryIngress().map { it.ingressId }
+        seedHistoricalIngress(originalIngress.first(), 101)
+        assertEquals(10_002, count("orion_action_requests"))
+        val forget = forgetPending()
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(consent(forget), UUID.randomUUID()))
+        assertNull(db.memories().find(command.memoryId.toString()))
+        assertEquals(1, db.memories().forgotten(command.memoryId.toString()))
+        assertTrue(db.actions().find(original.display.actionId.toString())!!.argumentsEnvelope.isEmpty())
+        for (id in originalIngress) assertTrue(db.ingress().find(id)!!.payloadEnvelope.isEmpty())
+        assertEquals(10_003, count("orion_action_requests")) // History and the forget receipt remain.
+    }
+
+    @Test fun pendingProposalLimitRejectsNewWorkButPreservesReplayAndExplicitDismissal() {
+        val original = prepared()
+        seedHistoricalActions(original.display.actionId, 999, "NEEDS_CONFIRMATION")
+        val key = UUID.randomUUID()
+        val newProposal = OrionMemoryIngressWire("CREATE", UUID.randomUUID(), key, UUID.randomUUID(), "New statement")
+        assertEquals(MemoryOperationOutcome.REJECTED, kernel.submit(newProposal, key))
+        assertEquals(1000, count("orion_action_requests"))
+        assertEquals(MemoryOperationOutcome.QUEUED, kernel.submit(wire(), UUID.randomUUID()))
+        assertEquals(1000, count("orion_action_requests"))
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(original.wire(dismiss = true), UUID.randomUUID()))
+        val nextKey = UUID.randomUUID()
+        assertEquals(MemoryOperationOutcome.QUEUED, kernel.submit(newProposal.copyForKey(nextKey), nextKey))
+        assertEquals(1001, count("orion_action_requests"))
+    }
+
+    @Test fun retainedProposalLimitStillAllowsConfirmationAndForgetOfAnExistingMemory() {
+        val original = prepared()
+        seedHistoricalActions(original.display.actionId, 9999, "SUCCEEDED")
+        val key = UUID.randomUUID()
+        assertEquals(MemoryOperationOutcome.REJECTED, kernel.submit(OrionMemoryIngressWire("CREATE",
+            UUID.randomUUID(), key, UUID.randomUUID(), "Capacity fixture"), key))
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(consent(original), UUID.randomUUID()))
+        val forget = forgetPending()
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(consent(forget), UUID.randomUUID()))
+        assertNull(db.memories().find(command.memoryId.toString()))
+    }
+
+    private fun OrionMemoryIngressWire.copyForKey(key: UUID) =
+        OrionMemoryIngressWire(operation, memoryId, key, trace, content)
+
+    private fun seedHistoricalActions(templateId: UUID, count: Int, status: String) {
+        require(status in setOf("SUCCEEDED", "NEEDS_CONFIRMATION"))
+        val sql = db.openHelper.writableDatabase
+        val columns = sql.query("PRAGMA table_info(orion_action_requests)").use { cursor ->
+            buildList { while (cursor.moveToNext()) add(cursor.getString(1)) }
+        }
+        val selection = columns.joinToString(",") { column -> when (column) {
+            "actionId", "idempotencyKey" -> "?"
+            "status" -> "?"
+            "argumentsEnvelope", "targetEnvelope" -> "X''" // Historical erased copies; never executable.
+            else -> column
+        } }
+        val statement = sql.compileStatement("INSERT INTO orion_action_requests (${columns.joinToString(",")}) " +
+            "SELECT $selection FROM orion_action_requests WHERE actionId=?")
+        db.runInTransaction {
+            statement.use {
+                repeat(count) { index ->
+                    var parameter = 1
+                    for (column in columns) when (column) {
+                        "actionId", "idempotencyKey" -> it.bindString(parameter++, UUID(0, index.toLong() + 1).toString())
+                        "status" -> it.bindString(parameter++, status)
+                    }
+                    it.bindString(parameter, templateId.toString())
+                    it.executeInsert()
+                }
+            }
+        }
+    }
+
+    private fun seedHistoricalIngress(templateId: String, count: Int) {
+        val sql = db.openHelper.writableDatabase
+        val columns = sql.query("PRAGMA table_info(orion_ingress_envelopes)").use { cursor ->
+            buildList { while (cursor.moveToNext()) add(cursor.getString(1)) }
+        }
+        val selection = columns.joinToString(",") { column -> when (column) {
+            "ingressId", "idempotencyKey" -> "?"
+            "status" -> "'CONSUMED'"
+            "payloadEnvelope" -> "X''"
+            else -> column
+        } }
+        val statement = sql.compileStatement("INSERT INTO orion_ingress_envelopes (${columns.joinToString(",")}) " +
+            "SELECT $selection FROM orion_ingress_envelopes WHERE ingressId=?")
+        db.runInTransaction {
+            statement.use {
+                repeat(count) { index ->
+                    it.bindString(1, UUID(0, index.toLong() + 1).toString())
+                    it.bindString(2, UUID(0, index.toLong() + 1).toString())
+                    it.bindString(3, templateId)
+                    it.executeInsert()
+                }
+            }
+        }
+    }
     @Test fun erasureFailureRollsBackDeletionClaimRemovalTombstoneAndEarlierCiphertextScrubs() {
-        val original=created(); val forget=forgetPending()
+        val original=created()
+        seedHistoricalActions(original.display.actionId, 101, "SUCCEEDED")
+        seedHistoricalIngress(db.memories().memoryIngress().first().ingressId, 101)
+        val forget=forgetPending()
         val ciphertext=db.actions().find(original.display.actionId.toString())!!.argumentsEnvelope.copyOf()
         val before=db.memories().memoryIngress().associate { it.ingressId to it.payloadEnvelope.copyOf() }
         db.openHelper.writableDatabase.execSQL("""CREATE TRIGGER orion_fail_memory_erase BEFORE UPDATE OF payloadEnvelope
