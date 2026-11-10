@@ -27,10 +27,13 @@ class OrionInferenceLifecycleTest {
 
     @Test fun `Cortex preserves baseline protocol negotiation`() {
         assertEquals(1, OrionCortexProtocol.CURRENT.protocolMajor)
-        assertEquals(0, OrionCortexProtocol.CURRENT.protocolMinor)
+        assertEquals(1, OrionCortexProtocol.CURRENT.protocolMinor)
         assertTrue(OrionCortexProtocol.CURRENT.negotiateWith(ProtocolInfo(2, 0)) is IpcProtocolNegotiation.MajorMismatch)
-        assertEquals(0, (OrionCortexProtocol.CURRENT.negotiateWith(ProtocolInfo(1, 3)) as
+        assertEquals(1, (OrionCortexProtocol.CURRENT.negotiateWith(ProtocolInfo(1, 3)) as
             IpcProtocolNegotiation.Compatible).protocolMinor)
+        val legacy = OrionCortexProtocol.CURRENT.negotiateWith(ProtocolInfo(1, 0)) as IpcProtocolNegotiation.Compatible
+        assertEquals(0, legacy.protocolMinor)
+        assertTrue(legacy.capabilities.isEmpty())
     }
 
     @Test fun `chunks are emitted once and in order including buffered terminal`() {

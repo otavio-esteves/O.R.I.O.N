@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
+import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import android.os.SharedMemory
 import android.system.OsConstants
@@ -19,6 +20,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import network.orion.ai.api.IOrionCortex
 import network.orion.ai.api.IOrionInferenceCallback
 import network.orion.ai.api.OrionCortexWire
+import network.orion.ai.api.OrionCortexProtocol
+import network.orion.ai.api.OrionIssuedRequestHistory
 import network.orion.core.time.AndroidOrionClock
 import org.junit.AfterClass
 import org.junit.Assert.*
@@ -32,6 +35,40 @@ import org.junit.runners.MethodSorters
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class OrionCortexBoundaryTest {
+    @Test fun a_legacyClientHandshakeAndOriginalTransactionsRemainCompatible() {
+        // Frozen protocol-1.0 transaction numbers and envelope: no new proxy or
+        // capability knowledge is allowed to make this legacy client compatible.
+        fun call(offset: Int, id: String? = null): Bundle {
+            val data = Parcel.obtain()
+            val reply = Parcel.obtain()
+            try {
+                data.writeInterfaceToken("network.orion.ai.api.IOrionCortex")
+                if (id != null) data.writeString(id)
+                assertTrue(remote.asBinder().transact(IBinder.FIRST_CALL_TRANSACTION + offset, data, reply, 0))
+                reply.readException()
+                return checkNotNull(reply.readTypedObject(Bundle.CREATOR))
+            } finally { data.recycle(); reply.recycle() }
+        }
+        val protocol = call(0)
+        OrionCortexWire.requireEnvelope(protocol, setOf("schemaVersion", "status", "major", "minor"))
+        assertEquals("OK", OrionCortexWire.text(protocol, "status"))
+        assertEquals(1, OrionCortexWire.int(protocol, "major"))
+        assertTrue(OrionCortexWire.int(protocol, "minor") >= 0)
+        val id = "orion_legacy_handshake_${UUID.randomUUID()}"
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            data.writeInterfaceToken("network.orion.ai.api.IOrionCortex"); data.writeString(id)
+            assertTrue(remote.asBinder().transact(IBinder.FIRST_CALL_TRANSACTION + 3, data, reply, 0))
+            reply.readException()
+        } finally { data.recycle(); reply.recycle() }
+        val status = call(4, id)
+        OrionCortexWire.requireEnvelope(status, setOf("schemaVersion", "status", "requestId", "state"))
+        assertEquals("OK", OrionCortexWire.text(status, "status"))
+        assertEquals(id, OrionCortexWire.text(status, "requestId"))
+        assertEquals("CANCELLED", OrionCortexWire.text(status, "state"))
+    }
+
     @Test fun a_privateManifestAndVersionedProtocol() {
         @Suppress("DEPRECATION")
         val info = app.packageManager.getServiceInfo(component, 0)
@@ -39,8 +76,12 @@ class OrionCortexBoundaryTest {
         assertEquals("${app.packageName}:ai", info.processName)
         val protocol = remote.getProtocolInfo()
         OrionCortexWire.requireEnvelope(protocol, setOf("schemaVersion", "status", "major", "minor"))
-        assertEquals(1, protocol.getInt("major")); assertEquals(0, protocol.getInt("minor"))
+        assertEquals(1, protocol.getInt("major")); assertEquals(1, protocol.getInt("minor"))
         assertEquals("OK", protocol.getString("status"))
+        val capabilities = remote.getCapabilities()
+        OrionCortexWire.requireEnvelope(capabilities, setOf("schemaVersion", "status", "capabilities"))
+        assertEquals("OK", OrionCortexWire.text(capabilities, "status"))
+        assertEquals(OrionCortexProtocol.ISSUED_HISTORY.value, OrionCortexWire.text(capabilities, "capabilities"))
         assertEquals("UNLOADED", remote.getStatus().getString("status"))
         assertEquals("OK", remote.healthCheck().getString("status"))
     }
@@ -82,7 +123,31 @@ class OrionCortexBoundaryTest {
         }
     }
 
-    @Test fun e_capacityRejectsNewRequestsWithoutEvictingExistingTerminals() {
+    @Test fun e_issuedHistoryContinuesPastCapacityAndRetiredRequestsNeverExecute() {
+        fun issue() = remote.issueRequestId().also { assertEquals("OK", it.getString("status")) }.getString("requestId")!!
+        val first = issue()
+        remote.cancelInference(first)
+        repeat(256) {
+            val id = issue()
+            remote.cancelInference(id)
+            assertEquals("CANCELLED", remote.getRequestStatus(id).getString("state"))
+        }
+        assertEquals("DUPLICATE_REQUEST", remote.getRequestStatus(first).getString("status"))
+        remote.cancelInference(first) // Retired cancellation is idempotent.
+        val callbacks = AtomicInteger()
+        shared(8).use { memory ->
+            assertEquals("DUPLICATE_REQUEST", remote.startInference(memory,
+                inferSpec(first, memory.size), callback(callbacks)).getString("status"))
+            val foreign = OrionIssuedRequestHistory<Unit> { true }.issue()
+            assertEquals("INVALID_REQUEST", remote.startInference(memory,
+                inferSpec(foreign, memory.size), callback(callbacks)).getString("status"))
+        }
+        assertEquals(0, callbacks.get())
+        assertEquals("OK", remote.healthCheck().getString("status"))
+        assertEquals("UNLOADED", remote.getStatus().getString("status"))
+    }
+
+    @Test fun f_legacyCapacityRejectsNewRequestsWithoutEvictingExistingTerminals() {
         var rejected = 0
         repeat(65) { index ->
             try { remote.cancelInference("orion_capacity_$index") }

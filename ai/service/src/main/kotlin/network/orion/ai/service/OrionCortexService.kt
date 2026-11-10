@@ -20,6 +20,9 @@ import java.util.concurrent.TimeUnit
 import network.orion.ai.api.IOrionCortex
 import network.orion.ai.api.IOrionInferenceCallback
 import network.orion.ai.api.OrionCortexWire
+import network.orion.ai.api.OrionCortexProtocol
+import network.orion.ai.api.OrionIssuedRequestHistory
+import network.orion.ai.api.OrionRetiredRequestException
 import network.orion.ai.llama.OrionLlamaFinish
 import network.orion.ai.llama.OrionLlamaRuntime
 import network.orion.core.time.AndroidOrionClock
@@ -34,6 +37,7 @@ class OrionCortexService : Service() {
     private val worker = ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, ArrayBlockingQueue<Runnable>(2))
     private val timer = ScheduledThreadPoolExecutor(1).apply { removeOnCancelPolicy = true }
     private val requests = linkedMapOf<String, Request>()
+    private val issuedRequests = OrionIssuedRequestHistory<Request> { it.terminal != null && active !== it }
     private lateinit var clock: AndroidOrionClock
     private lateinit var watchdog: OrionNativeUnresponsiveWatchdog
     @Volatile private var runtime: OrionLlamaRuntime? = null
@@ -68,7 +72,23 @@ class OrionCortexService : Service() {
     private val binder = object : IOrionCortex.Stub() {
         override fun getProtocolInfo(): Bundle {
             caller()
-            return reply("OK") { putInt("major", 1); putInt("minor", 0) }
+            return reply("OK") {
+                putInt("major", OrionCortexProtocol.CURRENT.protocolMajor)
+                putInt("minor", OrionCortexProtocol.CURRENT.protocolMinor)
+            }
+        }
+
+        override fun getCapabilities(): Bundle {
+            caller()
+            return reply("OK") { putString("capabilities", OrionCortexProtocol.ISSUED_HISTORY.value) }
+        }
+
+        override fun issueRequestId(): Bundle {
+            caller()
+            return synchronized(lock) {
+                if (closing) reply("UNAVAILABLE")
+                else reply("OK") { putString("requestId", issuedRequests.issue()) }
+            }
         }
 
         override fun loadModel(model: ParcelFileDescriptor?, specification: Bundle?): Bundle {
@@ -86,11 +106,11 @@ class OrionCortexService : Service() {
                 val threads = OrionCortexWire.int(spec, "threads").also { require(it in 1..OrionCortexWire.MAX_THREADS) }
                 val request = Request(id, deadline(spec), loading = true)
                 synchronized(lock) {
-                    requests[id]?.let { return@guarded requestReply(it) }
-                    if (requests.size >= MAX_REQUESTS) return@guarded reply("CAPACITY_REACHED")
+                    findRequest(id)?.let { return@guarded requestReply(it) }
+                    if (!hasCapacity(id)) return@guarded reply("CAPACITY_REACHED")
                     if (closing || unloading || active != null || loadedId != null) return@guarded reply("BUSY")
                     val owned = ParcelFileDescriptor.dup(fd.fileDescriptor)
-                    admit(request)
+                    try { admit(request) } catch (failure: Exception) { owned.close(); throw failure }
                     worker.execute { perform(request) {
                         var retained = false
                         try {
@@ -135,8 +155,8 @@ class OrionCortexService : Service() {
                 val temperature = OrionCortexWire.temperature(spec)
                 val request = Request(id, deadline(spec), requireNotNull(callback))
                 synchronized(lock) {
-                    requests[id]?.let { return@guardedInput requestReply(it) }
-                    if (requests.size >= MAX_REQUESTS) return@guardedInput reply("CAPACITY_REACHED")
+                    findRequest(id)?.let { return@guardedInput requestReply(it) }
+                    if (!hasCapacity(id)) return@guardedInput reply("CAPACITY_REACHED")
                     if (closing || unloading || active != null) return@guardedInput reply("BUSY")
                     if (loadedId != modelId) return@guardedInput reply("MODEL_MISMATCH")
                     // Copy to a bounded private String before the received shared handle closes.
@@ -162,16 +182,18 @@ class OrionCortexService : Service() {
         override fun cancelInference(requestId: String?) {
             caller(); val id = validId(requestId)
             active?.takeIf { it.id == id }?.work?.let(watchdog::arm)
-            val request = synchronized(lock) {
-                requests[id] ?: Request(id, null).also { remember(it) }
-            }
+            val request = try { synchronized(lock) {
+                findRequest(id) ?: Request(id, null).also { remember(it) }
+            } } catch (_: OrionRetiredRequestException) { return }
             finish(request, "CANCELLED")
             synchronized(lock) { if (active === request) runtime?.cancel() }
         }
 
         override fun getRequestStatus(requestId: String?): Bundle {
             caller(); val id = validId(requestId)
-            val request = synchronized(lock) { requests[id] } ?: return reply("NOT_FOUND")
+            val request = try { synchronized(lock) { findRequest(id) } }
+                catch (_: OrionRetiredRequestException) { return reply("DUPLICATE_REQUEST") }
+            if (request == null) return reply("NOT_FOUND")
             checkDeadline(request)
             return requestReply(request)
         }
@@ -210,7 +232,7 @@ class OrionCortexService : Service() {
             val sampled = clock.monotonicNow()
             val pss = Debug.MemoryInfo().also(Debug::getMemoryInfo).totalPss.toLong() * 1024
             val health = synchronized(lock) {
-                when { closing -> "UNAVAILABLE"; requests.size >= MAX_REQUESTS -> "DEGRADED"; else -> "OK" }
+                when { closing -> "UNAVAILABLE"; requests.size >= MAX_REQUESTS || !issuedRequests.hasCapacity() -> "DEGRADED"; else -> "OK" }
             }
             return reply(health) {
                 putString("processName", Application.getProcessName()); putInt("pid", Process.myPid())
@@ -253,9 +275,19 @@ class OrionCortexService : Service() {
     }
 
     private fun remember(request: Request) {
-        check(requests.size < MAX_REQUESTS) { "Cortex request capacity reached." }
-        requests[request.id] = request
+        if (OrionIssuedRequestHistory.isIssuedIdentity(request.id)) issuedRequests.put(request.id, request)
+        else {
+            check(requests.size < MAX_REQUESTS) { "Cortex request capacity reached." }
+            requests[request.id] = request
+        }
     }
+
+    /** Protocol-1.0 history is unchanged; reserved issued identities never fall back to legacy. */
+    private fun findRequest(id: String): Request? =
+        if (OrionIssuedRequestHistory.isIssuedIdentity(id)) issuedRequests.find(id) else requests[id]
+
+    private fun hasCapacity(id: String): Boolean =
+        if (OrionIssuedRequestHistory.isIssuedIdentity(id)) issuedRequests.hasCapacity() else requests.size < MAX_REQUESTS
 
     private fun perform(request: Request, operation: () -> Unit) {
         try { operation() }
@@ -341,11 +373,13 @@ class OrionCortexService : Service() {
 
     private fun guarded(descriptor: ParcelFileDescriptor?, operation: (ParcelFileDescriptor) -> Bundle): Bundle = try {
         requireNotNull(descriptor).use(operation)
-    } catch (_: Exception) { reply("INVALID_REQUEST") }
+    } catch (_: OrionRetiredRequestException) { reply("DUPLICATE_REQUEST") }
+      catch (_: Exception) { reply("INVALID_REQUEST") }
 
     private fun guardedInput(memory: SharedMemory?, operation: (SharedMemory) -> Bundle): Bundle = try {
         requireNotNull(memory).use(operation)
-    } catch (_: Exception) { reply("INVALID_REQUEST") }
+    } catch (_: OrionRetiredRequestException) { reply("DUPLICATE_REQUEST") }
+      catch (_: Exception) { reply("INVALID_REQUEST") }
 
     override fun onDestroy() {
         closing = true
@@ -376,7 +410,7 @@ class OrionCortexService : Service() {
         private val TIME_KEYS = setOf("bootCount", "startedElapsed", "durationMillis")
         private val LOAD_KEYS = TIME_KEYS + setOf("schemaVersion", "requestId", "modelId", "sha256", "sizeBytes", "contextTokens", "threads")
         private val INFERENCE_KEYS = TIME_KEYS + setOf("schemaVersion", "requestId", "modelId", "inputSize", "maxTokens", "temperature")
-        private val REPLY_KEYS = setOf("schemaVersion", "status", "state", "requestId", "modelId", "major", "minor", "processName", "pid", "bootCount", "sampledElapsed", "totalPssBytes", "nativeIncluded", "nativeRuntimeLoaded", "nativeValidationCompleted")
+        private val REPLY_KEYS = setOf("schemaVersion", "status", "state", "requestId", "modelId", "major", "minor", "capabilities", "processName", "pid", "bootCount", "sampledElapsed", "totalPssBytes", "nativeIncluded", "nativeRuntimeLoaded", "nativeValidationCompleted")
         private val CHUNK_KEYS = setOf("schemaVersion", "requestId", "sequence", "delta", "isFinal", "finishReason")
     }
 }
