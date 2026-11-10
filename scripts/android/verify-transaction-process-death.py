@@ -25,6 +25,10 @@ SCENARIOS = {
                      "app/src/androidTest/kotlin/network/orion/app/notifications/OrionNotificationTransactionProcessDeathTest.kt"),
     "reminder_delivery": ("network.orion.app.reminderdelivery.OrionReminderDeliveryProcessDeathTest",
                           "app/src/androidTest/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryProcessDeathTest.kt"),
+    "model_file": ("network.orion.app.models.OrionModelImportProcessDeathTest#verifiedFileBeforeRegistryCommitRemainsUnregistered",
+                   "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportProcessDeathTest.kt"),
+    "model_registered": ("network.orion.app.models.OrionModelImportProcessDeathTest#importedRegistryBeforeReadyRequiresSelectedValidation",
+                         "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportProcessDeathTest.kt"),
 }
 
 
@@ -32,6 +36,16 @@ def scenario_proof(scenario):
     """Declare the fixture's checkpoint/proof; labels never substitute verification."""
     if scenario not in SCENARIOS:
         raise ValueError("Invalid process-death scenario.")
+    if scenario in ("model_file", "model_registered"):
+        registered = scenario == "model_registered"
+        return {
+            "killCheck": "kill_after_imported_model_registry_commit" if registered else "kill_after_verified_model_file_commit",
+            "verificationCheck": "pending_model_verified_before_ready" if registered else "unregistered_model_not_adopted_and_orphan_removed",
+            "metadata": {
+                "checkpointBoundary": "AFTER_IMPORTED_REGISTRY_COMMIT_BEFORE_READY" if registered else "AFTER_VERIFIED_FILE_COMMIT_BEFORE_REGISTRY",
+                "modelEvidence": "SYNTHETIC_TINY_GGUF_NO_INFERENCE",
+            },
+        }
     if scenario in ("notification", "reminder_delivery"):
         return {
             "killCheck": "kill_after_committed_external_claim",

@@ -38,8 +38,9 @@ public final class OrionQualificationInstrumentation extends Instrumentation {
             check((context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0,
                     "Qualification target is debuggable");
             probeNative(context);
+            sendStatus(0, OrionCortexNativeQualification.run(context));
             if (!nativeOnly) probeStartup(context);
-            result.putString("stream", "\nOK (" + (nativeOnly ? 1 : 2) + " tests)\n");
+            result.putString("stream", "\nOK (" + (nativeOnly ? 2 : 3) + " tests)\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable failure) {
             result.putString("stream", "\nFAIL: " + failure.getClass().getSimpleName() + ": " + failure.getMessage() + "\n");
@@ -66,7 +67,7 @@ public final class OrionQualificationInstrumentation extends Instrumentation {
                 String entry = entries.nextElement().getName();
                 if (entry.startsWith(prefix) && entry.endsWith(".so")) {
                     String name = entry.substring(prefix.length());
-                    check(name.matches("lib[A-Za-z0-9_.-]+\\.so"), "Unsupported native entry");
+                    check(name.matches("lib[A-Za-z0-9_+.-]+\\.so"), "Unsupported native entry");
                     libraries.add(name);
                 }
             }
