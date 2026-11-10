@@ -53,20 +53,20 @@ class OrionCortexQueuedDeadlineTest {
             check(release.await(10, TimeUnit.SECONDS)) { "Synthetic pre-bind hold was not released." }
             error("Synthetic policy denies the held owner before bind.")
         }, availabilityChanged = { bindingChanges.incrementAndGet() })
-        fun request(id: String, prompt: String, duration: Long) = OrionInferenceRequest(id, 1, hash, prompt, "", 1,
+        fun request(prompt: String, duration: Long) = OrionInferenceRequest(client.newRequestId(), 1, hash, prompt, "", 1,
             0.0, OrionInferencePriority.INTERACTIVE, clock.monotonicNow().deadlineAfter(duration), "fixture")
         try {
             ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
                 val active = async(Dispatchers.IO) {
                     ParcelFileDescriptor.dup(descriptor.fileDescriptor).use {
-                        client.runInference(model, it, request("active", "synthetic active", 10_000), 512, 1) {
+                        client.runInference(model, it, request("synthetic active", 10_000), 512, 1) {
                             error("Denied owner emitted output.")
                         }
                     }
                 }
                 try {
                     assertTrue(entered.await(5, TimeUnit.SECONDS))
-                    val short = request("queued", "synthetic queued", 250)
+                    val short = request("synthetic queued", 250)
                     val queued = async(start = CoroutineStart.UNDISPATCHED) {
                         client.runInference(model, descriptor, short, 512, 1) { error("Expired waiter emitted output.") }
                     }

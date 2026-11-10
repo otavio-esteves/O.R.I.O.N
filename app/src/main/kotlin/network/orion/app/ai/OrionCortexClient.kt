@@ -10,7 +10,6 @@ import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.os.SharedMemory
 import android.system.OsConstants
-import java.util.UUID
 import java.security.MessageDigest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
@@ -26,6 +25,8 @@ import network.orion.core.resources.OrionResourceDecision
 import network.orion.core.resources.OrionRestartDecision
 import network.orion.core.time.OrionClock
 import network.orion.core.time.MonotonicDeadlineStatus
+import network.orion.core.ipc.ProtocolInfo
+import network.orion.core.ipc.IpcProtocolNegotiation
 import network.orion.data.database.ModelRegistryEntity
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -37,6 +38,7 @@ internal class OrionCortexClient(
     private val resources: (modelId: String, context: Int, threads: Int, tokens: Int) -> OrionResourceDecision,
     private val restart: () -> OrionRestartDecision,
     private val availabilityChanged: (Boolean) -> Unit = {},
+    private val requestHistory: OrionInferenceRequestLedger = OrionInferenceRequestLedger(),
 ) : AutoCloseable {
     private val app = context.applicationContext
     private val session = OrionInferenceTurnstile(clock)
@@ -50,12 +52,13 @@ internal class OrionCortexClient(
     @Volatile private var loaded: ModelRegistryEntity? = null
     private var loadedContext = 0
     private var loadedThreads = 0
-    private val requestHistory = OrionInferenceRequestLedger()
     private var connection: ServiceConnection? = null
     private var deathRecipient: IBinder.DeathRecipient? = null
     private var pinnedAiPid: Int? = null
 
     init { require(Application.getProcessName() == app.packageName) { "Cortex client belongs to MAIN." } }
+
+    fun newRequestId(): String { check(!closed); return requestHistory.newRequestId() }
 
     private fun restartCandidate(id: String, context: Int, threads: Int, tokens: Int): network.orion.core.resources.OrionInferenceResourcePlan {
         val decision = restart()
@@ -132,8 +135,8 @@ internal class OrionCortexClient(
         // Bind is lightweight; heavy work remains blocked until a fresh decision immediately before IPC.
         val service = withTimeout(10_000) { acquire() }
         OrionCortexWire.requireReadOnlyFile(descriptor, model.sizeBytes, 4L * 1024 * 1024 * 1024)
+        val id = issueTransportRequestId(service)
         approved(model.modelId, contextTokens, threads, 1)
-        val id = UUID.randomUUID().toString()
         val started = clock.monotonicNow()
         val deadline = started.deadlineAfter(durationMillis)
         val specification = Bundle().apply {
@@ -190,6 +193,7 @@ internal class OrionCortexClient(
         val service = withTimeout(10_000) { acquire() }
         val lifecycle = checkNotNull(active)
         if (lifecycle.status().terminal != null) return@withLock lifecycle.status()
+        val transportId = issueTransportRequestId(service)
         val callbacks = Channel<Bundle>(16)
         val content = (request.context + "\n" + request.prompt).toByteArray(Charsets.UTF_8)
         val input = try {
@@ -199,15 +203,18 @@ internal class OrionCortexClient(
         catch (failure: Throwable) { content.fill(0); callbacks.close(); throw failure }
         try {
             synchronized(monitor) {
-                check(!closed); active = lifecycle; activeId = request.requestId
+                check(!closed)
+                if (lifecycle.status().terminal != null) return@withLock lifecycle.status()
+                active = lifecycle; activeId = transportId
             }
             val mapped = input.mapReadWrite()
             try { mapped.put(content) } finally { SharedMemory.unmap(mapped); content.fill(0) }
             check(input.setProtect(OsConstants.PROT_READ))
             approved(model.modelId, contextTokens, threads, request.maxTokens)
+            if (lifecycle.status().terminal != null) return@withLock lifecycle.status()
             val start = request.deadline.start
             val specification = Bundle().apply {
-                putInt("schemaVersion", 1); putString("requestId", request.requestId); putString("modelId", model.modelId)
+                putInt("schemaVersion", 1); putString("requestId", transportId); putString("modelId", model.modelId)
                 putLong("inputSize", input.size.toLong()); putInt("maxTokens", request.maxTokens)
                 putFloat("temperature", request.temperature.toFloat())
                 putInt("bootCount", checkNotNull(start.bootSessionId).bootCount)
@@ -227,9 +234,10 @@ internal class OrionCortexClient(
                 if (chunk == null) { delay(10); continue }
                 try {
                     OrionCortexWire.requireEnvelope(chunk, CHUNK_KEYS)
+                    if (OrionCortexWire.text(chunk, "requestId") != transportId) continue
                     val final = OrionCortexWire.boolean(chunk, "isFinal")
                     val update = lifecycle.accept(OrionInferenceChunk(
-                        OrionCortexWire.text(chunk, "requestId"), OrionCortexWire.int(chunk, "schemaVersion"),
+                        request.requestId, OrionCortexWire.int(chunk, "schemaVersion"),
                         OrionCortexWire.long(chunk, "sequence"), OrionCortexWire.optionalText(chunk, "delta"), isFinal = final,
                         finishReason = if (final) OrionInferenceTerminal.valueOf(OrionCortexWire.text(chunk, "finishReason")) else null,
                     ))
@@ -237,14 +245,14 @@ internal class OrionCortexClient(
                 } catch (_: IllegalArgumentException) { lifecycle.failTransport() }
             }
             if (lifecycle.status().terminal != OrionInferenceTerminal.SUCCEEDED)
-                runCatching { service.cancelInference(request.requestId) }
+                runCatching { service.cancelInference(transportId) }
             lifecycle.status()
         } catch (cancelled: CancellationException) {
-            lifecycle.cancel(); runCatching { service.cancelInference(request.requestId) }; throw cancelled
+            lifecycle.cancel(); runCatching { service.cancelInference(transportId) }; throw cancelled
         } catch (_: android.os.RemoteException) {
             lifecycle.processDied(); lostConnection(); lifecycle.status()
         } catch (_: Exception) {
-            lifecycle.failTransport(); runCatching { service.cancelInference(request.requestId) }; lifecycle.status()
+            lifecycle.failTransport(); runCatching { service.cancelInference(transportId) }; lifecycle.status()
         } finally {
             content.fill(0)
             try { input.close() } finally { callbacks.close(); activeId = null }
@@ -317,7 +325,22 @@ internal class OrionCortexClient(
                         val service = IOrionCortex.Stub.asInterface(binder)
                         val protocol = service.getProtocolInfo()
                         OrionCortexWire.requireEnvelope(protocol, setOf("schemaVersion", "status", "major", "minor"))
-                        check(OrionCortexWire.int(protocol, "major") == 1 && OrionCortexWire.int(protocol, "minor") >= 0)
+                        check(OrionCortexWire.text(protocol, "status") == "OK")
+                        val major = OrionCortexWire.int(protocol, "major")
+                        val minor = OrionCortexWire.int(protocol, "minor")
+                        check(major == OrionCortexProtocol.CURRENT.protocolMajor && minor >= 1) {
+                            "Cortex capability discovery unavailable."
+                        }
+                        val capabilities = service.getCapabilities()
+                        OrionCortexWire.requireEnvelope(capabilities, setOf("schemaVersion", "status", "capabilities"))
+                        check(OrionCortexWire.text(capabilities, "status") == "OK")
+                        val capability = OrionCortexWire.optionalText(capabilities, "capabilities")
+                        val peer = ProtocolInfo(major, minor,
+                            if (capability == OrionCortexProtocol.ISSUED_HISTORY.value)
+                                setOf(OrionCortexProtocol.ISSUED_HISTORY) else emptySet())
+                        val negotiated = OrionCortexProtocol.CURRENT.negotiateWith(peer)
+                        check(negotiated is IpcProtocolNegotiation.Compatible && negotiated.protocolMinor >= 1 &&
+                            OrionCortexProtocol.ISSUED_HISTORY in negotiated.capabilities) { "Cortex issued history unavailable." }
                         val death = IBinder.DeathRecipient { lostConnection(this) }
                         synchronized(monitor) {
                             check(!closed && connection === this)
@@ -398,6 +421,14 @@ internal class OrionCortexClient(
     private fun checkReply(reply: Bundle, allowed: Set<String>) {
         OrionCortexWire.requireEnvelope(reply, REPLY_KEYS)
         check(OrionCortexWire.text(reply, "status") in allowed) { "Cortex request rejected." }
+    }
+
+    private fun issueTransportRequestId(service: IOrionCortex): String {
+        val reply = service.issueRequestId()
+        checkReply(reply, setOf("OK"))
+        return OrionCortexWire.text(reply, "requestId").also {
+            check(OrionIssuedRequestHistory.isIssuedIdentity(it)) { "Unissued Cortex identity." }
+        }
     }
 
     companion object {
