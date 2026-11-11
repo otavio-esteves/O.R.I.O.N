@@ -12,7 +12,6 @@ import java.util.concurrent.CancellationException
 import network.orion.core.exitinfo.OrionProcessExitClassifier
 import network.orion.core.resources.OrionAiExitHistory
 import network.orion.core.resources.OrionInferenceResourcePlan
-import network.orion.core.resources.OrionMemoryPressure
 import network.orion.core.resources.OrionProcessImportance
 import network.orion.core.resources.OrionResourceObservation
 import network.orion.core.time.OrionClock
@@ -80,13 +79,7 @@ internal class OrionAndroidResourceObserver(
             null -> OrionProcessImportance.UNKNOWN
             else -> OrionProcessImportance.BACKGROUND
         }
-        val pressure = when {
-            system == null || state == null -> OrionMemoryPressure.UNKNOWN
-            system.lowMemory -> OrionMemoryPressure.CRITICAL
-            state.lastTrimLevel >= 15 -> OrionMemoryPressure.CRITICAL
-            state.lastTrimLevel >= 5 -> OrionMemoryPressure.MODERATE
-            else -> OrionMemoryPressure.NONE
-        }
+        val pressure = classifyAndroidMemoryPressure(system?.lowMemory, state?.lastTrimLevel)
         val observation = OrionResourceObservation(sampledAt, qualifiedPlan?.model, battery, thermal,
             state?.let { importance == OrionProcessImportance.FOREGROUND }, importance, saver, pressure,
             totals.aiBytes, totals.aggregateBytes, system?.availMem?.takeIf { it >= 0 }, sanitized,
