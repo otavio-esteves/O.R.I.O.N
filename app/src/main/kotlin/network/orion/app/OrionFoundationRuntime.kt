@@ -197,6 +197,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     }
     private var governor = UnavailableResourceGovernor()
     private var database: OrionDatabase? = null
+    private var retentionMaintenance: OrionCoreRetentionMaintenance? = null
     private val cortexOwnershipLock = Any()
     private var cortexOwner: network.orion.app.ai.OrionCortexRuntimeOwner? = null
 
@@ -336,6 +337,10 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 states[stage] = if (scheduler.publishEvents()) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED
                 stage = OrionSubsystem.ACTION_OUTBOX
                 kernel.recoverActions()
+                // Preserve bounded pre-drain cleanup without a domain-specific policy or hidden deletions.
+                val retention = retentionMaintenance ?: OrionCoreRetentionMaintenance(db, clock)
+                    .also { retentionMaintenance = it }
+                retention.runBatch()
                 states[stage] = OrionHealthStatus.HEALTHY
                 stage = OrionSubsystem.REMINDERS
                 db.reminderSchedules().invalidateRegistrationObservations()
@@ -497,8 +502,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             // Existing facts and eligible retention must progress before expiry adds
             // cancellation facts; a full outbox must not block its own cleanup.
             scheduler.publishEvents()
-            val retentionPolicy = network.orion.data.repository.OrionRetentionPolicy()
-            val pruned = network.orion.data.repository.OrionRetentionMaintenance(db.retention(), clock, retentionPolicy).runBatch()
+            val retention = checkNotNull(retentionMaintenance)
+            val retentionBatch = retention.runBatch()
             val delivery = reminderDelivery
             val expirationBatchSize = 100
             val expiredProposals = if (delivery != null)
@@ -525,12 +530,12 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 OrionSubsystem.SCHEDULER to if (reconciled.healthy && reconciled.complete && delivered.healthy) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED))
             // Retry only unfinished internal batches. Denied permission/UNKNOWN remain observable,
             // and await a later capability event/heartbeat instead of creating a tight retry loop.
-            val outcome = maintenanceOutcome(pruned, retentionPolicy.batchSize, expiredProposals, expirationBatchSize,
+            val outcome = maintenanceOutcome(retentionBatch, retention.policy.batchSize, expiredProposals, expirationBatchSize,
                 ingressNeedsContinuation, reconciled, delivered, published, scheduler.hasDueEvents())
             maintenanceNeedsContinuation = outcome.needsContinuation
             val healthy = outcome.healthy
             try {
-                Log.i(OrionMaintenanceSnapshot.LOG_TAG, readMaintenanceSnapshot(app, db, clock, origin, healthy, pruned,
+                Log.i(OrionMaintenanceSnapshot.LOG_TAG, readMaintenanceSnapshot(app, db, clock, origin, healthy, retention.takeReport(),
                     maintenanceObservationSequence.incrementAndGet()).toLogLine())
             } catch (_: Exception) {
                 // Diagnostics are sampled, optional evidence. Never change authority, retry or recovery due to logging.
