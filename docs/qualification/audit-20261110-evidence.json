@@ -1,0 +1,594 @@
+{
+  "schemaVersion": 1,
+  "recordedUtc": "2026-11-11T01:58:38.357161+00:00",
+  "scope": "SOFTWARE_AUDIT_INTEGRATION_ONLY",
+  "source": {
+    "validatedCandidate": "999173a1c81a6c4f58e91ded69d5782b0f00c7a3",
+    "deliveryProductSourcesEqual": true,
+    "comparedNonDocumentationFiles": 665
+  },
+  "sourceLineage": {
+    "canonicalFrozenSource": "build/cortex-fixes-20261110/source-manifest.json",
+    "integratedSource": "integrated-source.json",
+    "allBuildAndRuntimeSourcesIdentical": true,
+    "onlyDocumentationChanged": [
+      "docs/issues/ORION-AUDIT-CORTEX-003.md"
+    ],
+    "artifacts": {
+      "app/build/outputs/apk/debug/app-debug.apk": "152ea243271a516f06f6617284ca9e1e26840e6c64dbd4861f2ca6d9c0af2970",
+      "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "b0922230174ad5fcc80377bd0a893151efcde4a8d7a5c8e2d3ba92305c27b49a",
+      "app/build/outputs/apk/qualificationRelease/app-qualificationRelease.apk": "45f0d55b21431ac4823b34b598bf333e5736ecc5b99a5b077e3b0fe01141eb3b",
+      "app/build/outputs/apk/androidTest/qualificationRelease/app-qualificationRelease-androidTest.apk": "8f8b030f585ed253906bcc7e809f7a670562dbf4db5bfd0862e682957eb42997"
+    }
+  },
+  "reviews": {
+    "resources": {
+      "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/83",
+      "branch": "fix/audit-resource-002-20261110",
+      "title": "ORION-AUDIT-RESOURCE-002: apply resource-exit backoff and classify trim signals",
+      "commit": "69a3bfa9c9989036fafae6f71348380647c4a472",
+      "pr": "https://github.com/otavio-esteves/O.R.I.O.N/pull/86",
+      "mergedCommit": "5d1d4eac77281932d1d3abdf390fc3273df253e2"
+    },
+    "retention": {
+      "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/84",
+      "branch": "fix/audit-retention-002-20261110",
+      "title": "ORION-AUDIT-RETENTION-002: centralize observable Core retention",
+      "commit": "af76e34bd95edf72cf32e6bf2094d8a04b9dc745",
+      "pr": "https://github.com/otavio-esteves/O.R.I.O.N/pull/87",
+      "mergedCommit": "cae1b676a7bec96c1bdc4ae958551d586fd16230"
+    },
+    "cortex": {
+      "issue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/85",
+      "branch": "fix/cortex-request-validation-20261110",
+      "title": "ORION-AUDIT-CORTEX-003: bind replay payloads and guard model I/O deadlines",
+      "commit": "45cd93e9e1fe908808f00e599a4cbaf64a4e147b",
+      "pr": "https://github.com/otavio-esteves/O.R.I.O.N/pull/88",
+      "mergedCommit": "4ff20fabf502185e786aa6e0122e9f8053fcd89b"
+    }
+  },
+  "componentCI": {
+    "resources": {
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/42939014197/job/130256061708",
+      "head": "69a3bfa9c9989036fafae6f71348380647c4a472"
+    },
+    "retention": {
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/42939021964/job/130256088521",
+      "head": "af76e34bd95edf72cf32e6bf2094d8a04b9dc745"
+    },
+    "cortex": {
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/42939025334/job/130256099811",
+      "head": "45cd93e9e1fe908808f00e599a4cbaf64a4e147b"
+    }
+  },
+  "validation": {
+    "api35-real-cortex": {
+      "status": "PASS",
+      "environment": "ANDROID_EMULATOR",
+      "physicalQualification": false,
+      "identityCapture": "BEFORE_INSTRUMENTATION_WITH_INSTALLED_APK_HASH_CHECK",
+      "recordedUtc": "2026-11-11T01:30:31.181232+00:00",
+      "serial": "emulator-5574",
+      "expectedCases": 3,
+      "runner": "network.orion.test/androidx.test.runner.AndroidJUnitRunner",
+      "recorderSha256": "20f2b7c546536273650b535c4c4aab2821808cb94fa74d50b259de3fb6367fe6",
+      "sourceFreezeSha256": "fb10bdeccce30413ab586dcca27dd3c3e7f49b58917276f1f4b3a089f7fce7b9",
+      "artifacts": {
+        "app/build/outputs/apk/debug/app-debug.apk": "152ea243271a516f06f6617284ca9e1e26840e6c64dbd4861f2ca6d9c0af2970",
+        "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "b0922230174ad5fcc80377bd0a893151efcde4a8d7a5c8e2d3ba92305c27b49a"
+      },
+      "api": "35",
+      "fingerprint": "google/sdk_gphone64_x86_64/emu64xa:15/AE3A.240806.043/12960925:userdebug/dev-keys",
+      "pageSize": "4096",
+      "commit": "999173a1c81a6c4f58e91ded69d5782b0f00c7a3",
+      "installedSha256": {
+        "network.orion": "152ea243271a516f06f6617284ca9e1e26840e6c64dbd4861f2ca6d9c0af2970",
+        "network.orion.test": "b0922230174ad5fcc80377bd0a893151efcde4a8d7a5c8e2d3ba92305c27b49a"
+      },
+      "command": [
+        "/home/hellenc/Android/Sdk/platform-tools/adb",
+        "-s",
+        "emulator-5574",
+        "shell",
+        "am",
+        "instrument",
+        "-w",
+        "-r",
+        "-e",
+        "class",
+        "network.orion.app.ai.OrionCortexRuntimeTest#importedRealModelStreamsThroughPrivateAiProcessAndUnloads,network.orion.app.ai.OrionCortexRuntimeTest#actualAiDeathPreservesCoreAndReplayWaitsForExplicitNewRequest,network.orion.app.ai.OrionCortexRuntimeTest#actualServiceDeadlineTerminatesInferenceOnceAndNativeUnwinds",
+        "-e",
+        "orionModelPath",
+        "/data/user/0/network.orion/files/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        "-e",
+        "orionEnvironment",
+        "ANDROID_EMULATOR",
+        "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+      ],
+      "logSha256": "0a42319a3f67882fce3a730ad03ab5c834147eb80ba5dff96c0fd4c3ecb90def",
+      "assumptionSkips": 0,
+      "failures": 0,
+      "durationSeconds": 327.319
+    },
+    "api37-full": {
+      "status": "PASS",
+      "environment": "ANDROID_EMULATOR",
+      "physicalQualification": false,
+      "identityCapture": "BEFORE_INSTRUMENTATION_WITH_INSTALLED_APK_HASH_CHECK",
+      "recordedUtc": "2026-11-11T01:40:11.299719+00:00",
+      "serial": "emulator-5574",
+      "expectedCases": 395,
+      "runner": "network.orion.test/androidx.test.runner.AndroidJUnitRunner",
+      "recorderSha256": "20f2b7c546536273650b535c4c4aab2821808cb94fa74d50b259de3fb6367fe6",
+      "sourceFreezeSha256": "fb10bdeccce30413ab586dcca27dd3c3e7f49b58917276f1f4b3a089f7fce7b9",
+      "artifacts": {
+        "app/build/outputs/apk/debug/app-debug.apk": "152ea243271a516f06f6617284ca9e1e26840e6c64dbd4861f2ca6d9c0af2970",
+        "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "b0922230174ad5fcc80377bd0a893151efcde4a8d7a5c8e2d3ba92305c27b49a"
+      },
+      "api": "37",
+      "fingerprint": "google/sdk_gphone16k_x86_64/emu64xa16k:17/CE2A.260420.051.A3/16571990:userdebug/dev-keys",
+      "pageSize": "16384",
+      "commit": "999173a1c81a6c4f58e91ded69d5782b0f00c7a3",
+      "installedSha256": {
+        "network.orion": "152ea243271a516f06f6617284ca9e1e26840e6c64dbd4861f2ca6d9c0af2970",
+        "network.orion.test": "b0922230174ad5fcc80377bd0a893151efcde4a8d7a5c8e2d3ba92305c27b49a"
+      },
+      "command": [
+        "/home/hellenc/Android/Sdk/platform-tools/adb",
+        "-s",
+        "emulator-5574",
+        "shell",
+        "am",
+        "instrument",
+        "-w",
+        "-r",
+        "-e",
+        "orionModelPath",
+        "/data/user/0/network.orion/files/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        "-e",
+        "orionEnvironment",
+        "ANDROID_EMULATOR",
+        "network.orion.test/androidx.test.runner.AndroidJUnitRunner"
+      ],
+      "logSha256": "27636655da38ec0519d32327ab4ae5e618ec722a8b350169e865b4f66cebea63",
+      "assumptionSkips": 0,
+      "failures": 0,
+      "durationSeconds": 962.559
+    },
+    "api37-r8": {
+      "status": "PASS",
+      "environment": "ANDROID_EMULATOR",
+      "physicalQualification": false,
+      "identityCapture": "BEFORE_INSTRUMENTATION_WITH_INSTALLED_APK_HASH_CHECK",
+      "recordedUtc": "2026-11-11T01:57:20.080520+00:00",
+      "serial": "emulator-5574",
+      "expectedCases": 3,
+      "runner": "network.orion.qualification.test/network.orion.app.compatibility.OrionQualificationInstrumentation",
+      "recorderSha256": "20f2b7c546536273650b535c4c4aab2821808cb94fa74d50b259de3fb6367fe6",
+      "sourceFreezeSha256": "fb10bdeccce30413ab586dcca27dd3c3e7f49b58917276f1f4b3a089f7fce7b9",
+      "artifacts": {
+        "app/build/outputs/apk/qualificationRelease/app-qualificationRelease.apk": "45f0d55b21431ac4823b34b598bf333e5736ecc5b99a5b077e3b0fe01141eb3b",
+        "app/build/outputs/apk/androidTest/qualificationRelease/app-qualificationRelease-androidTest.apk": "8f8b030f585ed253906bcc7e809f7a670562dbf4db5bfd0862e682957eb42997"
+      },
+      "api": "37",
+      "fingerprint": "google/sdk_gphone16k_x86_64/emu64xa16k:17/CE2A.260420.051.A3/16571990:userdebug/dev-keys",
+      "pageSize": "16384",
+      "commit": "4ff20fabf502185e786aa6e0122e9f8053fcd89b",
+      "installedSha256": {
+        "network.orion.qualification": "45f0d55b21431ac4823b34b598bf333e5736ecc5b99a5b077e3b0fe01141eb3b",
+        "network.orion.qualification.test": "8f8b030f585ed253906bcc7e809f7a670562dbf4db5bfd0862e682957eb42997"
+      },
+      "command": [
+        "/home/hellenc/Android/Sdk/platform-tools/adb",
+        "-s",
+        "emulator-5574",
+        "shell",
+        "am",
+        "instrument",
+        "-w",
+        "-r",
+        "network.orion.qualification.test/network.orion.app.compatibility.OrionQualificationInstrumentation"
+      ],
+      "logSha256": "2862ade22c95d115c8622027ea23e6dc19771c573d58e864b9344a91e598b893",
+      "assumptionSkips": 0,
+      "failures": 0
+    }
+  },
+  "upgrade": {
+    "result": "PASS",
+    "environment": "ANDROID_EMULATOR",
+    "fixtureId": "83b6f82b-cb86-474f-b45f-cbeef4a674b6",
+    "artifactSha256": {
+      "previous": "9fbcc6038a9c20d18a0ef5b151a130154c200608dcc3d6dec34368d7279046bc",
+      "previousTest": "2e2e5d833f5e97ece45460688351736801d18e74fefe0d54c8ffacff1f6d1eb1",
+      "candidate": "152ea243271a516f06f6617284ca9e1e26840e6c64dbd4861f2ca6d9c0af2970",
+      "candidateTest": "b0922230174ad5fcc80377bd0a893151efcde4a8d7a5c8e2d3ba92305c27b49a"
+    },
+    "checks": {
+      "seed_prior_installation": "PASS",
+      "encrypted_records_queues_and_keys_survived": "PASS",
+      "pending_and_unknown_never_replayed": "PASS"
+    },
+    "commit": "999173a1c81a6c4f58e91ded69d5782b0f00c7a3",
+    "workingTreeDirty": false,
+    "sourceSha256": {
+      "scripts/android/verify-installed-upgrade.py": "44ffb201547a44494a9f308a6cbb8bd80b9b3c40b6a64421251812308ea1cd59",
+      "app/src/androidTest/kotlin/network/orion/app/UpgradePersistenceTest.kt": "2694b97b20960d00a62505cec4694bd3f1851831ff3d7d6ac88c96f3bbd15b3b"
+    },
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "apiLevel": "35",
+    "androidBuild": "google/sdk_gphone64_x86_64/emu64xa:15/AE3A.240806.043/12960925:userdebug/dev-keys",
+    "abi": "x86_64",
+    "pageSize": "4096",
+    "previousVersionCode": 5,
+    "candidateVersionCode": 6,
+    "verifiedPid": "3438"
+  },
+  "modelImportDeath": {
+    "api37-model-file": {
+      "result": "PASS",
+      "environment": "ANDROID_EMULATOR",
+      "fixtureId": "54e46f2c-5983-4182-a8a1-8e5f787da143",
+      "scenario": "model_file",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checks": {
+        "kill_after_verified_model_file_commit": "PASS",
+        "unregistered_model_not_adopted_and_orphan_removed": "PASS"
+      },
+      "commit": "4ff20fabf502185e786aa6e0122e9f8053fcd89b",
+      "workingTreeDirty": false,
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportProcessDeathTest.kt": "614c6afba0c0e07735696247a83a9bd47efdce8b9c4b75be865dbf2dc92e751c",
+        "scripts/android/verify-transaction-process-death.py": "0416bb597679f99ee7049a74a0c76ea077ecfd53d821550d5cf3efec5f85821f"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "152ea243271a516f06f6617284ca9e1e26840e6c64dbd4861f2ca6d9c0af2970",
+        "app-debug-androidTest.apk": "b0922230174ad5fcc80377bd0a893151efcde4a8d7a5c8e2d3ba92305c27b49a"
+      },
+      "checkpointBoundary": "AFTER_VERIFIED_FILE_COMMIT_BEFORE_REGISTRY",
+      "modelEvidence": "SYNTHETIC_TINY_GGUF_NO_INFERENCE",
+      "androidRuntimeEvidence": "NON_DEFINITIVE",
+      "apiLevel": "37",
+      "androidBuild": "google/sdk_gphone16k_x86_64/emu64xa16k:17/CE2A.260420.051.A3/16571990:userdebug/dev-keys",
+      "abi": "x86_64",
+      "pageSize": "16384",
+      "beforePid": "17637",
+      "afterPid": "17709"
+    },
+    "api37-model-registered": {
+      "result": "PASS",
+      "environment": "ANDROID_EMULATOR",
+      "fixtureId": "21c2fc5d-d943-4b4b-93ad-97a5a61c64f8",
+      "scenario": "model_registered",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checks": {
+        "kill_after_imported_model_registry_commit": "PASS",
+        "pending_model_verified_before_ready": "PASS"
+      },
+      "commit": "4ff20fabf502185e786aa6e0122e9f8053fcd89b",
+      "workingTreeDirty": false,
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportProcessDeathTest.kt": "614c6afba0c0e07735696247a83a9bd47efdce8b9c4b75be865dbf2dc92e751c",
+        "scripts/android/verify-transaction-process-death.py": "0416bb597679f99ee7049a74a0c76ea077ecfd53d821550d5cf3efec5f85821f"
+      },
+      "artifactSha256": {
+        "app-debug.apk": "152ea243271a516f06f6617284ca9e1e26840e6c64dbd4861f2ca6d9c0af2970",
+        "app-debug-androidTest.apk": "b0922230174ad5fcc80377bd0a893151efcde4a8d7a5c8e2d3ba92305c27b49a"
+      },
+      "checkpointBoundary": "AFTER_IMPORTED_REGISTRY_COMMIT_BEFORE_READY",
+      "modelEvidence": "SYNTHETIC_TINY_GGUF_NO_INFERENCE",
+      "androidRuntimeEvidence": "NON_DEFINITIVE",
+      "apiLevel": "37",
+      "androidBuild": "google/sdk_gphone16k_x86_64/emu64xa16k:17/CE2A.260420.051.A3/16571990:userdebug/dev-keys",
+      "abi": "x86_64",
+      "pageSize": "16384",
+      "beforePid": "17793",
+      "afterPid": "17853"
+    }
+  },
+  "historicalValidation": {
+    "canonical": "PASS",
+    "jvmCases": 798,
+    "jvmSuites": 108,
+    "hostHarnessCases": 127,
+    "focusedJvmCases": 176,
+    "api35BinderOwnerModelCases": 26,
+    "api35ClientQueueCases": 15,
+    "api35R8Cases": 3,
+    "precedingPersistenceCases": 75,
+    "scope": "Original logged working-tree candidates; exact manifests and APK hashes retained in bundle. Counts overlap and must not be summed."
+  },
+  "evidenceBundle": {
+    "path": "docs/qualification/artifacts/orion-audit-20261110-evidence.tar.gz",
+    "sha256": "9705acf73e82655b1c5a191ca99007197901beb59f2650a233c3940004473f8f",
+    "bytes": 497661,
+    "files": {
+      "api35-boot.json": {
+        "sha256": "2d23d008323d2bfcc68bbcf5acb4f080f52e762b32502fec4e7b3a242268374b",
+        "bytes": 134
+      },
+      "api35-config.ini": {
+        "sha256": "e96f3577c559e735448ffc445ddbe21eab48c1bb382d0d002c4135a65580ec97",
+        "bytes": 3626
+      },
+      "api35-real-cortex/instrumentation.log": {
+        "sha256": "0a42319a3f67882fce3a730ad03ab5c834147eb80ba5dff96c0fd4c3ecb90def",
+        "bytes": 25698
+      },
+      "api35-real-cortex/run.json": {
+        "sha256": "194d3e71f6a6ac60a00e44eff3ac67a1ac295afbaf98b89e319c94aa64cf7e02",
+        "bytes": 2103
+      },
+      "api37-boot.json": {
+        "sha256": "c14f42d3393962ce5b4807293e53b82f49a67b74ebd1f98fca6f66b8692a259c",
+        "bytes": 154
+      },
+      "api37-command.json": {
+        "sha256": "b2ab7f1050ec1673de2f79dbd1e607fef70fd95836ec8f6e6627bbc310ac51db",
+        "bytes": 449
+      },
+      "api37-config.ini": {
+        "sha256": "79fbde77747f56cd99bf65478705603af591390e160cea331d99d2ce35dd65f6",
+        "bytes": 3804
+      },
+      "api37-full/instrumentation.log": {
+        "sha256": "27636655da38ec0519d32327ab4ae5e618ec722a8b350169e865b4f66cebea63",
+        "bytes": 335712
+      },
+      "api37-full/run.json": {
+        "sha256": "096fbb45b73b0f04a0e31787b226011bc1cbeb731b5b55d1a5890cb46b7e3ed9",
+        "bytes": 1770
+      },
+      "api37-image-provenance.json": {
+        "sha256": "da391e2fa7e0cd04b8eae08c066cdb8a6f1aeaab25317265b9f8263a719e1a74",
+        "bytes": 7453
+      },
+      "api37-model-file/prepare-instrumentation.txt": {
+        "sha256": "1097a7c58e27f38edfd3cb5bb2254c570c653cb8f47a8f85c70773923aeb7db0",
+        "bytes": 133
+      },
+      "api37-model-file/transaction-process-death-report.json": {
+        "sha256": "c11a4e08a9bfa52a6e1aa6e249bca23aac49533129343829b225dbb06f249242",
+        "bytes": 1325
+      },
+      "api37-model-file/verify-instrumentation.txt": {
+        "sha256": "cd3cc1f65770ee356740beb66cd9b00f3a659a622e94e7be54e50573be142459",
+        "bytes": 178
+      },
+      "api37-model-registered/prepare-instrumentation.txt": {
+        "sha256": "1097a7c58e27f38edfd3cb5bb2254c570c653cb8f47a8f85c70773923aeb7db0",
+        "bytes": 133
+      },
+      "api37-model-registered/transaction-process-death-report.json": {
+        "sha256": "c4f5e04606800011cd2a64dc8629abc2c5e5d7e90712262111b141dd72237ca7",
+        "bytes": 1322
+      },
+      "api37-model-registered/verify-instrumentation.txt": {
+        "sha256": "9dd0cbc0cf5c74886ea40af588718632b9e3628d9687364e33cc3f4cb8f0a1ad",
+        "bytes": 176
+      },
+      "api37-r8/instrumentation.log": {
+        "sha256": "2862ade22c95d115c8622027ea23e6dc19771c573d58e864b9344a91e598b893",
+        "bytes": 805
+      },
+      "api37-r8/run.json": {
+        "sha256": "8dbc8e616fb6c65eebcae190b2bcb57f21c8347ebdefec91b9fc118848e5b69c",
+        "bytes": 1742
+      },
+      "api37-runtime-configuration.json": {
+        "sha256": "b21ffffb1fd9468ce2c4c14db85050a2dd3f5b42cdedb2358b5c632c78d2da62",
+        "bytes": 1483
+      },
+      "api37-setup-identity.json": {
+        "sha256": "7ad16ced3b36f29aa4cf1de0440adb31a0347aa7f1c86226c289618897541ccf",
+        "bytes": 584
+      },
+      "artifact-source-lineage.json": {
+        "sha256": "5ac0530c058249b396dda7fb7fde29397726aca7eb62d5f9fefde7ad6396e36e",
+        "bytes": 854
+      },
+      "cleanup.json": {
+        "sha256": "5aafc8585e7e4e226a1940903a99bd2e758bf8d4a35fb06bd3f745d9bab68e43",
+        "bytes": 279
+      },
+      "component-ci/cortex.log": {
+        "sha256": "00496cfd2f9cca78707e5b396813db28e0415347ccb7b31ef4007e6bede541d0",
+        "bytes": 1177282
+      },
+      "component-ci/resources.log": {
+        "sha256": "39dac24f7f4d9d9137e99a48f52006b65964c8a2b33627dbb1995e099d16b3dd",
+        "bytes": 1176994
+      },
+      "component-ci/retention.log": {
+        "sha256": "85be491f4bc8bce8adbfeb8f56b48da9e5a28976b23c5a1eda8ed8a8846d5f31",
+        "bytes": 1177212
+      },
+      "component-ci.json": {
+        "sha256": "10fa166d19520fac4a5feea3c72b1c3dec3d5591414ad190383e615e973ecedf",
+        "bytes": 699
+      },
+      "component-merges.log": {
+        "sha256": "5250ba4719926e2e8f41eaad98ed350c10284b56c907ac5f9947de58bbeba244",
+        "bytes": 2759
+      },
+      "component-tree-equality.json": {
+        "sha256": "c2bcd93e8122c817bca00742e23ed4448aef2fa0c925e75781a16b021fa93e11",
+        "bytes": 243
+      },
+      "cortex-fixes/android-identity.json": {
+        "sha256": "e387a993730871737e963a6ac31b01828c1a7079b8af33717142a40becf323b2",
+        "bytes": 857
+      },
+      "cortex-fixes/android-instrumentation.log": {
+        "sha256": "228cc2e10d8b874f4b6dda9b67f2f8946de69cfa6755f5b60fb94aa1378855d8",
+        "bytes": 18397
+      },
+      "cortex-fixes/canonical-container-exit.txt": {
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      },
+      "cortex-fixes/canonical-container.log": {
+        "sha256": "85196058814518f17b02b63cdb80d27f17fa546aa7c9c082e919f66e29a411d3",
+        "bytes": 311100
+      },
+      "cortex-fixes/client-identity.json": {
+        "sha256": "bfa3791cabf2bd5e78daf8084ea6b5dd832a8a0f940e9b669f33b5116783abda",
+        "bytes": 679
+      },
+      "cortex-fixes/client-instrumentation.log": {
+        "sha256": "0d9fab7cc51d5c348b26ff2d432e18ea28749ae7e4d85ff48520e4be9eb35c06",
+        "bytes": 10391
+      },
+      "cortex-fixes/device-identity-r8.json": {
+        "sha256": "dd8133c60c96da2f60b0be0caf883490c0a6b26681bbfac7ba0379011539f1f5",
+        "bytes": 745
+      },
+      "cortex-fixes/focused-final.log": {
+        "sha256": "4b2ec10b0087e4c741f3b1bb2468b116349bff7bf3772fec4938a31af30be536",
+        "bytes": 67402
+      },
+      "cortex-fixes/host-harness.log": {
+        "sha256": "bd99b22f240137a7d0a7c9e985d4a53a35a272c075daa0fe7673483aa0013208",
+        "bytes": 227
+      },
+      "cortex-fixes/jvm-report-index.json": {
+        "sha256": "35a5277504b9fd852db58c45045dfef650dcedeb2e62ba89c51211319ff80e22",
+        "bytes": 22423
+      },
+      "cortex-fixes/platform-ui.xml": {
+        "sha256": "51d13edf1c10df496c8d0ce7d1f4dba556cb8ef374aa324227e55d3f6c1da83b",
+        "bytes": 4143
+      },
+      "cortex-fixes/r8-container-exit.txt": {
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      },
+      "cortex-fixes/r8-container.log": {
+        "sha256": "a51b5d45bbffeb5edde4eab746b552bad3e70988bc53036330dcfe8cf5f5811c",
+        "bytes": 117019
+      },
+      "cortex-fixes/r8-failure-ui.xml": {
+        "sha256": "51d13edf1c10df496c8d0ce7d1f4dba556cb8ef374aa324227e55d3f6c1da83b",
+        "bytes": 4143
+      },
+      "cortex-fixes/r8-instrumentation-attempt1-platform-anr.log": {
+        "sha256": "4e606e981e2dff786c8b344d35580a77e4a1487c310a4ef710d03d10260fd992",
+        "bytes": 692
+      },
+      "cortex-fixes/r8-instrumentation-attempt2-system-ui-anr.log": {
+        "sha256": "4e606e981e2dff786c8b344d35580a77e4a1487c310a4ef710d03d10260fd992",
+        "bytes": 692
+      },
+      "cortex-fixes/r8-instrumentation.log": {
+        "sha256": "2fb05f93e327eb76bc023555e632764ae1c62d65383e700c3ae6617bfe11237b",
+        "bytes": 748
+      },
+      "cortex-fixes/source-manifest.json": {
+        "sha256": "ca08812f212d0029a8d923ffe28d37ea143fde86995b4e36b22f801a9a0aaef3",
+        "bytes": 117031
+      },
+      "cortex-fixes/source-verification.json": {
+        "sha256": "cd364d5365a3d1e58f0dde1a3404511b7790c5af3cd0aa40997b5553017d83dc",
+        "bytes": 195
+      },
+      "cortex-fixes/validation-state.json": {
+        "sha256": "a4b1242c3ebf21d117d70670127138b513ac9fba86ab661d3ee5ca9106487ffc",
+        "bytes": 1850
+      },
+      "delivery-source-verification.json": {
+        "sha256": "7bc82f2728344b1a5b0ba27a2b389f62e6edecfb7ea040dcac09c067ef497b70",
+        "bytes": 150
+      },
+      "github.json": {
+        "sha256": "5cc5417c2784ac045ed6a1fd9a1ba0f31409180265b2ba4832adce7d258889bd",
+        "bytes": 1256
+      },
+      "integrated-source.json": {
+        "sha256": "fb10bdeccce30413ab586dcca27dd3c3e7f49b58917276f1f4b3a089f7fce7b9",
+        "bytes": 117051
+      },
+      "integration-state.json": {
+        "sha256": "019f5192faeed0f2653ed450379bf0ad645a7bda0ed536b472414fc50dbd2413",
+        "bytes": 2339
+      },
+      "model-fixture.json": {
+        "sha256": "625be60359d7a967fa51863ca7e990db25c4e919efedb6cfe49dbf27d44ef2a6",
+        "bytes": 332
+      },
+      "preceding-audit/audit-summary.json": {
+        "sha256": "d4e636a4d3c73ec7fb4c28fdef57e2239d661490bb249a6fcbc3ef7cce7a5e5c",
+        "bytes": 5212
+      },
+      "preceding-audit/device-identity-baseline.json": {
+        "sha256": "99308630601c19089b19d04921d83f6366606b1b4db1102a1f3b088c685b68e3",
+        "bytes": 657
+      },
+      "preceding-audit/fresh-jvm-report-index.json": {
+        "sha256": "5c3813ceb3acc71320a16c96bee5b4303d7b21b8c42f9be3d9932a002a8defd6",
+        "bytes": 25715
+      },
+      "preceding-audit/persistence-instrumentation.log": {
+        "sha256": "4a941eb5657d6ba1700da162ca5c41e087696725dc423f4da314ed0aa12b6a11",
+        "bytes": 52447
+      },
+      "preceding-audit/source-manifest.json": {
+        "sha256": "e316a05b9066b12d7b08e838309e6d82fbca8c39bdcc76d7879978802a2dd8e4",
+        "bytes": 116647
+      },
+      "publish-evidence.py": {
+        "sha256": "00febbe2d915e5c2a3f07a5b2c147c5246dfef1ad886dfe0f214fbbc956a1aee",
+        "bytes": 4813
+      },
+      "run-instrumentation.py": {
+        "sha256": "20f2b7c546536273650b535c4c4aab2821808cb94fa74d50b259de3fb6367fe6",
+        "bytes": 4729
+      },
+      "upgrade-api35/installed-upgrade-report.json": {
+        "sha256": "6bcd52000400b28a35237cad56b0023b979c3b312bf2cf0f2c457d26f7a94462",
+        "bytes": 1318
+      },
+      "upgrade-api35/prepare-instrumentation.txt": {
+        "sha256": "e54574e8425f099bf1ba84005c6fd7756060f875bb738d395ee4db46212d84ad",
+        "bytes": 69
+      },
+      "upgrade-api35/verify-instrumentation.txt": {
+        "sha256": "aafe72d6248a7e22d3f73c7031311bfd23c5d48731aa639976a5a5d6ab90ff86",
+        "bytes": 204
+      },
+      "upgrade-baseline-provenance.json": {
+        "sha256": "cb47f94f20eed82f07a0f69f66f14b95bc5042c8adf134afa274526cf9bdde8d",
+        "bytes": 5108
+      }
+    }
+  },
+  "deliveryRequiredCheck": "docker-build-and-check; exact delivery-head result recorded in the protected-main PR before merge",
+  "physicalQualification": false,
+  "f5Status": "OPEN",
+  "cortexRuntimeReady": false,
+  "productionInferenceEnabled": false,
+  "pending": [
+    "Physical Galaxy S21 arm64/model/resource/thermal/battery qualification",
+    "Physical API37 MemoryLimiter and policy calibration",
+    "Complete native/API physical load matrix and approved production profiles",
+    "At least 24 real elapsed hours of post-Cortex soak plus memory stress",
+    "Remaining F4 stability prerequisite #64",
+    "F6 implementation after the preceding gates pass"
+  ],
+  "physicalTrackingIssue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/89",
+  "cleanup": {
+    "ownedEmulatorsStopped": true,
+    "ownedTemporaryAvdsRemoved": [
+      "Orion_Integration_API35_20261110",
+      "Orion_Integration_API37_20261110"
+    ],
+    "originalAvdsModified": false,
+    "otherProjectDevicesModified": false,
+    "deviceRemaining": "List of devices attached\n\n"
+  }
+}
