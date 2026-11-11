@@ -18,13 +18,14 @@ data class OrionRestartDecision internal constructor(
     val memoryDeaths: Int,
     val degraded: Boolean,
     val preloadAllowed: Boolean,
+    val excessiveResourceDeaths: Int = 0,
 ) {
     val eligibleForResourceEvaluation: Boolean get() = block == null && candidatePlan != null
 }
 
 /**
  * MAIN-owned ephemeral guard. Recovery must supply complete available AI exit
- * history again; construction is not a reset of memory evidence. No process or
+ * history again; construction is not a reset of resource-death evidence. No process or
  * model is started here. Consumers must also obtain a fresh governor decision.
  */
 class OrionCortexRestartGuard(
@@ -34,7 +35,7 @@ class OrionCortexRestartGuard(
     private val cooldownMillis: Long,
 ) {
     private val plans = qualifiedFallbackPlans.toList()
-    private val memoryExits = linkedSetOf<ProcessExitSignal>()
+    private val resourceExits = linkedSetOf<ProcessExitSignal>()
     private var boot: BootSessionId? = null
     private var fence: MonotonicInstant? = null
 
@@ -52,40 +53,39 @@ class OrionCortexRestartGuard(
     }
 
     @Synchronized fun evaluate(history: OrionAiExitHistory?): OrionRestartDecision {
-        fun blocked(reason: OrionRestartBlock) = OrionRestartDecision(reason, null,
-            memoryExits.size, memoryExits.isNotEmpty(), false)
+        fun decision(block: OrionRestartBlock?, plan: OrionInferenceResourcePlan?) = OrionRestartDecision(
+            block, plan, resourceExits.count { it.isMemoryExit() }, resourceExits.isNotEmpty(),
+            block == null && resourceExits.isEmpty(), resourceExits.count { !it.isMemoryExit() })
+        fun blocked(reason: OrionRestartBlock) = decision(reason, null)
         if (history == null) return blocked(OrionRestartBlock.HISTORY_UNAVAILABLE)
         val now = clock.monotonicNow()
         val age = now.elapsedSince(history.sampledAt)?.toMillis()
         if (age == null || age >= maximumHistoryAgeMillis) return blocked(OrionRestartBlock.HISTORY_STALE)
         // Bound copying even when the provider supplies a huge lazy list.
         val exits = history.exits.take(MAX_EXITS + 1)
-        if (exits.size > MAX_EXITS || exits.any { it.kind == ProcessExitKind.UNKNOWN && !it.isMemoryExit() })
+        if (exits.size > MAX_EXITS || exits.any { it.kind == ProcessExitKind.UNKNOWN && !it.requiresResourceBackoff() })
             return blocked(OrionRestartBlock.HISTORY_INVALID)
         if (boot != now.bootSessionId) {
             boot = now.bootSessionId
             // Preserve degradation but never interpret a previous boot's fence.
-            fence = if (memoryExits.isNotEmpty()) now else null
+            fence = if (resourceExits.isNotEmpty()) now else null
         }
         for (exit in exits) {
-            if (exit.isMemoryExit() && exit !in memoryExits) {
+            if (exit.requiresResourceBackoff() && exit !in resourceExits) {
                 // Saturation already exhausts any permitted fallback ladder.
-                if (memoryExits.size < MAX_EXITS) memoryExits.add(exit)
+                if (resourceExits.size < MAX_EXITS) resourceExits.add(exit)
                 fence = now
             }
         }
-        if (memoryExits.size >= plans.size) return blocked(OrionRestartBlock.FALLBACK_EXHAUSTED)
+        if (resourceExits.size >= plans.size) return blocked(OrionRestartBlock.FALLBACK_EXHAUSTED)
         fence?.let {
             val elapsed = now.elapsedSince(it)?.toMillis()
             if (elapsed == null || elapsed < cooldownMillis) return blocked(OrionRestartBlock.COOLDOWN)
         }
-        val degraded = memoryExits.isNotEmpty()
-        val plan = plans[memoryExits.size].let { if (degraded) it.copy(keepAliveMs = 0) else it }
-        return OrionRestartDecision(null, plan, memoryExits.size, degraded, !degraded)
+        val degraded = resourceExits.isNotEmpty()
+        val plan = plans[resourceExits.size].let { if (degraded) it.copy(keepAliveMs = 0) else it }
+        return decision(null, plan)
     }
-
-    private fun ProcessExitSignal.isMemoryExit() = reason == 3 || memoryLimiterEvidence ||
-        kind == ProcessExitKind.LOW_MEMORY || kind == ProcessExitKind.MEMORY_LIMITER
 
     companion object { private const val MAX_EXITS = 64 }
 }
