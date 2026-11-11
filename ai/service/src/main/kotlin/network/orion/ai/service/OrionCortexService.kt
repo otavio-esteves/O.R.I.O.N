@@ -49,7 +49,8 @@ class OrionCortexService : Service() {
     @Volatile private var nativeValidationCompleted = false
 
     private class Request(val id: String, val deadline: MonotonicDeadline?,
-        val callback: IOrionInferenceCallback? = null, val loading: Boolean = false) {
+        val callback: IOrionInferenceCallback? = null, val loading: Boolean = false,
+        var fingerprint: String? = null) {
         @Volatile var terminal: String? = null
         var sequence = 0L
         var watcher: ScheduledFuture<*>? = null
@@ -104,9 +105,12 @@ class OrionCortexService : Service() {
                 OrionCortexWire.requireReadOnlyFile(fd, size, MAX_MODEL_BYTES)
                 val context = OrionCortexWire.int(spec, "contextTokens").also { require(it in 32..OrionCortexWire.MAX_CONTEXT) }
                 val threads = OrionCortexWire.int(spec, "threads").also { require(it in 1..OrionCortexWire.MAX_THREADS) }
-                val request = Request(id, deadline(spec), loading = true)
+                val deadline = deadline(spec)
+                val fingerprint = OrionCortexRequestFingerprint.load(modelId, hash, size, context, threads, deadline)
+                val request = Request(id, deadline, loading = true, fingerprint = fingerprint)
                 synchronized(lock) {
-                    findRequest(id)?.let { return@guarded requestReply(it) }
+                    findRequest(id)?.let { return@guarded duplicateReply(it, fingerprint, deadline) }
+                    require(deadline.statusAt(clock.monotonicNow()) == MonotonicDeadlineStatus.ACTIVE)
                     if (!hasCapacity(id)) return@guarded reply("CAPACITY_REACHED")
                     if (closing || unloading || active != null || loadedId != null) return@guarded reply("BUSY")
                     val owned = ParcelFileDescriptor.dup(fd.fileDescriptor)
@@ -153,14 +157,18 @@ class OrionCortexService : Service() {
                 require(bytes in 1..OrionCortexWire.MAX_INPUT_BYTES.toLong() && memory.size.toLong() == bytes)
                 val tokens = OrionCortexWire.int(spec, "maxTokens").also { require(it in 1..OrionCortexWire.MAX_TOKENS) }
                 val temperature = OrionCortexWire.temperature(spec)
-                val request = Request(id, deadline(spec), requireNotNull(callback))
+                val deadline = deadline(spec)
+                val target = requireNotNull(callback)
+                // Snapshot exactly once before admission; the digest and native worker use the same immutable text.
+                val prompt = OrionCortexWire.readUtf8(memory, bytes)
+                val fingerprint = OrionCortexRequestFingerprint.inference(modelId, prompt, bytes, tokens, temperature, deadline)
+                val request = Request(id, deadline, target, fingerprint = fingerprint)
                 synchronized(lock) {
-                    findRequest(id)?.let { return@guardedInput requestReply(it) }
+                    findRequest(id)?.let { return@guardedInput duplicateReply(it, fingerprint, deadline) }
+                    require(deadline.statusAt(clock.monotonicNow()) == MonotonicDeadlineStatus.ACTIVE)
                     if (!hasCapacity(id)) return@guardedInput reply("CAPACITY_REACHED")
                     if (closing || unloading || active != null) return@guardedInput reply("BUSY")
                     if (loadedId != modelId) return@guardedInput reply("MODEL_MISMATCH")
-                    // Copy to a bounded private String before the received shared handle closes.
-                    val prompt = OrionCortexWire.readUtf8(memory, bytes)
                     admit(request)
                     worker.execute { perform(request) {
                             ensureActive(request)
@@ -250,9 +258,7 @@ class OrionCortexService : Service() {
     private fun deadline(spec: Bundle): MonotonicDeadline {
         val duration = OrionCortexWire.long(spec, "durationMillis").also { require(it in 1..MAX_DURATION_MILLIS) }
         return MonotonicInstant(BootSessionId(OrionCortexWire.int(spec, "bootCount")),
-            OrionCortexWire.long(spec, "startedElapsed")).deadlineAfter(duration).also {
-            require(it.statusAt(clock.monotonicNow()) == MonotonicDeadlineStatus.ACTIVE)
-        }
+            OrionCortexWire.long(spec, "startedElapsed")).deadlineAfter(duration)
     }
 
     private fun admit(request: Request) {
@@ -360,6 +366,17 @@ class OrionCortexService : Service() {
 
     private fun validId(value: String?): String = requireNotNull(value).also {
         require(it.length in 1..128 && it == it.trim() && it.none(Char::isISOControl))
+    }
+
+    /** Called only under the admission lock. A cancellation tombstone binds its first valid payload, never executes it. */
+    private fun duplicateReply(request: Request, fingerprint: String, deadline: MonotonicDeadline): Bundle {
+        if (request.fingerprint == null) {
+            check(request.terminal == "CANCELLED")
+            require(deadline.statusAt(clock.monotonicNow()) == MonotonicDeadlineStatus.ACTIVE)
+            request.fingerprint = fingerprint
+        }
+        require(request.fingerprint == fingerprint) { "Cortex request identity conflict." }
+        return requestReply(request)
     }
 
     private fun requestReply(request: Request) = reply("OK") {

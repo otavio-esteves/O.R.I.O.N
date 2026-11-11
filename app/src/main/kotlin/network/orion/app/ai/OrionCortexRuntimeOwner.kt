@@ -10,6 +10,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import network.orion.ai.api.OrionInferenceLifecycle
 import network.orion.ai.api.OrionInferenceChunk
 import network.orion.ai.api.OrionInferenceRequest
 import network.orion.ai.api.OrionInferenceStatus
@@ -91,42 +92,59 @@ internal class OrionCortexRuntimeOwner(
         if (plans.isEmpty()) return@withContext unavailable(OrionCortexUnavailable.NO_QUALIFIED_PROFILE)
         if (timing == null) return@withContext unavailable(OrionCortexUnavailable.RESOURCE_CONFIGURATION_UNAVAILABLE)
         if (!coreReady()) return@withContext unavailable(OrionCortexUnavailable.CORE_NOT_READY)
-        if (discoverInventory() == null) return@withContext unavailable(OrionCortexUnavailable.PROCESS_INVENTORY_UNAVAILABLE)
         val plan = byId[modelId]
         if (request.modelId != modelId || plan == null) return@withContext unavailable(OrionCortexUnavailable.PROFILE_MISMATCH)
-        currentCoroutineContext().ensureActive()
+        val preparationContext = currentCoroutineContext()
+        preparationContext.ensureActive()
+        val fingerprint = try {
+            validateOrionInferenceRequest(request, contextTokens, threads)
+            orionInferenceRequestFingerprint(request, contextTokens, threads)
+        } catch (_: IllegalArgumentException) { return@withContext unavailable(OrionCortexUnavailable.MODEL_UNAVAILABLE) }
+        val lifecycle = OrionInferenceLifecycle(request, clock)
+        fun checkRequest() {
+            preparationContext.ensureActive()
+            val status = lifecycle.status()
+            if (status.terminal != null) throw PreparationStopped(status)
+        }
         try {
+            requestHistory.existingResult(request.requestId, fingerprint)?.let {
+                return@withContext OrionCortexRunResult.Completed(it)
+            }
+            checkRequest()
+            if (discoverInventory() == null) return@withContext unavailable(OrionCortexUnavailable.PROCESS_INVENTORY_UNAVAILABLE)
+            checkRequest()
             val beforeRecovery = database.models().find(modelId)
             // One registry row per request: no scan or hash work joins mandatory Core startup.
             recovery.withLock {
+                checkRequest()
                 // A later interrupted import may appear after the initial cursor
                 // completed. Reconcile only that selected row, never reopen a scan.
-                if (beforeRecovery?.status in setOf("IMPORTED", "VALIDATING")) importer.recoverSelected(modelId)
+                if (beforeRecovery?.status in setOf("IMPORTED", "VALIDATING")) importer.recoverSelected(modelId, ::checkRequest)
                 if (!copiesClean) {
-                    val copies = importer.cleanupInterruptedCopies(25)
+                    val copies = importer.cleanupInterruptedCopies(25, ::checkRequest)
                     copiesClean = !copies.needsContinuation && copies.blocked == 0
                 }
                 if (!recoveryComplete) {
-                    val page = importer.recoverPage(recoveryAfter, 1)
+                    val page = importer.recoverPage(recoveryAfter, 1, ::checkRequest)
                     recoveryAfter = page.nextAfterModelId
                     recoveryComplete = recoveryAfter == null
                 }
                 if (!unregisteredClean) {
-                    val files = importer.cleanupUnregisteredFiles(unregisteredAfter, 1)
+                    val files = importer.cleanupUnregisteredFiles(unregisteredAfter, 1, ::checkRequest)
                     unregisteredAfter = files.nextAfterFileName
                     unregisteredClean = unregisteredAfter == null && files.blocked == 0
                 }
             }
-            currentCoroutineContext().ensureActive()
+            checkRequest()
             // A pending selected row never gains authority in this same attempt merely through recovery.
             if (beforeRecovery?.status != "READY") return@withContext unavailable(OrionCortexUnavailable.MODEL_NOT_READY)
             val selected = database.models().find(modelId)
             if (!profileMatchesReadyModel(plan, selected, contextTokens, threads, request.maxTokens))
                 return@withContext unavailable(OrionCortexUnavailable.PROFILE_MISMATCH)
-            val descriptor = importer.openReadOnly(modelId)
+            val descriptor = importer.openReadOnly(modelId, ::checkRequest)
                 ?: return@withContext unavailable(OrionCortexUnavailable.MODEL_UNAVAILABLE)
             descriptor.use {
-                currentCoroutineContext().ensureActive()
+                checkRequest()
                 if (closed) return@withContext unavailable(OrionCortexUnavailable.CLOSED)
                 if (!coreReady()) return@withContext unavailable(OrionCortexUnavailable.CORE_NOT_READY)
                 val ownedClient = synchronized(monitor) {
@@ -144,11 +162,15 @@ internal class OrionCortexRuntimeOwner(
                 OrionCortexRunResult.Completed(ownedClient.runInference(checkNotNull(selected), it, request,
                     contextTokens, threads, onChunks))
             }
+        } catch (stopped: PreparationStopped) {
+            OrionCortexRunResult.Completed(requestHistory.runOnce(request.requestId, fingerprint) { stopped.status })
         } catch (cancelled: CancellationException) { throw cancelled }
           catch (_: network.orion.ai.api.OrionRetiredRequestException) { unavailable(OrionCortexUnavailable.REQUEST_RETIRED) }
           catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); throw interrupted }
           catch (_: Exception) { unavailable(OrionCortexUnavailable.MODEL_UNAVAILABLE) }
     }
+
+    private class PreparationStopped(val status: OrionInferenceStatus) : RuntimeException("Cortex preparation stopped.")
 
     @Suppress("DEPRECATION")
     private fun discoverInventory(): Set<String>? = try {
