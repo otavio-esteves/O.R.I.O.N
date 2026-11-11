@@ -168,12 +168,8 @@ internal class OrionTimerKernel(private val db: OrionDatabase, encryption: Orion
         val recovery = OrionActionExecutionStore(db, actions, clock, denied)
         var cursor: UUID? = null
         do { cursor = recovery.recoverAbandoned(100, cursor).nextAfterActionId } while (cursor != null)
-        val now = clock.wallNow().toEpochMilli()
-        val retention = now - Duration.ofDays(90).toMillis()
-        db.retention().prune(now, retention, retention, retention, retention, retention, 2000, 100)
-        // Domain events are facts, not action commands. With no registered durable
-        // consumers yet, retain pending/backoff/manual rows unchanged for F4.
-        // No reminders/workers are installed by this timer-only slice.
+        // MAIN Core owns operational retention and its counters. This slice only recovers ownership;
+        // it never prunes history, publishes facts, invokes Skills or installs schedulers.
     }
 
     fun pending(): List<OrionTimerPending> = db.actions().timerConfirmations(50).mapNotNull { row ->

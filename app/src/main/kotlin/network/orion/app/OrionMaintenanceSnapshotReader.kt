@@ -12,7 +12,11 @@ import network.orion.data.database.RetentionResult
 
 /** MAIN-only aggregate read. No business identifiers, content, errors or ciphertext leave this adapter. */
 internal fun readMaintenanceSnapshot(context: Context, db: OrionDatabase, clock: OrionClock,
-    origin: OrionMaintenanceOrigin, healthy: Boolean, pruned: RetentionResult, sequence: Long = 1): OrionMaintenanceSnapshot {
+    origin: OrionMaintenanceOrigin, healthy: Boolean, pruned: RetentionResult, sequence: Long = 1): OrionMaintenanceSnapshot =
+    readMaintenanceSnapshot(context, db, clock, origin, healthy, OrionRetentionTotals() + pruned, sequence)
+
+internal fun readMaintenanceSnapshot(context: Context, db: OrionDatabase, clock: OrionClock,
+    origin: OrionMaintenanceOrigin, healthy: Boolean, pruned: OrionRetentionTotals, sequence: Long = 1): OrionMaintenanceSnapshot {
     val queries = mapOf(
         OrionMaintenanceMetric.ACTION_TOTAL to "SELECT count(*) FROM orion_action_requests",
         OrionMaintenanceMetric.ACTION_QUEUED to "SELECT count(*) FROM orion_action_requests WHERE status IN ('PENDING','NEEDS_CONFIRMATION','CONFIRMED')",
@@ -34,11 +38,11 @@ internal fun readMaintenanceSnapshot(context: Context, db: OrionDatabase, clock:
             check(it.moveToFirst()); it.getLong(0)
         } }.toMutableMap()
     })
-    values[OrionMaintenanceMetric.PRUNED_EVENTS] = pruned.events.toLong()
-    values[OrionMaintenanceMetric.PRUNED_INGRESS] = pruned.ingress.toLong()
-    values[OrionMaintenanceMetric.PRUNED_ACTIONS] = pruned.actions.toLong()
-    values[OrionMaintenanceMetric.PRUNED_AUDIT] = pruned.audit.toLong()
-    values[OrionMaintenanceMetric.PRUNED_TECHNICAL] = pruned.technical.toLong()
+    values[OrionMaintenanceMetric.PRUNED_EVENTS] = pruned.events
+    values[OrionMaintenanceMetric.PRUNED_INGRESS] = pruned.ingress
+    values[OrionMaintenanceMetric.PRUNED_ACTIONS] = pruned.actions
+    values[OrionMaintenanceMetric.PRUNED_AUDIT] = pruned.audit
+    values[OrionMaintenanceMetric.PRUNED_TECHNICAL] = pruned.technical
     val path = db.openHelper.databaseName?.let(context::getDatabasePath)
     values[OrionMaintenanceMetric.DATABASE_BYTES] = if (path == null) 0 else path.length() + File(path.path + "-wal").length()
     val monotonic = clock.monotonicNow()

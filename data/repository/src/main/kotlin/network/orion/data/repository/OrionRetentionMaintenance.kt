@@ -21,7 +21,7 @@ data class OrionRetentionPolicy(
     }
 }
 
-/** No scheduler is installed by this adapter. Main's future maintenance runner invokes bounded batches. */
+/** Core invokes bounded batches during recovery/maintenance and owns their diagnostic accounting. */
 class OrionRetentionMaintenance(private val retention: OrionRetentionDao, private val clock: WallClock,
     private val policy: OrionRetentionPolicy = OrionRetentionPolicy()) {
     fun runBatch(): RetentionResult {
