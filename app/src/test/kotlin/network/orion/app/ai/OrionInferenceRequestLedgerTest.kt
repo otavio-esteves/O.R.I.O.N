@@ -14,6 +14,23 @@ import org.junit.Test
 class OrionInferenceRequestLedgerTest {
     private val timedOut = OrionInferenceStatus(OrionInferenceStage.TERMINAL, OrionInferenceTerminal.TIMED_OUT, null)
 
+    @Test fun `storage preflight validates issued identities and preserves the first result`() = runBlocking {
+        val ledger = OrionInferenceRequestLedger()
+        val id = ledger.newRequestId()
+        assertNull(ledger.existingResult(id, "hash"))
+        assertTrue(runCatching { ledger.existingResult("foreign", "hash") }.exceptionOrNull() is IllegalArgumentException)
+        val hold = CompletableDeferred<Unit>()
+        val owner = async(start = CoroutineStart.UNDISPATCHED) { ledger.runOnce(id, "hash") { hold.await(); timedOut } }
+        val duplicate = async(start = CoroutineStart.UNDISPATCHED) { ledger.existingResult(id, "hash") }
+        assertFalse(duplicate.isCompleted)
+        assertTrue(runCatching { ledger.existingResult(id, "changed") }.exceptionOrNull() is IllegalStateException)
+        hold.complete(Unit)
+        assertEquals(timedOut, owner.await()); assertEquals(timedOut, duplicate.await())
+        assertEquals(timedOut, ledger.existingResult(id, "hash"))
+        repeat(100) { ledger.runOnce(ledger.newRequestId(), "later") { timedOut } }
+        assertTrue(runCatching { ledger.existingResult(id, "hash") }.exceptionOrNull() is OrionRetiredRequestException)
+    }
+
     @Test fun `concurrent duplicate shares first result without another operation`() = runBlocking {
         val ledger = OrionInferenceRequestLedger()
         val id = ledger.newRequestId()

@@ -207,4 +207,34 @@ class OrionMinimumResourceGovernorTest {
         assertThrows(IllegalArgumentException::class.java) { plan.copy(processBudgetBytes = 0) }
         assertThrows(IllegalArgumentException::class.java) { OrionMinimumResourceGovernor(clock, { sample }, listOf(plan), 0, 2_000) }
     }
+
+    @Test fun `excessive resource exits block even otherwise healthy governor admission`() {
+        for (signal in listOf(ProcessExitSignal(9, clock.wall, ProcessExitKind.EXCESSIVE_RESOURCE_USAGE),
+            ProcessExitSignal(9, clock.wall), ProcessExitSignal(99, clock.wall, ProcessExitKind.EXCESSIVE_RESOURCE_USAGE))) {
+            sample = healthy().copy(recentExits = listOf(signal))
+            val governor = governor()
+            denied(governor, OrionResourceBlock.RESOURCE_EXIT)
+            assertEquals(MemoryRisk.UNKNOWN, governor.memoryRisk())
+        }
+    }
+
+    @Test fun `resource cooldown survives history shrinkage and wall jumps and does not renew for duplicates`() {
+        val governor = governor()
+        val signal = ProcessExitSignal(9, Instant.EPOCH, ProcessExitKind.EXCESSIVE_RESOURCE_USAGE)
+        sample = healthy().copy(recentExits = listOf(signal, signal))
+        assertFalse(governor.canRunInference())
+        clock.wall = Instant.MAX
+        clock.mark = MonotonicInstant(BootSessionId(1), 2_999)
+        sample = healthy().copy(sampledAt = clock.mark, recentExits = emptyList())
+        assertFalse(governor.canLoadModel(model))
+        clock.wall = Instant.MIN
+        clock.mark = MonotonicInstant(BootSessionId(1), 3_000)
+        sample = sample!!.copy(sampledAt = clock.mark, recentExits = listOf(signal))
+        assertTrue(governor.canRunInference())
+        sample = sample!!.copy(recentExits = listOf(signal, signal.copy(occurredAt = Instant.ofEpochMilli(1))))
+        assertFalse(governor.canRunInference())
+        clock.mark = MonotonicInstant(BootSessionId(2), 10)
+        sample = sample!!.copy(sampledAt = clock.mark)
+        assertFalse(governor.canRunInference())
+    }
 }

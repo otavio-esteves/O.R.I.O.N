@@ -13,6 +13,7 @@ import android.system.OsConstants
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
+import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -23,6 +24,7 @@ import network.orion.ai.api.OrionCortexWire
 import network.orion.ai.api.OrionCortexProtocol
 import network.orion.ai.api.OrionIssuedRequestHistory
 import network.orion.core.time.AndroidOrionClock
+import network.orion.core.time.MonotonicDeadlineStatus
 import org.junit.AfterClass
 import org.junit.Assert.*
 import org.junit.BeforeClass
@@ -123,6 +125,85 @@ class OrionCortexBoundaryTest {
         }
     }
 
+    @Test fun d_changedPayloadsCannotReplaceCancelledLoadOrInferenceBindings() {
+        fun issue() = remote.issueRequestId().getString("requestId")!!
+        val model = File.createTempFile("orion_identity_", ".bin", app.cacheDir)
+        model.writeBytes(ByteArray(256))
+        try {
+            // Cancellation alone has no payload; its first valid submission binds it without execution.
+            val load = loadSpec().apply { putString("requestId", issue()) }
+            val loadId = load.getString("requestId")!!
+            remote.cancelInference(loadId)
+            fun submitLoad(spec: Bundle) = ParcelFileDescriptor.open(model, ParcelFileDescriptor.MODE_READ_ONLY).use {
+                remote.loadModel(it, spec)
+            }
+            assertEquals("CANCELLED", submitLoad(load).getString("state"))
+            assertEquals("CANCELLED", submitLoad(Bundle(load)).getString("state"))
+            val changes = listOf<Bundle.() -> Unit>(
+                { putInt("threads", 2) }, { putInt("contextTokens", 256) },
+                { putString("modelId", "b".repeat(64)); putString("sha256", "b".repeat(64)) },
+                { putLong("durationMillis", 29_999) },
+                { putLong("startedElapsed", getLong("startedElapsed") - 1) },
+                { putInt("bootCount", getInt("bootCount") + 1) })
+            for (change in changes) assertEquals("INVALID_REQUEST", submitLoad(Bundle(load).apply(change)).getString("status"))
+            shared(8).use { input ->
+                assertEquals("INVALID_REQUEST", remote.startInference(input, inferSpec(loadId, 8),
+                    callback(AtomicInteger())).getString("status"))
+            }
+
+            val id = issue()
+            remote.cancelInference(id)
+            val infer = inferSpec(id, 8)
+            val count = AtomicInteger()
+            fun submit(spec: Bundle, fill: Byte = 65): Bundle = shared(8, fill).use {
+                remote.startInference(it, spec, callback(count))
+            }
+            assertEquals("CANCELLED", submit(infer).getString("state"))
+            assertEquals("CANCELLED", submit(Bundle(infer)).getString("state"))
+            assertEquals("INVALID_REQUEST", submit(Bundle(infer), 66).getString("status"))
+            for (change in listOf<Bundle.() -> Unit>(
+                { putInt("maxTokens", 9) }, { putFloat("temperature", 1f) },
+                { putString("modelId", "different-model") }, { putLong("durationMillis", 29_999) }))
+                assertEquals("INVALID_REQUEST", submit(Bundle(infer).apply(change)).getString("status"))
+            assertEquals("CANCELLED", remote.getRequestStatus(id).getString("state"))
+            assertEquals(0, count.get())
+            assertEquals("UNLOADED", remote.getStatus().getString("status"))
+        } finally { model.delete() }
+    }
+
+    @Test fun d_retainedFailedLoadRejectsChangedPayloadAndCrossOperationReplay() {
+        val file = File.createTempFile("orion_failed_load_", ".bin", app.cacheDir)
+        file.writeBytes(ByteArray(256))
+        try {
+            val hash = MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
+            val id = remote.issueRequestId().getString("requestId")!!
+            val spec = loadSpec().apply {
+                putString("requestId", id); putString("modelId", hash); putString("sha256", hash)
+            }
+            fun load(value: Bundle) = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use {
+                remote.loadModel(it, value)
+            }
+            assertEquals("ACCEPTED", load(spec).getString("status"))
+            val clock = AndroidOrionClock(app.contentResolver)
+            val deadline = clock.monotonicNow().deadlineAfter(10_000)
+            while (remote.getRequestStatus(id).getString("state") == "RUNNING" &&
+                deadline.statusAt(clock.monotonicNow()) == MonotonicDeadlineStatus.ACTIVE) Thread.sleep(5)
+            assertEquals("FAILED", remote.getRequestStatus(id).getString("state")) // Invalid GGUF, not real inference.
+            assertEquals("FAILED", load(Bundle(spec)).getString("state"))
+            assertEquals("INVALID_REQUEST", load(Bundle(spec).apply { putInt("threads", 2) }).getString("status"))
+            val count = AtomicInteger()
+            shared(8).use {
+                assertEquals("INVALID_REQUEST", remote.startInference(it, inferSpec(id, 8), callback(count)).getString("status"))
+            }
+            remote.cancelInference(id)
+            assertEquals("FAILED", remote.getRequestStatus(id).getString("state"))
+            assertEquals(0, count.get())
+            while (remote.getStatus().getString("status") != "UNLOADED" &&
+                deadline.statusAt(clock.monotonicNow()) == MonotonicDeadlineStatus.ACTIVE) Thread.sleep(5)
+            assertEquals("UNLOADED", remote.getStatus().getString("status"))
+        } finally { file.delete() }
+    }
+
     @Test fun e_issuedHistoryContinuesPastCapacityAndRetiredRequestsNeverExecute() {
         fun issue() = remote.issueRequestId().also { assertEquals("OK", it.getString("status")) }.getString("requestId")!!
         val first = issue()
@@ -186,9 +267,9 @@ class OrionCortexBoundaryTest {
         override fun onChunk(chunk: Bundle?) { count.incrementAndGet() }
     }
 
-    private fun shared(size: Int): SharedMemory = SharedMemory.create("orion_boundary_prompt", size).also { memory ->
+    private fun shared(size: Int, fill: Byte = 65): SharedMemory = SharedMemory.create("orion_boundary_prompt", size).also { memory ->
         val mapped = memory.mapReadWrite()
-        try { mapped.put(ByteArray(size) { 65 }) } finally { SharedMemory.unmap(mapped) }
+        try { mapped.put(ByteArray(size) { fill }) } finally { SharedMemory.unmap(mapped) }
         check(memory.setProtect(OsConstants.PROT_READ))
     }
 

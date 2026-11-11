@@ -12,6 +12,23 @@ profile and retains its unavailable governor fallback. The MAIN runtime owner is
 wired behind Core readiness, registry, fresh resource/restart and trusted inventory
 checks. No Cortex UI, F6 routing or direct LLM→Skill authority is enabled.
 
+## Audit refresh — 2026-11-10
+
+The resource, retention and Cortex audit corrections passed their separate CI
+reviews. The integrated candidate passed all **395 application tests** on
+API37/x86_64/16KiB with zero failures/skips, including the 33-cycle real-model test.
+API35 installed 5→6 upgrade and three real Cortex lifecycle cases, two API37 MAIN
+import SIGKILL scenarios, and three API37 minified probes also passed. The
+[audit closeout](Audit-20261110-Closeout.md) and
+[evidence index](audit-20261110-evidence.json) bind these newer results to their
+source/APK identities; the older runs below retain their historical scope.
+
+Neither physical target is available, as confirmed by the user. S21 performance,
+actual target-build MemoryLimiter, approved profiles, the full physical native/API
+matrix and the 24-hour post-Cortex soak plus memory stress remain open under
+[#89](https://github.com/otavio-esteves/O.R.I.O.N/issues/89). This refresh does not
+declare CORTEX_RUNTIME_READY or open F6.
+
 ## Master Plan §11.11 checklist
 
 PASS means the recorded container/emulator scope; it grants no physical,

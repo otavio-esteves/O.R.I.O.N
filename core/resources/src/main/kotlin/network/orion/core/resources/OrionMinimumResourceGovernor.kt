@@ -13,7 +13,7 @@ enum class OrionMemoryPressure { NONE, MODERATE, CRITICAL, UNKNOWN }
 enum class OrionResourceBlock {
     OBSERVATION_UNAVAILABLE, OBSERVATION_INVALID, OBSERVATION_STALE, EXIT_HISTORY_UNAVAILABLE,
     MODEL_UNQUALIFIED, BACKGROUND, BATTERY, THERMAL, POWER_SAVER, REQUEST_LIMITS,
-    MEMORY_PRESSURE, MEMORY_EXIT, MEMORY_BUDGET,
+    MEMORY_PRESSURE, MEMORY_EXIT, MEMORY_BUDGET, RESOURCE_EXIT,
 }
 
 /** Supplied by trusted, qualified configuration; construction alone is not device qualification. */
@@ -85,8 +85,9 @@ class OrionMinimumResourceGovernor(
 ) : ResourceGovernor {
     private val plans = qualifiedPlans.associateBy { it.model.modelId }
     private var observedBoot: BootSessionId? = null
-    private val observedMemoryExits = linkedSetOf<ProcessExitSignal>()
-    private var memoryFenceStarted: MonotonicInstant? = null
+    private val observedResourceExits = linkedSetOf<ProcessExitSignal>()
+    private var resourceFenceStarted: MonotonicInstant? = null
+    private var resourceFenceBlock = OrionResourceBlock.MEMORY_EXIT
     init {
         require(plans.size == qualifiedPlans.size)
         require(maximumObservationAgeMillis > 0 && memoryExitCooldownMillis > 0)
@@ -118,30 +119,31 @@ class OrionMinimumResourceGovernor(
         if (exits.size > MAX_EXIT_SIGNALS) return block(OrionResourceBlock.OBSERVATION_INVALID)
         if (observedBoot != now.bootSessionId) {
             observedBoot = now.bootSessionId
-            observedMemoryExits.clear()
-            memoryFenceStarted = null
+            observedResourceExits.clear()
+            resourceFenceStarted = null
         }
         // Exit wall timestamps identify evidence; they cannot shorten an in-boot
-        // cooldown. Even historical memory evidence first seen by this governor
+        // cooldown. Even historical resource-death evidence first seen by this governor
         // opens one conservative fence. Duplicate snapshots never extend it.
         for (exit in exits) {
-            if ((exit.reason == 3 || exit.memoryLimiterEvidence || exit.kind == ProcessExitKind.MEMORY_LIMITER ||
-                    exit.kind == ProcessExitKind.LOW_MEMORY) && observedMemoryExits.add(exit)) {
-                memoryFenceStarted = now
-                while (observedMemoryExits.size > MAX_EXIT_SIGNALS)
-                    observedMemoryExits.remove(observedMemoryExits.first())
+            if (exit.requiresResourceBackoff() && observedResourceExits.add(exit)) {
+                resourceFenceStarted = now
+                resourceFenceBlock = if (exit.isMemoryExit()) OrionResourceBlock.MEMORY_EXIT else OrionResourceBlock.RESOURCE_EXIT
+                while (observedResourceExits.size > MAX_EXIT_SIGNALS)
+                    observedResourceExits.remove(observedResourceExits.first())
             }
         }
         if (sample.memoryPressure == OrionMemoryPressure.CRITICAL)
             return block(OrionResourceBlock.MEMORY_PRESSURE, MemoryRisk.CRITICAL)
         if (sample.memoryPressure == OrionMemoryPressure.MODERATE)
             return block(OrionResourceBlock.MEMORY_PRESSURE, MemoryRisk.HIGH)
-        memoryFenceStarted?.let { start ->
+        resourceFenceStarted?.let { start ->
             val elapsed = now.elapsedSince(start)?.toMillis()
             if (elapsed == null || elapsed < memoryExitCooldownMillis)
-                return block(OrionResourceBlock.MEMORY_EXIT, MemoryRisk.HIGH)
+                return block(resourceFenceBlock,
+                    if (resourceFenceBlock == OrionResourceBlock.MEMORY_EXIT) MemoryRisk.HIGH else MemoryRisk.UNKNOWN)
         }
-        if (exits.any { it.kind == ProcessExitKind.UNKNOWN && !it.memoryLimiterEvidence })
+        if (exits.any { it.kind == ProcessExitKind.UNKNOWN && !it.requiresResourceBackoff() })
             return block(OrionResourceBlock.OBSERVATION_INVALID)
         val plan = sample.model?.let { plans[it.modelId]?.takeIf { plan -> plan.model == it } }
             ?: return block(OrionResourceBlock.MODEL_UNQUALIFIED)

@@ -82,15 +82,11 @@ internal class OrionCortexClient(
         request: OrionInferenceRequest, contextTokens: Int, threads: Int,
         onChunks: (List<OrionInferenceChunk>) -> Unit): OrionInferenceStatus {
         check(!closed)
-        require(request.modelId == model.modelId && request.schemaVersion == 1)
-        require(contextTokens in 32..OrionCortexWire.MAX_CONTEXT && threads in 1..OrionCortexWire.MAX_THREADS)
-        require(request.maxTokens in 1..OrionCortexWire.MAX_TOKENS)
+        validateOrionInferenceRequest(request, contextTokens, threads)
+        require(request.modelId == model.modelId)
         val modelContextLimit = model.contextLimit
         require(modelContextLimit != null && contextTokens <= modelContextLimit)
-        val totalDuration = request.deadline.expiresElapsedRealtimeMillis - request.deadline.start.elapsedRealtimeMillis
-        require(totalDuration in 0..120_000)
-        require(request.prompt.length.toLong() + request.context.length < OrionCortexWire.MAX_INPUT_BYTES)
-        val fingerprint = requestFingerprint(request, contextTokens, threads)
+        val fingerprint = orionInferenceRequestFingerprint(request, contextTokens, threads)
         val lifecycle = OrionInferenceLifecycle(request, clock)
         return requestHistory.runOnce(request.requestId, fingerprint, cancelledStatus = { lifecycle.cancel() }) {
             val initial = lifecycle.status()
@@ -381,18 +377,6 @@ internal class OrionCortexClient(
         }
     }
 
-    private fun requestFingerprint(request: OrionInferenceRequest, context: Int, threads: Int): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        for (field in listOf(request.modelId, request.prompt, request.context, request.maxTokens.toString(),
-            request.temperature.toString(), request.priority.name, request.deadline.start.toString(),
-            request.deadline.expiresElapsedRealtimeMillis.toString(), context.toString(), threads.toString())) {
-            val bytes = field.toByteArray(Charsets.UTF_8)
-            digest.update(java.nio.ByteBuffer.allocate(4).putInt(bytes.size).array()); digest.update(bytes)
-            bytes.fill(0)
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
-
     private fun lostConnection(expected: ServiceConnection? = null) {
         synchronized(monitor) {
             if (expected != null && connection !== expected) return
@@ -437,4 +421,26 @@ internal class OrionCortexClient(
             "sampledElapsed", "totalPssBytes", "nativeIncluded", "nativeRuntimeLoaded", "nativeValidationCompleted")
         private val CHUNK_KEYS = setOf("schemaVersion", "requestId", "sequence", "delta", "isFinal", "finishReason", "errorCode")
     }
+}
+
+/** Shared MAIN admission checks; no storage, inventory or Binder access. */
+internal fun validateOrionInferenceRequest(request: OrionInferenceRequest, context: Int, threads: Int) {
+    require(request.schemaVersion == 1)
+    require(context in 32..OrionCortexWire.MAX_CONTEXT && threads in 1..OrionCortexWire.MAX_THREADS)
+    require(request.maxTokens in 1..OrionCortexWire.MAX_TOKENS)
+    val duration = request.deadline.expiresElapsedRealtimeMillis - request.deadline.start.elapsedRealtimeMillis
+    require(duration in 0..120_000)
+    require(request.prompt.length.toLong() + request.context.length < OrionCortexWire.MAX_INPUT_BYTES)
+}
+
+internal fun orionInferenceRequestFingerprint(request: OrionInferenceRequest, context: Int, threads: Int): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    for (field in listOf(request.modelId, request.prompt, request.context, request.maxTokens.toString(),
+        request.temperature.toString(), request.priority.name, request.deadline.start.toString(),
+        request.deadline.expiresElapsedRealtimeMillis.toString(), context.toString(), threads.toString())) {
+        val bytes = field.toByteArray(Charsets.UTF_8)
+        digest.update(java.nio.ByteBuffer.allocate(4).putInt(bytes.size).array()); digest.update(bytes)
+        bytes.fill(0)
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }
 }

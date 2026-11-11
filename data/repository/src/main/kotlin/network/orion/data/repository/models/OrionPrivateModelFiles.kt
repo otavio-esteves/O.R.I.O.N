@@ -8,6 +8,7 @@ import android.system.Os
 import android.system.OsConstants
 import android.system.ErrnoException
 import java.io.File
+import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.InterruptedIOException
@@ -151,7 +152,8 @@ class OrionPrivateModelFiles internal constructor(
     }
 
     /** Only recognized staging files are removed. Never follows links or removes registered content. */
-    fun cleanupInterruptedBatch(limit: Int = 25): OrionModelOrphanCleanup = synchronized(lock) {
+    fun cleanupInterruptedBatch(limit: Int = 25, checkCancellation: () -> Unit = {}): OrionModelOrphanCleanup = synchronized(lock) {
+        checkCancelled(checkCancellation)
         require(limit in 1..MAX_STAGING_FILES)
         try {
             directories()
@@ -162,13 +164,14 @@ class OrionPrivateModelFiles internal constructor(
             Files.newDirectoryStream(staging.toPath()).use { entries ->
                 val iterator = entries.iterator()
                 while (iterator.hasNext() && inspected < limit) {
+                    checkCancelled(checkCancellation)
                     val path = iterator.next()
                     inspected++
                     val name = path.fileName.toString()
                     val id = name.removeSuffix(".part")
                     val known = name.endsWith(".part") && runCatching { UUID.fromString(id).toString() == id }.getOrDefault(false)
                     if (!known || !Files.isRegularFile(path, NOFOLLOW_LINKS)) blocked++
-                    else try { Files.delete(path); deleted++ } catch (_: IOException) { blocked++ }
+                    else try { checkCancelled(checkCancellation); Files.delete(path); deleted++ } catch (_: IOException) { blocked++ }
                 }
                 continuation = iterator.hasNext() && blocked == 0
             }
@@ -177,7 +180,9 @@ class OrionPrivateModelFiles internal constructor(
     }
 
     /** Revalidate the exact opened inode, never a caller-supplied path or a prior receipt alone. */
-    internal fun openVerified(expected: OrionExpectedModelFile, parser: OrionGgufValidator): OrionModelFileRead = synchronized(lock) {
+    internal fun openVerified(expected: OrionExpectedModelFile, parser: OrionGgufValidator,
+        checkCancellation: () -> Unit = {}): OrionModelFileRead = synchronized(lock) {
+        checkCancelled(checkCancellation)
         if (expected.sizeBytes > maximumModelBytes) return@synchronized OrionModelFileRead.Invalid
         var owned: ParcelFileDescriptor? = null
         try {
@@ -193,7 +198,7 @@ class OrionPrivateModelFiles internal constructor(
             ParcelFileDescriptor.AutoCloseInputStream(ParcelFileDescriptor.dup(descriptor.fileDescriptor)).use { input ->
                 val buffer = ByteArray(BUFFER_BYTES)
                 while (true) {
-                    checkCancelled { }
+                    checkCancelled(checkCancellation)
                     val n = input.read(buffer)
                     if (n < 0) break
                     if (n == 0) return@synchronized OrionModelFileRead.StorageUnavailable
@@ -201,12 +206,20 @@ class OrionPrivateModelFiles internal constructor(
                     digest.update(buffer, 0, n); copied += n
                 }
             }
+            checkCancelled(checkCancellation)
             if (copied != expected.sizeBytes || hex(digest.digest()) != expected.sha256) return@synchronized OrionModelFileRead.Invalid
             Os.lseek(descriptor.fileDescriptor, 0, OsConstants.SEEK_SET)
             val metadata = ParcelFileDescriptor.AutoCloseInputStream(ParcelFileDescriptor.dup(descriptor.fileDescriptor)).use {
-                parser.inspect(it, expected.sizeBytes)
+                parser.inspect(object : FilterInputStream(it) {
+                    override fun read(): Int { checkCancelled(checkCancellation); return super.read() }
+                    override fun read(bytes: ByteArray, offset: Int, length: Int): Int {
+                        checkCancelled(checkCancellation)
+                        return super.read(bytes, offset, length)
+                    }
+                }, expected.sizeBytes)
             } ?: return@synchronized OrionModelFileRead.Invalid
             Os.lseek(descriptor.fileDescriptor, 0, OsConstants.SEEK_SET)
+            checkCancelled(checkCancellation)
             owned = null
             OrionModelFileRead.Verified(OrionOpenedModel(descriptor, metadata))
         } catch (interrupted: InterruptedIOException) {
@@ -221,7 +234,9 @@ class OrionPrivateModelFiles internal constructor(
     }
 
     /** Cursor prevents unknown entries from starving bounded reconciliation. Only recognized files are candidates. */
-    internal fun reconcileUnregisteredBatch(registered: Set<String>, after: String?, limit: Int): Pair<OrionModelOrphanCleanup, String?> = synchronized(lock) {
+    internal fun reconcileUnregisteredBatch(registered: Set<String>, after: String?, limit: Int,
+        checkCancellation: () -> Unit = {}): Pair<OrionModelOrphanCleanup, String?> = synchronized(lock) {
+        checkCancelled(checkCancellation)
         require(limit in 1..100)
         try {
             directories()
@@ -229,6 +244,7 @@ class OrionPrivateModelFiles internal constructor(
             val names = mutableListOf<String>()
             Files.newDirectoryStream(ready.toPath()).use { entries ->
                 for (entry in entries) {
+                    checkCancelled(checkCancellation)
                     if (names.size >= MAX_STAGING_FILES) return@synchronized OrionModelOrphanCleanup(0, 1, false) to null
                     names.add(entry.fileName.toString())
                 }
@@ -237,10 +253,11 @@ class OrionPrivateModelFiles internal constructor(
             var deleted = 0
             var blocked = 0
             for (name in page) {
+                checkCancelled(checkCancellation)
                 val path = File(ready, name).toPath()
                 val hash = name.removeSuffix(".gguf")
                 if (!name.matches(Regex("[0-9a-f]{64}\\.gguf")) || !Files.isRegularFile(path, NOFOLLOW_LINKS)) blocked++
-                else if (hash !in registered) try { Files.delete(path); deleted++ } catch (_: IOException) { blocked++ }
+                else if (hash !in registered) try { checkCancelled(checkCancellation); Files.delete(path); deleted++ } catch (_: IOException) { blocked++ }
             }
             val next = if (page.size == limit) page.last() else null
             OrionModelOrphanCleanup(deleted, blocked, next != null) to next

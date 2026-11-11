@@ -173,4 +173,54 @@ class OrionCortexRestartGuardTest {
         assertThrows(IllegalArgumentException::class.java) { OrionCortexRestartGuard(clock, plans, 0, 1_000) }
         assertThrows(IllegalArgumentException::class.java) { OrionCortexRestartGuard(clock, plans, 100, 0) }
     }
+
+    private fun excessive(index: Long = 1) = ProcessExitSignal(9, Instant.ofEpochMilli(index), ProcessExitKind.EXCESSIVE_RESOURCE_USAGE)
+
+    @Test fun `successive excessive resource deaths exhaust the qualified fallback ladder`() {
+        val guard = guard()
+        assertEquals(OrionRestartBlock.COOLDOWN, guard.evaluate(history(excessive())).block)
+        advance(1_000)
+        val degraded = guard.evaluate(history(excessive()))
+        assertEquals(medium.copy(keepAliveMs = 0), degraded.candidatePlan)
+        assertTrue(degraded.degraded)
+        assertFalse(degraded.preloadAllowed)
+        assertEquals(0, degraded.memoryDeaths) // A resource kill must not be mislabeled as memory evidence.
+        assertEquals(1, degraded.excessiveResourceDeaths)
+        assertEquals(OrionRestartBlock.COOLDOWN, guard.evaluate(history(excessive(), excessive(2))).block)
+        advance(1_000)
+        assertEquals(small.copy(keepAliveMs = 0), guard.evaluate(history(excessive(), excessive(2))).candidatePlan)
+        assertEquals(OrionRestartBlock.FALLBACK_EXHAUSTED,
+            guard.evaluate(history(excessive(), excessive(2), excessive(3))).block)
+        advance(100_000)
+        repeat(100) { assertFalse(guard.evaluate(history()).eligibleForResourceEvaluation) }
+    }
+
+    @Test fun `mixed resource deaths deduplicate and preserve evidence through reboot and reconstruction`() {
+        val guard = guard()
+        assertEquals(OrionRestartBlock.COOLDOWN, guard.evaluate(history(excessive(), excessive(), memory(2))).block)
+        advance(999)
+        clock.wall = Instant.MAX
+        assertEquals(OrionRestartBlock.COOLDOWN, guard.evaluate(history(excessive())).block)
+        advance(1)
+        val reduced = guard.evaluate(history())
+        assertEquals(small.copy(keepAliveMs = 0), reduced.candidatePlan)
+        assertEquals(1, reduced.memoryDeaths)
+        assertEquals(1, reduced.excessiveResourceDeaths)
+        clock.mark = MonotonicInstant(BootSessionId(2), 10)
+        assertEquals(OrionRestartBlock.COOLDOWN, guard.evaluate(history()).block)
+        advance(1_000)
+        assertEquals(small.copy(keepAliveMs = 0), guard.evaluate(history()).candidatePlan)
+        assertEquals(OrionRestartBlock.COOLDOWN, guard().evaluate(history(excessive(), memory(2))).block)
+    }
+
+    @Test fun `resource reason and classification both block while ordinary kills do not`() {
+        for (exit in listOf(excessive().copy(kind = ProcessExitKind.UNKNOWN), excessive().copy(reason = 99))) {
+            assertEquals(OrionRestartBlock.COOLDOWN, guard().evaluate(history(exit)).block)
+        }
+        for (exit in listOf(ProcessExitSignal(1, Instant.EPOCH, ProcessExitKind.NORMAL_EXIT),
+            ProcessExitSignal(2, Instant.EPOCH, ProcessExitKind.SIGNALLED),
+            ProcessExitSignal(10, Instant.EPOCH, ProcessExitKind.USER_REQUESTED))) {
+            assertEquals(base, guard().evaluate(history(exit)).candidatePlan)
+        }
+    }
 }

@@ -168,11 +168,8 @@ internal class OrionTaskKernel(private val db: OrionDatabase, encryption: OrionF
         val recovery = OrionActionExecutionStore(db, actions, clock, denied)
         var cursor: UUID? = null
         do { cursor = recovery.recoverAbandoned(100, cursor).nextAfterActionId } while (cursor != null)
-        val now = clock.wallNow().toEpochMilli()
-        val retention = now - Duration.ofDays(90).toMillis()
-        db.retention().prune(now, retention, retention, retention, retention, retention, 2000, 100)
-        // Action recovery never publishes facts or invokes Skills. The MAIN runtime
-        // owns event publication, reminder reconciliation and worker registration separately.
+        // MAIN Core owns operational retention and its counters. This slice only recovers ownership;
+        // it never prunes history, publishes facts, invokes Skills or installs schedulers.
     }
 
     fun pending(): List<OrionTaskPending> = db.actions().taskConfirmations(50).mapNotNull { row ->
