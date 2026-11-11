@@ -210,6 +210,80 @@ class OrionModelImportTest {
         assertTrue((files.importModel(expected, { error("Duplicate source opened") }) as OrionModelImportResult.Ready).reused)
     }
 
+    @Test fun cancellationDuringReadyHashDoesNotQuarantineOrLeakDescriptors() = fixture { db, files, root ->
+        // Several 64KiB read boundaries; the GGUF metadata still describes a valid tiny tensor.
+        val bytes = model() + ByteArray(192 * 1024)
+        val expected = expected(bytes)
+        assertTrue(files.importModel(expected, { ByteArrayInputStream(bytes) }) is OrionModelImportResult.Ready)
+        val before = checkNotNull(db.models().find(expected.sha256))
+        val cancellation = CancellationException("synthetic hash cancellation")
+        val descriptorsBefore = File("/proc/self/fd").list().orEmpty().size
+        repeat(8) {
+            try {
+                files.openReadOnly(expected.sha256) {
+                    if (modelReadOffset(root, expected.sha256)?.let { it > 0 && it < bytes.size } == true) throw cancellation
+                }
+                fail("Cancelled hash returned a descriptor")
+            } catch (actual: CancellationException) { assertSame(cancellation, actual) }
+            assertEquals(before, db.models().find(expected.sha256))
+        }
+        assertTrue(File("/proc/self/fd").list().orEmpty().size <= descriptorsBefore + 3)
+        files.openReadOnly(expected.sha256)?.close() ?: fail("Cancelled validation damaged the file")
+    }
+
+    @Test fun interruptedPendingValidationRemainsRecoverableWithoutFalseQuarantineOrReady() = fixture { db, files, root ->
+        val bytes = model() + ByteArray(192 * 1024)
+        val expected = expected(bytes)
+        try {
+            files.importModel(expected, { ByteArrayInputStream(bytes) }) {
+                if (db.models().find(expected.sha256) != null) throw CancellationException("imported checkpoint")
+            }
+            fail("Import did not stop at its checkpoint")
+        } catch (_: CancellationException) { }
+        assertEquals("IMPORTED", db.models().find(expected.sha256)?.status)
+        try {
+            files.recoverSelected(expected.sha256) {
+                if (modelReadOffset(root, expected.sha256)?.let { it > 0 && it < bytes.size } == true)
+                    throw CancellationException("hash checkpoint")
+            }
+            fail("Recovery swallowed cancellation")
+        } catch (_: CancellationException) { }
+        assertEquals("VALIDATING", db.models().find(expected.sha256)?.status)
+        assertTrue(files.recoverSelected(expected.sha256))
+        assertEquals("READY", db.models().find(expected.sha256)?.status)
+    }
+
+    @Test fun cancellationAtParseBoundaryClosesTheOpenedModelAndPreservesReady() = fixture { db, files, root ->
+        val bytes = model()
+        val expected = expected(bytes)
+        files.importModel(expected, { ByteArrayInputStream(bytes) })
+        val before = db.models().find(expected.sha256)
+        // Observe the real file offset: EOF completes hashing; rewinding starts format inspection.
+        var hashFinished = false
+        try {
+            files.openReadOnly(expected.sha256) {
+                val offset = modelReadOffset(root, expected.sha256)
+                if (offset == bytes.size.toLong()) hashFinished = true
+                if (hashFinished && offset == 0L) throw CancellationException("parse checkpoint")
+            }
+            fail("Parser swallowed cancellation")
+        } catch (_: CancellationException) { }
+        assertEquals(before, db.models().find(expected.sha256))
+        files.openReadOnly(expected.sha256)?.close() ?: fail("Parse cancellation damaged the file")
+    }
+
+    /** Observe only this synthetic model's open file description, without timing sleeps or private counters. */
+    private fun modelReadOffset(root: File, hash: String): Long? {
+        val path = File(root, "orion_model_files/verified/$hash.gguf").canonicalPath
+        for (descriptor in File("/proc/self/fd").listFiles().orEmpty()) {
+            val target = runCatching { Os.readlink(descriptor.path) }.getOrNull()
+            if (target != path) continue
+            return File("/proc/self/fdinfo/${descriptor.name}").readLines()
+                .first { it.startsWith("pos:") }.substringAfter(':').trim().toLong()
+        }
+        return null
+    }
+
     private fun expected(bytes: ByteArray) = OrionExpectedModelFile(
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }, bytes.size.toLong())
     private fun imported(hash: String, size: Long) = ModelRegistryEntity(hash, "Fixture", "verified/$hash.gguf",

@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.ParcelFileDescriptor
 import android.os.UserManager
 import java.io.InputStream
+import java.util.concurrent.Callable
 import network.orion.core.common.process.MainProcessStoragePolicy
 import network.orion.core.common.process.OrionProcessRole
 import network.orion.core.time.WallClock
@@ -37,11 +38,12 @@ class OrionModelImportCoordinator private constructor(
 ) {
     fun importModel(expected: OrionExpectedModelFile, source: () -> InputStream,
         checkCancellation: () -> Unit = {}): OrionModelImportResult = synchronized(lock) {
+        checkCancellation()
         val existing = database.models().find(expected.sha256)
         if (existing != null) {
             if (!matches(existing, expected)) return@synchronized rejected(OrionModelImportBlock.REGISTRY_CONFLICT)
             if (existing.status == "READY") {
-                val opened = openReadOnly(existing.modelId)
+                val opened = openReadOnly(existing.modelId, checkCancellation)
                 return@synchronized if (opened != null) {
                     opened.close(); OrionModelImportResult.Ready(existing.modelId, true)
                 } else rejected(OrionModelImportBlock.MODEL_UNAVAILABLE)
@@ -60,6 +62,7 @@ class OrionModelImportCoordinator private constructor(
             "IMPORTED", clock.wallNow().toEpochMilli(), null)
         var accepted = false
         database.runInTransaction {
+            checkCancellation()
             if (database.models().find(expected.sha256) == null && database.models().countAll() < MAX_REGISTRY_ROWS) {
                 database.models().registerImported(imported)
                 accepted = true
@@ -67,29 +70,33 @@ class OrionModelImportCoordinator private constructor(
         }
         if (!accepted) return@synchronized rejected(OrionModelImportBlock.REGISTRY_CONFLICT)
         checkCancellation()
-        if (finishPending(imported)) OrionModelImportResult.Ready(expected.sha256, (staged as OrionModelFileImport.Verified).reused)
+        if (finishPending(imported, checkCancellation)) OrionModelImportResult.Ready(expected.sha256, (staged as OrionModelFileImport.Verified).reused)
         else rejected(OrionModelImportBlock.MODEL_UNAVAILABLE)
     }
 
     /** Every open checks current READY, exact identity and full hash/format on the opened inode. */
-    fun openReadOnly(modelId: String): ParcelFileDescriptor? = synchronized(lock) {
+    fun openReadOnly(modelId: String, checkCancellation: () -> Unit = {}): ParcelFileDescriptor? = synchronized(lock) {
+        checkCancellation()
         val row = database.models().find(modelId) ?: return@synchronized null
         if (row.status != "READY") return@synchronized null
         val expected = expected(row)
-        val read = expected?.let { files.openVerified(it, parser) } ?: OrionModelFileRead.Invalid
-        if (read == OrionModelFileRead.StorageUnavailable) return@synchronized null
+        val read = expected?.let { files.openVerified(it, parser, checkCancellation) } ?: OrionModelFileRead.Invalid
         if (read !is OrionModelFileRead.Verified) {
-            database.models().invalidate(row.modelId, row.version, true)
+            checkCancellation()
+            if (read == OrionModelFileRead.StorageUnavailable) return@synchronized null
+            checkedMutation(checkCancellation) { database.models().invalidate(row.modelId, row.version, true) }
             return@synchronized null
         }
         val opened = read.opened
         var transferred = false
         try {
+            checkCancellation()
             val metadata = opened.metadata
             val same = metadata.architecture == row.architecture && metadata.contextLimit == row.contextLimit &&
                 quantization(metadata) == row.quantization && database.models().find(modelId) == row
+            checkCancellation()
             if (!same) {
-                database.models().invalidate(row.modelId, row.version, true)
+                checkedMutation(checkCancellation) { database.models().invalidate(row.modelId, row.version, true) }
                 null
             } else {
                 transferred = true
@@ -99,20 +106,23 @@ class OrionModelImportCoordinator private constructor(
     }
 
     /** A caller resumes with the cursor; no READY entry is assumed valid merely because SQLite says so. */
-    fun recoverPage(afterModelId: String? = null, limit: Int = 25): OrionModelRecoveryPage = synchronized(lock) {
+    fun recoverPage(afterModelId: String? = null, limit: Int = 25,
+        checkCancellation: () -> Unit = {}): OrionModelRecoveryPage = synchronized(lock) {
+        checkCancellation()
         val page = database.models().listPage(afterModelId, limit)
         var invalidated = 0
         var restored = 0
         var conflicts = 0
         for (row in page) {
+            checkCancellation()
             when (row.status) {
                 "READY" -> {
-                    val opened = openReadOnly(row.modelId)
+                    val opened = openReadOnly(row.modelId, checkCancellation)
                     if (opened != null) opened.close()
                     else if (database.models().find(row.modelId)?.status in setOf("INVALID", "QUARANTINED")) invalidated++
                     else conflicts++
                 }
-                "IMPORTED", "VALIDATING" -> if (finishPending(row)) restored++ else {
+                "IMPORTED", "VALIDATING" -> if (finishPending(row, checkCancellation)) restored++ else {
                     if (database.models().find(row.modelId)?.status in setOf("INVALID", "QUARANTINED")) invalidated++ else conflicts++
                 }
             }
@@ -127,52 +137,66 @@ class OrionModelImportCoordinator private constructor(
      * source stream. This grants no load/inference authority; callers still require
      * a fresh request and resource decision after recovery.
      */
-    fun recoverSelected(modelId: String): Boolean = synchronized(lock) {
+    fun recoverSelected(modelId: String, checkCancellation: () -> Unit = {}): Boolean = synchronized(lock) {
+        checkCancellation()
         val row = database.models().find(modelId) ?: return@synchronized false
         when (row.status) {
-            "IMPORTED", "VALIDATING" -> finishPending(row)
-            "READY" -> openReadOnly(modelId)?.use { true } ?: false
+            "IMPORTED", "VALIDATING" -> finishPending(row, checkCancellation)
+            "READY" -> openReadOnly(modelId, checkCancellation)?.use { true } ?: false
             else -> false
         }
     }
 
-    fun cleanupInterruptedCopies(limit: Int = 25): OrionModelOrphanCleanup = files.cleanupInterruptedBatch(limit)
+    fun cleanupInterruptedCopies(limit: Int = 25, checkCancellation: () -> Unit = {}): OrionModelOrphanCleanup =
+        files.cleanupInterruptedBatch(limit, checkCancellation)
 
     /** Preserve files referenced even by quarantined/manual-review rows; never manufacture READY from filenames. */
-    fun cleanupUnregisteredFiles(afterFileName: String? = null, limit: Int = 25): OrionUnregisteredModelCleanup = synchronized(lock) {
+    fun cleanupUnregisteredFiles(afterFileName: String? = null, limit: Int = 25,
+        checkCancellation: () -> Unit = {}): OrionUnregisteredModelCleanup = synchronized(lock) {
+        checkCancellation()
         val known = mutableSetOf<String>()
         var after: String? = null
         do {
+            checkCancellation()
             val rows = database.models().listPage(after, 100)
             rows.forEach { known.add(it.modelId) }
             // Admission caps rows at128. Excess from another writer is preserved and reported.
             if (known.size > MAX_REGISTRY_ROWS) return@synchronized OrionUnregisteredModelCleanup(0, 1, null)
             after = if (rows.size == 100) rows.last().modelId else null
         } while (after != null)
-        val (result, next) = files.reconcileUnregisteredBatch(known, afterFileName, limit)
+        val (result, next) = files.reconcileUnregisteredBatch(known, afterFileName, limit, checkCancellation)
         OrionUnregisteredModelCleanup(result.deleted, result.blocked, next)
     }
 
-    private fun finishPending(original: ModelRegistryEntity): Boolean {
+    private fun finishPending(original: ModelRegistryEntity, checkCancellation: () -> Unit): Boolean {
+        checkCancellation()
         var row = original
         if (row.status == "IMPORTED") {
-            if (database.models().beginValidation(row.modelId, row.version) != 1) return false
+            if (checkedMutation(checkCancellation) { database.models().beginValidation(row.modelId, row.version) } != 1) return false
             row = database.models().find(row.modelId) ?: return false
         }
         if (row.status != "VALIDATING") return false
         val expected = expected(row)
-        val read = expected?.let { files.openVerified(it, parser) } ?: OrionModelFileRead.Invalid
-        if (read == OrionModelFileRead.StorageUnavailable) return false
+        val read = expected?.let { files.openVerified(it, parser, checkCancellation) } ?: OrionModelFileRead.Invalid
         if (read !is OrionModelFileRead.Verified) {
-            database.models().invalidate(row.modelId, row.version, true)
+            checkCancellation()
+            if (read == OrionModelFileRead.StorageUnavailable) return false
+            checkedMutation(checkCancellation) { database.models().invalidate(row.modelId, row.version, true) }
             return false
         }
         val opened = read.opened
         val metadata = opened.metadata
         opened.descriptor.close()
-        return database.models().completeValidation(row.modelId, row.version, row.sha256, row.sizeBytes,
-            metadata.architecture, quantization(metadata), metadata.contextLimit, clock.wallNow().toEpochMilli()) == 1
+        checkCancellation()
+        return checkedMutation(checkCancellation) {
+            database.models().completeValidation(row.modelId, row.version, row.sha256, row.sizeBytes,
+                metadata.architecture, quantization(metadata), metadata.contextLimit, clock.wallNow().toEpochMilli())
+        } == 1
     }
+
+    /** Waiting for another SQLite writer cannot preserve permission to mutate after cancellation/expiry. */
+    private fun <T> checkedMutation(checkCancellation: () -> Unit, mutation: () -> T): T =
+        database.runInTransaction(Callable { checkCancellation(); mutation() })
 
     private fun expected(row: ModelRegistryEntity): OrionExpectedModelFile? {
         if (row.modelId != row.sha256 || row.filePath != fileName(row.sha256)) return null

@@ -51,6 +51,43 @@ class OrionCortexOwnerDefaultTest {
         assertEquals(0, bindings.get())
     }
 
+    @Test fun expiredRequestAndItsReplayNeverAccessInventoryDatabaseOrBinder() = fixture { context, db, importer, bindings ->
+        val clock = AndroidOrionClock(context.contentResolver)
+        val plan = OrionInferenceResourcePlan(InferenceModelProfile(HASH, 100), "DEADLINE_FIXTURE", 1, 128, 8, 0,
+            10_000, 20_000, 100, 20, 2)
+        val owner = OrionCortexRuntimeOwner(context, importer, db, clock, listOf(plan),
+            OrionCortexResourceTiming(1000, 1000), coreReady = { true })
+        val expired = OrionInferenceRequest(owner.newRequestId(), 1, HASH, "expired", "", 8, 0.0,
+            OrionInferencePriority.INTERACTIVE, clock.monotonicNow().deadlineAfter(0), "deadline-fixture")
+        try { runBlocking {
+            repeat(2) {
+                val result = owner.run(HASH, expired, 128, 1) { error("Expired output") } as OrionCortexRunResult.Completed
+                assertEquals(OrionInferenceTerminal.TIMED_OUT, result.status.terminal)
+            }
+            val conflict = OrionInferenceRequest(expired.requestId, 1, HASH, "changed", "", 8, 0.0,
+                expired.priority, expired.deadline, "deadline-fixture")
+            assertTrue(owner.run(HASH, conflict, 128, 1) { error("Conflict output") } is OrionCortexRunResult.Unavailable)
+        } } finally { owner.close() }
+        assertEquals(0, bindings.get())
+    }
+
+    @Test fun invalidBootRequestFailsBeforeInventoryDatabaseOrBinder() = fixture { context, db, importer, bindings ->
+        val clock = AndroidOrionClock(context.contentResolver)
+        val plan = OrionInferenceResourcePlan(InferenceModelProfile(HASH, 100), "BOOT_FIXTURE", 1, 128, 8, 0,
+            10_000, 20_000, 100, 20, 2)
+        val owner = OrionCortexRuntimeOwner(context, importer, db, clock, listOf(plan),
+            OrionCortexResourceTiming(1000, 1000), coreReady = { true })
+        val deadline = network.orion.core.time.MonotonicInstant(null, 0).deadlineAfter(10_000)
+        try { runBlocking {
+            val request = OrionInferenceRequest(owner.newRequestId(), 1, HASH, "invalid boot", "", 8, 0.0,
+                OrionInferencePriority.INTERACTIVE, deadline, "boot-fixture")
+            val result = owner.run(HASH, request, 128, 1) { error("Invalid boot output") } as OrionCortexRunResult.Completed
+            assertEquals(OrionInferenceTerminal.FAILED, result.status.terminal)
+            assertEquals(OrionInferenceFailure.INVALID_TIME_REFERENCE, result.status.failure)
+        } } finally { owner.close() }
+        assertEquals(0, bindings.get())
+    }
+
     private fun request(clock: AndroidOrionClock) = OrionInferenceRequest(UUID.randomUUID().toString(), 1, HASH,
         "fixture", "", 8, 0.0, OrionInferencePriority.INTERACTIVE, clock.monotonicNow().deadlineAfter(10_000),
         UUID.randomUUID().toString())

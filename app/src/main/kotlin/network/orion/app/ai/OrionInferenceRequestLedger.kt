@@ -16,6 +16,17 @@ internal class OrionInferenceRequestLedger {
 
     fun newRequestId(): String = entries.issue()
 
+    /** Validate issued identity/conflicts and join retained work before optional storage preparation. New work is admitted by runOnce. */
+    suspend fun existingResult(id: String, fingerprint: String): OrionInferenceStatus? {
+        val result = synchronized(monitor) {
+            entries.find(id)?.let { existing ->
+                check(existing.fingerprint == fingerprint) { "Inference request identity conflict." }
+                existing.result
+            }
+        } ?: return null
+        return result.await()
+    }
+
     suspend fun runOnce(id: String, fingerprint: String,
         cancelledStatus: () -> OrionInferenceStatus = {
             OrionInferenceStatus(OrionInferenceStage.TERMINAL, OrionInferenceTerminal.CANCELLED, null)
