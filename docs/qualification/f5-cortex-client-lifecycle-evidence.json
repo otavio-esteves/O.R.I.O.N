@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F5-AUDIT-001",
+  "capturedUtc": "2026-11-13T01:02:46.483836+00:00",
+  "baseCommit": "1afba10aba07eb1eb52175c11c7c830067dbf617",
+  "branch": "fix/f5-cortex-client-lifecycle",
+  "workingTreeDirtyAtValidation": true,
+  "softwareCorrectionsResult": "PASS",
+  "resolvedAuditFindings": [
+    "AUDIT-001: late connection callback executor rejection",
+    "AUDIT-002: old disconnect cleanup affecting new admission"
+  ],
+  "sourceSha256": {
+    "ai/cortex/src/main/kotlin/network/orion/ai/cortex/OrionCortexClient.kt": "094fbacc7f252346f7b34cc8762b7137ac2d86ae131243619af31b3fdf937cf9",
+    "ai/service/src/androidTest/kotlin/network/orion/ai/service/OrionCortexClientLifecycleTest.kt": "588b33bb300e0156fa095602921cdd93d727ce25503590d03f9e466dba2da2e5",
+    "docs/issues/ORION-F5-AUDIT-001.md": "45bb9be3547c0c6f3fb4c16752902da3c244969704bc4f473f4606725bf29c62"
+  },
+  "invariantsPreserved": [
+    "INV-012",
+    "INV-013",
+    "INV-028"
+  ],
+  "implementation": [
+    "Allocate the connection epoch atomically with request admission.",
+    "Reject stale connection callbacks before enqueue and again when the worker executes; contain executor rejection concurrent with close.",
+    "Commit terminality and detach only the old connection listeners/resources before any platform or user callback admits new work.",
+    "Deliver detached terminals without updating newer connection state; fence health publication by epoch."
+  ],
+  "validation": {
+    "baselineReproduction": {
+      "environment": "ANDROID_EMULATOR",
+      "tests": 5,
+      "failures": 4,
+      "result": "EXPECTED_REGRESSIONS_REPRODUCED",
+      "output": "before/instrumentation.txt"
+    },
+    "correctedFocusedRegressions": {
+      "environment": "ANDROID_EMULATOR",
+      "tests": 5,
+      "failures": 0,
+      "skips": 0,
+      "output": "after/focused-instrumentation.txt"
+    },
+    "correctedFullServiceSuite": {
+      "environment": "ANDROID_EMULATOR",
+      "tests": 13,
+      "failures": 0,
+      "skips": 0,
+      "output": "after/full-service-instrumentation.txt",
+      "scope": "Includes the five new regressions plus existing real Binder/versioning/UID guards and actual AI SIGKILL/Main survival/explicit rebind."
+    },
+    "focusedJvmAndAssembly": {
+      "environment": "CONTAINER",
+      "result": "PASS",
+      "runtimeJvmTestsExecuted": 30,
+      "command": "docker compose run --rm android-build :ai:cortex:testDebugUnitTest :ai:service:assembleDebugAndroidTest --max-workers=2",
+      "output": "logs/orion-cortex-fix-focused-build.log"
+    },
+    "canonical": {
+      "environment": "CONTAINER",
+      "result": "PASS",
+      "actionableTasks": 4515,
+      "executedTasks": 131,
+      "fromCacheTasks": 2,
+      "upToDateTasks": 4382,
+      "command": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :ai:service:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest --max-workers=2",
+      "output": "logs/orion-cortex-fix-canonical.log"
+    },
+    "debugJvmReports": {
+      "tests": 744,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "suites": 100,
+      "note": "Unchanged Gradle test tasks were reused; the 744 report cases are not all newly executed."
+    },
+    "hostHarness": {
+      "environment": "CONTAINER",
+      "result": "PASS",
+      "tests": 125,
+      "command": "docker compose run --rm host-harness-check",
+      "output": "logs/orion-cortex-fix-host-harness.log"
+    },
+    "r8JniAndNativePackaging": {
+      "environment": "CONTAINER",
+      "result": "PASS",
+      "actionableTasks": 1800,
+      "executedTasks": 19,
+      "upToDateTasks": 1781,
+      "command": "docker compose run --rm android-build -PorionQualificationRelease=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2",
+      "output": "logs/orion-cortex-fix-r8.log"
+    },
+    "androidFocusedCommand": "/home/otavio/Android/Sdk/platform-tools/adb -s emulator-5584 shell am instrument -w -r -e class network.orion.ai.service.OrionCortexClientLifecycleTest network.orion.ai.service.test/androidx.test.runner.AndroidJUnitRunner",
+    "androidFullCommand": "/home/otavio/Android/Sdk/platform-tools/adb -s emulator-5584 shell am instrument -w -r network.orion.ai.service.test/androidx.test.runner.AndroidJUnitRunner"
+  },
+  "runtimeEnvironment": {
+    "ro.build.fingerprint": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+    "ro.build.version.sdk": "35",
+    "ro.product.cpu.abi": "x86_64",
+    "ro.kernel.qemu": "1",
+    "sys.boot_completed": "1",
+    "environment": "ANDROID_EMULATOR",
+    "qualification": "NON_DEFINITIVE",
+    "serial": "emulator-5584",
+    "pageSizeBytes": 4096
+  },
+  "testFixtureScope": "The five interleaving regressions use captured binds and a synthetic clock/admission guard in androidTest sources. Existing real transport/death tests use a fixture engine. No production resource/model plan is qualified by them.",
+  "processDeathRecoveryImpact": "Old request terminality is committed before fresh admission; late callbacks cannot revive old work or tear down the new binding. AI process death still leaves Main alive and requires a fresh explicit guarded request to rebind. No durable action or side effect is reconstructed.",
+  "securityPrivacyImpact": "No new exported components, permissions, wire fields or payload/exception logging. Resource admission, same-UID IPC guards and the main-process ownership check remain in force.",
+  "migrationUpgradeImpact": "Only ephemeral client state changes; no schema, persistent data or migration change.",
+  "preflightNotes": [
+    "The pre-existing OrionF3Validation AVD entry referenced a missing /tmp directory; a separate disposable AVD was created.",
+    "An install attempted before full Android boot was rejected by an uninitialized package/storage service. The failure is retained in before/install-before-boot.txt; installation and tests succeeded after sys.boot_completed=1."
+  ],
+  "disposableEmulatorStopped": true,
+  "disposableAvdRemoved": true,
+  "physicalDeviceUsed": false,
+  "productionInferenceEnabled": false,
+  "fullF5GateClosed": false,
+  "fullNativeReleaseGateClosed": false,
+  "fullSoakGateClosed": false,
+  "outOfScope": [
+    "Physical S21 qualification",
+    "24-hour soak",
+    "Qualified production memory/model profiles",
+    "IPC semantics or process ownership changes",
+    "Schema/migrations",
+    "Release promotion or merge"
+  ],
+  "evidenceDirectory": "/home/otavio/Projects/O.R.I.O.N-evidence/cortex-client-fix-20261112",
+  "retainedEvidenceSha256": {
+    "after/OrionCortexClient.kt": "094fbacc7f252346f7b34cc8762b7137ac2d86ae131243619af31b3fdf937cf9",
+    "after/OrionCortexClientLifecycleTest.kt": "588b33bb300e0156fa095602921cdd93d727ce25503590d03f9e466dba2da2e5",
+    "after/focused-instrumentation.txt": "b21049c5a6f3c5ff463df7763cbb4f802fd23e3f2719f3a6f720a25f4be4387c",
+    "after/full-service-instrumentation.txt": "2a5a7f32a53d3321d7ae9f53e7c339d8c2602cc18014698b83803ce256d5eb07",
+    "after/install.txt": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    "after/service-debug-androidTest.apk": "7398269d3797a19c1af97155c4d2ee3a5a075623c6b6b7f40ece5bb072004a36",
+    "artifacts/app-debug.apk": "e970bbc64f6f0e7824fce2c9cd81acccbc18a130a7137a7be3a816b6f772ca70",
+    "artifacts/app-qualificationRelease.apk": "49ae7fdaab0f2c43e14327146f9787a82664c8db191e1825b3bfd0f48b1fa0bf",
+    "artifacts/app-release-unsigned.apk": "3cfd066ed67991e8c6556dc8b515f82f0ea58a327eafb61a6c7d2d4332f574c4",
+    "artifacts/app-release.aab": "16d9431a701bfb216ef50aa0a0aded6f4f3f1c3ddf20e029a4dfce90e24ce12c",
+    "before/OrionCortexClient.kt": "440c320cc716b45985570e5e593da2570875dbcfc99ba17d57caba425ec93e03",
+    "before/OrionCortexClientLifecycleTest.kt": "588b33bb300e0156fa095602921cdd93d727ce25503590d03f9e466dba2da2e5",
+    "before/install-before-boot.txt": "55e2170c0aaba99d6b8ff8a452976656acd1af02e98673494dd3f90c9a5c41df",
+    "before/install.txt": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    "before/instrumentation.txt": "92a3581252507f763fc7307c0ac9bca5361aff393d35e83d88460ed0c4a66da6",
+    "before/service-debug-androidTest.apk": "40d4bf11040bdc235bbae78f313f3b3da8c40baa3ec6d38e2cf06ca775f2ae33",
+    "environment.json": "c847224ff2ca879570d787e74dbfe0a86ff84944cd23cd9acf01bfe84b0d9c52",
+    "jvm-reports.zip": "2fac149710b6061eb24a0f43d0877e74f09b5fd25ee62f5281ce6dd8bbcd8c85",
+    "jvm-summary.json": "d9f5f0a1b5277bed20ca41bea227245ff34b18e5d2a1cea879cb6f1c12a8ae19",
+    "logs/orion-cortex-fix-before-build.log": "76bde17148f22d0dfa6e4e8c016472b21a94c84318c2c5360d80109a3c771ccf",
+    "logs/orion-cortex-fix-canonical.log": "771042a03876d9111b2bb88c88f08736d14c38184152aca4d6288d802e6abd2b",
+    "logs/orion-cortex-fix-emulator.log": "1588e233438a07b987275b9fb696b49b11b82be26b928d621dbfd5178f633125",
+    "logs/orion-cortex-fix-focused-build.log": "b9628e42678a4664cd68f79d1b7671b598e90c83c23dcb8d555324ad8cfcdf00",
+    "logs/orion-cortex-fix-host-harness.log": "46eefdb62d560578c786b18f3025b2082f92b045bef064b7a56bf929263c2893",
+    "logs/orion-cortex-fix-r8.log": "d0c8ee45f5a2e54d71b12f4b9b08214fdacf481b125138833c626262bdb667fa"
+  }
+}

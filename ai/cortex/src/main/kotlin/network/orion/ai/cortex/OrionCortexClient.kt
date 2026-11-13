@@ -11,6 +11,7 @@ import android.os.RemoteException
 import java.util.UUID
 import java.util.concurrent.CancellationException
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.ScheduledFuture
 import network.orion.ai.api.*
@@ -106,16 +107,21 @@ class OrionCortexClient(
         }
         val id = UUID.randomUUID(); val start = clock.monotonicNow()
         if (start.bootSessionId == null) { release(); return null }
-        val shouldBind: Boolean
+        val bindEpoch: Long?
         synchronized(lock) {
             if (closed || pending.size >= OrionCortexBounds.MAX_PENDING || !ledger.register(id)) { release(); return null }
             listeners[id] = listener; deadlines[id] = start to timeoutMillis
-            ensureWatchdog()
             pending[id] = Pending(id, modelId, operation, timeoutMillis, start, release) { service, permit -> invoke(id, service, permit) }
-            shouldBind = remote == null && !binding
-            if (shouldBind) binding = true
+            // Admission and connection ownership are atomic with close/disconnect.
+            // A delayed bind cannot claim a new epoch after its request was detached.
+            bindEpoch = if (remote == null && !binding) {
+                epoch = Math.addExact(epoch, 1)
+                binding = true
+                epoch
+            } else null
+            ensureWatchdog()
         }
-        if (shouldBind) bind(modelId)
+        if (bindEpoch != null) bind(modelId, bindEpoch)
         else synchronized(lock) { remote }?.let { scheduleDrain() }
         return id
     }
@@ -136,25 +142,34 @@ class OrionCortexClient(
             }, 50, 50, TimeUnit.MILLISECONDS)
     }
 
-    private fun bind(modelId: String) {
-        val currentEpoch = synchronized(lock) { epoch = Math.addExact(epoch, 1); epoch }
+    private fun bind(modelId: String, currentEpoch: Long) {
+        if (synchronized(lock) { closed || epoch != currentEpoch || !binding }) return
         val bindApproval = approval(modelId, OrionCortexOperation.BIND)
         if (bindApproval == null) { disconnect(currentEpoch, OrionCortexRequestStatus.FAILED); return }
         val selected = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, binder: IBinder) {
-                worker.execute {
-                    try {
-                        val service = OrionCortexRemote(binder); service.getProtocolInfo()
-                        val died = IBinder.DeathRecipient { disconnect(currentEpoch, OrionCortexRequestStatus.PROCESS_DIED) }
-                        binder.linkToDeath(died, 0)
-                        val accepted = synchronized(lock) {
-                            if (closed || epoch != currentEpoch || !binder.isBinderAlive) false
-                            else { remote = service; remoteBinder = binder; deathRecipient = died; binding = false; true }
-                        }
-                        if (!accepted) { binder.unlinkToDeath(died, 0); return@execute }
-                        publish(OrionCortexHealth.UNLOADED); drain()
-                    } catch (_: RemoteException) { disconnect(currentEpoch, OrionCortexRequestStatus.PROCESS_DIED) }
-                    catch (_: Exception) { disconnect(currentEpoch, OrionCortexRequestStatus.FAILED) }
+                if (synchronized(lock) { closed || epoch != currentEpoch || connection !== this }) return
+                try {
+                    worker.execute {
+                        // The callback can become stale while waiting for the worker.
+                        if (synchronized(lock) { closed || epoch != currentEpoch || connection !== this }) return@execute
+                        try {
+                            val service = OrionCortexRemote(binder); service.getProtocolInfo()
+                            val died = IBinder.DeathRecipient { disconnect(currentEpoch, OrionCortexRequestStatus.PROCESS_DIED) }
+                            binder.linkToDeath(died, 0)
+                            val accepted = synchronized(lock) {
+                                if (closed || epoch != currentEpoch || !binder.isBinderAlive) false
+                                else { remote = service; remoteBinder = binder; deathRecipient = died; binding = false; true }
+                            }
+                            if (!accepted) { binder.unlinkToDeath(died, 0); return@execute }
+                            publish(OrionCortexHealth.UNLOADED, currentEpoch); drain()
+                        } catch (_: RemoteException) { disconnect(currentEpoch, OrionCortexRequestStatus.PROCESS_DIED) }
+                        catch (_: Exception) { disconnect(currentEpoch, OrionCortexRequestStatus.FAILED) }
+                    }
+                } catch (_: RejectedExecutionException) {
+                    // close may shut down the executor after the ownership check.
+                    // A framework callback must never let that rejection escape MAIN.
+                    disconnect(currentEpoch, OrionCortexRequestStatus.FAILED)
                 }
             }
             override fun onServiceDisconnected(name: ComponentName) { disconnect(currentEpoch, OrionCortexRequestStatus.PROCESS_DIED) }
@@ -165,7 +180,7 @@ class OrionCortexClient(
             if (closed || epoch != currentEpoch) return
             connection = selected
         }
-        publish(OrionCortexHealth.CONNECTING)
+        publish(OrionCortexHealth.CONNECTING, currentEpoch)
         try {
             val resources = approval(modelId, OrionCortexOperation.LOAD)
             if (resources == null || !resources.current(clock) || !bindApproval.current(clock)) {
@@ -308,23 +323,44 @@ class OrionCortexClient(
         observedHealth: OrionCortexHealth = OrionCortexHealth.UNAVAILABLE) {
         val oldConnection: ServiceConnection?
         val requests: List<Pending>
-        synchronized(lock) {
-            if (expectedEpoch != epoch) return
-            epoch = Math.addExact(epoch, 1)
-            try { deathRecipient?.let { remoteBinder?.unlinkToDeath(it, 0) } } catch (_: Exception) { }
-            remote = null; remoteBinder = null; deathRecipient = null; loaded = null; loading.clear(); binding = false
-            idleSince = null; deadlineTask?.cancel(false); deadlineTask = null
-            oldConnection = connection; connection = null
-            requests = pending.values.toList(); pending.clear()
+        val detachedEpoch: Long
+        val terminals = mutableListOf<() -> Unit>()
+        synchronized(callbacksLock) {
+            synchronized(lock) {
+                if (expectedEpoch != epoch) return
+                epoch = Math.addExact(epoch, 1)
+                detachedEpoch = epoch
+                try { deathRecipient?.let { remoteBinder?.unlinkToDeath(it, 0) } } catch (_: Exception) { }
+                remote = null; remoteBinder = null; deathRecipient = null; loaded = null; loading.clear(); binding = false
+                idleSince = null; deadlineTask?.cancel(false); deadlineTask = null
+                oldConnection = connection; connection = null
+                requests = pending.values.toList(); pending.clear()
+                // Commit terminality and detach listeners before exposing the new
+                // epoch. User/platform callbacks may immediately admit fresh work.
+                for (id in deadlines.keys) {
+                    val listener = listeners.remove(id)
+                    for (chunk in ledger.terminate(id, status)) {
+                        if (listener != null) terminals += { listener(chunk) }
+                    }
+                }
+                deadlines.clear()
+            }
         }
         try { oldConnection?.let(app::unbindService) } catch (_: Exception) { }
         requests.forEach { try { it.release() } catch (_: Exception) { } }
-        publish(observedHealth)
-        synchronized(callbacksLock) { ledger.terminateAll(status).forEach(::dispatch) }
+        publish(observedHealth, detachedEpoch)
+        // These are detached notifications, not current-connection state updates.
+        // In particular, an old FAILED terminal cannot tear down a newer binding.
+        terminals.forEach { try { it() } catch (_: Exception) { } }
     }
-    private fun publish(value: OrionCortexHealth) {
-        health = value
-        try { onHealth(value) } catch (_: Exception) { }
+    private fun publish(value: OrionCortexHealth, expectedEpoch: Long? = null) {
+        synchronized(callbacksLock) {
+            synchronized(lock) {
+                if (expectedEpoch != null && epoch != expectedEpoch) return
+                health = value
+            }
+            try { onHealth(value) } catch (_: Exception) { }
+        }
     }
     override fun close() {
         val selected = synchronized(lock) { if (closed) return; closed = true; epoch }
