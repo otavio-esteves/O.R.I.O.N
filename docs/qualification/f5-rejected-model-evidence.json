@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F5-MODEL-003",
+  "validatedCodeHead": "51c9fcdc694cf6d3b9fd2904744993f6fe045834",
+  "integratedHead": "462835578bf261c597e0f90b073857c826d3110a",
+  "sourceSha256": {
+    "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportProcessDeathTest.kt": "6684e482812120b7d14d0f21404081a748587ef9c2402321df7cac8fbccfa8e3",
+    "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportTest.kt": "31e53a8ebf710425ca90ba680053006060ba1db7ce53c036f6d186c8172e2829",
+    "app/src/androidTest/kotlin/network/orion/app/models/OrionModelRegistryTest.kt": "ebf8b589848466fdd7c4b2ec1c035394210114b744ba054e59b70df766d4d5f3",
+    "data/database/src/main/kotlin/network/orion/data/database/OrionModelRegistryDao.kt": "74f787e171ea459d82281091f078519ac65e334037698686e6072ff85f4b44f8",
+    "data/repository/src/main/kotlin/network/orion/data/repository/models/OrionModelImportCoordinator.kt": "73a9850fa3c6634d46a34b3d7dcc1dffdb427737e893019e95e83194f373b838",
+    "data/repository/src/main/kotlin/network/orion/data/repository/models/OrionPrivateModelFiles.kt": "ce48b083956e6f7b1cce980140a8926a61cd0cf081515814388a2434a73512d8",
+    "data/repository/src/test/kotlin/network/orion/data/repository/models/OrionPrivateModelFilesTest.kt": "e90a4383687851414c4143f119ebbe114e1a5f5047f8907f3eb62bb257730531",
+    "scripts/android/test_transaction_process_death_harness.py": "269983be47c06fda694ad05a2f747a4aa1d636960cec839d8086160fd3fcbb0a",
+    "scripts/android/verify-transaction-process-death.py": "69fad52c4940e65a1d6fc32ab5799acbe7e8d7e2d85d16a2fa23b4f01f77f448"
+  },
+  "physicalDeviceUsed": false,
+  "productionInferenceEnabled": false,
+  "fullF5GateClosed": false,
+  "fullSoakGateClosed": false,
+  "checks": [
+    {
+      "environment": "CONTAINER",
+      "kind": "CANONICAL_CHECK_DEBUG_RELEASE",
+      "result": "PASS",
+      "cases": 803,
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/registry-canonical.log",
+      "logSha256": "9b4a1d657b0519045be5a0a910e39903a9fb4ad59bd5fa747f69833f017fde36",
+      "command": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest :ai:llama:assembleDebugAndroidTest :ai:service:assembleDebugAndroidTest --max-workers=2"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "REPOSITORY_JVM",
+      "result": "PASS",
+      "cases": 33,
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/registry-anchored-focused-build.log",
+      "logSha256": "c76e8ca7a157880f031889bad4816c5ff1369d3b8bea9f2323ec5c67e7310bb4",
+      "command": "docker compose run --rm android-build :data:repository:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --max-workers=2"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "INTEGRATED_HOST_CONTRACTS",
+      "result": "PASS",
+      "cases": 160,
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/registry-integrated-host-harness.log",
+      "logSha256": "e3169689101138b261444ece5fc21ed9d2cf90a9e6d2472b4e850e05ef854592",
+      "command": "docker compose run --rm host-harness-check"
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "kind": "PARENT_REPLACEMENT_REGRESSION",
+      "result": "EXPECTED_FAILURE",
+      "cases": 1,
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/registry/before/parent-replacement.txt",
+      "logSha256": "cd73a0e301f3b7fc6deb1585af9b4231e7b507cf4c435e119e91dea54285f7bb"
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "kind": "MODEL_ANDROID_SUITE",
+      "result": "PASS",
+      "cases": 31,
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/registry/after/model-instrumentation.txt",
+      "logSha256": "6f20676ff251f83d9c5cc46d02f32f5ea0054d0f6da18d9392d5c36d985d6ee3"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "R8_QUALIFICATION_AND_NATIVE_PACKAGE",
+      "result": "PASS",
+      "duration": "17m10s",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/registry-r8-native.log",
+      "logSha256": "6b1a2cef2d724d7e5e8e38efe5cf418b0c470dd4d892b85e41fa0c29b7be43ea",
+      "command": "docker compose run --rm android-build -PorionQualificationRelease=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2"
+    }
+  ],
+  "processDeath": {
+    "result": "PASS",
+    "environment": "ANDROID_EMULATOR",
+    "fixtureId": "7a114a0c-6b57-4c5d-ac67-3ccc88bbe95b",
+    "scenario": "model_rejected_removal",
+    "terminationMethod": "RUN_AS_SIGKILL",
+    "checks": {
+      "kill_after_rejected_model_unlink_inside_room_transaction": "PASS",
+      "rejected_metadata_rolled_back_file_absent_explicit_removal_repeat": "PASS"
+    },
+    "commit": "51c9fcdc694cf6d3b9fd2904744993f6fe045834",
+    "workingTreeDirty": false,
+    "sourceSha256": {
+      "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportProcessDeathTest.kt": "6684e482812120b7d14d0f21404081a748587ef9c2402321df7cac8fbccfa8e3",
+      "scripts/android/verify-transaction-process-death.py": "69fad52c4940e65a1d6fc32ab5799acbe7e8d7e2d85d16a2fa23b4f01f77f448"
+    },
+    "artifactSha256": {
+      "app-debug.apk": "84b0576ae2af837e5e9c7166e1ad07685368f0ddd49be734513f76301e7ce11e",
+      "app-debug-androidTest.apk": "dbdd173f5232a2a41276d9e87e65c3e5b5c303b7abe748c94c19c702b6cb79bb"
+    },
+    "checkpointBoundary": "AFTER_REJECTED_MODEL_UNLINK_FSYNC_BEFORE_SQLITE_COMMIT",
+    "checkpointTransaction": "OPEN_ROOM_TRANSACTION",
+    "modelEvidence": "SYNTHETIC_TINY_GGUF_NO_INFERENCE",
+    "recoveryPolicy": "EXPLICIT_REJECTED_REMOVAL_REPEAT_ONLY",
+    "androidRuntimeEvidence": "NON_DEFINITIVE",
+    "apiLevel": "35",
+    "androidBuild": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+    "abi": "x86_64",
+    "pageSize": "4096",
+    "beforePid": "2948",
+    "afterPid": "3007"
+  },
+  "limitations": [
+    "Android API35 x86_64 4096-byte-page owned emulator only; runtime evidence NON_DEFINITIVE per ADR-0001",
+    "803 JVM report cases include cached/up-to-date tasks; not 803 fresh executions",
+    "Integrated merge after validated code head changes documentation/HOST preflight scripts only",
+    "A public-SDK test compilation error (Os.unlink) was corrected before any runtime validation; first failed build log retained",
+    "Filesystem unlink and SQLite commit are not atomic; safe recovery leaves rejected metadata and an absent artifact for explicit removal repetition",
+    "No model inference, production profile approval, physical qualification or 24-hour soak"
+  ],
+  "r8Artifacts": {
+    "app-qualificationRelease-androidTest.apk": "86c6b0058dca8028da7f217271756c3549b418a4bd978a9aea55ad7ec76aa4e7",
+    "mapping.txt": "11770bfd51641ce405d6ce84d6fcf9ca37427e79489865ec305bbefabdd1c470",
+    "app-qualificationRelease.apk": "b973524d0e70a3497abdc3420c1afe606765a686ac994e46e11146d2561ffad4"
+  },
+  "sourceOnlyPeerReview": {
+    "result": "APPROVED_NO_ADDITIONAL_BLOCKER",
+    "reviewedHead": "4628355",
+    "productionHead": "51c9fcd",
+    "runtimeEvidenceOwnedBy": "root"
+  }
+}

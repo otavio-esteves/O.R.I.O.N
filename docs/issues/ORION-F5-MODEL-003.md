@@ -82,10 +82,23 @@ selects secure streams when openat/NOFOLLOW are supported;
 uses directory-relative file channels and unlinkat. These sources establish the
 implementation choice, not runtime qualification on an untested API/OEM build.
 
-VALIDATION: `python3 scripts/android/test_transaction_process_death_harness.py`
-passed all 17 recorder contracts in HOST (no device contacted). Repository JVM,
-Android and actual SIGKILL execution remain for the parent's serialized canonical
-validation. No physical qualification is claimed by this work package.
+VALIDATION (root, 2026-11-14): Canonical Docker `check assembleDebug
+assembleRelease` plus the four required Android-test APK assemblies passed in
+29m06s. The 803 JVM report cases have zero failures/errors/skips (some tasks were
+cached/up-to-date). Focused repository JVM: 33 passed. Integrated Docker HOST
+harness: 160 passed. Normal R8 qualification/native packaging and test assembly
+passed in 17m10s. Source-only independent review found no additional blocker.
+
+Owned API35/x86_64/4096-byte-page Android emulator: 31 model cases passed. The
+parent-replacement regression first failed against the vulnerable implementation,
+then passed after anchored deletion. A real MAIN SIGKILL at the specified open
+transaction boundary passed full rejected-metadata rollback/missing-file/explicit
+repeat verification, PID 2948 -> 3007. These are NON_DEFINITIVE Android runtime
+observations under ADR-0001; no physical device, model inference or gate approval.
+The initial test compilation failure using unavailable public SDK Os.unlink was
+corrected with Files.delete before runtime execution; its failed log is retained.
+Exact hashes, commands/scopes and retained evidence paths are in
+[the validation record](../qualification/f5-rejected-model-evidence.json).
 
 PROCESS-DEATH RECORDER: `model_rejected_removal` selects
 `OrionModelImportProcessDeathTest#rejectedModelUnlinkBeforeCommitPreservesRejectedMetadata`.
