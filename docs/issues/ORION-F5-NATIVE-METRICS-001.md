@@ -14,6 +14,9 @@ internal observation type; focused ai/llama tests; this work package and
 docs/qualification/F5-NativeLocalMetrics.md; root additionally authorized the
 related ai/llama/build.gradle.kts junit4 test dependency. No vendor, service, AIDL,
 client, profile, scheduler, shared build/CI wiring or root checkout edits.
+Root integration also owns f5-native-local-metrics-evidence.json and the shared
+F5-QualificationChecklist.md status reconciliation. Author edits stayed in its
+own worktree; root centralized compilation, packaging and device work.
 
 CONTRACTS INVOLVED: Architecture Cortex ownership, native lifetime and metrics;
 Master Plan F0/F5; current shared native ownership/operation exclusion, JNI
@@ -47,7 +50,7 @@ discard every array slot while preserving finish. Counter/duration definitions,
 partial-work limitations and API-return synchronization scope are specified in
 [the technical note](../qualification/F5-NativeLocalMetrics.md).
 
-VALIDATION: Sixteen JVM tests and six new Android cases supplied; not yet executed
+AUTHOR HANDOFF VALIDATION: Sixteen JVM tests and six new Android cases supplied; not yet executed
 by the author. Model-dependent cases preserve explicit fixture skip behavior.
 Lightweight diff whitespace, local Markdown links and private native/Kotlin
 array-size/publication-bit consistency checks passed. Root centralizes all
@@ -58,3 +61,30 @@ accept one decode call. The native loop never evaluates the final allowed output
 token. A test-only commit preserves that failing case and the valid limit=8
 post-decode cancellation control; the fix bounds decode calls/tokens by
 min(callbacksReturnedNormally, maxTokens-1) for every finish. No JNI changes.
+
+CENTRAL VALIDATION (compiled source 6f85b4a841e7c6e7dcca2400e447bd904897fc6c):
+Canonical Docker reproduced the negative regression on test-only source4244e77:
+16 tests/one expected failure. After the fix, all16 native JVM cases passed with
+zero failure/error/skip, as did all142 app JVM cases. The initial15 cases overlap
+the final16. Final library lint/native/APK Debug/Release/test assembly passed6m4s;
+ordinary qualification R8/native packaging/test assembly passed12m25s. Initial
+build-only APKs, negative XML/logs and fixed artifacts remain separate.
+
+Owned API35/x86_64/4096-byte-page emulator: all13 library Android cases passed
+without skip in987.086s, including real EOG, greedy default/observed equality,
+max1/cancel, original callback-exception identity and concurrent close/unwind.
+The exact491400032-byte model fixture and installed APKs were SHA256-verified.
+
+Three actual private-AI integration cases passed in415.387s: model streaming/
+unload, actual AI death without losing Core, and deadline/native unwind. Main PID
+4761 stayed stable while observed AI PIDs changed4791 to5112; replay returned its
+retained failure and only an explicit new request allowed another execution.
+Three ordinary non-debuggable R8 probes also passed.
+All installed target/test hashes matched their frozen APKs before and after.
+
+Resource controls were synthetic functional fixtures; no physical/profile,
+memory-limiter, throughput or soak qualification. R8 probes cover library loading,
+constructor/corrupt-model rejection and storage startup, not real-model minified
+inference. There is still no Cortex metrics export; PR114 is a Proposed ADR only.
+No schema/migration, permission, policy, persistent telemetry or recovery change.
+See [the source/artifact/log index](../qualification/f5-native-local-metrics-evidence.json).

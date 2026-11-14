@@ -157,9 +157,26 @@ not reach EOG, that case explicitly skips and supplies no EOG runtime evidence.
 These isolated cases retain fresh synthetic emulator-only governor decisions;
 they do not configure or approve product inference.
 
-No Gradle/Docker/ADB/device command was executed by the author. Root must perform
+No Gradle/Docker/ADB/device command was executed by the author. At handoff, root still had to perform
 canonical JVM/native/R8/packaging and actual optional fixture regressions, retaining
 all skips/failures and exact source/artifact/environment identity. This package
 does not itself supply integrated MAIN/HOST observations, actual physical/native
 compatibility qualification, trusted profiles, production inference, F5 closure,
 F6 or real-duration soak.
+
+Root subsequently reproduced the impossible cancelled/max-one decode frame on
+the pre-fix decoder (16 cases, one expected failure), then passed all 16 JVM cases
+after the bound fix. All 142 app JVM cases, library lint, native Debug/Release/test
+assembly and ordinary R8/native packaging passed as well. These overlapping JVM
+runs are not additional unique tests.
+
+On the owned API35/x86_64/4KiB emulator, all 13 library Android cases passed with
+the pinned verified Qwen fixture and zero skips, including EOG and original
+exception identity. Three real private-AI integration cases passed, including
+actual AI process death while Core remained alive; three ordinary R8 probes also
+passed. The latter cover loading/constructor/rejection/storage, without real-model
+minified inference. Installed artifact hashes matched before and after. The
+[evidence index](f5-native-local-metrics-evidence.json) retains exact scopes,
+source/artifacts/logs, negative proof and remaining qualification limits. Model
+fixtures use synthetic resource inputs; no hardware or performance/profile gate
+is approved by this execution.

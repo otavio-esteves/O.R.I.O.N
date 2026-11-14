@@ -1,0 +1,402 @@
+{
+  "schemaVersion": 1,
+  "package": "ORION-F5-NATIVE-METRICS-001",
+  "status": "SOFTWARE_VALIDATION_ONLY_NOT_QUALIFIED",
+  "compiledSourceCommit": "6f85b4a841e7c6e7dcca2400e447bd904897fc6c",
+  "authorCommits": [
+    "3669e5ab7f002b1c02a9065925d32c978822e13c",
+    "89bdc611195ecff5caae9a57df28ad0121622f08",
+    "628b125c2817f1a2b86f170db2c0961fda8811d2"
+  ],
+  "sourceInputs": {
+    "ai/llama/build.gradle.kts": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/ai/llama/build.gradle.kts",
+      "size": 1288,
+      "sha256": "5d3b81460bc0f215e124aac7b8bc7240ad5df06796da41c72e73523c1615f29c"
+    },
+    "ai/llama/src/main/cpp/orion_llama_jni.cpp": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/ai/llama/src/main/cpp/orion_llama_jni.cpp",
+      "size": 17409,
+      "sha256": "b39b98f030789a25965ca99f7ab73d804c7afa876c97169c93eb294715bff1e6"
+    },
+    "ai/llama/src/main/kotlin/network/orion/ai/llama/OrionLlamaRuntime.kt": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/ai/llama/src/main/kotlin/network/orion/ai/llama/OrionLlamaRuntime.kt",
+      "size": 4951,
+      "sha256": "16e976e9519d785d6e11370fbf1abfa1133c3a267bfc71c609bb6261547f12e8"
+    },
+    "ai/llama/src/main/kotlin/network/orion/ai/llama/OrionLlamaGenerationObservation.kt": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/ai/llama/src/main/kotlin/network/orion/ai/llama/OrionLlamaGenerationObservation.kt",
+      "size": 6423,
+      "sha256": "3ecdbfb251262445f9ec08d7902692fac46acf8ccee605a18c381c595f4a7131"
+    },
+    "ai/llama/src/test/kotlin/network/orion/ai/llama/OrionLlamaGenerationObservationTest.kt": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/ai/llama/src/test/kotlin/network/orion/ai/llama/OrionLlamaGenerationObservationTest.kt",
+      "size": 10391,
+      "sha256": "9b230be160e2fcdc0b21dc58350e9d0eeeb7bc29b36f6b93bf8e02fc4c8ae116"
+    },
+    "ai/llama/src/androidTest/kotlin/network/orion/ai/llama/OrionLlamaBoundaryTest.kt": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/ai/llama/src/androidTest/kotlin/network/orion/ai/llama/OrionLlamaBoundaryTest.kt",
+      "size": 3497,
+      "sha256": "4966430780a31570feca91e81c01311f771971f9e7b59dcf8e2640ebbb9f717c"
+    },
+    "ai/llama/src/androidTest/kotlin/network/orion/ai/llama/OrionLlamaModelTest.kt": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/ai/llama/src/androidTest/kotlin/network/orion/ai/llama/OrionLlamaModelTest.kt",
+      "size": 13375,
+      "sha256": "5d4fef27e1a2331f222999b9296d0cc3be0a5c4476159ff2e2b6420c69a46fe9"
+    }
+  },
+  "canonicalDocker": {
+    "initialFocusedJvm": {
+      "tests": 15,
+      "result": "PASS",
+      "commandDuration": "1m20s",
+      "notAdditionalToFinal16": true
+    },
+    "negativeRegression": {
+      "sourceCommit": "4244e77",
+      "tests": 16,
+      "failures": 1,
+      "result": "EXPECTED_REGRESSION_FAILURE_BEFORE_FIX",
+      "commandDuration": "1m5s",
+      "case": "CANCELLED/maxTokens1 cannot include a decode call; limit8 remains valid."
+    },
+    "finalFocusedJvm": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "commandDuration": "1m"
+    },
+    "finalAppJvm": {
+      "suites": 24,
+      "tests": 142,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "initialDefaultBuildBeforeDecoderBound": "PASS_3m51s_BUILD_ONLY_NOT_RUNTIME",
+    "finalDefaultBuildsAndLibraryLint": "PASS_6m4s",
+    "ordinaryR8NativePackagingAndTestAssembly": "PASS_12m25s",
+    "logs": {
+      "native-metrics-fixture-download.log": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/native-metrics-fixture-download.log",
+        "size": 94,
+        "sha256": "5417ae5004895855700248d02c498e645c23b966d70ce77e3fa0d1229daf6a95"
+      },
+      "native-metrics-focused-jvm.log": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/native-metrics-focused-jvm.log",
+        "size": 1557,
+        "sha256": "5fb1c5c52607f936dcb4dc0258ef6448321550b7b35dfa346f6f65410582a8eb"
+      },
+      "native-metrics-default-builds.log": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/native-metrics-default-builds.log",
+        "size": 179513,
+        "sha256": "b1cbe1f06c36e33b0196299f391e49d3a920213c6d15caef276bbc44e1440ac9"
+      },
+      "native-metrics-decode-bound-before-fix.log": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/native-metrics-decode-bound-before-fix.log",
+        "size": 2070,
+        "sha256": "ecb701724e392bd7098c5ef8148e65b4fe367ad5583f58a5ff8a4c8364b44eca"
+      },
+      "native-metrics-focused-jvm-after-fix.log": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/native-metrics-focused-jvm-after-fix.log",
+        "size": 1447,
+        "sha256": "dafd135537cbf1ed0d51ef04494ba2d91659f93a4bb9b5a47ed842316cfad830"
+      },
+      "native-metrics-final-default-builds.log": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/native-metrics-final-default-builds.log",
+        "size": 182777,
+        "sha256": "fdabfc45a74169623eaa2cfb91facd96dd27b1b989eb413f6913c3466b56585e"
+      },
+      "native-metrics-r8-native.log": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/native-metrics-r8-native.log",
+        "size": 117215,
+        "sha256": "a146d6152b7bc8124d435ab1d882bcf05b387eeb29a3046f1f6e41ccd4ec57bd"
+      }
+    }
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "api": 35,
+    "abi": "x86_64",
+    "pageSize": 4096,
+    "syntheticResourceControls": true,
+    "library": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "actualDurationSeconds": 987.086,
+      "environment": "ANDROID_EMULATOR",
+      "classes": {
+        "network.orion.ai.llama.OrionLlamaBoundaryTest": 5,
+        "network.orion.ai.llama.OrionLlamaModelTest": 8
+      },
+      "passed": [
+        "limitsAndClosedRuntimeAreRejectedBeforeNativeWork",
+        "emptyRuntimeUnloadsAndClosesIdempotently",
+        "corruptPrivateModelNeverLoads",
+        "failedOrRejectedObservedCallsNeverExposeAnOlderObservation",
+        "generationWithoutLoadedModelFailsWithoutCallback",
+        "realEogSamplesAreNotOutputCallbacksWhenFixtureReachesEog",
+        "realModelLoadsStreamsAndUnloadsWithFreshFixtureDecisions",
+        "realDecodeCancelsAfterFirstPieceAndRuntimeCanBeReused",
+        "realOneTokenAndCallbackCancellationDoNotEvaluateFinalOutputToken",
+        "realCloseDuringObservedCallbackRetainsNativeLifetimeUntilReturnWithoutHandleGetter",
+        "realLocalMetricsPreserveGreedyPiecesAndCountNativeTokensSeparately",
+        "realLoadHonorsConcurrentCancellationAndLeavesNoLoadedContext",
+        "realCallbackExceptionIdentitySurvivesAndMetricsStayUnavailableUntilFreshInvocation"
+      ],
+      "libraryInstalledSha256After": "01fe8c8ce74b66c3ede5bd87d7a95571867e9ae1028e29b200ee02f4b118f95f",
+      "sourceCommit": "6f85b4a841e7c6e7dcca2400e447bd904897fc6c",
+      "physicalOrPerformanceQualification": false
+    },
+    "cortex": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "actualDurationSeconds": 415.387,
+      "sourceCommit": "6f85b4a841e7c6e7dcca2400e447bd904897fc6c",
+      "environment": "ANDROID_EMULATOR",
+      "passed": [
+        "actualAiDeathPreservesCoreAndReplayWaitsForExplicitNewRequest",
+        "importedRealModelStreamsThroughPrivateAiProcessAndUnloads",
+        "actualServiceDeadlineTerminatesInferenceOnceAndNativeUnwinds"
+      ],
+      "mainPidsObserved": [
+        4761
+      ],
+      "aiPidsObserved": [
+        4791,
+        5112
+      ],
+      "installedHashesAfter": {
+        "network.orion": {
+          "installedBasePath": "/data/app/~~iv5gYzvAj6UwabHSPxD4oQ==/network.orion-MpVCcFoglMmQ2-PEes4pgw==/base.apk",
+          "sha256": "a3b4f000c4e1c700148d1ae7f7b36a7345378799698b0eaaf3297dceab18d3d0",
+          "matchesFrozen": true
+        },
+        "network.orion.test": {
+          "installedBasePath": "/data/app/~~-k-Eaj3hbcDDZnE37D1qyQ==/network.orion.test-FsGVtReY7ErgP8I0m5CAlw==/base.apk",
+          "sha256": "0f6f3a91355733d15ca4baed85fff0390464bcf28f2939ec9996bd133eaff8a3",
+          "matchesFrozen": true
+        }
+      },
+      "actualModel": true,
+      "actualAiProcessDeath": true,
+      "metricsExportViaCortex": false,
+      "resourceInputs": "SYNTHETIC_FUNCTIONAL_FIXTURE",
+      "qualifiedProfileOrPhysicalOr24HourGate": false
+    },
+    "r8": {
+      "environment": "ANDROID_EMULATOR",
+      "tests": 3,
+      "failures": 0,
+      "skipped": 0,
+      "sourceCommit": "6f85b4a841e7c6e7dcca2400e447bd904897fc6c",
+      "abi": "x86_64",
+      "pageSize": 4096,
+      "nativeLibrariesLoaded": true,
+      "aiConstructorAndCorruptModelRejection": true,
+      "nonDebuggableStorageHealthy": true,
+      "realModelR8Inference": false,
+      "physicalOrProfileQualification": false,
+      "installedHashesMatchedBeforeAndAfter": true
+    },
+    "evidence": {
+      "final-default/library-instrumentation.txt": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/library-instrumentation.txt",
+        "size": 9049,
+        "sha256": "9576632e6fc4d0549300e63619978f712309a46687838cc5c953593d58eb1e96"
+      },
+      "final-default/library-results.json": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/library-results.json",
+        "size": 1342,
+        "sha256": "019e51937b8411d3e6baac90c7e3b88fac867db113c7b7cd14373768e67f976b"
+      },
+      "final-default/library-installed-and-model.json": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/library-installed-and-model.json",
+        "size": 1081,
+        "sha256": "c86c74a86bf2282b4591a14d336576f1716b61b16ea3df5995f47da3a030ba43"
+      },
+      "final-default/library-manifest.txt": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/library-manifest.txt",
+        "size": 4663,
+        "sha256": "3fa19188b9ab2fb1210bbdd2ba0709c310672b77487ea79826c2d7812da0a7ee"
+      },
+      "final-default/cortex-instrumentation.txt": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/cortex-instrumentation.txt",
+        "size": 25706,
+        "sha256": "af3f555fb69b6a8757a5f4e93955fefb0a14a468e338fbcd612271881ddc30ef"
+      },
+      "final-default/cortex-results.json": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/cortex-results.json",
+        "size": 13638,
+        "sha256": "6d5c338099788ec15a17e95a0da709bfa443b250b30ab17f92f19b15c4602fba"
+      },
+      "final-default/app-installed-and-model.json": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/app-installed-and-model.json",
+        "size": 1274,
+        "sha256": "6773b0beff8b41220cef9b2ef4b594bc8cbac8de1ceb70abed58f5025620ac4c"
+      },
+      "r8/instrumentation.txt": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/r8/instrumentation.txt",
+        "size": 804,
+        "sha256": "37e62aadfd399063c588b748ec6f953afe3a2eb2eb1b906ce9ef20d5f37c753c"
+      },
+      "r8/results.json": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/r8/results.json",
+        "size": 433,
+        "sha256": "4fba5410293236f6c447494a13c399917385ddc09e6083238b6988e1b61db392"
+      },
+      "r8/installed-before.json": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/r8/installed-before.json",
+        "size": 894,
+        "sha256": "29746057645c082087cec2590f3d45ac7a3e3376889c3812d2ee5475c4bbc103"
+      },
+      "r8/installed-after.json": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/r8/installed-after.json",
+        "size": 894,
+        "sha256": "21890e4ed9538c7395e538700b74e75be22598f2b7e24219c36b229be3f17141"
+      },
+      "negative-decode-bound/expected-regression-failure.json": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/negative-decode-bound/expected-regression-failure.json",
+        "size": 396,
+        "sha256": "7c8209839423d59d848be0a8b4c103dd9d457fe2ab0212a982fdbe507acc3dd8"
+      }
+    },
+    "physicalEvidence": false
+  },
+  "modelFixture": {
+    "manifest": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/ai/llama/test-fixtures/model-manifest.json",
+      "size": 666,
+      "sha256": "6350aa810fe1b24f28296b4c08c1d081047d1b87f7111d497dcb180dabad9b4c"
+    },
+    "fileName": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "sizeBytes": 491400032,
+    "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "purpose": "ANDROID_EMULATOR integration fixture only; NOT QUALIFIED for production",
+    "productionQualified": false
+  },
+  "artifacts": {
+    "before-decode-bound": {
+      "sourceCommit": "aa7f3ad",
+      "scope": "Build and first15 JVM cases only; APKs not runtime-tested. Retained before adding cancelled one-token decoder regression.",
+      "artifacts": {
+        "app": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/before-decode-bound/app-debug.apk",
+          "sha256": "5bb4d0a7fd51a961c8adc857821c6e15bdae278b27d97e15b0fd75c617aa1308",
+          "size": 85405425
+        },
+        "test": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/before-decode-bound/app-debug-androidTest.apk",
+          "sha256": "0f6f3a91355733d15ca4baed85fff0390464bcf28f2939ec9996bd133eaff8a3",
+          "size": 4929399
+        },
+        "release": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/before-decode-bound/app-release-unsigned.apk",
+          "sha256": "143820a707aa492abd033b1153c8e8732cb74d4fd6563d85fdd5c3accea4c5e7",
+          "size": 34626015
+        },
+        "libraryTest": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/before-decode-bound/llama-debug-androidTest.apk",
+          "sha256": "3e8140133d438da5e2ebd13f9ac5335cf7a7c08ff0491bd032665ffc12dfc257",
+          "size": 42395941
+        }
+      }
+    },
+    "final-default": {
+      "sourceCommit": "6f85b4a841e7c6e7dcca2400e447bd904897fc6c",
+      "environment": "DOCKER",
+      "artifacts": {
+        "app": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/app-debug.apk",
+          "sha256": "a3b4f000c4e1c700148d1ae7f7b36a7345378799698b0eaaf3297dceab18d3d0",
+          "size": 85405425
+        },
+        "test": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/app-debug-androidTest.apk",
+          "sha256": "0f6f3a91355733d15ca4baed85fff0390464bcf28f2939ec9996bd133eaff8a3",
+          "size": 4929399
+        },
+        "release": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/app-release-unsigned.apk",
+          "sha256": "832cb20d9bf99bf2cd054739a4d8c684d2c93798d213ac9c055d7608ff5cd88c",
+          "size": 34626015
+        },
+        "libraryTest": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/llama-debug-androidTest.apk",
+          "sha256": "01fe8c8ce74b66c3ede5bd87d7a95571867e9ae1028e29b200ee02f4b118f95f",
+          "size": 42395941
+        },
+        "libraryLint": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/final-default/lint-results-debug.xml",
+          "sha256": "1b6e6f54270cf3298b1e965e53ea942f8dcb9f55dcd8f9c34744266238ed457f",
+          "size": 86
+        }
+      },
+      "units": {
+        "app": {
+          "suites": 24,
+          "tests": 142,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "ai/llama": {
+          "suites": 1,
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "r8": {
+      "sourceCommit": "6f85b4a841e7c6e7dcca2400e447bd904897fc6c",
+      "environment": "DOCKER",
+      "artifacts": {
+        "app": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/r8/app-qualificationRelease.apk",
+          "size": 17328733,
+          "sha256": "832e9e01987b310ed1e8ce8709ee9f94fe9f4fa176e6504ece27078d26374073"
+        },
+        "test": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/r8/app-qualificationRelease-androidTest.apk",
+          "size": 41002,
+          "sha256": "ae769aa165fd5fa3cc0d6d42cbfe2fb6b252e6723d142cba50aaef976fda3414"
+        },
+        "mapping": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/native-metrics/r8/mapping.txt",
+          "size": 43755749,
+          "sha256": "8d7f574feb43903929331733d551ee6eb6e18e40f9db548c9dc8abecf3bd3c97"
+        }
+      }
+    }
+  },
+  "reviews": {
+    "qualificationAudit": "APPROVED_SOURCE_ONLY_628b125",
+    "operationalLifecycle": "APPROVED_SOURCE_ONLY_628b125",
+    "root": "EXECUTED_EXPECTED_RED_THEN_GREEN_AND_SCOPED_RUNTIME_CHECKS"
+  },
+  "limits": [
+    "Optional native-local source only; no Cortex IPC export. ADR proposal PR114 remains PROPOSED/DRAFT and does not authorize implementation.",
+    "PUBLISHED private JNI bit establishes only diagnostic copy; LOCAL_JNI_RETURNED is distinct from service-slot cleanup/backend synchronization.",
+    "Counts are native token/API facts; callback returned false is not MAIN acceptance/delivery. API-wall sums are not synchronized compute, throughput, TTFT or calibrated performance.",
+    "No prompts/output/token IDs/model paths/errors/logging in retained runtime observations; no second runtime or new persistence/authority/schema.",
+    "Real-model execution used debug software fixtures with synthetic resource observations, not a qualified production resource profile.",
+    "Ordinary R8 probes cover packaged library loading, AI constructor/corrupt-model rejection and storage startup; no real-model minified inference.",
+    "Host build overlapped early library tests; timings demonstrate execution scope only, not a benchmark or undisturbed autonomy.",
+    "Initial15 and final16 JVM cases overlap; expected negative16/1failure is not an unresolved current failure.",
+    "No physical S21/API37 MemoryLimiter/headroom/native/API qualification, current resource-profile approval or real24-hour soak."
+  ],
+  "gates": {
+    "F4PhysicalClosed": false,
+    "F5Closed": false,
+    "CortexRuntimeReady": false,
+    "productionInferenceEnabled": false,
+    "F6Opened": false
+  }
+}
