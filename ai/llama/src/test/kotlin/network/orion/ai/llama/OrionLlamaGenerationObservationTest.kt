@@ -78,6 +78,13 @@ class OrionLlamaGenerationObservationTest {
         assertTrue(aborted.decode.partialWorkUnknown)
     }
 
+    @Test fun `cancelled one token limit cannot contain a decode call but later limits can`() {
+        val raw = oneToken().apply { this[11] = 1; this[12] = 1; this[13] = 1; this[14] = 1; this[19] = 1 }
+        val code = 1 or ORION_NATIVE_METRICS_PUBLISHED
+        assertEquals(OrionLlamaObservationState.LOCAL_JNI_RETURNED, decode(raw, code, 8).state)
+        assertEquals(OrionLlamaObservationState.UNAVAILABLE_FORMAT, decode(raw, code, 1).state)
+    }
+
     @Test fun `prefill aborted batch reports known prefix and unknown partial work`() {
         val raw = longArrayOf(1, 1024, 2, 0, 0, 0, 0, 2, 1, 1024, 512, 0, 0, 0, 0, 1, 0, 1, 1, -1)
         val metrics = checkNotNull(decode(raw, 1 or ORION_NATIVE_METRICS_PUBLISHED, 8).metrics)
