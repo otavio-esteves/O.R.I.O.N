@@ -77,6 +77,7 @@ class OrionGenerationMetricsSnapshot(
         }
         require(values[OrionGenerationMetric.PROMPT_TOKENS] != 0L)
         checkRelations()
+        checkCompletedCallStages()
     }
 
     /** Limits belong to the actual admitted request, never the metrics query. */
@@ -99,6 +100,9 @@ class OrionGenerationMetricsSnapshot(
         fun eq(a: OrionGenerationMetric, b: OrionGenerationMetric) {
             val x = values[a]; val y = values[b]; if (x != null && y != null) require(x == y)
         }
+        fun sameZero(a: OrionGenerationMetric, b: OrionGenerationMetric) {
+            val x = values[a]; val y = values[b]; if (x != null && y != null) require((x == 0L) == (y == 0L))
+        }
         le(OrionGenerationMetric.EOG_TOKENS, OrionGenerationMetric.SAMPLED_TOKENS)
         le(OrionGenerationMetric.CALLBACKS_RETURNED, OrionGenerationMetric.CALLBACKS_ATTEMPTED)
         le(OrionGenerationMetric.CALLBACKS_ATTEMPTED, OrionGenerationMetric.SAMPLED_TOKENS)
@@ -106,6 +110,9 @@ class OrionGenerationMetricsSnapshot(
         val attempted = values[OrionGenerationMetric.CALLBACKS_ATTEMPTED]
         if (sampled != null && eog != null && attempted != null) require(attempted <= sampled - eog)
         le(OrionGenerationMetric.PREFILL_SUCCEEDED, OrionGenerationMetric.PREFILL_CALLS)
+        le(OrionGenerationMetric.PREFILL_SUCCEEDED, OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS)
+        sameZero(OrionGenerationMetric.PREFILL_CALLS, OrionGenerationMetric.PREFILL_SUBMITTED)
+        sameZero(OrionGenerationMetric.PREFILL_SUCCEEDED, OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS)
         le(OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS, OrionGenerationMetric.PREFILL_SUBMITTED)
         le(OrionGenerationMetric.PREFILL_CALLS, OrionGenerationMetric.PREFILL_SUBMITTED)
         le(OrionGenerationMetric.PREFILL_SUBMITTED, OrionGenerationMetric.PROMPT_TOKENS)
@@ -114,6 +121,19 @@ class OrionGenerationMetricsSnapshot(
         le(OrionGenerationMetric.DECODE_SUBMITTED, OrionGenerationMetric.CALLBACKS_RETURNED)
         eq(OrionGenerationMetric.DECODE_SUBMITTED, OrionGenerationMetric.DECODE_CALLS)
         eq(OrionGenerationMetric.DECODE_SUCCESSFUL_TOKENS, OrionGenerationMetric.DECODE_SUCCEEDED)
+    }
+
+    /** Stage claims require their actual operands; absent counts never imply completion. */
+    private fun checkCompletedCallStages() {
+        val tokenizer = completedCallStagesMask and 1 != 0
+        val prefill = completedCallStagesMask and 2 != 0
+        val generation = completedCallStagesMask and 4 != 0
+        val prompt = values[OrionGenerationMetric.PROMPT_TOKENS]
+        if (tokenizer) require(prompt != null)
+        if (prefill) require(tokenizer && prompt != null &&
+            values[OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS] == prompt)
+        if (generation) require(prefill && nativeState == OrionGenerationNativeState.JNI_RETURNED &&
+            nativeFinish in setOf(OrionGenerationNativeFinish.SUCCEEDED, OrionGenerationNativeFinish.TOKEN_LIMIT))
     }
 
     override fun toString() = "OrionGenerationMetricsSnapshot(sequence=$snapshotSequence, state=$snapshotState, correlation=REDACTED)"

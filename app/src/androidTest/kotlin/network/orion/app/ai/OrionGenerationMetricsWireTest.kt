@@ -18,6 +18,7 @@ class OrionGenerationMetricsWireTest {
             OrionGenerationMetric.SAMPLED_TOKENS to 1L, OrionGenerationMetric.EOG_TOKENS to 0L,
             OrionGenerationMetric.CALLBACKS_ATTEMPTED to 1L, OrionGenerationMetric.CALLBACKS_RETURNED to 1L,
             OrionGenerationMetric.DECODE_CALLS to 0L, OrionGenerationMetric.DECODE_SUBMITTED to 0L,
+            OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS to 3L,
             OrionGenerationMetric.PREFILL_NANOS to 0L))
     private fun decode(bundle: Bundle) = OrionGenerationMetricsWire.decodeSnapshot(bundle, 0xffff, 1, 32)
     private fun invalid(change: Bundle.() -> Unit) {
@@ -110,4 +111,45 @@ class OrionGenerationMetricsWireTest {
             OrionGenerationMetricsWire.queryId(OrionGenerationMetricsWire.query(id).apply { putString("requestId", "x".repeat(2000)) })
         }
     }
+    @Test fun completedStagesRequireOperandsAndTheirNativeControlFlow() {
+        fun Bundle.removeMetric(metric: OrionGenerationMetric) {
+            getBundle("metrics")!!.remove(metric.key)
+            putLong("availableMetricsMask", getLong("availableMetricsMask") and metric.bit.inv())
+        }
+        invalid { removeMetric(OrionGenerationMetric.PROMPT_TOKENS) }
+        invalid { removeMetric(OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS) }
+        invalid { putInt("completedCallStagesMask", 2) }
+        invalid { putInt("completedCallStagesMask", 5) }
+        invalid { getBundle("metrics")!!.putLong("prefillTokensInSuccessfulCalls", 2) }
+        invalid { putString("nativeFinish", "CANCELLED") }
+        invalid {
+            putString("nativeState", "RUNNING"); putString("nativeFinish", "NONE")
+            putString("snapshotState", "UPDATING"); putString("slotState", "OWNED")
+        }
+        val partial = OrionGenerationMetricsWire.snapshot(snapshot()).apply {
+            putInt("completedCallStagesMask", 0)
+            removeMetric(OrionGenerationMetric.PROMPT_TOKENS)
+            removeMetric(OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS)
+        }
+        val value = checkNotNull(decode(partial))
+        assertEquals(0, value.completedCallStagesMask)
+        assertNull(value.metric(OrionGenerationMetric.PROMPT_TOKENS))
+    }
+
+    @Test fun measuredPrefillCannotHaveTokensWithoutEnteredOrSuccessfulCalls() {
+        for (counts in listOf(
+            mapOf(OrionGenerationMetric.PREFILL_CALLS to 0L, OrionGenerationMetric.PREFILL_SUBMITTED to 3L),
+            mapOf(OrionGenerationMetric.PREFILL_SUCCEEDED to 1L, OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS to 0L),
+            mapOf(OrionGenerationMetric.PREFILL_SUCCEEDED to 0L, OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS to 3L),
+            mapOf(OrionGenerationMetric.PREFILL_SUCCEEDED to 2L, OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS to 1L))) {
+            invalid {
+                putInt("completedCallStagesMask", 0)
+                val metrics = getBundle("metrics")!!
+                var mask = getLong("availableMetricsMask")
+                for ((metric, value) in counts) { metrics.putLong(metric.key, value); mask = mask or metric.bit }
+                putLong("availableMetricsMask", mask)
+            }
+        }
+    }
+
 }
