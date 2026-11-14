@@ -10,7 +10,8 @@ profiles become available later.
 FILES ALLOWED: OrionCortexRuntimeOwner.kt and narrowly related owner tests;
 app/src/cortexReadinessTarget/**; app/src/cortexReadinessAndroidTest/**;
 scripts/android/test_f5_cortex_readiness_source_contract_harness.py;
-docs/qualification/F5-CortexReadinessProducer.md; this work package. Root owns
+docs/qualification/F5-CortexReadinessProducer.md;
+docs/qualification/f5-readiness-producer-evidence.json; this work package. Root owns
 app/build.gradle.kts and CI wiring for orionCortexReadinessProbe=true and its
 mutual exclusion with other explicit qualification modes.
 
@@ -64,3 +65,20 @@ the same original boot-bound window, with a separate final snapshot. It never
 calls Application.onCreate, changes field visibility or starts another owner.
 The source-threading regression requires these properties; root retains the
 initial run and performs the canonical rebuild/actual emulator rerun separately.
+
+CENTRAL VALIDATION: Root canonical default check/Debug/Release/four Android-test
+assemblies passed in 7m09s; 807 current-module JVM report cases /109 suites have
+zero failures/errors/skips (cached/up-to-date tasks included). Fixed readiness
+R8/native packaging/test assembly passed in 6m34s; ordinary R8 scope passed in
+6m59s. Docker HOST after the fix: 287 cases passed. Both invalid standalone flag
+and conflicting baseline/readiness flags were actually rejected by Gradle.
+
+Owned API35/x86_64/4KiB emulator: all five owner-gate cases and three ordinary R8
+native/JNI/startup probes passed. The fixed actual readiness receipt observed
+STARTING -> DEGRADED_SAFE and owner NO_QUALIFIED_PROFILE (four port queries in
+217ms), without request/bind/heavy issuance. A declared physical environment was
+rejected as mismatching the observed emulator. No AI PID was found after readiness
+attempts; ordinary native probes run separately and intentionally start AI.
+Default Debug/test and ordinary R8 target/test/mapping exclude the readiness bridge.
+The original cached-null receipt and APKs remain retained. No physical observation,
+production profile or soak approval; see [the evidence](../qualification/f5-readiness-producer-evidence.json).
