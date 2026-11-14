@@ -172,7 +172,8 @@ Counts below retain their individual execution scopes; they are not additive.
 | PR #104 — heavy-soak protocol | Integrated offline bounded journal/fence/cleanup consistency validator; no workload executor. [Protocol](F5-HeavySoakEvidenceProtocol.md), [work package](../issues/ORION-F5-HEAVY-SOAK-EVIDENCE-001.md). |
 | PR #107 — durable HOST store | Integrated atomic/fsync/CAS evidence storage with explicit uncertain commit, owned files and serialized writers; no device executor. [Protocol](F5-HeavySoakJournalStore.md), [work package](../issues/ORION-F5-HEAVY-JOURNAL-001.md). |
 | PR #108 — pre-resource readiness | Integrated real read-only diagnostic; required CI passed. Actual emulator receipt reports NO_QUALIFIED_PROFILE. Local checks: 807 JVM, 315 HOST, five owner-gate cases and three ordinary R8 probes. [Producer](F5-CortexReadinessProducer.md), [work package](../issues/ORION-F5-READINESS-PRODUCER-001.md). |
-| Issue #106 — exit capture | Local R8/348-HOST validation and actual emulator AI_NOT_AVAILABLE/truncated-history observations; no AI auto-start. Live-endpoint/death-correlation branches currently have synthetic HOST coverage only. [Producer](F5-ExitCapture.md), [work package](../issues/ORION-F5-EXIT-CAPTURE-001.md). |
+| PR #109 — exit capture | Integrated with required CI green: R8/348-HOST validation and actual emulator AI_NOT_AVAILABLE/truncated-history observations; no AI auto-start. Live-endpoint/death-correlation branches currently have synthetic HOST coverage only. [Producer](F5-ExitCapture.md), [work package](../issues/ORION-F5-EXIT-CAPTURE-001.md). |
+| Issue #110 — unload observation | Local validation passed:142 app JVM cases (including10 focused),34 scripted Android cases, lint/Debug/Release and ordinary R8/native packaging. Optional bounded internal collector observes existing UNLOADED replies; production collector remains disabled. No new Cortex RPC or heavy producer. [Technical note](F5-UnloadObservation.md), [work package](../issues/ORION-F5-UNLOAD-OBSERVATION-001.md). |
 
 Readiness observes only the real owner's early predicates. It never issues a
 request, evaluates resource/restart policy or grants admission, even if trusted
@@ -195,12 +196,19 @@ or reviewed decisions before a complete heavy qualification run:
 - A real heavy lifecycle producer and passive hooks for authenticated load,
   accepted stream/terminal and confirmed asynchronous unload, with current
   endpoint ownership and complete fresh native/process memory coverage.
+  The optional internal unload-status observer is a preparatory source, without
+  full request/lifecycle export, native release proof or integrated heavy receipt.
 - Actual performance producers for tokenizer/token counts and prefill/decode;
   chunks/bytes and end-to-end elapsed time cannot substitute for these metrics.
 - Trusted qualified configuration and physical coverage/budget calibration;
   existing production qualified plans remain empty, with admission blocked.
 - A reviewed real MemoryLimiter stimulus/correlation/policy-transition procedure
   and a complete post-Cortex 24-hour workload, execution and observation protocol.
+
+Further preparation is explicitly tracked by native-local instrumentation #111
+and a Proposed metrics IPC ADR #112. Neither issue enables a profile or accepts
+an IPC change. Native call duration must not be relabeled as synchronized compute
+time, and text chunks/bytes remain distinct from actual token counts.
 
 Physical S21/API/native/model qualification and real-duration evidence remain
 pending alongside those software gaps. F4 #64 and F5 #89 stay OPEN. No entry here

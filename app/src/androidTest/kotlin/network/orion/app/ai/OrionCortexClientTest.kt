@@ -38,7 +38,19 @@ import org.junit.runner.RunWith
 class OrionCortexClientTest {
     private class Clock : OrionClock {
         var mark = MonotonicInstant(BootSessionId(1), 1_000)
-        override fun monotonicNow() = mark
+        var failNextRead = false
+        var slowNextReadMillis = 0L
+        var markAfterSlowRead: MonotonicInstant? = null
+        override fun monotonicNow(): MonotonicInstant {
+            if (failNextRead) { failNextRead = false; error("Scripted observation clock unavailable") }
+            if (slowNextReadMillis > 0) {
+                val pause = slowNextReadMillis
+                slowNextReadMillis = 0
+                Thread.sleep(pause)
+                markAfterSlowRead?.let { mark = it }
+            }
+            return mark
+        }
         override fun wallNow() = Instant.EPOCH
     }
 
@@ -57,6 +69,10 @@ class OrionCortexClientTest {
         val loads = AtomicInteger()
         val inferences = AtomicInteger()
         val unloads = AtomicInteger()
+        val statusQueries = AtomicInteger()
+        val healthQueries = AtomicInteger()
+        var unloadReply: (() -> Bundle)? = null
+        var unloadFailure: Exception? = null
         val cancelled = CopyOnWriteArrayList<String>()
         val inferenceStarted = CompletableDeferred<Unit>()
         val readinessObserved = CompletableDeferred<Unit>()
@@ -104,14 +120,20 @@ class OrionCortexClientTest {
             putString("requestId", requestId); putString("state", if (requestId == loadId) "SUCCEEDED" else "RUNNING")
         }
         override fun getStatus(): Bundle {
+            statusQueries.incrementAndGet()
+            if (unloads.get() > 0) unloadReply?.let { return it() }
             val model = loadedModelId
             if (model != null && !modelReady) readinessObserved.complete(Unit)
             return OrionCortexWire.reply(when { model == null -> "UNLOADED"; modelReady -> "LOADED"; else -> "LOADING" }).apply {
                 model?.let { putString("modelId", it) }
             }
         }
-        override fun unloadModel() { unloads.incrementAndGet(); loadedModelId = null }
-        override fun healthCheck() = OrionCortexWire.reply("OK")
+        override fun unloadModel() {
+            unloads.incrementAndGet()
+            unloadFailure?.let { throw it }
+            loadedModelId = null
+        }
+        override fun healthCheck() = OrionCortexWire.reply("OK").also { healthQueries.incrementAndGet() }
     }
 
     private class BindingContext(base: Context) : ContextWrapper(base) {
@@ -127,6 +149,8 @@ class OrionCortexClientTest {
         var capabilitiesReply: Bundle? = null
         var capabilitiesUnavailable = false
         var holdInferenceIssue = false
+        var unloadReply: (() -> Bundle)? = null
+        var unloadFailure: Exception? = null
         val unbinds = AtomicInteger()
         private val component get() = ComponentName(packageName, "network.orion.ai.service.OrionCortexService")
         override fun getApplicationContext(): Context = this
@@ -136,6 +160,7 @@ class OrionCortexClientTest {
                 it.protocolMajor = protocolMajor; it.protocolMinor = protocolMinor; it.historyCapability = historyCapability
                 it.capabilitiesReply = capabilitiesReply; it.capabilitiesUnavailable = capabilitiesUnavailable
                 it.holdInferenceIssue = holdInferenceIssue
+                it.unloadReply = unloadReply; it.unloadFailure = unloadFailure
             }
             endpoints.add(endpoint); connections.add(connection); bound.complete(Unit)
             if (autoConnect) connection.onServiceConnected(component, endpoint)
@@ -146,7 +171,7 @@ class OrionCortexClientTest {
         override fun unbindService(connection: ServiceConnection) { unbinds.incrementAndGet() }
     }
 
-    private class Fixture : AutoCloseable {
+    private class Fixture(val unloadBuffer: OrionCortexUnloadObservationBuffer? = null) : AutoCloseable {
         val context = BindingContext(InstrumentationRegistry.getInstrumentation().targetContext)
         val clock = Clock()
         val file = File.createTempFile("orion_client_fixture_", ".bin", context.cacheDir).apply { writeBytes(byteArrayOf(65)) }
@@ -166,7 +191,8 @@ class OrionCortexClientTest {
         val client = OrionCortexClient(context, clock, { _, _, _, _ -> governor.evaluate() },
             { guard.evaluate(OrionAiExitHistory(clock.mark, if (denyRestart) listOf(
                 network.orion.core.exitinfo.ProcessExitSignal(3, Instant.EPOCH,
-                    network.orion.core.exitinfo.ProcessExitKind.LOW_MEMORY)) else emptyList())) }, availability::add)
+                    network.orion.core.exitinfo.ProcessExitKind.LOW_MEMORY)) else emptyList())) }, availability::add,
+            unloadObservations = unloadBuffer)
         fun request(id: String = client.newRequestId(), modelId: String = hash,
             deadline: MonotonicDeadline = clock.mark.deadlineAfter(30_000)) = OrionInferenceRequest(id, 1, modelId,
             "test", "context", 8, 0.0, OrionInferencePriority.INTERACTIVE, deadline, id)
@@ -183,6 +209,264 @@ class OrionCortexClientTest {
             assertEquals(OrionInferenceTerminal.FAILED, fixture.run().terminal)
             assertEquals(0, fixture.context.endpoints.sumOf { it.loads.get() })
             assertEquals(0, fixture.context.endpoints.sumOf { it.inferences.get() })
+        }
+    }
+
+    @Test fun observedUnloadAndReplayPreserveInferenceAndExactlyExistingCortexCalls() = runBlocking {
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
+            val request = fixture.request()
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run(request).terminal)
+            val endpoint = fixture.context.endpoints.single()
+            val observed = buffer.drain().observations.single()
+            assertEquals(OrionCortexUnloadOutcome.UNLOADED_OBSERVED, observed.outcome)
+            assertNotNull(observed.clientScope); assertEquals(1L, observed.connectionEpoch)
+            assertNull(observed.knownAiPid) // This fixture supplies no real PID telemetry.
+            assertEquals(fixture.clock.mark, observed.deadlineStartedAt)
+            assertEquals(1, endpoint.unloads.get()); assertEquals(2, endpoint.statusQueries.get())
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run(request).terminal)
+            assertTrue(buffer.drain().observations.isEmpty())
+            assertEquals(1, endpoint.unloads.get()); assertEquals(2, endpoint.statusQueries.get())
+            assertEquals(1, endpoint.loads.get()); assertEquals(1, endpoint.inferences.get())
+            assertEquals(0, endpoint.healthQueries.get())
+            assertEquals(1, fixture.context.connections.size)
+        }
+    }
+
+    @Test fun restartRefusalRecordsMissingEndpointWithoutBindingOrUnloadRpc() = runBlocking {
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
+            fixture.denyRestart = true
+            assertEquals(OrionInferenceTerminal.FAILED, fixture.run().terminal)
+            assertEquals(OrionCortexUnloadOutcome.NO_ENDPOINT, buffer.drain().observations.single().outcome)
+            assertTrue(fixture.context.endpoints.isEmpty())
+        }
+    }
+
+    @Test fun unloadedReplyAtOrAfterDeadlineOrAcrossInvalidClockNeverConfirmsButStillPreservesSuccess() = runBlocking {
+        val cases = listOf(
+            MonotonicInstant(BootSessionId(1), 5999) to OrionCortexUnloadOutcome.UNLOADED_OBSERVED,
+            MonotonicInstant(BootSessionId(1), 6000) to OrionCortexUnloadOutcome.DEADLINE_EXPIRED,
+            MonotonicInstant(BootSessionId(1), 6001) to OrionCortexUnloadOutcome.DEADLINE_EXPIRED,
+            MonotonicInstant(BootSessionId(2), 1001) to OrionCortexUnloadOutcome.TIME_REFERENCE_INVALID,
+            MonotonicInstant(null, 1001) to OrionCortexUnloadOutcome.TIME_REFERENCE_INVALID,
+            MonotonicInstant(BootSessionId(1), 999) to OrionCortexUnloadOutcome.TIME_REFERENCE_INVALID,
+        )
+        for ((after, expected) in cases) {
+            val buffer = OrionCortexUnloadObservationBuffer()
+            Fixture(buffer).use { fixture ->
+                fixture.context.unloadReply = {
+                    fixture.clock.mark = after
+                    OrionCortexWire.reply("UNLOADED")
+                }
+                assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal)
+                assertEquals(expected, buffer.drain().observations.single().outcome)
+                val endpoint = fixture.context.endpoints.single()
+                assertEquals(1, endpoint.unloads.get()); assertEquals(2, endpoint.statusQueries.get())
+                assertEquals(0, fixture.context.unbinds.get())
+            }
+        }
+    }
+
+    @Test fun failingExtraObservationClockCannotEnterLostConnectionOrChangeInference() = runBlocking {
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
+            fixture.context.unloadReply = {
+                fixture.clock.failNextRead = true
+                OrionCortexWire.reply("UNLOADED")
+            }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal)
+            val observation = buffer.drain().observations.single()
+            assertEquals(OrionCortexUnloadOutcome.TIME_REFERENCE_INVALID, observation.outcome)
+            assertNull(observation.checkedAt)
+            assertEquals(0, fixture.context.unbinds.get())
+            assertEquals(listOf(true), fixture.availability.toList())
+            assertEquals(2, fixture.context.endpoints.single().statusQueries.get())
+        }
+    }
+
+    @Test fun laterFunctionalClockFailureRemainsTimeReferenceInvalidAfterUnloadingReply() = runBlocking {
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
+            fixture.context.unloadReply = {
+                fixture.clock.failNextRead = true
+                OrionCortexWire.reply("UNLOADING")
+            }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal)
+            assertEquals(OrionCortexUnloadOutcome.TIME_REFERENCE_INVALID, buffer.drain().observations.single().outcome)
+            assertEquals(1, fixture.context.unbinds.get()) // Original clock failure still disconnects.
+            assertEquals(2, fixture.context.endpoints.single().statusQueries.get())
+        }
+    }
+
+    @Test fun clockRegressionAcrossReplyWithinUnloadWindowNeverConfirms() = runBlocking {
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
+            val replies = AtomicInteger()
+            fixture.context.unloadReply = {
+                if (replies.incrementAndGet() == 1) {
+                    fixture.clock.mark = MonotonicInstant(BootSessionId(1), 5000)
+                    OrionCortexWire.reply("UNLOADING")
+                } else {
+                    fixture.clock.mark = MonotonicInstant(BootSessionId(1), 4000)
+                    OrionCortexWire.reply("UNLOADED")
+                }
+            }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal)
+            assertEquals(OrionCortexUnloadOutcome.TIME_REFERENCE_INVALID, buffer.drain().observations.single().outcome)
+            assertEquals(0, fixture.context.unbinds.get())
+            assertEquals(3, fixture.context.endpoints.single().statusQueries.get())
+        }
+    }
+
+    @Test fun slowDiagnosticClockAfterSuspendedCleanupCannotTriggerOriginalTimeoutOrDisconnect() = runBlocking {
+        for (observing in listOf(false, true)) {
+            val buffer = OrionCortexUnloadObservationBuffer()
+            Fixture(if (observing) buffer else null).use { fixture ->
+                val replies = AtomicInteger()
+                fixture.context.unloadReply = {
+                    if (replies.incrementAndGet() == 1) OrionCortexWire.reply("UNLOADING")
+                    else {
+                        fixture.clock.slowNextReadMillis = 6000
+                        fixture.clock.markAfterSlowRead = MonotonicInstant(BootSessionId(1), 6000)
+                        OrionCortexWire.reply("UNLOADED")
+                    }
+                }
+                assertEquals(OrionInferenceTerminal.SUCCEEDED, withTimeout(9_000) { fixture.run() }.terminal)
+                assertEquals(0, fixture.context.unbinds.get())
+                val endpoint = fixture.context.endpoints.single()
+                assertEquals(1, endpoint.unloads.get()); assertEquals(3, endpoint.statusQueries.get())
+                assertEquals(0, endpoint.healthQueries.get()); assertEquals(listOf(true), fixture.availability.toList())
+                if (observing) assertEquals(OrionCortexUnloadOutcome.DEADLINE_EXPIRED, buffer.drain().observations.single().outcome)
+                else assertTrue(buffer.drain().observations.isEmpty())
+            }
+        }
+    }
+
+    @Test fun absentCollectorKeepsOriginalClockAndCortexCallsAfterUnloadedReply() = runBlocking {
+        Fixture().use { fixture ->
+            fixture.context.unloadReply = {
+                fixture.clock.failNextRead = true
+                OrionCortexWire.reply("UNLOADED")
+            }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal)
+            assertTrue(fixture.clock.failNextRead) // No diagnostic post-reply clock read on default path.
+            assertEquals(0, fixture.context.unbinds.get())
+            assertEquals(1, fixture.context.endpoints.single().unloads.get())
+            assertEquals(2, fixture.context.endpoints.single().statusQueries.get())
+        }
+    }
+
+    @Test fun closeOrDeathDuringStatusReplyInvalidatesItsEndpointWithoutChangingCompletedTerminal() = runBlocking {
+        for (close in listOf(false, true)) {
+            val buffer = OrionCortexUnloadObservationBuffer()
+            Fixture(buffer).use { fixture ->
+                fixture.context.unloadReply = {
+                    if (close) fixture.client.close() else fixture.context.disconnect(0)
+                    OrionCortexWire.reply("UNLOADED")
+                }
+                assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal)
+                assertEquals(if (close) OrionCortexUnloadOutcome.CLIENT_CLOSED else OrionCortexUnloadOutcome.ENDPOINT_CHANGED,
+                    buffer.drain().observations.single().outcome)
+                assertEquals(1, fixture.context.endpoints.single().unloads.get())
+                assertEquals(2, fixture.context.endpoints.single().statusQueries.get())
+                assertEquals(1, fixture.context.connections.size)
+            }
+        }
+    }
+
+    @Test fun delayedStatusDoesNotHoldOwnershipMonitorAndCannotConfirmAfterConcurrentDisconnect() = runBlocking {
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
+            val entered = CountDownLatch(1)
+            val release = CountDownLatch(1)
+            fixture.context.unloadReply = {
+                entered.countDown()
+                check(release.await(5, TimeUnit.SECONDS))
+                OrionCortexWire.reply("UNLOADED")
+            }
+            val result = async(Dispatchers.Default) { fixture.run() }
+            try {
+                assertTrue(entered.await(5, TimeUnit.SECONDS))
+                val disconnected = async(Dispatchers.Default) { fixture.context.disconnect(0) }
+                withTimeout(2_000) { disconnected.await() }
+            } finally { release.countDown() }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, withTimeout(3_000) { result.await() }.terminal)
+            assertEquals(OrionCortexUnloadOutcome.ENDPOINT_CHANGED, buffer.drain().observations.single().outcome)
+            assertEquals(1, fixture.context.endpoints.single().unloads.get())
+            assertEquals(2, fixture.context.endpoints.single().statusQueries.get())
+        }
+    }
+
+    @Test fun malformedAndContradictoryUnloadStatusRemainUnconfirmedWithOriginalCleanupEffects() = runBlocking {
+        val replies = listOf(
+            OrionCortexWire.reply("UNLOADED").apply { putString("modelId", "not-retained") } to false,
+            OrionCortexWire.reply("UNLOADED").apply { putString("state", "not-a-getStatus-field") } to false,
+            OrionCortexWire.reply("UNLOADED").apply { putInt("status", 1) } to true,
+            OrionCortexWire.reply("UNLOADED").apply { putInt("schemaVersion", 2) } to true,
+        )
+        for ((reply, originalDisconnects) in replies) {
+            val buffer = OrionCortexUnloadObservationBuffer()
+            Fixture(buffer).use { fixture ->
+                fixture.context.unloadReply = { reply }
+                assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal)
+                assertEquals(OrionCortexUnloadOutcome.STATUS_INVALID, buffer.drain().observations.single().outcome)
+                assertEquals(if (originalDisconnects) 1 else 0, fixture.context.unbinds.get())
+                assertEquals(1, fixture.context.endpoints.single().unloads.get())
+                assertEquals(2, fixture.context.endpoints.single().statusQueries.get())
+            }
+        }
+    }
+
+    @Test fun unloadRpcAndStatusTransportFailuresAreDistinguishedAndDoNotReplaceSuccess() = runBlocking {
+        for (requestFails in listOf(false, true)) {
+            val buffer = OrionCortexUnloadObservationBuffer()
+            Fixture(buffer).use { fixture ->
+                if (requestFails) fixture.context.unloadFailure = android.os.RemoteException("Fixture request failed")
+                else fixture.context.unloadReply = { throw android.os.RemoteException("Fixture status failed") }
+                assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal)
+                assertEquals(if (requestFails) OrionCortexUnloadOutcome.UNLOAD_REQUEST_FAILED else OrionCortexUnloadOutcome.TRANSPORT_FAILURE,
+                    buffer.drain().observations.single().outcome)
+                assertEquals(1, fixture.context.unbinds.get())
+                assertEquals(1, fixture.context.endpoints.single().unloads.get())
+            }
+        }
+    }
+
+    @Test fun existingPollingDeadlineExitAndSaturatedCollectorNeverAddPollsOrChangeResults() = runBlocking {
+        val buffer = OrionCortexUnloadObservationBuffer(1)
+        Fixture(buffer).use { fixture ->
+            fixture.context.unloadReply = {
+                fixture.clock.mark = MonotonicInstant(BootSessionId(1), 6000)
+                OrionCortexWire.reply("UNLOADING")
+            }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal)
+            val observation = buffer.drain().observations.single()
+            assertEquals(OrionCortexUnloadOutcome.DEADLINE_EXPIRED, observation.outcome)
+            assertEquals(2, fixture.context.endpoints.single().statusQueries.get())
+            assertEquals(1, fixture.context.unbinds.get())
+        }
+        val saturated = OrionCortexUnloadObservationBuffer(1)
+        Fixture(saturated).use { fixture ->
+            repeat(2) { assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run().terminal) }
+            val batch = saturated.drain()
+            assertEquals(1, batch.observations.size); assertEquals(1L, batch.droppedAtLeast)
+            assertEquals(2, fixture.context.endpoints.single().unloads.get())
+            assertEquals(4, fixture.context.endpoints.single().statusQueries.get())
+        }
+    }
+
+    @Test fun existingCoroutinePollingTimeoutRemainsUnconfirmedWithoutChangingSuccessfulInference() = runBlocking {
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
+            // Frozen fixture clock keeps the boot deadline ACTIVE; existing 5.5s coroutine bound must fire.
+            fixture.context.unloadReply = { OrionCortexWire.reply("UNLOADING") }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, withTimeout(8_000) { fixture.run() }.terminal)
+            assertEquals(OrionCortexUnloadOutcome.POLL_TIMEOUT, buffer.drain().observations.single().outcome)
+            val endpoint = fixture.context.endpoints.single()
+            assertEquals(1, endpoint.unloads.get()); assertTrue(endpoint.statusQueries.get() >= 2)
+            assertEquals(0, endpoint.healthQueries.get())
+            assertEquals(1, fixture.context.connections.size); assertEquals(1, fixture.context.unbinds.get())
         }
     }
 
@@ -270,12 +554,14 @@ class OrionCortexClientTest {
     }
 
     @Test fun expiredOrBootInvalidRequestNeverLoads() = runBlocking {
-        Fixture().use { fixture ->
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
             val expired = fixture.request(deadline = fixture.clock.mark.deadlineAfter(0))
             assertEquals(OrionInferenceTerminal.TIMED_OUT, fixture.run(expired).terminal)
             val invalid = fixture.request(deadline = MonotonicInstant(BootSessionId(2), 1_000).deadlineAfter(1_000))
             assertEquals(OrionInferenceTerminal.FAILED, fixture.run(invalid).terminal)
             assertTrue(fixture.context.endpoints.isEmpty())
+            assertTrue(buffer.drain().observations.isEmpty())
         }
     }
 
@@ -321,7 +607,8 @@ class OrionCortexClientTest {
     }
 
     @Test fun cancellationStillUnloadsTheSessionInNonCancellableCleanup() = runBlocking {
-        Fixture().use { fixture ->
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
             fixture.context.completeInference = false
             val operation = launch(Dispatchers.Default) { fixture.run() }
             withTimeout(3_000) {
@@ -331,6 +618,8 @@ class OrionCortexClientTest {
             withTimeout(3_000) { operation.cancelAndJoin() }
             assertTrue(fixture.context.endpoints[0].unloads.get() >= 1)
             assertTrue(fixture.context.endpoints[0].cancelled.isNotEmpty())
+            assertTrue(operation.isCancelled)
+            assertEquals(OrionCortexUnloadOutcome.UNLOADED_OBSERVED, buffer.drain().observations.single().outcome)
         }
     }
 

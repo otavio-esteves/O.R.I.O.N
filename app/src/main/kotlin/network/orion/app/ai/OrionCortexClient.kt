@@ -39,6 +39,7 @@ internal class OrionCortexClient(
     private val restart: () -> OrionRestartDecision,
     private val availabilityChanged: (Boolean) -> Unit = {},
     private val requestHistory: OrionInferenceRequestLedger = OrionInferenceRequestLedger(),
+    private val unloadObservations: OrionCortexUnloadObservationBuffer? = null,
 ) : AutoCloseable {
     private val app = context.applicationContext
     private val session = OrionInferenceTurnstile(clock)
@@ -55,6 +56,9 @@ internal class OrionCortexClient(
     private var connection: ServiceConnection? = null
     private var deathRecipient: IBinder.DeathRecipient? = null
     private var pinnedAiPid: Int? = null
+    private val unloadObservationScope = if (unloadObservations == null) null else
+        runCatching { newCortexUnloadObservationScope() }.getOrNull()
+    private var unloadConnectionEpoch: Long? = 0
 
     init { require(Application.getProcessName() == app.packageName) { "Cortex client belongs to MAIN." } }
 
@@ -260,23 +264,109 @@ internal class OrionCortexClient(
     }
 
     private suspend fun unload() = operation.withLock {
+        val observing = unloadObservations != null
+        var selectedService: IOrionCortex? = null
+        var selectedOwner: ServiceConnection? = null
+        var selectedEpoch: Long? = null
+        var selectedPid: Int? = null
+        var initiallyClosed = false
+        var observedDeadline: network.orion.core.time.MonotonicDeadline? = null
+        var checkedAt: network.orion.core.time.MonotonicInstant? = null
+        var pollAt: network.orion.core.time.MonotonicInstant? = null
+        var outcome = OrionCortexUnloadOutcome.OBSERVATION_UNAVAILABLE
+        var failurePhase = OrionCortexUnloadOutcome.UNLOAD_REQUEST_FAILED
+        var failureOutcome: OrionCortexUnloadOutcome? = null
+        var unloadedReply = false
+        var validUnloadedReply = false
+        var currentAtLoopExit = false
+        var closedAtLoopExit = false
+        fun observe(action: () -> Unit) {
+            if (observing) try { action() } catch (_: Throwable) {
+                outcome = OrionCortexUnloadOutcome.OBSERVATION_UNAVAILABLE
+                runCatching { unloadObservations?.recordingFailed() }
+            }
+        }
+        fun observationClock() = try { clock.monotonicNow() } catch (_: Throwable) { null }
+        fun endpointCurrent() = remote === selectedService && connection === selectedOwner && unloadConnectionEpoch == selectedEpoch &&
+            (selectedPid == null || pinnedAiPid == selectedPid)
+        fun classify(at: network.orion.core.time.MonotonicInstant?, current: Boolean, endedClosed: Boolean, valid: Boolean, unloaded: Boolean) =
+            classifyCortexUnloadObservation(observedDeadline, at, pollAt,
+                identityKnown = unloadObservationScope != null && selectedEpoch != null && selectedOwner != null,
+                endpointCurrent = current, clientClosed = initiallyClosed || endedClosed, validEnvelope = valid, unloaded = unloaded)
+        fun pollingClock(): network.orion.core.time.MonotonicInstant {
+            failurePhase = OrionCortexUnloadOutcome.TIME_REFERENCE_INVALID
+            return clock.monotonicNow().also { if (observing) pollAt = it }
+        }
         try {
-            val service = remote ?: return@withLock
+            val service = if (!observing) remote else synchronized(monitor) {
+                selectedService = remote; selectedOwner = connection; initiallyClosed = closed
+                selectedEpoch = if (connection == null) null else unloadConnectionEpoch?.takeIf { it > 0 }
+                selectedPid = pinnedAiPid
+                selectedService
+            }
+            if (service == null) {
+                observe { outcome = OrionCortexUnloadOutcome.NO_ENDPOINT }
+                return@withLock
+            }
             service.unloadModel()
+            failurePhase = OrionCortexUnloadOutcome.TIME_REFERENCE_INVALID
             val deadline = clock.monotonicNow().deadlineAfter(5_000)
+            observe { observedDeadline = deadline }
             withTimeout(5_500) {
-                while (deadline.statusAt(clock.monotonicNow()) == MonotonicDeadlineStatus.ACTIVE && remote === service) {
+                while (deadline.statusAt(pollingClock()) == MonotonicDeadlineStatus.ACTIVE && remote === service) {
+                    failurePhase = OrionCortexUnloadOutcome.TRANSPORT_FAILURE
                     val status = service.getStatus()
+                    failurePhase = OrionCortexUnloadOutcome.STATUS_INVALID
                     OrionCortexWire.requireEnvelope(status, REPLY_KEYS)
-                    if (OrionCortexWire.text(status, "status") == "UNLOADED") return@withTimeout
+                    if (OrionCortexWire.text(status, "status") == "UNLOADED") {
+                        observe {
+                            unloadedReply = true
+                            validUnloadedReply = status.keySet() == setOf("schemaVersion", "status")
+                        }
+                        return@withTimeout
+                    }
+                    failurePhase = OrionCortexUnloadOutcome.OBSERVATION_UNAVAILABLE
                     delay(25)
                 }
+                observe { synchronized(monitor) {
+                    currentAtLoopExit = endpointCurrent(); closedAtLoopExit = closed
+                } }
                 releaseConnection()
             }
         } catch (failure: Exception) {
+            observe {
+                failureOutcome = when (failure) {
+                    is kotlinx.coroutines.TimeoutCancellationException -> OrionCortexUnloadOutcome.POLL_TIMEOUT
+                    is CancellationException -> OrionCortexUnloadOutcome.CANCELLED
+                    else -> failurePhase
+                }
+            }
             lostConnection()
             throw failure
-        } finally { loaded = null }
+        } finally {
+            loaded = null
+            // No user callbacks. Publication cannot enter the cleanup catch or affect terminality.
+            observe {
+                // Extra diagnostic clock/classification run only AFTER the original timeout/catch.
+                // A slow/throwing clock must not turn a successful cleanup into lostConnection().
+                when {
+                    outcome == OrionCortexUnloadOutcome.NO_ENDPOINT -> checkedAt = observationClock()
+                    failureOutcome != null -> { checkedAt = observationClock(); outcome = checkNotNull(failureOutcome) }
+                    unloadedReply -> {
+                        checkedAt = observationClock()
+                        outcome = synchronized(monitor) {
+                            classify(checkedAt, endpointCurrent(), closed, validUnloadedReply, true)
+                        }
+                    }
+                    else -> {
+                        checkedAt = pollAt
+                        outcome = classify(checkedAt, currentAtLoopExit, closedAtLoopExit, true, false)
+                    }
+                }
+                unloadObservations?.offer(OrionCortexUnloadObservation(unloadObservationScope, selectedEpoch, selectedPid,
+                    observedDeadline?.start, checkedAt, outcome))
+            }
+        }
     }
 
     /** Fresh local-process PSS from this authenticated Binder epoch; never creates a second binding. */
@@ -367,6 +457,9 @@ internal class OrionCortexClient(
                 check(!closed)
                 if (!pending.isActive) false else {
                     connection = owner
+                    if (unloadObservations != null) unloadConnectionEpoch = unloadConnectionEpoch?.let {
+                        if (it < Long.MAX_VALUE) it + 1 else null
+                    }
                     app.bindService(intent, owner, Context.BIND_AUTO_CREATE)
                 }
             }
