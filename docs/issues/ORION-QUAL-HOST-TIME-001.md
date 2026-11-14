@@ -70,3 +70,14 @@ harnesses. No heavy journal v1 or F4 recovery journal format was changed. A part
 sample can remain only in memory on clock failure; completed flushed rows remain
 retained and the report stays incomplete. Existing abrupt-HOST-death limitations
 and explicit owned recovery still apply. Nothing resumes work automatically.
+
+## Canonical validation
+
+Root executed the unchanged Python sources in the pinned Docker HOST harness.
+The regression-only `1026dc8` ran 350 contracts with the expected one failure and
+one error. The fixed source `aa5c150` ran all **368 contracts successfully**
+(Docker exit 0; no device). Evidence is retained outside the repository at
+`O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/host-time/validation.json`;
+the negative raw log is retained, and the positive summary comes from the recorded
+tool stdout rather than a saved raw log. This does not qualify actual suspend,
+Android behavior or a 24-hour window. Required PR CI remains a separate merge gate.
