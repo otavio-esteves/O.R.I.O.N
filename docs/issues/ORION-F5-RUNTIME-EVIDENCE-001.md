@@ -40,11 +40,14 @@ and resource/timing metadata are accepted; raw prompts/output/errors/paths and
 arbitrary request identifiers are absent. The CLI reads regular bounded JSON
 files and emits a fixed diagnostic report without echoing rejected input.
 
-VALIDATION: 18 pure HOST unittest cases pass, including a table of wrong primitive
+VALIDATION: 22 pure HOST unittest cases pass, including a table of wrong primitive
 and container replacements throughout the nested schema and actual offline CLI
 success/rejection/symlink cases. `git diff --check` passes. No Docker, Gradle,
 Android, ADB or model execution was performed for this package. Tests use synthetic
-metadata, not measured resource observations.
+metadata, not measured resource observations. Review regressions cover deadline
+precedence for MAIN cancellation/failure/death, all callback terminals, accepted
+chunks and exact expiry boundaries; an early remote timeout remains distinct
+from MAIN's own timeout.
 
 STATUS: Software protocol and negative contracts only. Physical producer,
 measurement/admission authority and coverage qualification remain separate work

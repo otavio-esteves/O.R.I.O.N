@@ -180,6 +180,67 @@ class RuntimeEvidenceProtocolTest(unittest.TestCase):
             self.data = fixture()
             self.reject(mutate)
 
+    def test_deadline_precedes_other_main_terminals_at_exact_boundary_and_after(self):
+        for terminal in ("CANCELLED", "FAILED", "PROCESS_DIED"):
+            for deadline in (4999, 5000, 5001):
+                with self.subTest(terminal=terminal, deadline=deadline):
+                    self.data = fixture()
+                    infer = self.data["inference"]
+                    infer.update(terminal=terminal, terminalSource="MAIN_LIFECYCLE", deadlineElapsed=deadline,
+                                 chunks=infer["chunks"][:1])
+                    if terminal == "PROCESS_DIED":
+                        self.data.update(unload=None, memory=self.data["memory"][:4])
+                    if deadline <= infer["terminalElapsed"]:
+                        with self.assertRaises(PROTOCOL.Rejected) as caught:
+                            self.validate()
+                        self.assertEqual("TERMINAL_AFTER_DEADLINE", str(caught.exception))
+                    else:
+                        self.assertEqual(terminal, self.validate()["inferenceTerminal"])
+
+    def test_callback_terminals_all_require_delivery_before_main_deadline(self):
+        for terminal in ("SUCCEEDED", "CANCELLED", "FAILED", "TIMED_OUT"):
+            for deadline in (4999, 5000, 5001):
+                with self.subTest(terminal=terminal, deadline=deadline):
+                    self.data = fixture()
+                    infer = self.data["inference"]
+                    infer.update(terminal=terminal, deadlineElapsed=deadline)
+                    infer["chunks"][-1]["finishReason"] = terminal
+                    if deadline <= infer["terminalElapsed"]:
+                        with self.assertRaises(PROTOCOL.Rejected) as caught:
+                            self.validate()
+                        self.assertEqual("TERMINAL_AFTER_DEADLINE", str(caught.exception))
+                    else:
+                        self.assertEqual(terminal, self.validate()["inferenceTerminal"])
+
+    def test_accepted_chunks_before_local_timeout_cannot_reach_deadline(self):
+        for received in (4899, 4900, 4950):
+            with self.subTest(received=received):
+                self.data = fixture()
+                infer = self.data["inference"]
+                infer.update(terminal="TIMED_OUT", terminalSource="MAIN_LIFECYCLE", deadlineElapsed=4900,
+                             chunks=infer["chunks"][:1])
+                infer["chunks"][0]["receivedElapsed"] = received
+                if received >= infer["deadlineElapsed"]:
+                    with self.assertRaises(PROTOCOL.Rejected) as caught:
+                        self.validate()
+                    self.assertEqual("CHUNK_TIME_INVALID", str(caught.exception))
+                else:
+                    self.assertEqual("TIMED_OUT", self.validate()["inferenceTerminal"])
+
+    def test_main_timeout_can_occur_at_deadline_but_not_before(self):
+        for deadline in (4999, 5000, 5001):
+            with self.subTest(deadline=deadline):
+                self.data = fixture()
+                infer = self.data["inference"]
+                infer.update(terminal="TIMED_OUT", terminalSource="MAIN_LIFECYCLE", deadlineElapsed=deadline,
+                             chunks=infer["chunks"][:1])
+                if deadline > infer["terminalElapsed"]:
+                    with self.assertRaises(PROTOCOL.Rejected) as caught:
+                        self.validate()
+                    self.assertEqual("TIMEOUT_BEFORE_DEADLINE", str(caught.exception))
+                else:
+                    self.assertEqual("TIMED_OUT", self.validate()["inferenceTerminal"])
+
     def test_time_boot_pid_inventory_and_aggregate_are_bound(self):
         mutations = (lambda d: d["memory"][0].update(bootCount=8),
                      lambda d: d["memory"][0].update(aiPid=457),

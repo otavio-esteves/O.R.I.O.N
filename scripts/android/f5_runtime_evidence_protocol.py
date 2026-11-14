@@ -143,10 +143,13 @@ def inference(value, model, scope, load):
     integer(value["inputBytes"], 1, 1024**2)
     member(value["terminal"], TERMINALS, "TERMINAL_INVALID")
     member(value["terminalSource"], {"CALLBACK", "MAIN_LIFECYCLE"}, "TERMINAL_SOURCE_INVALID")
-    if value["terminal"] == "SUCCEEDED":
-        require(end < value["deadlineElapsed"], "SUCCESS_AFTER_DEADLINE")
-    if value["terminal"] == "TIMED_OUT":
+    # MAIN checks its deadline before cancellation, transport/death signals and
+    # every callback. A remote TIMED_OUT may be delivered before MAIN expires;
+    # MAIN's own timeout must instead be at/after its deadline.
+    if value["terminalSource"] == "MAIN_LIFECYCLE" and value["terminal"] == "TIMED_OUT":
         require(end >= value["deadlineElapsed"], "TIMEOUT_BEFORE_DEADLINE")
+    else:
+        require(end < value["deadlineElapsed"], "TERMINAL_AFTER_DEADLINE")
     if value["failureCode"] is not None:
         member(value["failureCode"], FAILURES, "FAILURE_CODE_INVALID")
         require(value["terminal"] == "FAILED", "FAILURE_WITHOUT_FAILED_TERMINAL")
@@ -160,7 +163,8 @@ def inference(value, model, scope, load):
         integer(chunk["sequence"])
         require(chunk["sequence"] == index, "CHUNK_SEQUENCE_INVALID")
         integer(chunk["receivedElapsed"])
-        require(last_at <= chunk["receivedElapsed"] <= end, "CHUNK_TIME_INVALID")
+        require(last_at <= chunk["receivedElapsed"] <= end and
+                chunk["receivedElapsed"] < value["deadlineElapsed"], "CHUNK_TIME_INVALID")
         last_at = chunk["receivedElapsed"]
         integer(chunk["textDeltaBytes"], 0, 64 * 1024)
         integer(chunk["toolDeltaBytes"], 0, 64 * 1024)

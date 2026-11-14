@@ -109,7 +109,12 @@ A missing terminal for an ongoing load is outside version 1.
 | `terminal`, `terminalSource`, `failureCode` | A terminal enum; `CALLBACK` or `MAIN_LIFECYCLE`; null or existing `OrionInferenceFailure` enum, nonnull only for FAILED |
 | `chunks` | Array of 0–4097 accepted MAIN chunk metadata objects |
 
-SUCCEEDED must precede the logical deadline; TIMED_OUT cannot precede it.
+MAIN checks its deadline before accepting a callback, cancellation, transport
+failure or process-death signal. At or after that deadline those signals cannot
+replace the local TIMED_OUT terminal. Therefore a MAIN_LIFECYCLE TIMED_OUT is at
+or after the deadline, and all other terminal events must precede it. A CALLBACK
+TIMED_OUT received before MAIN's deadline is permitted: it is a remote terminal
+reason rather than proof that MAIN's own deadline has expired.
 `CALLBACK` requires exactly one final chunk, last in the list, with its received
 time equal to `terminalElapsed` and matching reason/error. PROCESS_DIED is a MAIN
 terminal. `MAIN_LIFECYCLE` has no accepted final chunk and cannot claim SUCCEEDED.
@@ -119,7 +124,10 @@ An exporter that only observed a delayed poll cannot invent those event times.
 Every chunk contains exactly `requestIdSha256`, `sequence`, `receivedElapsed`,
 `textDeltaBytes`, `toolDeltaBytes`, `isFinal`, `finishReason`, `errorCode`.
 The request hash matches MAIN, sequence is its zero-based array index, and times
-are nondecreasing from inference start through terminal. Text/tool UTF-8 byte
+are nondecreasing from inference start through terminal. `receivedElapsed` means
+the MAIN acceptance/delivery event, not arrival in an unvalidated raw callback
+queue. Every accepted chunk must strictly precede MAIN's deadline, including
+nonfinal chunks recorded before a later local timeout. Text/tool UTF-8 byte
 counts are nonnegative integers with sum at most 64 KiB, matching the lifecycle's
 content guard. `isFinal` is a strict boolean. Nonfinal reason/error are null;
 final reason/error match the logical terminal. No callbacks after terminal,
