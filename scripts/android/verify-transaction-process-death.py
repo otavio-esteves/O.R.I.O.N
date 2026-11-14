@@ -29,6 +29,8 @@ SCENARIOS = {
                    "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportProcessDeathTest.kt"),
     "model_registered": ("network.orion.app.models.OrionModelImportProcessDeathTest#importedRegistryBeforeReadyRequiresSelectedValidation",
                          "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportProcessDeathTest.kt"),
+    "model_rejected_removal": ("network.orion.app.models.OrionModelImportProcessDeathTest#rejectedModelUnlinkBeforeCommitPreservesRejectedMetadata",
+                               "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportProcessDeathTest.kt"),
 }
 
 
@@ -36,6 +38,17 @@ def scenario_proof(scenario):
     """Declare the fixture's checkpoint/proof; labels never substitute verification."""
     if scenario not in SCENARIOS:
         raise ValueError("Invalid process-death scenario.")
+    if scenario == "model_rejected_removal":
+        return {
+            "killCheck": "kill_after_rejected_model_unlink_inside_room_transaction",
+            "verificationCheck": "rejected_metadata_rolled_back_file_absent_explicit_removal_repeat",
+            "metadata": {
+                "checkpointBoundary": "AFTER_REJECTED_MODEL_UNLINK_FSYNC_BEFORE_SQLITE_COMMIT",
+                "checkpointTransaction": "OPEN_ROOM_TRANSACTION",
+                "modelEvidence": "SYNTHETIC_TINY_GGUF_NO_INFERENCE",
+                "recoveryPolicy": "EXPLICIT_REJECTED_REMOVAL_REPEAT_ONLY",
+            },
+        }
     if scenario in ("model_file", "model_registered"):
         registered = scenario == "model_registered"
         return {

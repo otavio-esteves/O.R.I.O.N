@@ -113,6 +113,7 @@ class TransactionRecorderContractTest(unittest.TestCase):
         expected = {
             "model_file": "verifiedFileBeforeRegistryCommitRemainsUnregistered",
             "model_registered": "importedRegistryBeforeReadyRequiresSelectedValidation",
+            "model_rejected_removal": "rejectedModelUnlinkBeforeCommitPreservesRejectedMetadata",
         }
         for scenario, method in expected.items():
             for mode in ("prepare", "verify"):
@@ -134,6 +135,19 @@ class TransactionRecorderContractTest(unittest.TestCase):
             self.assertEqual(verification, proof["verificationCheck"])
             self.assertEqual("SYNTHETIC_TINY_GGUF_NO_INFERENCE", proof["metadata"]["modelEvidence"])
             self.assertNotEqual("OPEN_ROOM_TRANSACTION", boundary)
+
+    def test_rejected_model_removal_proof_requires_unlink_and_fsync_inside_open_room_transaction(self):
+        proof = RECORDER.scenario_proof("model_rejected_removal")
+        self.assertEqual("kill_after_rejected_model_unlink_inside_room_transaction", proof["killCheck"])
+        self.assertEqual("rejected_metadata_rolled_back_file_absent_explicit_removal_repeat", proof["verificationCheck"])
+        self.assertEqual("AFTER_REJECTED_MODEL_UNLINK_FSYNC_BEFORE_SQLITE_COMMIT", proof["metadata"]["checkpointBoundary"])
+        self.assertEqual("OPEN_ROOM_TRANSACTION", proof["metadata"]["checkpointTransaction"])
+        self.assertEqual("SYNTHETIC_TINY_GGUF_NO_INFERENCE", proof["metadata"]["modelEvidence"])
+        self.assertEqual("EXPLICIT_REJECTED_REMOVAL_REPEAT_ONLY", proof["metadata"]["recoveryPolicy"])
+        for scenario in ["model_file", "model_registered"]:
+            previous = RECORDER.scenario_proof(scenario)
+            self.assertNotEqual(previous["killCheck"], proof["killCheck"])
+            self.assertNotEqual(previous["verificationCheck"], proof["verificationCheck"])
 
     def test_unknown_scenario_cannot_select_a_checkpoint_or_verification_claim(self):
         for scenario in ["", "arbitrary.class", "notification;echo unsafe", "new_external_boundary"]:
