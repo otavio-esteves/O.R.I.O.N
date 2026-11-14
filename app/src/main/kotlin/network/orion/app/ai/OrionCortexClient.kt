@@ -513,7 +513,9 @@ internal class OrionCortexClient(
                 check(!closed)
                 if (!pending.isActive) false else {
                     connection = owner
-                    metricsConnectionEpoch = metricsConnectionEpoch?.let { if (it < Long.MAX_VALUE) it + 1 else null }
+                    metricsConnectionEpoch = try {
+                        metricsConnectionEpoch?.let { if (it < Long.MAX_VALUE) it + 1 else null }
+                    } catch (_: Throwable) { null }
                     if (unloadObservations != null) unloadConnectionEpoch = unloadConnectionEpoch?.let {
                         if (it < Long.MAX_VALUE) it + 1 else null
                     }
