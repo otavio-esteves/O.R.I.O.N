@@ -108,11 +108,14 @@ class OrionCortexUnloadDiagnosticsTest {
 
     @Test fun `unavailable version never creates confirmation`() {
         for (stamp in listOf(selected.copy(executionEpoch = null), selected.copy(endpointVersion = null),
-            selected.copy(connectionEpoch = null), selected.copy(executionEpoch = 0))) {
+            selected.copy(connectionEpoch = null), selected.copy(executionEpoch = 0), selected.copy(connectionEpoch = 0))) {
             val owner = OrionCortexUnloadObservationOwner().apply { update(stamp) }
             val buffer = OrionCortexUnloadObservationBuffer()
             owner.publish(facts(stamp), at, buffer)
-            assertEquals(OrionCortexUnloadOutcome.IDENTITY_UNAVAILABLE, buffer.drain().observations.single().outcome)
+            val event = buffer.drain().observations.single()
+            assertEquals(OrionCortexUnloadOutcome.IDENTITY_UNAVAILABLE, event.outcome)
+            if (stamp.connectionEpoch == 0L) assertNull(event.connectionEpoch)
+            if (stamp.executionEpoch == 0L) assertNull(event.executionEpoch)
         }
     }
 

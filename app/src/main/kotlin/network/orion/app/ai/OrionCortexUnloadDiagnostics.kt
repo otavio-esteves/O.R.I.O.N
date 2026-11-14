@@ -53,9 +53,9 @@ internal class OrionCortexUnloadObservationOwner {
                     facts.clientScope != null && selected.connectionEpoch != null && selected.connectionEpoch > 0,
                     facts.currentAtLoopExit, selected.closed || facts.closedAtLoopExit, true, false)
             }
-            buffer.offer(OrionCortexUnloadObservation(facts.clientScope, selected.connectionEpoch, facts.knownAiPid,
+            buffer.offer(OrionCortexUnloadObservation(facts.clientScope, selected.connectionEpoch?.takeIf { it > 0 }, facts.knownAiPid,
                 facts.deadline?.start, if (facts.unloadedReply || facts.failure != null || facts.noEndpoint) checkedAt else facts.pollAt,
-                outcome, selected.executionEpoch))
+                outcome, selected.executionEpoch?.takeIf { it > 0 }))
         }
     }
 }
