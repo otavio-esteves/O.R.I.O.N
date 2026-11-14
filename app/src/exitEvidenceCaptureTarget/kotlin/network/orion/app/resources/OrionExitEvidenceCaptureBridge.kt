@@ -159,6 +159,7 @@ object OrionExitEvidenceCaptureBridge {
                         val runtime = OrionCortexWire.boolean(health, "nativeRuntimeLoaded")
                         val validation = OrionCortexWire.boolean(health, "nativeValidationCompleted")
                         require(!validation || runtime)
+                        require(state !in setOf("LOADED", "INFERENCING") || runtime && validation)
                         pinnedPid = pid
                         live.put(JSONObject().apply {
                             put("pid", pid); put("processName", AI); put("bootCount", firstBoot)

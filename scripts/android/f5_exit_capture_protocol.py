@@ -138,6 +138,8 @@ def validate_json(data):
         choice(row["serviceState"], {"UNLOADED", "LOADING", "LOADED", "INFERENCING", "UNLOADING"})
         require(type(row["nativeRuntimeLoaded"]) is bool and type(row["nativeValidationCompleted"]) is bool and
                 (not row["nativeValidationCompleted"] or row["nativeRuntimeLoaded"]), "NATIVE_FLAG_INVALID")
+        require(row["serviceState"] not in {"LOADED", "INFERENCING"} or
+                row["nativeRuntimeLoaded"] and row["nativeValidationCompleted"], "NATIVE_STATE_INVALID")
     expected_first = live[0]["readCompletedElapsed"] if live else None
     if value["firstLiveObservedElapsed"] is not None:
         integer(value["firstLiveObservedElapsed"])

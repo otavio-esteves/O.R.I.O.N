@@ -248,6 +248,19 @@ class ExitCaptureProtocolTest(unittest.TestCase):
         with self.assertRaises(protocol.Rejected):
             validate(value)
 
+    def test_loaded_and_inferencing_states_require_both_native_flags(self):
+        for state in ("LOADED", "INFERENCING"):
+            for runtime, validation in ((False, False), (False, True), (True, False), (True, True)):
+                value = fixture(live=True)
+                value["liveObservations"][0].update(serviceState=state, nativeRuntimeLoaded=runtime,
+                                                    nativeValidationCompleted=validation)
+                with self.subTest(state=state, runtime=runtime, validation=validation):
+                    if runtime and validation:
+                        self.assert_valid(value)
+                    else:
+                        with self.assertRaises(protocol.Rejected):
+                            validate(value)
+
     def test_rejection_metadata_preserves_unknown_environment_and_false_authority(self):
         value = {"schemaVersion": 1, "kind": "ORION_F5_EXIT_CAPTURE_REJECTION", "environment": "UNVERIFIED",
                  "qualification": "NOT_QUALIFIED", "runtimeEvidence": "NON_DEFINITIVE", "result": "REJECTED",
@@ -340,6 +353,7 @@ class ExitCaptureSourceContractTest(unittest.TestCase):
         self.assertIn('"firstLiveObservedElapsed"', text)
         self.assertNotIn('"startedElapsedMillis"', text)
         self.assertIn('"SETTINGS_GLOBAL_BOOT_COUNT"', text)
+        self.assertIn('require(state !in setOf("LOADED", "INFERENCING") || runtime && validation)', text)
 
     def test_qualification_scope_keep_and_framework_runner_types(self):
         keep = (BRIDGE.parents[5] / 'proguard-rules.pro').read_text()

@@ -134,6 +134,12 @@ The nine flags are `provenanceAuthenticated`, `physicalDeviceVerified`,
 `fullF5GateClosed`, `fullSoakGateClosed`, `heavyWorkIssued`, `policyMutationIssued`.
 They must all be false, including in rejection receipts.
 
+LOADED/INFERENCING rows require both native flags true, matching the current
+service's successful-load state. UNLOADED may retain both true after model unload.
+Status and health are separate reads, not an atomic service snapshot; an unstable
+or inconsistent combination ends live observation with LIVE_OBSERVATION_FAILED
+rather than publishing a contradictory row. This still grants no model authority.
+
 `bindingOutcome` is CONNECTED, NOT_BOUND, CONNECTION_TIMEOUT or NO_ENDPOINT.
 AI_NOT_AVAILABLE describes the unavailable endpoint in this capture; it is not a
 claim that no app AI process exists anywhere in the OS.
