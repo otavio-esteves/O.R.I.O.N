@@ -130,6 +130,7 @@ class OrionCortexGenerationMetricsClientTest {
         private val governor = OrionMinimumResourceGovernor(clock, { sample }, listOf(plan), 100, 100)
         private val guard = OrionCortexRestartGuard(clock, listOf(plan), 100, 100)
         var observeDuringInference = true
+        var observeDuringRestart = false
         var beforeResource: (() -> Unit)? = null
         private var evaluations = 0
         lateinit var client: OrionCortexClient
@@ -139,7 +140,10 @@ class OrionCortexGenerationMetricsClientTest {
                 beforeResource?.invoke()
                 if (++evaluations == 1 || observeDuringInference) client.currentMemoryTelemetry()
                 governor.evaluate()
-            }, { guard.evaluate(OrionAiExitHistory(clock.mark, emptyList())) })
+            }, {
+                if (observeDuringRestart && context.endpoint.loads.get() > 0) client.currentMemoryTelemetry()
+                guard.evaluate(OrionAiExitHistory(clock.mark, emptyList()))
+            })
         }
         fun request(id: String = client.newRequestId()) = OrionInferenceRequest(id, 1, hash, "fixture", "context", 8,
             0.0, OrionInferencePriority.INTERACTIVE, clock.mark.deadlineAfter(30_000), id)
@@ -186,6 +190,22 @@ class OrionCortexGenerationMetricsClientTest {
             assertEquals(1, health)
             assertNull(f.client.generationMetrics(request.requestId))
             assertEquals(health, f.context.endpoint.health.get()); assertEquals(0, f.context.endpoint.discovery.get())
+        }
+    }
+
+    @Test fun receiptOnlyFromRestartCannotStandInForInferenceResourceCallback() = runBlocking {
+        Fixture().use { f ->
+            f.observeDuringInference = false
+            f.observeDuringRestart = true
+            val request = f.request()
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, f.run(request).terminal)
+            val endpoint = f.context.endpoint
+            assertEquals(2, endpoint.health.get()) // One load-resource read plus a fresh inference-restart read.
+            val clocks = f.clock.reads
+            assertNull(f.client.generationMetrics(request.requestId))
+            assertEquals(0, endpoint.discovery.get()); assertEquals(0, endpoint.queries.get())
+            assertEquals(2, endpoint.health.get()); assertEquals(clocks, f.clock.reads)
+            assertEquals(1, endpoint.loads.get()); assertEquals(1, endpoint.inferences.get()); assertEquals(1, endpoint.unloads.get())
         }
     }
 
