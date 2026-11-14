@@ -23,10 +23,16 @@ import java.util.zip.ZipFile;
 public final class OrionQualificationInstrumentation extends Instrumentation {
     private static final String TARGET = "network.orion.qualification";
     private boolean nativeOnly;
+    private Bundle generationMetricsArguments;
 
     @Override public void onCreate(Bundle arguments) {
         super.onCreate(arguments);
         nativeOnly = arguments != null && "true".equals(arguments.getString("orionNativeOnly"));
+        if (arguments != null && (arguments.containsKey("orionGenerationMetricsProbe")
+                || arguments.containsKey("orionGenerationMetricsModelPath")
+                || arguments.containsKey("orionGenerationMetricsEnvironment"))) {
+            generationMetricsArguments = new Bundle(arguments);
+        }
         start();
     }
 
@@ -37,13 +43,22 @@ public final class OrionQualificationInstrumentation extends Instrumentation {
             check(TARGET.equals(context.getPackageName()), "Wrong qualification identity");
             check((context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0,
                     "Qualification target is debuggable");
-            probeNative(context);
-            sendStatus(0, OrionCortexNativeQualification.run(context));
-            if (!nativeOnly) probeStartup(context);
-            result.putString("stream", "\nOK (" + (nativeOnly ? 2 : 3) + " tests)\n");
+            if (generationMetricsArguments != null) {
+                check(!nativeOnly, "Conflicting qualification mode");
+                sendStatus(0, OrionGenerationMetricsQualification.run(context, generationMetricsArguments));
+                result.putString("stream", "\nOK (1 test)\n");
+            } else {
+                probeNative(context);
+                sendStatus(0, OrionCortexNativeQualification.run(context));
+                if (!nativeOnly) probeStartup(context);
+                result.putString("stream", "\nOK (" + (nativeOnly ? 2 : 3) + " tests)\n");
+            }
             finish(Activity.RESULT_OK, result);
         } catch (Throwable failure) {
-            result.putString("stream", "\nFAIL: " + failure.getClass().getSimpleName() + ": " + failure.getMessage() + "\n");
+            // The optional real-model probe never prints an input/path/request ID or raw failure.
+            result.putString("stream", generationMetricsArguments != null
+                    ? "\nFAIL: GENERATION_METRICS_PROBE_FAILED\n"
+                    : "\nFAIL: " + failure.getClass().getSimpleName() + ": " + failure.getMessage() + "\n");
             finish(Activity.RESULT_CANCELED, result);
         }
     }

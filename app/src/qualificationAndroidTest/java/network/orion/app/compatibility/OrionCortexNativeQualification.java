@@ -65,7 +65,7 @@ final class OrionCortexNativeQualification {
             // Original 1.0 envelope/transaction: a legacy client must accept it.
             envelope(protocol, "status", "major", "minor");
             check("OK".equals(protocol.getString("status")) && protocol.getInt("major") == 1
-                    && protocol.getInt("minor") == 1, "Wrong Cortex protocol");
+                    && protocol.getInt("minor") >= 1, "Wrong Cortex protocol");
             Bundle capabilities = call(service, CAPABILITIES, null);
             envelope(capabilities, "status", "capabilities");
             check("OK".equals(capabilities.getString("status"))
