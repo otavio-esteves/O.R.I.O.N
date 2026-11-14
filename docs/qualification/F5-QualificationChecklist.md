@@ -329,3 +329,8 @@ Schema 1 rows use `orionPhysicalBaselineSample`; the terminal summary uses
 `NOT_QUALIFIED`, no heavy work, and false profile/production/F5/soak approval fields.
 An owned emulator can verify rejection; it cannot supply physical baseline values.
 No physical sample is claimed by compilation, HOST fixtures or the rejection case.
+The requested PHYSICAL_DEVICE argument is not an observation: rejected arguments,
+target identity or emulator builds retain environment UNVERIFIED in the runner's
+summary. The bridge revalidates the physical Build before any receipt as well.
+Every attempted bind is released even if bindService returns false or throws;
+NOT_REGISTERED cleanup is explicitly non-successful, never a completed observation.

@@ -60,10 +60,12 @@ public final class OrionPhysicalBaselineInstrumentation extends Instrumentation 
         };
         Context context = null;
         boolean bound = false;
+        boolean bindAttempted = false;
         ExecutorService collector = null;
         Future<Bundle> collection = null;
         Bundle outcome = null;
         String failureCode = "ARGUMENTS_REJECTED";
+        String observedEnvironment = "UNVERIFIED";
         try {
             check(arguments.keySet().equals(new HashSet<>(Arrays.asList(
                     "orionEnvironment", "orionSampleCount", "orionSampleIntervalMs"))));
@@ -75,6 +77,7 @@ public final class OrionPhysicalBaselineInstrumentation extends Instrumentation 
             check(TARGET.equals(context.getPackageName()));
             failureCode = "PHYSICAL_ENVIRONMENT_REJECTED";
             checkPhysicalBuild();
+            observedEnvironment = "PHYSICAL_DEVICE";
             failureCode = "TARGET_IDENTITY_REJECTED";
             Class<?> bridge = Class.forName(BRIDGE, true, context.getClassLoader());
             // Validate sample bounds and the actual complete manifest inventory before binding.
@@ -82,6 +85,7 @@ public final class OrionPhysicalBaselineInstrumentation extends Instrumentation 
             Method collect = bridge.getMethod("collect", Context.class, IBinder.class, int.class, int.class, ResultReceiver.class);
             failureCode = "BIND_FAILED";
             Intent intent = new Intent().setComponent(new ComponentName(TARGET, "network.orion.ai.service.OrionCortexService"));
+            bindAttempted = true;
             bound = context.bindService(intent, connection, Context.BIND_AUTO_CREATE);
             check(bound && connected.await(5, TimeUnit.SECONDS) && endpoint.get() != null && !disconnected.get());
             final Context ownedContext = context;
@@ -104,27 +108,35 @@ public final class OrionPhysicalBaselineInstrumentation extends Instrumentation 
                     ownedContext, ownedEndpoint, sampleCount, sampleInterval, receiver));
             outcome = collection.get(30, TimeUnit.SECONDS);
             check(outcome != null && outcome.size() == 1 && outcome.get(SUMMARY) instanceof String);
-            if (disconnected.get()) outcome = summary(requested, received.get(), interval, "INCOMPLETE", "SERVICE_DISCONNECTED");
+            if (disconnected.get()) outcome = summary(observedEnvironment, requested, received.get(), interval, "INCOMPLETE", "SERVICE_DISCONNECTED");
         } catch (TimeoutException timeout) {
-            outcome = summary(requested, received.get(), interval, "INCOMPLETE", "OBSERVATION_TIMEOUT");
+            outcome = summary(observedEnvironment, requested, received.get(), interval, "INCOMPLETE", "OBSERVATION_TIMEOUT");
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
-            outcome = summary(requested, received.get(), interval, bound ? "INCOMPLETE" : "REJECTED", "INTERRUPTED");
+            outcome = summary(observedEnvironment, requested, received.get(), interval, bound ? "INCOMPLETE" : "REJECTED", "INTERRUPTED");
         } catch (Throwable failure) {
             // No exception messages, stack traces, file paths or user content leave the probe.
-            outcome = summary(requested, received.get(), interval, bound ? "INCOMPLETE" : "REJECTED", failureCode);
+            outcome = summary(observedEnvironment, requested, received.get(), interval, bound ? "INCOMPLETE" : "REJECTED", failureCode);
         } finally {
             accepting.set(false);
             if (collection != null && !collection.isDone()) collection.cancel(true);
             if (collector != null) collector.shutdownNow();
-            if (bound) {
+            // Context.bindService requires release even after false or SecurityException.
+            if (bindAttempted) {
                 try { context.unbindService(connection); }
-                catch (Throwable failure) { outcome = summary(requested, received.get(), interval, "INCOMPLETE", "CLEANUP_FAILED"); }
+                catch (IllegalArgumentException notRegistered) {
+                    outcome = summary(observedEnvironment, requested, received.get(), interval,
+                            bound ? "INCOMPLETE" : "REJECTED", "CLEANUP_NOT_REGISTERED");
+                }
+                catch (Throwable failure) {
+                    outcome = summary(observedEnvironment, requested, received.get(), interval,
+                            bound ? "INCOMPLETE" : "REJECTED", "CLEANUP_FAILED");
+                }
             }
         }
         boolean complete = false;
         try { complete = "OBSERVATION_COMPLETE_REVIEW_REQUIRED".equals(new JSONObject(outcome.getString(SUMMARY)).getString("result")); }
-        catch (Throwable failure) { outcome = summary(requested, received.get(), interval, "INCOMPLETE", "OBSERVATION_FAILED"); }
+        catch (Throwable failure) { outcome = summary(observedEnvironment, requested, received.get(), interval, "INCOMPLETE", "OBSERVATION_FAILED"); }
         outcome.putString("stream", "\nMEASUREMENT_ONLY / NOT_QUALIFIED\n");
         finish(complete ? Activity.RESULT_OK : Activity.RESULT_CANCELED, outcome);
     }
@@ -145,11 +157,11 @@ public final class OrionPhysicalBaselineInstrumentation extends Instrumentation 
         check(Build.FINGERPRINT != null && Build.FINGERPRINT.length() >= 10 && Build.FINGERPRINT.length() <= 512);
     }
 
-    private static Bundle summary(int requested, int collected, int interval, String result, String failure) {
+    private static Bundle summary(String observedEnvironment, int requested, int collected, int interval, String result, String failure) {
         try {
             JSONObject value = new JSONObject();
             value.put("schemaVersion", 1); value.put("kind", "PHYSICAL_BASELINE_SUMMARY");
-            value.put("environment", "PHYSICAL_DEVICE"); value.put("qualification", "NOT_QUALIFIED"); value.put("packageName", TARGET);
+            value.put("environment", observedEnvironment); value.put("qualification", "NOT_QUALIFIED"); value.put("packageName", TARGET);
             value.put("result", result); value.put("samplesRequested", requested); value.put("samplesCollected", collected);
             value.put("sampleIntervalMillis", interval); value.put("profileQualified", false); value.put("productionInferenceEnabled", false);
             value.put("fullF5GateClosed", false); value.put("fullSoakGateClosed", false); value.put("heavyWorkIssued", false);

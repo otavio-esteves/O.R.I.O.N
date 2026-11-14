@@ -10,6 +10,7 @@ qualification checklist; coordinating scripts/android/record-f5-physical-baselin
 and test_f5_physical_baseline_harness.py; the explicit required_artifacts extension
 in prepare-f5-physical-qualification.py and its focused contracts. The coordinating
 agent owns those HOST files and preserves the original model-required default.
+Source-boundary regressions are in test_f5_physical_source_contract_harness.py.
 
 CONTRACTS INVOLVED: Architecture §§25–35; Master Plan §11.9; ADR-0001;
 ORION-F5-QUAL-001/#89 and ORION-F5-MEMORY-QUAL-001. Existing AIDL and telemetry
@@ -52,3 +53,18 @@ Keystore material and technical WorkManager state. This is owned qualification
 state, not the production identity's state. The Core may still be initializing;
 the probe proves only that AI stays UNLOADED/nativeRuntimeLoaded=false, not that
 the Core or device is quiescent. No settings or model/inference operation is issued.
+
+Runner review hardening: the request label is separate from the observed
+environment. Rejections before physical validation report UNVERIFIED, and direct
+bridge entry revalidates Build before emitting any physical sample. Every bind
+attempt is released, including a false return or SecurityException, following the
+[Context.bindService contract](https://developer.android.com/reference/android/content/Context).
+An unregistered cleanup is explicitly non-successful (CLEANUP_NOT_REGISTERED),
+never promoted to a completed observation. Positive schema fields are unchanged.
+
+Six HOST source-boundary regressions pass on the corrected source. The same
+contracts produce five expected failures/errors against the pre-review 5fbd769
+snapshot; the no-heavy-work contract already passed there. All 165 HOST harness
+cases in this branch pass. These checks establish source/build boundaries, not a
+physical observation; root still compiles/R8-checks and runs the actual owned
+emulator rejection case before integration.

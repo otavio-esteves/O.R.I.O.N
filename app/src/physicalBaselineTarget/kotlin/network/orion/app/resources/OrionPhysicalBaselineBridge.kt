@@ -4,9 +4,11 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Build
 import android.os.IBinder
 import android.os.Process
 import android.os.ResultReceiver
+import java.util.Locale
 import network.orion.ai.api.IOrionCortex
 import network.orion.ai.api.OrionCortexWire
 import network.orion.app.ai.supportedCortexInventory
@@ -27,7 +29,16 @@ object OrionPhysicalBaselineBridge {
     @JvmStatic fun validate(context: Context, samples: Int, intervalMillis: Int) {
         require(samples in 1..10 && intervalMillis in 100..1_000) { "ARGUMENTS_REJECTED" }
         require(context.packageName == TARGET && Application.getProcessName() == TARGET) { "TARGET_IDENTITY_REJECTED" }
+        requirePhysicalBuild()
         inventory(context)
+    }
+
+    /** Also protects direct reflection calls: a rejected build cannot emit a physical receipt. */
+    private fun requirePhysicalBuild() {
+        require(Build.VERSION.SDK_INT in 31..37 && System.getProperty("os.arch") == "aarch64") { "PHYSICAL_ENVIRONMENT_REJECTED" }
+        val identity = "${Build.FINGERPRINT} ${Build.HARDWARE} ${Build.PRODUCT} ${Build.DEVICE}".lowercase(Locale.ROOT)
+        val markers = listOf("emulator", "qemu", "ranchu", "goldfish", "cuttlefish", "sdk_gphone", "generic", "aosp_cf")
+        require(Build.FINGERPRINT.length in 10..512 && markers.none(identity::contains)) { "PHYSICAL_ENVIRONMENT_REJECTED" }
     }
 
     @Suppress("DEPRECATION")
