@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F5-QUAL-PREFLIGHT-001",
+  "capturedUtc": "2026-11-14T15:10:38.891965+00:00",
+  "sourceBase": "3f244d1fcb6abf33b01c38b194434c793404b4d1",
+  "validatedHead": "76dc04ffde1df2340f7d499bbc5995317ce6f1ea",
+  "workingTreeDirtyAtValidation": true,
+  "sourceSha256": {
+    "scripts/android/prepare-f5-physical-qualification.py": "ed8beaf97f47f9c918998c48ff0aff20aa13fcfab468daa7add06bc030e569d6",
+    "scripts/android/test_f5_physical_preflight_harness.py": "5d68fbd3fe2846d7161553367e83e14b25e4af030067f7811464bc2709a8dd9a"
+  },
+  "checksExecuted": [
+    {
+      "environment": "CONTAINER",
+      "command": "docker compose run --rm host-harness-check",
+      "result": "PASS",
+      "tests": 159,
+      "newPreflightCases": 32,
+      "precedingCases": 127,
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/qualification-host-harness.log",
+      "logSha256": "41b8b1742101453fa2fe31c445866286c371e8fc565e2ae0640fcb940b4afb59"
+    },
+    {
+      "environment": "HOST",
+      "kind": "MEMORY_SOURCE_SHA256_AND_LOCAL_LINKS",
+      "result": "PASS",
+      "sourceFiles": 14
+    }
+  ],
+  "productionSourceChanged": false,
+  "profileApproval": "NOT_EVALUATED",
+  "physicalDeviceUsed": false,
+  "productionInferenceEnabled": false,
+  "fullF5GateClosed": false,
+  "fullSoakGateClosed": false,
+  "measurementScope": "Fake ADB/Git contract fixtures only. The recorder always returns BLOCKED/NOT_IMPLEMENTED for consistent selected physical inputs, never qualified PASS.",
+  "remainingCases": [
+    "Measured physical Cortex runtime",
+    "Physical API37 MemoryLimiter",
+    "Post-Cortex 24-hour soak plus memory stress"
+  ]
+}

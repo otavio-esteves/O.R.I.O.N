@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F5-MEMORY-QUAL-001",
+  "reviewedOn": "2026-11-14",
+  "reviewedCommit": "3f244d1fcb6abf33b01c38b194434c793404b4d1",
+  "reviewType": "SOURCE_AND_OFFICIAL_API_REVIEW_ONLY",
+  "scope": "Current MAIN manifest inventory, authenticated self-PSS AIDL telemetry, freshness and aggregate resource decision; no runtime or physical qualification.",
+  "sourceSha256": {
+    "app/src/main/kotlin/network/orion/app/resources/OrionProcessMemoryEvidence.kt": "fad1c2bb0b35dedd59a22a0d37c743cbc6517ef7b6d0331168bbaeb18e047a7a",
+    "app/src/main/kotlin/network/orion/app/resources/OrionCortexMemoryTelemetry.kt": "508bf961fdf1a1c70df5eacf29e1f978207628a540ab22b28be5f7574161ea45",
+    "app/src/main/kotlin/network/orion/app/resources/OrionAndroidResourceObserver.kt": "69a8b1ed698795bbb1f8445608949b17688722eab78e4fc2eb6d859ad8f8c8b7",
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeOwner.kt": "9bacc89d3c430a14a00a79ab2e14cd0fdab9937c5df0093b8e688944f797262f",
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt": "6b74e782bf3f85ecc9776aa993e9c36bab691be4e897ad75607962b39a5ffe89",
+    "ai/service/src/main/kotlin/network/orion/ai/service/OrionCortexService.kt": "f3eb8f3bb4c4e403e98b2ee05c7de01cd1ba967e4db20eedb6dac79121274bd1",
+    "core/resources/src/main/kotlin/network/orion/core/resources/OrionMinimumResourceGovernor.kt": "ca9bb19549522da1edf58667c62f4f1f443da40b25d7e4482a3ca68e0f3b05b9",
+    "app/src/test/kotlin/network/orion/app/resources/OrionProcessMemoryEvidenceTest.kt": "2c8aa766e681551ba537de920dcc57d3ad1f234b318f8fd951aed0a9e3dcf02b",
+    "app/src/test/kotlin/network/orion/app/resources/OrionCortexMemoryTelemetryTest.kt": "5a889adcef3ea526d49eb8a96e55a68af5f26812e9aba61ffca9062c55d19b2a",
+    "app/src/androidTest/kotlin/network/orion/app/resources/OrionCortexMemoryTelemetryAndroidTest.kt": "0bddb64c26fb1ba7b1044a3048cbbaca2f10d819464f5b2dd5ade0ba3986af8d",
+    "app/src/test/kotlin/network/orion/app/ai/OrionCortexRuntimeOwnerPolicyTest.kt": "4f1c301a38e3f54fdc0b9bc8a14892bb9fc66e4c11ddae7148798028661142e7",
+    "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexOwnerDefaultTest.kt": "67f29a415c721ae6f4f855bc3180743e40e48c70e8ec343c15ca7435ac33badc",
+    "core/resources/src/test/kotlin/network/orion/core/resources/OrionMinimumResourceGovernorTest.kt": "bf8cea7ba35eeb8d946099b7734335b6136a36035aa411a101d3854a63bfa834",
+    "core/resources/src/test/kotlin/network/orion/core/resources/OrionCortexRestartGuardTest.kt": "6fd805f8a8376a9ca8e3a805c318a5ca86d994cb40f8dfe440a266ed0ae55358"
+  },
+  "officialReferences": [
+    {
+      "url": "https://developer.android.com/reference/android/app/ActivityManager#getProcessMemoryInfo(int%5B%5D)",
+      "reviewedFacts": [
+        "Debugging/process-management UI scope",
+        "Same-UID restriction and rate-limited repeated data since Android Q"
+      ]
+    },
+    {
+      "url": "https://developer.android.com/reference/android/app/ActivityManager#getRunningAppProcesses()",
+      "reviewedFacts": [
+        "Debugging/process-management UI scope; not used as runtime completeness authority"
+      ]
+    },
+    {
+      "url": "https://developer.android.com/reference/android/os/Debug#getMemoryInfo(android.os.Debug.MemoryInfo)",
+      "reviewedFacts": [
+        "Calling-process managed/native/other breakdown",
+        "Potential absence of protected allocations such as graphics"
+      ]
+    },
+    {
+      "url": "https://developer.android.com/reference/android/os/Debug#getRss()",
+      "reviewedFacts": [
+        "Self-process RSS public from API35; not a complete peer-inventory API"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "MEMORY-SOURCE-001",
+      "result": "EXISTING_IMPLEMENTATION",
+      "detail": "Private self-PSS receipts and bounded MAIN-owned MAIN+AI manifest inventory already exist on the current base; no duplicate provider introduced."
+    },
+    {
+      "id": "MEMORY-FRESHNESS-001",
+      "result": "SOURCE_PATH_REVIEWED",
+      "detail": "Service and observer timestamp before collection, aggregate validates after receipt, governor validates outer observation age after observer returns."
+    },
+    {
+      "id": "MEMORY-COVERAGE-001",
+      "result": "PHYSICAL_QUALIFICATION_OPEN",
+      "detail": "Self-PSS native flag does not physically prove protected allocation coverage or approve a budget; unbounded omissions must keep heavy admission blocked."
+    },
+    {
+      "id": "MEMORY-DEFECT-001",
+      "result": "NO_REPRODUCED_DEFECT_IDENTIFIED_IN_SCOPE",
+      "detail": "No production change made on source review alone; scope does not assert global absence of defects."
+    }
+  ],
+  "checksExecuted": [
+    {
+      "environment": "HOST",
+      "kind": "READ_ONLY_SOURCE_COMPARISON",
+      "result": "PASS",
+      "detail": "All reviewed production/test source files byte-identical to the recorded base commit."
+    },
+    {
+      "environment": "HOST",
+      "kind": "LOCAL_DOCUMENT_LINK_VALIDATION",
+      "result": "PASS"
+    }
+  ],
+  "gradleOrDockerExecuted": false,
+  "androidInstrumentationExecuted": false,
+  "physicalDeviceUsed": false,
+  "productionCodeChanged": false,
+  "ipcChanged": false,
+  "schemaChanged": false,
+  "qualifiedProfilesChanged": false,
+  "productionInferenceEnabled": false,
+  "fullF5GateClosed": false,
+  "fullSoakGateClosed": false,
+  "structuralAdrProposed": false,
+  "remainingQualification": [
+    "Target-build self-PSS coverage including native/mappings/graphics discrepancies",
+    "Recorded full sampling and decision latency vs freshness window",
+    "Measured model/process/aggregate/system budgets",
+    "Actual physical lifecycle and MemoryLimiter evidence"
+  ],
+  "protocol": "docs/qualification/F5-MemoryEvidence.md",
+  "matrixOwner": "docs/qualification/F5-QualificationChecklist.md (separate coordinating package)"
+}
