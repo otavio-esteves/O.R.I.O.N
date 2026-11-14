@@ -56,6 +56,27 @@ The coordinator's existing process-wide lock serializes import/recovery/removal;
 Room CAS/writer ownership also excludes concurrent DAO changes. Only exact private
 regular artifacts can be unlinked. No user/model content or exception is logged.
 
+SECURE REMOVAL: A directory-path lstat followed by pathname unlink is insufficient:
+an app-UID writer can replace a checked parent with a symlink before unlink. The
+removal therefore anchors at Android's trusted app data directory, opens every
+app-controlled child relatively with `SecureDirectoryStream` and `NOFOLLOW_LINKS`,
+and holds the chain's directory inodes throughout the transaction. The file type
+and identity are read relative to that directory. Parent-binding changes observed
+before or after unlink cause rollback. Actual unlink is `deleteFile` relative to
+the pinned directory, so even a later parent change cannot redirect it outside.
+The sync channel is opened as `.` relative to that same stream and must be a
+`FileChannel`; directory force is probed before unlink and repeated after unlink.
+There is no absolute-path unlink/fsync fallback. Unsupported secure stream,
+identity or channel/sync support refuses removal and preserves rejected metadata.
+
+The public [SecureDirectoryStream contract](https://developer.android.com/reference/java/nio/file/SecureDirectoryStream)
+defines directory-relative operations independent of parent replacement. The
+[AOSP Android 15 provider](https://android.googlesource.com/platform/libcore/+/refs/heads/android15-release/ojluni/src/main/java/sun/nio/fs/UnixFileSystemProvider.java)
+selects secure streams when openat/NOFOLLOW are supported;
+[its implementation](https://android.googlesource.com/platform/libcore/+/refs/heads/android15-release/ojluni/src/main/java/sun/nio/fs/UnixSecureDirectoryStream.java)
+uses directory-relative file channels and unlinkat. These sources establish the
+implementation choice, not runtime qualification on an untested API/OEM build.
+
 VALIDATION: `python3 scripts/android/test_transaction_process_death_harness.py`
 passed all 17 recorder contracts in HOST (no device contacted). Repository JVM,
 Android and actual SIGKILL execution remain for the parent's serialized canonical

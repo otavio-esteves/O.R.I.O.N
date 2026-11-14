@@ -14,12 +14,18 @@ import java.io.InputStream
 import java.io.InterruptedIOException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
+import java.nio.file.DirectoryStream
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
+import java.nio.file.OpenOption
+import java.nio.file.Path
+import java.nio.file.SecureDirectoryStream
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardOpenOption.CREATE_NEW
+import java.nio.file.StandardOpenOption.READ
 import java.nio.file.StandardOpenOption.WRITE
+import java.nio.file.attribute.BasicFileAttributeView
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.UUID
@@ -74,7 +80,9 @@ class OrionPrivateModelFiles internal constructor(
     private val maximumModelBytes: Long,
     private val reserveBytes: Long,
     private val validator: OrionModelFileValidator,
-    private val syncDirectory: (File) -> Unit = { syncPrivateDirectory(it) },
+    private val syncDirectory: (FileChannel) -> Unit = { it.force(true) },
+    private val storageAnchor: File = root.absoluteFile.toPath().root.toFile(),
+    private val openDirectory: (Path) -> DirectoryStream<Path> = { Files.newDirectoryStream(it) },
     private val availableBytes: (File) -> Long = { it.usableSpace },
 ) {
     init { require(maximumModelBytes > 0 && reserveBytes >= 0) }
@@ -272,25 +280,60 @@ class OrionPrivateModelFiles internal constructor(
     /**
      * The coordinator must first CAS-delete a rejected row in its uncommitted
      * writer transaction. No hash/parse is needed for an explicitly rejected file,
-     * but path/type checks remain mandatory. Never touches staging or other hashes.
+     * but path/type checks remain mandatory. Directory traversal, unlink and sync
+     * remain relative to pinned directory inodes; replaced parents cannot redirect
+     * deletion. A provider lacking secure streams/file-channel sync fails closed.
      */
     internal fun removeRejectedArtifact(expected: OrionExpectedModelFile,
         checkCancellation: () -> Unit = {}): OrionRejectedArtifactRemoval = synchronized(lock) {
         checkCancelled(checkCancellation)
+        val opened = mutableListOf<SecureDirectoryStream<Path>>()
         try {
-            directories()
-            val target = File(ready, "${expected.sha256}.gguf").toPath()
-            val attributes = try { Files.readAttributes(target, BasicFileAttributes::class.java, NOFOLLOW_LINKS) }
-                catch (_: NoSuchFileException) { null }
-            if (attributes != null && !attributes.isRegularFile)
-                return@synchronized OrionRejectedArtifactRemoval.UNSAFE_PATH
-            checkCancelled(checkCancellation)
-            Files.deleteIfExists(target)
-            // Also sync an already-missing artifact: a previous interrupted unlink
-            // must become durable before SQLite may forget its rejected owner.
-            syncDirectory(ready)
-            checkCancelled(checkCancellation)
-            OrionRejectedArtifactRemoval.REMOVED
+            val anchor = storageAnchor.absoluteFile.toPath().normalize()
+            val destination = ready.absoluteFile.toPath().normalize()
+            if (!destination.startsWith(anchor)) throw UnsafeModelPath()
+            val components = anchor.relativize(destination)
+            if (components.nameCount !in 1..32) throw UnsafeModelPath()
+            val initial = openDirectory(anchor)
+            if (initial !is SecureDirectoryStream<*>) {
+                initial.close()
+                return@synchronized OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE
+            }
+            @Suppress("UNCHECKED_CAST")
+            var directory = initial as SecureDirectoryStream<Path>
+            opened += directory
+            val bindings = mutableListOf<RemovalDirectoryBinding>()
+            for (component in components) {
+                val before = removalAttributes(directory, component) ?: throw UnsafeModelPath()
+                if (!before.isDirectory) throw UnsafeModelPath()
+                val child = directory.newDirectoryStream(component, NOFOLLOW_LINKS)
+                opened += child
+                val childKey = child.getFileAttributeView(BasicFileAttributeView::class.java)?.readAttributes()?.fileKey()
+                    ?: throw IOException("Secure directory identity unavailable.")
+                if (before.fileKey() == null || before.fileKey() != childKey) throw UnsafeModelPath()
+                bindings += RemovalDirectoryBinding(directory, component, childKey)
+                directory = child
+            }
+            val target = destination.fileSystem.getPath("${expected.sha256}.gguf")
+            val dot = destination.fileSystem.getPath(".")
+            directory.newByteChannel(dot, setOf<OpenOption>(READ, NOFOLLOW_LINKS)).use { channel ->
+                val sync = channel as? FileChannel ?: return@synchronized OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE
+                // Prove supported directory fsync before any destructive operation.
+                // This descriptor is opened as '.' relative to the SAME pinned inode.
+                sync.force(true)
+                val before = removalAttributes(directory, target)
+                if (before != null && !before.isRegularFile) throw UnsafeModelPath()
+                if (before != null && before.fileKey() == null) throw IOException("Secure file identity unavailable.")
+                checkCancelled(checkCancellation)
+                if (!removalBindingsUnchanged(bindings) || !sameRemovalEntry(before, removalAttributes(directory, target)))
+                    throw UnsafeModelPath()
+                try { directory.deleteFile(target) } catch (_: NoSuchFileException) { /* Explicit repeat after interrupted unlink. */ }
+                // Also sync an already-missing artifact before SQLite forgets its owner.
+                syncDirectory(sync)
+                checkCancelled(checkCancellation)
+                if (!removalBindingsUnchanged(bindings) || removalAttributes(directory, target) != null) throw UnsafeModelPath()
+                OrionRejectedArtifactRemoval.REMOVED
+            }
         } catch (interrupted: InterruptedException) {
             Thread.currentThread().interrupt(); throw interrupted
         } catch (interrupted: InterruptedIOException) {
@@ -298,7 +341,25 @@ class OrionPrivateModelFiles internal constructor(
         } catch (_: UnsafeModelPath) { OrionRejectedArtifactRemoval.UNSAFE_PATH }
           catch (_: IOException) { OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE }
           catch (_: ErrnoException) { OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE }
+          catch (_: UnsupportedOperationException) { OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE }
+        finally { opened.asReversed().forEach { try { it.close() } catch (_: IOException) { } } }
     }
+
+    private data class RemovalDirectoryBinding(val parent: SecureDirectoryStream<Path>, val name: Path, val key: Any)
+
+    private fun removalAttributes(directory: SecureDirectoryStream<Path>, name: Path): BasicFileAttributes? = try {
+        val view = directory.getFileAttributeView(name, BasicFileAttributeView::class.java, NOFOLLOW_LINKS)
+            ?: throw IOException("Secure attributes unavailable.")
+        view.readAttributes()
+    } catch (_: NoSuchFileException) { null }
+
+    private fun removalBindingsUnchanged(bindings: List<RemovalDirectoryBinding>): Boolean = bindings.all {
+        val current = removalAttributes(it.parent, it.name)
+        current?.isDirectory == true && current.fileKey() == it.key
+    }
+
+    private fun sameRemovalEntry(before: BasicFileAttributes?, after: BasicFileAttributes?): Boolean =
+        if (before == null) after == null else after?.isRegularFile == true && before.fileKey() == after.fileKey()
 
     private val ready get() = File(root, "verified")
     private val staging get() = File(root, "staging")
@@ -371,15 +432,6 @@ class OrionPrivateModelFiles internal constructor(
         private const val MAX_QUARANTINE_BYTES = 1024 * 1024L
         private fun hex(bytes: ByteArray) = bytes.joinToString("") { "%02x".format(it) }
 
-        private fun syncPrivateDirectory(directory: File) {
-            val descriptor = Os.open(directory.path, OsConstants.O_RDONLY or OsConstants.O_CLOEXEC or
-                OsConstants.O_NOFOLLOW or OsConstants.O_NONBLOCK, 0)
-            try {
-                if (!OsConstants.S_ISDIR(Os.fstat(descriptor).st_mode)) throw IOException("Model directory required.")
-                Os.fsync(descriptor)
-            } finally { Os.close(descriptor) }
-        }
-
         fun open(context: Context, maximumModelBytes: Long, reserveBytes: Long,
             validator: OrionModelFileValidator): OrionPrivateModelFiles {
             val app = context.applicationContext
@@ -390,7 +442,11 @@ class OrionPrivateModelFiles internal constructor(
             // example /data/user/0). Normalize only that trusted base. Resolving the
             // appended store path would conceal an attacker-controlled child link.
             val frameworkBase = app.noBackupFilesDir.canonicalFile
-            return OrionPrivateModelFiles(File(frameworkBase, "orion_model_files"), maximumModelBytes, reserveBytes, validator)
+            // Android owns the binding of the app data directory in its parent.
+            // App-controlled children (including no_backup) are opened relatively
+            // with NOFOLLOW; no traversal/listing permission on /data is required.
+            return OrionPrivateModelFiles(File(frameworkBase, "orion_model_files"), maximumModelBytes, reserveBytes, validator,
+                storageAnchor = app.dataDir.canonicalFile)
         }
     }
 }

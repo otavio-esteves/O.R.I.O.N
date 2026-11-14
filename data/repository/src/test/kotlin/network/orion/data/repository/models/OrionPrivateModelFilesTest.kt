@@ -5,6 +5,8 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
+import java.nio.file.DirectoryStream
+import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.CancellationException
@@ -181,17 +183,17 @@ class OrionPrivateModelFilesTest {
 
     @Test fun selectedRejectedArtifactRemovalIsBoundedAndMissingRepetitionStillSyncs() {
         val root = temporary.newFolder()
-        val synced = mutableListOf<File>()
+        var synced = 0
         val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true },
-            syncDirectory = { synced += it })
+            syncDirectory = { synced++; it.force(true) })
         files.stage(expected(), { ByteArrayInputStream(bytes) })
         val other = File(root, "verified/" + "e".repeat(64) + ".gguf").also { it.writeText("preserved") }
         assertEquals(OrionRejectedArtifactRemoval.REMOVED, files.removeRejectedArtifact(expected()))
         assertFalse(File(root, "verified/${expected().sha256}.gguf").exists())
         assertEquals("preserved", other.readText())
-        assertEquals(listOf(File(root, "verified")), synced)
+        assertEquals(1, synced)
         assertEquals(OrionRejectedArtifactRemoval.REMOVED, files.removeRejectedArtifact(expected()))
-        assertEquals(2, synced.size)
+        assertEquals(2, synced)
     }
 
     @Test fun selectedRejectedArtifactRemovalRefusesLinksAndNonregularFiles() {
@@ -252,5 +254,22 @@ class OrionPrivateModelFilesTest {
                 if (backup.isDirectory) check(backup.renameTo(replaced))
             }
         }
+    }
+
+    @Test fun removalWithoutSecureDirectorySupportRefusesBeforeUnlink() {
+        val root = temporary.newFolder()
+        var synced = false
+        val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true },
+            syncDirectory = { synced = true }, openDirectory = { path ->
+                val delegate = Files.newDirectoryStream(path)
+                object : DirectoryStream<Path> {
+                    override fun iterator(): MutableIterator<Path> = delegate.iterator()
+                    override fun close() = delegate.close()
+                }
+            })
+        files.stage(expected(), { ByteArrayInputStream(bytes) })
+        assertEquals(OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE, files.removeRejectedArtifact(expected()))
+        assertArrayEquals(bytes, ready(root).single().readBytes())
+        assertFalse(synced)
     }
 }
