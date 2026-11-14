@@ -1,5 +1,7 @@
 # ORION-F5-READINESS-PRODUCER-001 — Real read-only pre-resource diagnostic
 
+Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/103
+
 OBJECTIVE: Emit a bounded qualification-only Android diagnostic from the actual
 MAIN-owned Cortex runtime port, including its exact early refusal or explicit
 DECISION_NOT_EVALUATED. Never execute requests or heavy work, including if trusted
@@ -50,3 +52,7 @@ new JVM cases and the expanded owner Android gate tests are supplied but await
 root's canonical compilation/execution. No Gradle, Docker, Android or device
 command was used in this worktree. Conditional build/CI wiring and actual
 emulator receipts remain root-owned validation dependencies.
+
+ROOT WIRING: app/build.gradle.kts accepts the strict boolean flag only with
+orionQualificationRelease=true and refuses simultaneous baseline/readiness modes.
+The required CI retains normal/probe/baseline scopes and builds this mode last.

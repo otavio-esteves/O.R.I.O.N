@@ -16,6 +16,13 @@ val physicalBaselineFlag = providers.gradleProperty("orionPhysicalBaseline").orE
 check(physicalBaselineFlag in setOf("true", "false")) { "orionPhysicalBaseline must be true or false." }
 val physicalBaselineEnabled = physicalBaselineFlag == "true"
 check(!physicalBaselineEnabled || qualificationEnabled) { "Physical baseline requires the separate qualification identity." }
+val cortexReadinessFlag = providers.gradleProperty("orionCortexReadinessProbe").orElse("false").get()
+check(cortexReadinessFlag in setOf("true", "false")) { "orionCortexReadinessProbe must be true or false." }
+val cortexReadinessEnabled = cortexReadinessFlag == "true"
+check(!cortexReadinessEnabled || qualificationEnabled) { "Cortex readiness probe requires the separate qualification identity." }
+check(listOf(physicalBaselineEnabled, cortexReadinessEnabled).count { it } <= 1) {
+    "Qualification measurement modes are mutually exclusive."
+}
 
 android {
     namespace = "network.orion.app"
@@ -27,6 +34,7 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
         testInstrumentationRunner = when {
+            cortexReadinessEnabled -> "network.orion.app.compatibility.OrionCortexReadinessInstrumentation"
             physicalBaselineEnabled -> "network.orion.app.compatibility.OrionPhysicalBaselineInstrumentation"
             qualificationEnabled -> "network.orion.app.compatibility.OrionQualificationInstrumentation"
             else -> "androidx.test.runner.AndroidJUnitRunner"
@@ -69,6 +77,12 @@ android {
         buildTypes.getByName("qualificationRelease").proguardFiles("src/physicalBaselineTarget/proguard-rules.pro")
         sourceSets.getByName("androidTest").java.directories.clear()
         sourceSets.getByName("androidTest").java.directories.add("src/physicalBaselineAndroidTest/java")
+    }
+    if (cortexReadinessEnabled) {
+        sourceSets.getByName("qualificationRelease").kotlin.directories.add("src/cortexReadinessTarget/kotlin")
+        buildTypes.getByName("qualificationRelease").proguardFiles("src/cortexReadinessTarget/proguard-rules.pro")
+        sourceSets.getByName("androidTest").java.directories.clear()
+        sourceSets.getByName("androidTest").java.directories.add("src/cortexReadinessAndroidTest/java")
     }
 }
 
