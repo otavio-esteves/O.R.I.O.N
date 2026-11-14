@@ -3,6 +3,7 @@
 #include "gguf.h"
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -75,6 +76,63 @@ struct ClearMemory {
     llama_memory_t memory;
     ~ClearMemory() { if (memory) llama_memory_clear(memory, true); }
 };
+
+constexpr jsize METRIC_SLOTS = 20;
+constexpr jint METRICS_PUBLISHED = 1 << 8;
+using MetricClock = std::chrono::steady_clock;
+struct GenerationMetrics {
+    jlong slots[METRIC_SLOTS]{};
+    bool timing_valid[3]{true, true, true};
+
+    GenerationMetrics() {
+        slots[0] = 1; // Local schema; no timestamps or content cross this boundary.
+        slots[1] = -1; // Tokenizer result unavailable until the second call succeeds.
+        slots[17] = slots[18] = slots[19] = -1; // Not called / clock unavailable.
+    }
+
+    void duration(int phase, MetricClock::time_point started) noexcept {
+        if (!timing_valid[phase]) return;
+        // Convert before subtracting: neither signed tick subtraction nor sums may overflow.
+        const long double begin = std::chrono::duration<long double, std::nano>(started.time_since_epoch()).count();
+        const long double end = std::chrono::duration<long double, std::nano>(MetricClock::now().time_since_epoch()).count();
+        const long double elapsed = end - begin;
+        auto & total = slots[17 + phase];
+        if (!std::isfinite(elapsed) || elapsed < 0 ||
+                elapsed > static_cast<long double>(std::numeric_limits<jlong>::max())) {
+            timing_valid[phase] = false; total = -1; return;
+        }
+        const auto delta = static_cast<jlong>(elapsed);
+        if (total < 0) total = 0;
+        if (delta > std::numeric_limits<jlong>::max() - total) {
+            timing_valid[phase] = false; total = -1; return;
+        }
+        total += delta;
+    }
+};
+
+bool metrics_capacity(JNIEnv * env, jlongArray output) {
+    if (!output || env->ExceptionCheck()) return false;
+    const auto size = env->GetArrayLength(output);
+    if (env->ExceptionCheck()) {
+        // Only a NEW failure of this diagnostic size query; no generation has run here.
+        env->ExceptionClear();
+        return false;
+    }
+    return size == METRIC_SLOTS;
+}
+
+jint publish_metrics(JNIEnv * env, jlongArray output, const GenerationMetrics & metrics, jint finish) {
+    // Callback/native exceptions have already passed through guarded unchanged. Never clear them.
+    if (finish < 0 || finish > 2 || env->ExceptionCheck()) return finish;
+    env->SetLongArrayRegion(output, 0, METRIC_SLOTS, metrics.slots);
+    if (env->ExceptionCheck()) {
+        // The immediately preceding precheck was clean: this is exclusively a NEW export failure.
+        // Ignore the entire array (possibly partial), do not retry, and preserve the original finish.
+        env->ExceptionClear();
+        return finish;
+    }
+    return finish | METRICS_PUBLISHED;
+}
 }
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -189,8 +247,10 @@ Java_network_orion_ai_llama_OrionLlamaRuntime_nativeLoad(JNIEnv * env, jobject, 
 
 extern "C" JNIEXPORT jint JNICALL
 Java_network_orion_ai_llama_OrionLlamaRuntime_nativeGenerate(JNIEnv * env, jobject, jlong id,
-        jbyteArray input, jint max_tokens, jfloat temperature, jobject callback) {
-    return guarded<jint>(env, -1, [&] {
+        jbyteArray input, jint max_tokens, jfloat temperature, jobject callback, jlongArray output) {
+    const bool measuring = metrics_capacity(env, output);
+    GenerationMetrics metrics;
+    const auto finish = guarded<jint>(env, -1, [&] {
         if (max_tokens < 1 || max_tokens > 32768 || !std::isfinite(temperature) ||
                 temperature < 0 || temperature > 2 || !callback) throw std::invalid_argument("limits");
         auto value = runtime(id);
@@ -204,7 +264,9 @@ Java_network_orion_ai_llama_OrionLlamaRuntime_nativeGenerate(JNIEnv * env, jobje
         llama_memory_clear(memory, true);
         ClearMemory cleanup{memory};
         const auto * vocab = llama_model_get_vocab(value->model.get());
+        auto timed = measuring ? MetricClock::now() : MetricClock::time_point{};
         const auto measured = llama_tokenize(vocab, prompt.data(), static_cast<int32_t>(prompt.size()), nullptr, 0, true, true);
+        if (measuring) { ++metrics.slots[2]; metrics.duration(0, timed); }
         if (measured >= 0 || measured == std::numeric_limits<int32_t>::min())
             throw std::runtime_error("tokenization unavailable");
         const auto count = -measured;
@@ -212,8 +274,12 @@ Java_network_orion_ai_llama_OrionLlamaRuntime_nativeGenerate(JNIEnv * env, jobje
         if (static_cast<uint32_t>(count) > available || static_cast<uint32_t>(max_tokens) > available - count)
             throw std::invalid_argument("context limit");
         std::vector<llama_token> tokens(static_cast<size_t>(count));
-        if (llama_tokenize(vocab, prompt.data(), static_cast<int32_t>(prompt.size()), tokens.data(), count, true, true) != count)
+        if (measuring) timed = MetricClock::now();
+        const auto tokenized = llama_tokenize(vocab, prompt.data(), static_cast<int32_t>(prompt.size()), tokens.data(), count, true, true);
+        if (measuring) { ++metrics.slots[2]; metrics.duration(0, timed); }
+        if (tokenized != count)
             throw std::runtime_error("tokenization mismatch");
+        if (measuring) metrics.slots[1] = tokenized;
         auto sampler_params = llama_sampler_chain_default_params();
         sampler_params.no_perf = true;
         std::unique_ptr<llama_sampler, decltype(&llama_sampler_free)> sampler(
@@ -232,7 +298,13 @@ Java_network_orion_ai_llama_OrionLlamaRuntime_nativeGenerate(JNIEnv * env, jobje
         for (int32_t offset = 0; offset < count;) {
             if (value->cancelled.load()) return 1;
             const auto batch_size = std::min(count - offset, static_cast<int32_t>(llama_n_batch(context)));
+            if (measuring) { ++metrics.slots[7]; metrics.slots[9] += batch_size; timed = MetricClock::now(); }
             const auto code = llama_decode(context, llama_batch_get_one(tokens.data() + offset, batch_size));
+            if (measuring) {
+                metrics.duration(1, timed);
+                if (code == 0) { ++metrics.slots[8]; metrics.slots[10] += batch_size; }
+                else metrics.slots[15] = 1; // Aborted/failed ubatch work is not inferable from this API.
+            }
             if (value->cancelled.load()) return 1;
             if (code != 0) throw std::runtime_error("prefill failed");
             offset += batch_size;
@@ -240,7 +312,8 @@ Java_network_orion_ai_llama_OrionLlamaRuntime_nativeGenerate(JNIEnv * env, jobje
         for (int32_t generated = 0; generated < max_tokens; ++generated) {
             if (value->cancelled.load()) return 1;
             llama_token token = llama_sampler_sample(sampler.get(), context, -1);
-            if (llama_vocab_is_eog(vocab, token)) return 0;
+            if (measuring) ++metrics.slots[3];
+            if (llama_vocab_is_eog(vocab, token)) { if (measuring) ++metrics.slots[4]; return 0; }
             char initial[256];
             auto size = llama_token_to_piece(vocab, token, initial, sizeof(initial), 0, false);
             if (size == std::numeric_limits<int32_t>::min() || size < -65536 || size > 65536)
@@ -257,18 +330,29 @@ Java_network_orion_ai_llama_OrionLlamaRuntime_nativeGenerate(JNIEnv * env, jobje
             java_check(env);
             env->SetByteArrayRegion(delta, 0, size, reinterpret_cast<const jbyte *>(data));
             java_check(env);
+            if (measuring) ++metrics.slots[5];
             const bool keep_going = env->CallBooleanMethod(callback, on_piece, delta);
             env->DeleteLocalRef(delta);
             java_check(env);
+            if (measuring) ++metrics.slots[6]; // Returning false is normal callback return, not delivery/acceptance.
             if (!keep_going || value->cancelled.load()) { value->cancelled.store(true); return 1; }
             if (generated + 1 < max_tokens) {
+                if (measuring) { ++metrics.slots[11]; ++metrics.slots[13]; timed = MetricClock::now(); }
                 const auto code = llama_decode(context, llama_batch_get_one(&token, 1));
+                if (measuring) {
+                    metrics.duration(2, timed);
+                    if (code == 0) { ++metrics.slots[12]; ++metrics.slots[14]; }
+                    else metrics.slots[16] = 1;
+                }
                 if (value->cancelled.load()) return 1;
                 if (code != 0) throw std::runtime_error("decode failed");
             }
         }
         return 2;
     });
+    // POD survives concurrent close. guarded/lambda RAII (including KV cleanup) has unwound here.
+    // No publication occurs while an original Java/native exception is pending.
+    return measuring ? publish_metrics(env, output, metrics, finish) : finish;
 }
 
 extern "C" JNIEXPORT void JNICALL

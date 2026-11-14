@@ -46,6 +46,26 @@ class OrionLlamaBoundaryTest {
         assertFalse(called)
     }
 
+    @Test fun failedOrRejectedObservedCallsNeverExposeAnOlderObservation() {
+        OrionLlamaRuntime().use { runtime ->
+            val unloaded = OrionLlamaGenerationCapture()
+            assertThrows(IllegalStateException::class.java) {
+                runtime.generateObserved("synthetic", 1, 0f, unloaded) { error("Unexpected callback") }
+            }
+            assertEquals(OrionLlamaObservationState.UNAVAILABLE_GENERATION, unloaded.observation.state)
+            assertNull(unloaded.observation.metrics)
+            val invalid = OrionLlamaGenerationCapture()
+            assertThrows(IllegalArgumentException::class.java) {
+                runtime.generateObserved("synthetic", 0, 0f, invalid) { true }
+            }
+            assertEquals(OrionLlamaObservationState.UNAVAILABLE_GENERATION, invalid.observation.state)
+            assertNull(invalid.observation.metrics)
+            assertThrows(IllegalStateException::class.java) {
+                runtime.generateObserved("synthetic", 1, 0f, invalid) { true }
+            }
+        }
+    }
+
     @Test fun limitsAndClosedRuntimeAreRejectedBeforeNativeWork() {
         OrionLlamaRuntime().use { runtime ->
             assertThrows(IllegalArgumentException::class.java) { runtime.load("relative.gguf", 512, 1) }
