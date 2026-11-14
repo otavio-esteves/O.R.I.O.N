@@ -1,12 +1,15 @@
 # ADR-0003: Optional Cortex native generation metrics
 
-- Status: **PROPOSED — not accepted and not authorization to implement IPC**
+- Status: **ACCEPTED — explicitly approved by the user in this conversation**
 - Date: 2026-11-14
+- Decision record: On 2026-11-14 the user explicitly accepted ADR-0003 and
+  authorized implementation of the optional Cortex IPC within this exact scope.
 - Decision issue: [#112](https://github.com/otavio-esteves/O.R.I.O.N/issues/112)
 - Work package: [ORION-F5-METRICS-ADR-001](../issues/ORION-F5-METRICS-ADR-001.md)
-- Scope proposed: Optional, read-only, content-free generation measurements from
+- Scope: Optional, read-only, content-free generation measurements from
   the existing private AI-owned runtime to its existing MAIN client.
-- Supersedes now: **Nothing.** Existing architecture and accepted ADRs govern.
+- Supersedes: Only ADR-0002's implementation-version statement for peers that
+  implement this extension, as scoped below. All unaffected baseline rules govern.
 
 ## Context and exact precedence
 
@@ -15,27 +18,30 @@ negotiation, lifecycle, governor-first operation, resource backoff and per-infer
 observability. Master Plan §§6.3/11.11 requires meaningful benchmark/runtime
 evidence. [AGENTS §1.1](../../AGENTS.md) requires an ADR before changing IPC
 semantics; §1 gives normative precedence only to accepted ADRs for their exact
-scope. This proposal therefore awaits acceptance before it can govern an IPC
-change. A generic Bundle or observability requirement is not permission to change
-an existing closed wire envelope silently.
+scope. The recorded user acceptance makes only the target contract below normative
+for this extension; it does not waive any unaffected authority or gate. A generic
+Bundle or observability requirement is not permission to change an existing closed
+wire envelope silently.
 
-If accepted, this ADR would extend only the current Cortex method/capability
-surface with the two optional operations below and advance supporting peers from
+This decision authorizes extending only the Cortex method/capability surface
+with the two optional operations below and advancing supporting peers from
 minor 1 to minor 2. In [ADR-0002](ADR-0002-bounded-cortex-request-history.md), only
-the implementation-version statement “Cortex 1.1” would become “Cortex 1.2 for
+the implementation-version statement “Cortex 1.1” becomes “Cortex 1.2 for
 peers implementing this optional extension.” Its issued-history capability,
 transaction numbers 1–10, legacy handshake, required minor-1 checks, logical and
 transport identity rules, retirement watermark, retention/admission behavior and
-no-replay semantics would be unchanged. Major stays 1. No architectural authority,
+no-replay semantics remain unchanged. Major stays 1. No architectural authority,
 process topology, IPC payload guard, persistence or resource-policy clause is waived.
-Only the Cortex subsystem minor would change; common/voice protocol versions do not.
+Only the supporting Cortex subsystem minor changes; common/voice protocol versions do not.
+Peers without the extension remain on the existing implementation contract. This
+document does not claim that a supporting implementation has been delivered.
 
 [ADR-0001](ADR-0001-docker-first-host-device.md) remains unchanged. Metrics are
 not physical provenance, a qualified profile, memory admission, restart permission,
 native/API qualification, real-duration soak evidence or F6 authorization.
 INV-002/009/011/012/013/027/028/032/035/036 remain binding.
 
-## Current source facts
+## Source facts at the reviewed baseline
 
 Reviewed source: `d2b784e67f0645df3257d890be128ad9771ba99d`.
 
@@ -49,7 +55,7 @@ Reviewed source: `d2b784e67f0645df3257d890be128ad9771ba99d`.
   [service](../../ai/service/src/main/kotlin/network/orion/ai/service/OrionCortexService.kt)
   decodes UTF-8 and splits text before callbacks; client chunk/byte counts are not
   token counters. Native TOKEN_LIMIT and natural completion currently both map
-  to logical SUCCEEDED, which must not be reinterpreted by this proposal.
+  to logical SUCCEEDED, which must not be reinterpreted by this decision.
 - [IOrionCortex](../../ai/api/src/main/aidl/network/orion/ai/api/IOrionCortex.aidl)
   has ten transactions. Its status/health/callback envelopes and the
   [client guards](../../app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt)
@@ -60,16 +66,16 @@ Reviewed source: `d2b784e67f0645df3257d890be128ad9771ba99d`.
   native RAII unwind and service-slot cleanup. An inference terminal, void unload,
   wrapper existence or a live PID cannot prove complete performance measurements.
 
-Native-local instrumentation proposed in
+Native-local instrumentation in
 [#111](https://github.com/otavio-esteves/O.R.I.O.N/issues/111) is independent. It can
 prepare same-runtime measurement sources without Cortex IPC. This ADR neither
 approves that implementation nor prescribes its JNI ABI, holder, counter layout or
 collection technique. A future adapter may expose only fields actually supported
 by a reviewed source; unavailable fields must remain absent.
 
-## Proposed negotiation and API
+## Accepted negotiation and API — implementation pending
 
-All following choices are proposed for decision review, not implemented behavior.
+The following defines the accepted target contract, not implemented behavior.
 Add at the end of AIDL, without renumbering or changing methods 1–10:
 
 ```text
@@ -117,9 +123,9 @@ MAIN must not call acquire/bind solely to discover/query metrics. An absent or
 changed owned endpoint stays unavailable; discovery can use an existing compatible
 connection obtained through the unchanged gates. A query performs a bounded
 lookup/copy and never waits for native/worker completion. No new background poller
-is proposed; any later capture loop needs its own finite count/time contract.
+is authorized here; any later capture loop needs its own finite count/time contract.
 
-## Proposed closed replies and bounds
+## Closed replies and bounds
 
 Every encoded metrics reply is at most **8192 bytes total**, including nested
 Bundle/Parcel overhead, and retains the 256 KiB architectural ceiling. Only
@@ -131,7 +137,7 @@ internal correlation metadata, not content to print in logs. This ADR adds no
 persistence/export permission; future retained HOST evidence requires its own
 minimization/provenance contract and cannot treat an IPC/file field as a signature.
 
-Two reply shapes are proposed:
+Two reply shapes are defined:
 
 1. Exactly schemaVersion:Int=1/status:String for UNSUPPORTED, INVALID_QUERY,
    NOT_FOUND, RETIRED or UNAVAILABLE. No request content/identifier is echoed from
@@ -206,7 +212,7 @@ service process; exhaustion makes telemetry unavailable without changing inferen
 It may repeat after process death. PID/boot/numeric counters alone are not a global
 identity: the actual current Binder/connection epoch remains essential.
 
-## Proposed metric semantics
+## Metric semantics
 
 Every selected count is a nonnegative Long except promptTokens, which is positive
 when present. Bounds follow current Cortex request limits, without increasing
@@ -275,7 +281,7 @@ Zeros must be known measurements; checks never infer missing operands.
 Token counts presented to the user are not available from these native facts and
 are not carried. Client chunks/bytes, callback segmentation and requested
 maxTokens cannot substitute for measured tokens. No throughput, TTFT, first-piece
-latency or native-total-duration field is proposed: they require their own real
+latency or native-total-duration field is included here: they require their own real
 source and reviewed measurement boundaries. This ADR does not define token/s or
 full prefill/decode throughput from API-wall time. An arithmetic ratio must not be
 promoted to either metric; zero/unavailable time never produces infinity, NaN,
@@ -355,9 +361,9 @@ no native work, safe retry or safe model residency.
 - Make metrics mandatory for inference or accept a CLI/JSON profile to obtain
   them: rejected; measurement does not create admission or qualified configuration.
 
-Before any implementation of this IPC extension, the decision must be explicitly
-accepted for this exact scope. Independently authorized native-local work is not
-blocked or approved by this proposal. Separate bounded implementation work must prove:
+User acceptance is recorded above. Independently authorized native-local work
+remains separate; this decision does not prescribe its implementation. Bounded
+implementation work for this IPC extension must prove:
 
 1. Transaction/legacy envelope compatibility for 1.0/1.1/new peers; minor/capability,
    unsupported/unknown-method and malformed optional-reply fallback; mandatory
@@ -379,8 +385,11 @@ blocked or approved by this proposal. Separate bounded implementation work must 
 
 ## Current disposition
 
-This document is a **PROPOSED** decision for a draft PR. It changes no code,
-accepted ADR, native instrumentation, configuration, profile or gate. No build,
-Android measurement or physical result is supplied. Production plans remain empty;
+This is an **ACCEPTED** decision, with optional IPC implementation authorized by
+the user's explicit acceptance on 2026-11-14. This documentation update implements
+no AIDL/Kotlin/native code, configuration, profile or gate. The current IPC is not
+claimed to expose these metrics; implementation and its required tests remain
+separate work. No build, Android measurement or physical result is supplied here.
+Production plans remain empty;
 F4 #64/F5 #89, heavy producer, real limiter stimulus and full-duration workload
 remain open. Nothing here declares CORTEX_RUNTIME_READY or opens F6.
