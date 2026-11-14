@@ -94,8 +94,6 @@ class OrionCortexClientTest {
                 if (historyCapability) putString("capabilities", OrionCortexProtocol.ISSUED_HISTORY.value)
             }
         }
-        override fun getGenerationMetricsCapabilities() = OrionGenerationMetricsWire.status("UNSUPPORTED")
-        override fun getGenerationMetrics(query: Bundle) = OrionGenerationMetricsWire.status("UNSUPPORTED")
         override fun issueRequestId() = OrionCortexWire.reply("OK").apply {
             check(capabilityQueries.get() == 1) { "Identity issued before capability negotiation." }
             if (issued.incrementAndGet() == 2 && holdInferenceIssue) {
