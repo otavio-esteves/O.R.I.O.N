@@ -430,11 +430,11 @@ internal class OrionCortexClient(
     fun generationMetrics(logicalRequestId: String): OrionGenerationMetricsSnapshot? {
         val selected = synchronized(monitor) {
             if (closed) return null
-            metricsCorrelation.isolatedMetrics { it.select(logicalRequestId) } ?: return null
+            metricsCorrelation.isolatedMetrics { it.select(logicalRequestId)?.takeIf(::metricsEndpointCurrent) } ?: return null
         }
         val discovery = synchronized(monitor) {
             if (closed) return null
-            metricsCorrelation.isolatedMetrics { it.claimDiscovery(selected) }
+            metricsCorrelation.isolatedMetrics { if (metricsEndpointCurrent(selected)) it.claimDiscovery(selected) else null }
         }
         if (discovery != null) {
             val mask = try {
@@ -447,7 +447,7 @@ internal class OrionCortexClient(
         }
         val mask = synchronized(monitor) {
             if (closed) return null
-            metricsCorrelation.isolatedMetrics { it.mask(selected) } ?: return null
+            metricsCorrelation.isolatedMetrics { if (metricsEndpointCurrent(selected)) it.mask(selected) else null } ?: return null
         }
         val snapshot = try {
             val reply = (selected.endpoint.service as IOrionCortex).getGenerationMetrics(
@@ -455,9 +455,16 @@ internal class OrionCortexClient(
             OrionGenerationMetricsWire.decodeSnapshot(reply, mask, selected.maxTokens, selected.contextTokens)
         } catch (_: Throwable) { null } ?: return null
         return synchronized(monitor) {
-            if (closed || metricsCorrelation.isolatedMetrics { it.accepts(selected, snapshot) } != true) null else snapshot
+            if (closed || metricsCorrelation.isolatedMetrics {
+                metricsEndpointCurrent(selected) && it.accepts(selected, snapshot)
+            } != true) null else snapshot
         }
     }
+
+    /** Called only under monitor, checking the actual owner fields as well as the detached mapping. */
+    private fun metricsEndpointCurrent(selected: OrionCortexMetricsCorrelation.Binding): Boolean =
+        remote === selected.endpoint.service && connection === selected.endpoint.owner &&
+            metricsConnectionEpoch == selected.endpoint.epoch && pinnedAiPid == selected.witness.pid
 
     private suspend fun acquire(): IOrionCortex = connectionMutex.withLock {
         check(!closed)
