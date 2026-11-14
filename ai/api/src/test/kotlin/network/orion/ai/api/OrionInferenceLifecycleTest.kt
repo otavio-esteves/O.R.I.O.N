@@ -27,10 +27,14 @@ class OrionInferenceLifecycleTest {
 
     @Test fun `Cortex preserves baseline protocol negotiation`() {
         assertEquals(1, OrionCortexProtocol.CURRENT.protocolMajor)
-        assertEquals(1, OrionCortexProtocol.CURRENT.protocolMinor)
+        assertEquals(2, OrionCortexProtocol.CURRENT.protocolMinor)
         assertTrue(OrionCortexProtocol.CURRENT.negotiateWith(ProtocolInfo(2, 0)) is IpcProtocolNegotiation.MajorMismatch)
-        assertEquals(1, (OrionCortexProtocol.CURRENT.negotiateWith(ProtocolInfo(1, 3)) as
+        assertEquals(2, (OrionCortexProtocol.CURRENT.negotiateWith(ProtocolInfo(1, 3)) as
             IpcProtocolNegotiation.Compatible).protocolMinor)
+        val previous = OrionCortexProtocol.CURRENT.negotiateWith(ProtocolInfo(1, 1, setOf(OrionCortexProtocol.ISSUED_HISTORY))) as
+            IpcProtocolNegotiation.Compatible
+        assertEquals(1, previous.protocolMinor)
+        assertEquals(setOf(OrionCortexProtocol.ISSUED_HISTORY), previous.capabilities)
         val legacy = OrionCortexProtocol.CURRENT.negotiateWith(ProtocolInfo(1, 0)) as IpcProtocolNegotiation.Compatible
         assertEquals(0, legacy.protocolMinor)
         assertTrue(legacy.capabilities.isEmpty())

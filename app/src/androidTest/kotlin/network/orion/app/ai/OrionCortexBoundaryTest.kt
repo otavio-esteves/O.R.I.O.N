@@ -78,7 +78,8 @@ class OrionCortexBoundaryTest {
         assertEquals("${app.packageName}:ai", info.processName)
         val protocol = remote.getProtocolInfo()
         OrionCortexWire.requireEnvelope(protocol, setOf("schemaVersion", "status", "major", "minor"))
-        assertEquals(1, protocol.getInt("major")); assertEquals(1, protocol.getInt("minor"))
+        assertEquals(setOf("schemaVersion", "status", "major", "minor"), protocol.keySet())
+        assertEquals(1, protocol.getInt("major")); assertEquals(2, protocol.getInt("minor"))
         assertEquals("OK", protocol.getString("status"))
         val capabilities = remote.getCapabilities()
         OrionCortexWire.requireEnvelope(capabilities, setOf("schemaVersion", "status", "capabilities"))
@@ -86,6 +87,16 @@ class OrionCortexBoundaryTest {
         assertEquals(OrionCortexProtocol.ISSUED_HISTORY.value, OrionCortexWire.text(capabilities, "capabilities"))
         assertEquals("UNLOADED", remote.getStatus().getString("status"))
         assertEquals("OK", remote.healthCheck().getString("status"))
+    }
+
+    @Test fun optionalTransactionsAppendWithoutRenumberingLegacyOperations() {
+        val names = listOf("getProtocolInfo", "loadModel", "startInference", "cancelInference", "getRequestStatus",
+            "getStatus", "unloadModel", "healthCheck", "issueRequestId", "getCapabilities",
+            "getGenerationMetricsCapabilities", "getGenerationMetrics")
+        for ((offset, name) in names.withIndex()) {
+            val field = IOrionCortex.Stub::class.java.getDeclaredField("TRANSACTION_$name").apply { isAccessible = true }
+            assertEquals(IBinder.FIRST_CALL_TRANSACTION + offset, field.getInt(null))
+        }
     }
 
     @Test fun b_invalidSchemaWritableAndPipeDescriptorsFailBeforeNativeLoad() {
