@@ -446,6 +446,9 @@ class OrionCortexClientTest {
                     val completedWithoutDiagnostic = withTimeoutOrNull(700) { result.await() }
                     fixture.clock.releaseDiagnostic.countDown()
                     val actual = completedWithoutDiagnostic ?: withTimeout(3_000) { result.await() }
+                    // Preserve the pre-release observation: a later successful result must not
+                    // hide that the diagnostic held the caller beyond its return deadline.
+                    assertNotNull("The caller did not return while the diagnostic was blocked", completedWithoutDiagnostic)
                     assertNotNull("The diagnostic changed the outer timeout", actual)
                     assertEquals(OrionInferenceTerminal.SUCCEEDED, actual?.terminal)
                     assertEquals(0, fixture.context.unbinds.get())
