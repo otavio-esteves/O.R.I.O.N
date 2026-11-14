@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "package": "ORION-F5-UNLOAD-OBSERVATION-001",
+  "status": "SOFTWARE_VALIDATION_ONLY_NOT_QUALIFIED",
+  "sourceCommit": "c9de57e052c282ce4015936acc2f6c353052fda7",
+  "authorCommit": "a77e991",
+  "sourceFiles": {
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt",
+      "sha256": "935d65d7e146823cbbef45de3c03a1f74836229d85aebe0c748f49af7ecc7c1c",
+      "size": 30068
+    },
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexUnloadObservation.kt": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/app/src/main/kotlin/network/orion/app/ai/OrionCortexUnloadObservation.kt",
+      "sha256": "6c668cdfd17d67a1f851db2616826e75f071feb9856c248b9e14909d7117ff16",
+      "size": 4570
+    },
+    "app/src/test/kotlin/network/orion/app/ai/OrionCortexUnloadObservationTest.kt": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/app/src/test/kotlin/network/orion/app/ai/OrionCortexUnloadObservationTest.kt",
+      "sha256": "6acb2f083d17fc784989b153c0170c0112b52ddad65290a1dc8c4b370be219d5",
+      "size": 7531
+    },
+    "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexClientTest.kt": {
+      "path": "/home/otavio/Projects/O.R.I.O.N/app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexClientTest.kt",
+      "sha256": "c981a51413ffc02d164211fd9b4c4d3aac117b0dd48f2995a72529046e043948",
+      "size": 36254
+    }
+  },
+  "canonicalDocker": {
+    "focusedJvm": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "duration": "1m47s",
+      "includedInBroaderAppSuite": true
+    },
+    "appJvm": {
+      "suites": 24,
+      "tests": 142,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "appLintDebugReleaseAndAndroidTestAssembly": "PASS_7m39s",
+    "ordinaryR8NativePackagingAndTestAssembly": "PASS_6m50s",
+    "logs": {
+      "unload-observation-focused-jvm.log": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/unload-observation-focused-jvm.log",
+        "sha256": "c5cc6a78a6929c22c37d8473c2657cce5d682fed137a29af5b3347c3afa3148a",
+        "size": 48799
+      },
+      "unload-observation-default-checks.log": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/unload-observation-default-checks.log",
+        "sha256": "9dd3c7d8d7d555595ef1d31e74ca2a1080dd60b377e6557bb70d4da490d5361a",
+        "size": 230319
+      },
+      "unload-observation-r8-native.log": {
+        "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/unload-observation-r8-native.log",
+        "sha256": "681a7432a0bdae1199733dd08cefcee4f78e1664c21cdc06f0def002b2a81ce2",
+        "size": 117137
+      }
+    }
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "definitiveHardwareEvidence": false,
+    "identity": {
+      "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/emulator-identity.json",
+      "sha256": "98907488d8bd2b7cbca6d7956c2090c0e210cf144110851aa7cf4d8226e2300e",
+      "size": 419
+    },
+    "tests": 34,
+    "classes": {
+      "network.orion.app.ai.OrionCortexClientTest": 28,
+      "network.orion.app.ai.OrionCortexQueuedDeadlineTest": 1,
+      "network.orion.app.ai.OrionCortexOwnerDefaultTest": 5
+    },
+    "failures": 0,
+    "skipped": 0,
+    "actualDurationSeconds": 13.215,
+    "report": {
+      "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/default/instrumentation.txt",
+      "sha256": "2af70d67658063b0bb0c08a00626c444e750613dd23cb01fbb65b7cc6548a694",
+      "size": 23996
+    },
+    "endpoints": "SCRIPTED_IN_PROCESS_BINDER_STUBS",
+    "resourceControls": "SYNTHETIC_FUNCTIONAL_FIXTURE",
+    "actualModelInference": false,
+    "actualAiProcessDeath": false,
+    "installedBefore": {
+      "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/default/installed-before.json",
+      "sha256": "7fda3c9818be4607302f2caddcb9e5745de7aad62b963dc4c0bcf8ec6fd694ac",
+      "size": 848
+    },
+    "installedAfter": {
+      "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/default/installed-after.json",
+      "sha256": "fd848dd1326b319dd1ca8d3198623a4a90717642297fe275fff2067e529eb3ea",
+      "size": 848
+    },
+    "aiProcessAfter": {
+      "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/default/ai-process-observation.json",
+      "sha256": "0d2d563c30fc1e60c3134440f17741e68a503dbaa4cc5dc2a5ba4834626f08b1",
+      "size": 316
+    }
+  },
+  "artifacts": {
+    "default": {
+      "sourceCommit": "c9de57e052c282ce4015936acc2f6c353052fda7",
+      "recordedAtUtc": "2026-11-14T20:34:09.526571+00:00",
+      "environment": "DOCKER",
+      "artifacts": {
+        "app": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/default/app-debug.apk",
+          "sha256": "da93d3a478bbefda45dce013268c88e3f049a55b5eaa19bc7eb02c97b9638b5c",
+          "size": 74842273
+        },
+        "test": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/default/app-debug-androidTest.apk",
+          "sha256": "0f6f3a91355733d15ca4baed85fff0390464bcf28f2939ec9996bd133eaff8a3",
+          "size": 4929399
+        },
+        "release": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/default/app-release-unsigned.apk",
+          "sha256": "07662c6fbd66c1444fff5e1b76db35e9aadcc61db0c5e97429fa2c1672847780",
+          "size": 34606119
+        },
+        "lint": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/default/lint-results-debug.xml",
+          "sha256": "0d5fc69658bf308a9e44e54eea21f04d38fe3bbeaff23640a10fa8865ce802d1",
+          "size": 14480
+        }
+      }
+    },
+    "r8": {
+      "sourceCommit": "c9de57e052c282ce4015936acc2f6c353052fda7",
+      "environment": "DOCKER",
+      "recordedAtUtc": "2026-11-14T20:46:03.671841+00:00",
+      "artifacts": {
+        "app": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/r8/app-qualificationRelease.apk",
+          "sha256": "dea589ae689c113ac44748d43ebb97e253aa0efc3c5dfa0bb0daf2cb2a775ac5",
+          "size": 17324461
+        },
+        "test": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/r8/app-qualificationRelease-androidTest.apk",
+          "sha256": "86c6b0058dca8028da7f217271756c3549b418a4bd978a9aea55ad7ec76aa4e7",
+          "size": 41002
+        },
+        "mapping": {
+          "path": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-observation/r8/mapping.txt",
+          "sha256": "11770bfd51641ce405d6ce84d6fcf9ca37427e79489865ec305bbefabdd1c470",
+          "size": 43752671
+        }
+      }
+    }
+  },
+  "reviews": {
+    "memoryEvidence": "APPROVED_SOURCE_ONLY",
+    "operationalLifecycle": "APPROVED_SOURCE_ONLY",
+    "root": "APPROVED_AND_EXECUTED_SCOPED_VALIDATION"
+  },
+  "limits": [
+    "Optional production collector remains disabled; no qualified profile or admission change.",
+    "UNLOADED_OBSERVED is private endpoint status plus point-in-time identity/time checks, not native release or reclaimed memory proof.",
+    "No load/stream hooks, cross-process authentication, durable journal or integrated heavy producer.",
+    "No new Cortex RPC, native method, IPC schema, persistence, retry or migration.",
+    "No actual physical/API37 MemoryLimiter, model performance or 24-hour qualification.",
+    "R8/native validation here is compilation/static packaging; runtime scripted tests used the frozen default debug APK pair."
+  ],
+  "gates": {
+    "F4PhysicalClosed": false,
+    "F5Closed": false,
+    "CortexRuntimeReady": false,
+    "productionInferenceEnabled": false,
+    "F6Opened": false
+  }
+}

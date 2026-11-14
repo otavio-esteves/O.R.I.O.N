@@ -8,6 +8,8 @@ uncertain cleanup. Inference completion never substitutes for unload evidence.
 
 FILES ALLOWED: OrionCortexClient.kt; one related internal observation/helper file;
 focused app JVM/Android tests; this work package and F5-UnloadObservation.md.
+Root also owns f5-unload-observation-evidence.json and reconciliation of the
+shared F5-QualificationChecklist.md with delivered preparation and remaining gaps.
 
 CONTRACTS INVOLVED: Architecture §§22/32/33; Master Plan §11.11; existing AIDL
 unloadModel/getStatus, OrionClock/BootSessionId and private connection ownership.
@@ -37,7 +39,7 @@ not proof of native release, memory reclamation or future residency. Extra opt-i
 OrionClock reads use the existing Android BOOT_COUNT source and remain isolated
 from the original cleanup decisions; there are no new Cortex calls.
 
-VALIDATION: Ten focused JVM tests and fourteen new Android fixture cases are
+AUTHOR HANDOFF VALIDATION: Ten focused JVM tests and fourteen new Android fixture cases are
 supplied (client class total 28), pending root's canonical JVM/Android/build/lint
 execution. Existing cancellation/initial-expiry tests also assert observation
 scope. Static review confirms unchanged Cortex/bind/unbind call sites and
@@ -48,3 +50,21 @@ timeout/catch and loaded=null; preserves clock-failure classification on each
 poll; and rejects post-reply time below the pre-RPC poll even when both fit the
 original deadline. The technical note documents scope/epoch, non-atomic loss
 accounting, optional provider IPC and conservative observation-time limits.
+
+CENTRAL VALIDATION (source c9de57e052c282ce4015936acc2f6c353052fda7): Canonical
+Docker focused ten JVM cases passed in 1m47s, then all 142 app JVM cases passed
+without failure/error/skip. The focused ten are included in 142, not additional
+unique cases. App lint, Debug/Release and Android test APK assembly passed in
+7m39s. Ordinary qualification R8/native packaging/test assembly passed in 6m50s.
+
+Owned API35/x86_64/4096-byte-page emulator executed 34 cases in 13.215s: client28,
+queued expiry1 and owner gates5. No failures/skips. The deliberately slow6000ms
+diagnostic and the other review regressions passed. App/test installed hashes
+matched frozen APKs before and after; pidof AI returned exit1/empty afterward.
+Endpoints and resource controls were scripted fixtures, with no real model,
+actual AI process kill, physical/native performance or soak claim. R8 evidence
+is compilation/static packaging; runtime cases used the frozen default APK pair.
+
+Both independent source reviews approved the corrected implementation. No schema,
+migration, authority, durable state or recovery change. Process death simply loses
+the bounded ephemeral observations. See [the source/artifact/log index](../qualification/f5-unload-observation-evidence.json).

@@ -135,9 +135,17 @@ clock read, poll5000/reply4000 within the same window, and a slow 6000ms diagnos
 read after UNLOADING/UNLOADED compared with the default path. Inference terminal,
 Cortex RPC and disconnect counts must remain unchanged.
 
-These JVM/Android tests await root's canonical execution; this worktree ran no
-Gradle, Docker, ADB or device command. Source checks confirm unchanged Cortex and
+At author handoff, these JVM/Android tests awaited root's canonical execution;
+the author worktree ran no Gradle, Docker, ADB or device command. Source checks confirm unchanged Cortex and
 bind/unbind call sites, and git diff --check passes. No software test or DTO from
 this package is assigned physical provenance. F4 #64/F5 #89, performance/profile
 calibration, heavy producer, actual limiter stimulus and real-duration soak remain
 open; no CORTEX_RUNTIME_READY or F6 activation is claimed.
+
+Root execution subsequently passed: ten focused JVM cases, then all 142 app JVM
+cases (including those ten), app lint/Debug/Release/test assembly, ordinary R8/native
+packaging/test assembly, and all 34 scoped Android cases. The owned emulator was
+API35/x86_64/4KiB; fixtures used scripted Binder endpoints and synthetic resource
+controls, with no native model. APK hashes were verified before/after. The
+[evidence index](f5-unload-observation-evidence.json) binds the exact compiled
+source, raw logs and frozen artifacts. No physical or F5 gate is closed.
