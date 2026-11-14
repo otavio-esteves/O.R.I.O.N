@@ -33,7 +33,9 @@ object OrionExitEvidenceCaptureBridge {
         require(context.packageName == TARGET && Application.getProcessName() == TARGET) { "TARGET_IDENTITY_REJECTED" }
         require(Build.VERSION.SDK_INT in 31..37 && Build.FINGERPRINT.length in 10..512) { "PLATFORM_UNSUPPORTED" }
         val labels = "${Build.FINGERPRINT} ${Build.HARDWARE} ${Build.PRODUCT} ${Build.DEVICE}".lowercase(Locale.ROOT)
-        val emulator = System.getProperty("os.arch") in setOf("x86", "x86_64") ||
+        val architecture = System.getProperty("os.arch")
+        require(architecture != null) { "PLATFORM_UNSUPPORTED" }
+        val emulator = architecture in setOf("x86", "x86_64") ||
             listOf("emulator", "qemu", "ranchu", "goldfish", "cuttlefish", "sdk_gphone", "generic", "aosp_cf").any(labels::contains)
         require(environment == if (emulator) "ANDROID_EMULATOR" else "PHYSICAL_DEVICE") { "ENVIRONMENT_MISMATCH" }
         return if (emulator) "ANDROID_EMULATOR" else "PHYSICAL_BUILD_CANDIDATE"
@@ -233,7 +235,7 @@ object OrionExitEvidenceCaptureBridge {
                 .put("fence", "UNAVAILABLE_NOT_EXPOSED").put("cooldown", "UNAVAILABLE_NOT_EXPOSED"))
             put("config", JSONObject().put("observations", count).put("intervalMillis", interval).put("historyLimit", limit))
             put("platform", JSONObject().put("apiLevel", Build.VERSION.SDK_INT).put("buildFingerprintSha256", sha256(Build.FINGERPRINT))
-                .put("abi", System.getProperty("os.arch").takeIf { it in setOf("aarch64", "arm64", "armv7l", "arm", "x86", "x86_64") } ?: "UNAVAILABLE")
+                .put("abi", System.getProperty("os.arch")?.takeIf { it in setOf("aarch64", "arm64", "armv7l", "arm", "x86", "x86_64") } ?: "UNAVAILABLE")
                 .put("bootSource", "SETTINGS_GLOBAL_BOOT_COUNT")
                 .put("dedicatedReason", dedicated ?: JSONObject.NULL).put("dedicatedReasonStatus", if (dedicated == null) "UNAVAILABLE" else "EXPOSED"))
             put("window", JSONObject().put("start", start.json()).put("end", end.json()).put("wallClockState", wallState))

@@ -34,7 +34,7 @@ OUT OF SCOPE: Gradle/CI/shared docs edits, limiter-v1 changes, load/infer/import
 cancel/unload/run, synthetic policy/governor/fence/revision, stress, native model
 work, device execution, qualification/profile approval or gate closure.
 
-VALIDATION: HOST Python: 31 focused parser/correlation/source-contract tests passed
+VALIDATION: HOST Python: 33 focused parser/correlation/source-contract tests passed
 via `python3 -m unittest discover -s scripts/android -p test_f5_exit_capture_protocol_harness.py -v`.
 Python AST parse, local Markdown links and diff whitespace checks passed. No
 Gradle/Docker/device execution. Android compilation/R8 isolation and actual
@@ -54,3 +54,8 @@ ROOT WIRING: app/build.gradle.kts accepts strict orionExitEvidenceCapture=true
 only with orionQualificationRelease=true, mutually exclusive with baseline and
 readiness. The required CI builds each opt-in mode sequentially after normal
 checks, without a device. Root-owned files include .github/workflows/ci.yml.
+
+Canonical compilation reported two nullable Java property warnings. Validation
+now refuses an unavailable initial architecture explicitly; the later output read
+uses a safe nullable path and records UNAVAILABLE, never a guessed architecture.
+HOST source/parser regressions cover both paths; the author did not run a build.

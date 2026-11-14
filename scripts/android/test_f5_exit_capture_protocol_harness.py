@@ -94,6 +94,11 @@ class ExitCaptureProtocolTest(unittest.TestCase):
         with self.assertRaises(protocol.Rejected):
             validate(value)
 
+    def test_unavailable_later_architecture_is_explicit_not_a_known_abi_default(self):
+        value = fixture()
+        value["platform"]["abi"] = "UNAVAILABLE"
+        self.assert_valid(value)
+
     def test_false_binding_and_connection_timeout_retain_history_only(self):
         for outcome in ("NOT_BOUND", "CONNECTION_TIMEOUT", "NO_ENDPOINT"):
             value = fixture()
@@ -335,6 +340,17 @@ class ExitCaptureProtocolTest(unittest.TestCase):
 
 
 class ExitCaptureSourceContractTest(unittest.TestCase):
+    def test_nullable_architecture_is_refused_before_classification_and_later_read_is_sanitized(self):
+        text = BRIDGE.read_text()
+        read = text.index('val architecture = System.getProperty("os.arch")')
+        refusal = text.index('require(architecture != null) { "PLATFORM_UNSUPPORTED" }', read)
+        classify = text.index('val emulator = architecture in setOf(', refusal)
+        self.assertLess(read, refusal)
+        self.assertLess(refusal, classify)
+        self.assertIn('System.getProperty("os.arch")?.takeIf', text)
+        self.assertIn('} ?: "UNAVAILABLE")', text)
+        self.assertNotIn('System.getProperty("os.arch")!!', text)
+
     def test_only_existing_read_methods_and_no_trace_or_business_dependencies(self):
         text = BRIDGE.read_text()
         self.assertEqual({"getProtocolInfo", "getStatus", "healthCheck"}, set(re.findall(r'service\.([A-Za-z]+)\(', text)))
