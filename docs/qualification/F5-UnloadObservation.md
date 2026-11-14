@@ -124,6 +124,15 @@ opt-in client. These identifiers can repeat after MAIN dies, even within the sam
 boot, and do not authenticate a process, artifact, physical device or cross-process
 incident. They are not durable leases or a provenance signature.
 
+Optional guard construction and numeric-version/stamp allocation are contained
+separately from normative execution/bind/release/cancel/close. A diagnostic update
+failure permanently disables that owner's publication guard using only a
+primitive volatile write, without allocating, acquiring its lock or reading a
+provider. Pending/later tickets can publish only OBSERVATION_UNAVAILABLE; updates cannot
+revive confirmation. Recording/allocation failure may still drop the record. Failure accounting is itself contained. A constructor failure leaves
+the optional owner/dispatcher unavailable. This does not claim that arbitrary
+process-wide OOM permits the original functional allocations to succeed.
+
 There is exactly one diagnostic worker and one global in-flight slot, with no
 queue or replacement thread. It is initialized only after MAIN role validation,
 when an opt-in client is constructed outside a turn. Submission uses one CAS and
@@ -163,11 +172,12 @@ while sampling is pending and queue expiry without phantom unload/epoch advance.
 Existing observation cases now await evidence only in test code, never in the
 production caller; saturation/replay retain their original Cortex call checks.
 
-Eight new pure JVM cases exercise the actual shared dispatcher/guard: global
+Nine new pure JVM cases exercise the actual shared dispatcher/guard: global
 capacity including closed clients and a stuck provider, resumption, execution/
 endpoint/closure invalidation, unavailable versions, clock failure, functional
 failure distinctions, original loop-exit facts, deadline and clock regression.
-Together with the ten existing classifier/buffer cases these await root's
+The permanent-disable case additionally covers blocked pending work and later
+non-revival without forcing real OOM. Together with the ten existing classifier/buffer cases these await root's
 canonical execution. Author ran no Gradle, Docker, ADB or device commands.
 
 ## Original validation boundary (issue110, not issue118 evidence)

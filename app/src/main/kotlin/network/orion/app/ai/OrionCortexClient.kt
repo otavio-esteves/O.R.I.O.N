@@ -69,23 +69,40 @@ internal class OrionCortexClient(
         require(Application.getProcessName() == app.packageName) { "Cortex client belongs to MAIN." }
         unloadObservationScope = if (unloadObservations == null) null else
             runCatching { newCortexUnloadObservationScope() }.getOrNull()
-        unloadObservationOwner = if (unloadObservations == null) null else OrionCortexUnloadObservationOwner()
+        unloadObservationOwner = if (unloadObservations == null) null else try {
+            OrionCortexUnloadObservationOwner()
+        } catch (_: Throwable) { unloadRecordingFailed(); null }
         // Starting the sole diagnostic thread is opt-in and occurs only after MAIN validation,
         // outside functional execution. A startup failure cannot prevent normal inference.
-        unloadDiagnosticDispatcher = if (unloadObservations == null) null else runCatching {
+        unloadDiagnosticDispatcher = if (unloadObservationOwner == null) null else try {
             OrionCortexUnloadDiagnosticDispatcher
-        }.getOrElse { unloadObservations.recordingFailed(); null }
+        } catch (_: Throwable) { unloadObservationOwner.disable(); unloadRecordingFailed(); null }
     }
 
     private fun nextUnloadVersion(previous: Long?): Long? = previous?.let { if (it < Long.MAX_VALUE) it + 1 else null }
 
-    /** Called only under monitor; no provider/RPC/user code is invoked by the numeric guard. */
-    private fun updateUnloadOwner(endpointChanged: Boolean = false, executionStarted: Boolean = false) {
-        if (unloadObservations == null) return
-        if (endpointChanged) unloadEndpointVersion = nextUnloadVersion(unloadEndpointVersion)
-        if (executionStarted) unloadExecutionEpoch = nextUnloadVersion(unloadExecutionEpoch)
-        unloadObservationOwner?.update(OrionCortexUnloadOwnerStamp(
-            unloadEndpointVersion, unloadConnectionEpoch, unloadExecutionEpoch, closed))
+    /** Diagnostic accounting itself must never prevent the original operation or cleanup. */
+    private fun unloadRecordingFailed() {
+        try { unloadObservations?.recordingFailed() } catch (_: Throwable) { }
+    }
+
+    /** Called only under monitor; catch covers diagnostic versions/allocations, never normative work. */
+    private fun updateUnloadOwner(endpointChanged: Boolean = false, executionStarted: Boolean = false,
+        connectionStarted: Boolean = false) {
+        val owner = unloadObservationOwner ?: return
+        if (owner.isDisabled()) return
+        try {
+            if (connectionStarted) unloadConnectionEpoch = nextUnloadVersion(unloadConnectionEpoch)
+            if (endpointChanged) unloadEndpointVersion = nextUnloadVersion(unloadEndpointVersion)
+            if (executionStarted) unloadExecutionEpoch = nextUnloadVersion(unloadExecutionEpoch)
+            owner.update(OrionCortexUnloadOwnerStamp(
+                unloadEndpointVersion, unloadConnectionEpoch, unloadExecutionEpoch, closed))
+        } catch (_: Throwable) {
+            // A primitive volatile write: no allocation/clock/RPC/guard lock while MAIN owns monitor.
+            // Old pending tickets must never validate against the last successfully published stamp.
+            owner.disable()
+            unloadRecordingFailed()
+        }
     }
 
     fun newRequestId(): String { check(!closed); return requestHistory.newRequestId() }
@@ -534,10 +551,7 @@ internal class OrionCortexClient(
                     metricsConnectionEpoch = try {
                         metricsConnectionEpoch?.let { if (it < Long.MAX_VALUE) it + 1 else null }
                     } catch (_: Throwable) { null }
-                    if (unloadObservations != null) unloadConnectionEpoch = unloadConnectionEpoch?.let {
-                        if (it < Long.MAX_VALUE) it + 1 else null
-                    }
-                    updateUnloadOwner(endpointChanged = true)
+                    updateUnloadOwner(endpointChanged = true, connectionStarted = true)
                     app.bindService(intent, owner, Context.BIND_AUTO_CREATE)
                 }
             }
