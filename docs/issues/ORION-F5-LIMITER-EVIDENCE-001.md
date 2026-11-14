@@ -1,5 +1,7 @@
 # ORION-F5-LIMITER-EVIDENCE-001 — offline limiter correlation protocol
 
+Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/98
+
 OBJECTIVE: Specify a sanitized technical receipt and validate internal correlation
 of AI exit encoding with subsequent MAIN policy refusal. File input is always
 UNVERIFIED_INPUT / NOT_QUALIFIED, never evidence authentication or gate approval.
