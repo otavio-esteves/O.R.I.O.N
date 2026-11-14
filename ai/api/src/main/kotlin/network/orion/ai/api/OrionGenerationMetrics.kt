@@ -46,8 +46,7 @@ class OrionGenerationMetricsSnapshot(
     fun metric(metric: OrionGenerationMetric): Long? = values[metric]
 
     init {
-        requireInferenceId(requestId)
-        require(OrionIssuedRequestHistory.isIssuedIdentity(requestId))
+        requireGenerationMetricsRequestId(requestId)
         require(servicePid > 0 && snapshotSequence > 0 && (invocationId == null || invocationId > 0))
         require(completedCallStagesMask and 7.inv() == 0)
         if (timeState == OrionGenerationTimeState.KNOWN_BOOT) {
@@ -137,4 +136,17 @@ class OrionGenerationMetricsSnapshot(
     }
 
     override fun toString() = "OrionGenerationMetricsSnapshot(sequence=$snapshotSequence, state=$snapshotState, correlation=REDACTED)"
+}
+
+/** Syntax only. Actual service scope, issue/admission and retirement belong to owned history. */
+internal fun requireGenerationMetricsRequestId(value: String) {
+    requireInferenceId(value)
+    val prefix = "orion_request/"
+    require(value.startsWith(prefix))
+    val separator = value.indexOf('/', prefix.length)
+    require(separator > prefix.length && value.indexOf('/', separator + 1) == -1)
+    require(value.substring(prefix.length, separator).isNotBlank())
+    val suffix = value.substring(separator + 1)
+    val sequence = suffix.toLongOrNull()
+    require(sequence != null && sequence > 0 && suffix == sequence.toString())
 }

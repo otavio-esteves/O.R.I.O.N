@@ -152,4 +152,23 @@ class OrionGenerationMetricsWireTest {
         }
     }
 
+    @Test fun queryAndSnapshotIdsRequireCanonicalPositiveSequenceButDoNotAuthenticateScope() {
+        for (value in listOf("orion_request/x/001", "orion_request/x/0", "orion_request/x/-1",
+            "orion_request/x/+1", "orion_request/x/NaN", "orion_request/x/9223372036854775808",
+            "orion_request/", "orion_request/x", "orion_request/x/", "orion_request//1",
+            "orion_request/ /1", "orion_request/x/y/1", "orion_request/x/1/2",
+            " orion_request/x/1", "orion_request/x/1 ", "orion_request/x\n/1",
+            "orion_request/" + "x".repeat(128) + "/1")) {
+            val query = Bundle().apply { putInt("schemaVersion", 1); putString("requestId", value) }
+            assertThrows(IllegalArgumentException::class.java) { OrionGenerationMetricsWire.queryId(query) }
+            assertThrows(IllegalArgumentException::class.java) { OrionGenerationMetricsWire.query(value) }
+            invalid { putString("requestId", value) }
+        }
+        for (value in listOf("orion_request/foreign-opaque-scope/1", "orion_request/x/${Long.MAX_VALUE}")) {
+            assertEquals(value, OrionGenerationMetricsWire.queryId(OrionGenerationMetricsWire.query(value)))
+            val snapshot = OrionGenerationMetricsWire.snapshot(snapshot()).apply { putString("requestId", value) }
+            assertEquals(value, checkNotNull(decode(snapshot)).requestId)
+        }
+    }
+
 }

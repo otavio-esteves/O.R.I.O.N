@@ -12,7 +12,8 @@ class OrionGenerationMetricsTest {
         time: OrionGenerationTimeState = OrionGenerationTimeState.UNAVAILABLE,
         boot: Int? = null, captured: Long? = null, started: Long? = null, ended: Long? = null,
         stages: Int = 0, native: OrionGenerationNativeState = OrionGenerationNativeState.JNI_RETURNED,
-    ) = OrionGenerationMetricsSnapshot("orion_request/test/1", 1, 1, 1, terminal,
+        requestId: String = "orion_request/test/1",
+    ) = OrionGenerationMetricsSnapshot(requestId, 1, 1, 1, terminal,
         native, finish, slot, state,
         OrionGenerationPartialWork.NONE_OBSERVED, stages, time, boot, captured, started, ended, metrics)
 
@@ -124,6 +125,19 @@ class OrionGenerationMetricsTest {
         snapshot(mapOf(OrionGenerationMetric.PREFILL_CALLS to 1L,
             OrionGenerationMetric.PREFILL_SUBMITTED to 3L, OrionGenerationMetric.PREFILL_SUCCEEDED to 0L,
             OrionGenerationMetric.PREFILL_SUCCESSFUL_TOKENS to 0L))
+    }
+
+    @Test fun metricsIdentityRequiresEmittableSyntaxWithoutPretendingToAuthenticateScope() {
+        for (id in listOf("orion_request/x/001", "orion_request/x/0", "orion_request/x/-1",
+            "orion_request/x/+1", "orion_request/x/NaN", "orion_request/x/9223372036854775808",
+            "orion_request/", "orion_request/x", "orion_request/x/", "orion_request//1",
+            "orion_request/ /1", "orion_request/x/y/1", "orion_request/x/1/2",
+            " orion_request/x/1", "orion_request/x/1 ", "orion_request/x\n/1",
+            "orion_request/" + "x".repeat(128) + "/1")) {
+            assertThrows(IllegalArgumentException::class.java) { snapshot(requestId = id) }
+        }
+        for (id in listOf("orion_request/foreign-opaque-scope/1", "orion_request/x/${Long.MAX_VALUE}"))
+            assertEquals(id, snapshot(requestId = id).requestId)
     }
 
 }

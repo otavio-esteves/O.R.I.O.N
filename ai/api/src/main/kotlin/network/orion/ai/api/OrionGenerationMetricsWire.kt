@@ -43,7 +43,7 @@ object OrionGenerationMetricsWire {
     }
 
     fun query(requestId: String): Bundle = Bundle().apply {
-        requireMetricsId(requestId)
+        requireGenerationMetricsRequestId(requestId)
         putInt("schemaVersion", 1); putString("requestId", requestId)
         envelope(this, MAX_QUERY_BYTES)
     }
@@ -52,7 +52,7 @@ object OrionGenerationMetricsWire {
         envelope(bundle, MAX_QUERY_BYTES, checkSchema = false)
         require(bundle.keySet() == setOf("schemaVersion", "requestId"))
         if (OrionCortexWire.int(bundle, "schemaVersion") != 1) throw OrionGenerationMetricsUnsupportedSchema()
-        return OrionCortexWire.text(bundle, "requestId").also(::requireMetricsId)
+        return OrionCortexWire.text(bundle, "requestId").also(::requireGenerationMetricsRequestId)
     }
 
     fun snapshot(value: OrionGenerationMetricsSnapshot): Bundle = OrionCortexWire.reply("SNAPSHOT").apply {
@@ -112,7 +112,6 @@ object OrionGenerationMetricsWire {
     }
 
     private fun requireMask(value: Long) { require(value >= 0 && value and OrionGenerationMetric.ALL_MASK.inv() == 0L) }
-    private fun requireMetricsId(value: String) { requireInferenceId(value); require(OrionIssuedRequestHistory.isIssuedIdentity(value)) }
 
     private fun envelope(bundle: Bundle, limit: Int, checkSchema: Boolean = true) {
         val parcel = Parcel.obtain()
