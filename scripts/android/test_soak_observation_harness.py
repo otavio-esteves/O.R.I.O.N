@@ -216,6 +216,22 @@ class SoakObservationTest(unittest.TestCase):
         self.assertEqual("INCOMPLETE", report["result"])
         self.assertEqual(1, report["samplingGaps"])
 
+    def test_slow_final_read_is_a_gap_even_without_a_later_poll(self):
+        clock = Clock(); adb = FakeAdb()
+        def slow(*args, **kwargs):
+            if args == ("shell", "dumpsys", "battery"): clock.now += 11
+            return adb(*args, **kwargs)
+        with tempfile.TemporaryDirectory() as tmp:
+            report = RECORDER.observe(slow, Path(tmp)/"new", HASH, "PHYSICAL_DEVICE", 10, 5, clock.read, clock.sleep)
+        self.assertEqual("INCOMPLETE", report["result"])
+        self.assertGreater(report["samplingGaps"], 0)
+
+    def test_injected_clock_is_explicitly_synthetic(self):
+        report, _ = self.collect()
+        self.assertEqual("SYNTHETIC_INJECTED", report["hostTiming"]["clockSource"])
+        self.assertEqual("UNVERIFIED_INPUT", report["hostTiming"]["evidence"])
+        self.assertNotEqual("PHYSICAL_OBSERVATION_ONLY", report["androidRuntimeEvidence"])
+
     def test_multiple_main_pids_cannot_be_mislabeled_as_one_process_memory(self):
         adb = FakeAdb(); adb.responses[("shell", "pidof", "network.orion")] = "123 456"
         report, rows = self.collect(adb)
