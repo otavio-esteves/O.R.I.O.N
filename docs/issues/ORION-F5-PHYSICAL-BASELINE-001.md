@@ -1,5 +1,7 @@
 # ORION-F5-PHYSICAL-BASELINE-001 — Unloaded physical resource baseline
 
+Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/96
+
 OBJECTIVE: Prepare an opt-in, measurement-only resource baseline using the actual
 MAIN observer, authenticated AI self-PSS receipt and manifest inventory without
 loading a model, fabricating resources or granting production inference.
