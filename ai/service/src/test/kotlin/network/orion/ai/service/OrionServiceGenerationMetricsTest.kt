@@ -32,7 +32,6 @@ class OrionServiceGenerationMetricsTest {
         OrionLlamaServiceMetric.DECODE_SUCCESSFUL_TOKENS to 0L,
         OrionLlamaServiceMetric.TOKENIZATION_NANOS to 7L,
         OrionLlamaServiceMetric.PREFILL_NANOS to 8L,
-        OrionLlamaServiceMetric.DECODE_NANOS to 0L,
     )
 
     // The port intentionally cannot be manufactured by service production code. Reflection is
@@ -81,10 +80,11 @@ class OrionServiceGenerationMetricsTest {
         assertNull(returned.logicalTerminal)
         assertEquals(OrionGenerationSlotState.OWNED, returned.slotState)
         assertEquals(OrionGenerationSnapshotState.UPDATING, returned.snapshotState)
-        assertEquals(OrionGenerationMetric.ALL_MASK, returned.availableMetricsMask)
+        assertEquals(OrionGenerationMetric.ALL_MASK xor OrionGenerationMetric.DECODE_NANOS.bit, returned.availableMetricsMask)
         for ((metric, value) in oneToken())
             assertEquals(value, returned.metric(OrionGenerationMetric.entries.single { it.key == metric.key }))
         assertEquals(0L, returned.metric(OrionGenerationMetric.DECODE_CALLS)) // maxTokens=1.
+        assertNull(returned.metric(OrionGenerationMetric.DECODE_NANOS)) // No decode API call, no timer.
         assertEquals(7, returned.completedCallStagesMask)
     }
 
@@ -130,7 +130,6 @@ class OrionServiceGenerationMetricsTest {
             this[OrionLlamaServiceMetric.CALLBACKS_RETURNED] = 0
             this[OrionLlamaServiceMetric.PREFILL_SUCCEEDED] = 0
             this[OrionLlamaServiceMetric.PREFILL_SUCCESSFUL_TOKENS] = 0
-            remove(OrionLlamaServiceMetric.DECODE_NANOS)
         }
         recorder.wrapperAttempted(); recorder.returned(receipt(OrionLlamaFinish.CANCELLED, values, 1, true))
         recorder.terminal(OrionInferenceTerminal.CANCELLED); recorder.workerReleased()
@@ -162,6 +161,7 @@ class OrionServiceGenerationMetricsTest {
             this[OrionLlamaServiceMetric.DECODE_SUCCEEDED] = 1
             this[OrionLlamaServiceMetric.DECODE_SUBMITTED] = 1
             this[OrionLlamaServiceMetric.DECODE_SUCCESSFUL_TOKENS] = 1
+            this[OrionLlamaServiceMetric.DECODE_NANOS] = 0 // An entered call can observe zero clock resolution.
         }
         val rejected = recorder()
         rejected.wrapperAttempted(); rejected.returned(receipt(OrionLlamaFinish.CANCELLED, values, 3))
@@ -169,6 +169,7 @@ class OrionServiceGenerationMetricsTest {
         val accepted = recorder(8)
         accepted.wrapperAttempted(); accepted.returned(receipt(OrionLlamaFinish.CANCELLED, values, 3))
         assertEquals(1L, accepted.snapshot()?.metric(OrionGenerationMetric.DECODE_SUCCEEDED))
+        assertEquals(0L, accepted.snapshot()?.metric(OrionGenerationMetric.DECODE_NANOS))
     }
 
     @Test fun `actual loaded context is checked instead of nominal global context`() {
