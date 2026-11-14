@@ -190,7 +190,9 @@ Observation data has exactly `mainPid`, `aiPid`, `mainPssBytes`, `aiPssBytes`,
 Available resource observations require distinct positive signed-32-bit PIDs,
 positive PSS values no greater than 1 TiB with exact aggregation, thermal 0–6,
 pressure `NONE|MODERATE|CRITICAL`, a boolean native-runtime value and service state
-`UNLOADED|LOADING|LOADED|INFERENCING|CANCELLING|UNLOADING|FAILED`. These are structural
+`UNLOADED|LOADING|LOADED|INFERENCING|UNLOADING`, matching the current service
+`getStatus` surface. `LOADED` and `INFERENCING` require `nativeRuntimeLoaded=true`;
+the service can only report those states after its runtime exists. These are structural
 checks, not resource admission. The heavy lifecycle may leave its native wrapper
 resident after model unload: `UNLOADED` with `nativeRuntimeLoaded=true` is valid.
 The never-loaded baseline's false-native requirement does not apply here.

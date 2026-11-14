@@ -19,7 +19,7 @@ LIMIT_KEYS = {"targetDurationMillis", "maximumAttempts", "minimumAttemptInterval
               "maximumResourceDeaths", "maximumObservationGapMillis"}
 REFUSALS = {"RESOURCE_COOLDOWN", "RESOURCE_LIMIT", "RESOURCE_UNAVAILABLE", "RUNNER_UNAVAILABLE",
             "CONFIGURATION_UNAVAILABLE", "ADMISSION_REFUSED"}
-SERVICE_STATES = {"UNLOADED", "LOADING", "LOADED", "INFERENCING", "CANCELLING", "UNLOADING", "FAILED"}
+SERVICE_STATES = {"UNLOADED", "LOADING", "LOADED", "INFERENCING", "UNLOADING"}
 
 
 class Invalid(ValueError):
@@ -133,6 +133,8 @@ def observation(data):
         integer(data["thermalStatus"], 0, 6)
         require(type(data["nativeRuntimeLoaded"]) is bool, "BOOLEAN_INVALID")
         one_of(data["serviceState"], SERVICE_STATES)
+        require(data["serviceState"] not in {"LOADED", "INFERENCING"} or data["nativeRuntimeLoaded"],
+                "SERVICE_RUNTIME_STATE_INVALID")
         one_of(data["memoryPressure"], {"NONE", "MODERATE", "CRITICAL"})
         # UNLOADED can retain the native wrapper. This is not the never-loaded baseline.
     else:

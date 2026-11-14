@@ -44,9 +44,13 @@ owned changes, interruption and cleanup remain visible, and no journal entry is
 an instruction to execute or restore anything. No app migration or business-state
 mutation. Unknown fields/errors are rejected without echoing input content.
 
-VALIDATION: 28 synthetic HOST contracts passed, including actual offline CLI
+VALIDATION: 31 synthetic HOST contracts passed, including actual offline CLI
 invocations, unchanged input files, full-day fabrication remaining unqualified,
 plan-content binding, unavailable dependencies, clock/session/boot boundaries,
 resource cooldown/refusal and cleanup/interruption cases. Python AST, documentation
 fences and whitespace checks passed. No ADB, device, heavy executor, Docker or
 Gradle command was run. Canonical integration checks remain the root's responsibility.
+
+Peer review hardening: reject LOADED/INFERENCING with an absent native runtime,
+retain UNLOADED with a resident wrapper, and restrict service states to the actual
+getStatus surface. Targeted HOST regressions preserve pre-runtime loading/unloading.

@@ -163,6 +163,27 @@ class HeavySoakEvidenceProtocolTest(unittest.TestCase):
         self.assertTrue(observation()["nativeRuntimeLoaded"])
         self.assertEqual((True, True), PROTOCOL.observation(observation()))
 
+    def test_loaded_or_inferencing_without_native_runtime_is_rejected(self):
+        for state in ("LOADED", "INFERENCING"):
+            journal = Journal().complete()
+            journal.entries[5]["data"].update(serviceState=state, nativeRuntimeLoaded=False)
+            with self.subTest(state=state):
+                self.rejected(journal.plan, journal.value(), "SERVICE_RUNTIME_STATE_INVALID")
+
+    def test_service_transitions_that_can_precede_native_creation_remain_valid(self):
+        for state in ("UNLOADED", "LOADING", "UNLOADING"):
+            row = observation()
+            row.update(serviceState=state, nativeRuntimeLoaded=False)
+            with self.subTest(state=state):
+                self.assertEqual((True, True), PROTOCOL.observation(row))
+
+    def test_service_states_match_current_get_status_surface(self):
+        for state in ("CANCELLING", "FAILED"):
+            row = observation()
+            row["serviceState"] = state
+            with self.subTest(state=state), self.assertRaisesRegex(PROTOCOL.Invalid, "ENUM_INVALID"):
+                PROTOCOL.observation(row)
+
     def test_unavailable_resources_queues_and_unknown_counts_are_explicit(self):
         journal = Journal().complete()
         journal.entries[5]["data"] = observation(False, False)
