@@ -6,7 +6,7 @@ OBJECTIVE: Prepare an opt-in, measurement-only resource baseline using the actua
 MAIN observer, authenticated AI self-PSS receipt and manifest inventory without
 loading a model, fabricating resources or granting production inference.
 
-FILES ALLOWED: app/build.gradle.kts; app/src/physicalBaselineTarget/**;
+FILES ALLOWED: app/build.gradle.kts; .github/workflows/ci.yml; app/src/physicalBaselineTarget/**;
 app/src/physicalBaselineAndroidTest/**; this work package and the existing F5
 qualification checklist; coordinating scripts/android/record-f5-physical-baseline.py
 and test_f5_physical_baseline_harness.py; the explicit required_artifacts extension
@@ -70,3 +70,7 @@ snapshot; the no-heavy-work contract already passed there. All 165 HOST harness
 cases in this branch pass. These checks establish source/build boundaries, not a
 physical observation; root still compiles/R8-checks and runs the actual owned
 emulator rejection case before integration.
+
+CI COVERAGE: The required docker-build-and-check job retains its ordinary builds
+and three-probe R8 scope, then builds the opt-in baseline sequentially in canonical
+Docker. It performs no device execution or physical qualification.
