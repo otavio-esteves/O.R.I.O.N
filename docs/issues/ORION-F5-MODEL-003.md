@@ -25,6 +25,10 @@ CAS before file removal; refuse symlinks/special files without deleting targets;
 retain rejected row after filesystem failure; rollback after cancellation/death
 checkpoint following unlink; safe explicit repetition with a missing artifact;
 fresh validated reimport after successful removal; serialize coordinator instances.
+At 128 rows, prove refusal before source opening, explicit removal of one rejected
+entry, and fresh complete validation admitting a new import into the freed slot.
+Replace verified/store/fixture ancestors by symlinks after the regular-file check
+and prove external bytes and the rejected row remain intact.
 The `model_rejected_removal` host scenario must SIGKILL the exact marked MAIN PID
 after unlink/directory fsync, explicitly inside the open writer transaction. A new
 process must verify the complete original rejected metadata/version, absent file,
@@ -38,6 +42,9 @@ commits only after successful file cleanup. Filesystem failure rolls back the ro
 Crash after unlink leaves a rejected row whose absent artifact can be removed by
 explicit repetition; it never produces READY or automatic reimport/inference.
 Results contain technical outcome codes only. Existing capacity caps remain intact.
+Selection binds the content-addressed identity and its current version, not an
+incarnation token. A future UI must supply authorized ingress, idempotency and
+confirmation contracts of its own; this technical method cannot grant them.
 
 OUT OF SCOPE: User-facing management UI/ingress, automatic repair/retry, deletion
 of READY/pending models, arbitrary filenames, inference/session lifecycle, resource

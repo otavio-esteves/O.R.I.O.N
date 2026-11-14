@@ -221,4 +221,36 @@ class OrionPrivateModelFilesTest {
         fail = false
         assertEquals(OrionRejectedArtifactRemoval.REMOVED, files.removeRejectedArtifact(expected()))
     }
+
+    @Test fun rejectedRemovalNeverFollowsAParentReplacedAfterTheRegularFileCheck() {
+        for (component in listOf("verified", "root")) {
+            val root = temporary.newFolder()
+            val outside = temporary.newFolder()
+            val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true }, syncDirectory = {})
+            files.stage(expected(), { ByteArrayInputStream(bytes) })
+            val replaced = if (component == "verified") File(root, "verified") else root
+            val suffix = if (component == "verified") "${expected().sha256}.gguf" else "verified/${expected().sha256}.gguf"
+            val external = File(outside, suffix).also { check(it.parentFile.mkdirs() || it.parentFile.isDirectory); it.writeBytes(bytes) }
+            val backup = File(replaced.parentFile, replaced.name + "_original")
+            var checks = 0
+            var swapped = false
+            try {
+                val result = files.removeRejectedArtifact(expected()) {
+                    if (++checks == 2) {
+                        check(replaced.renameTo(backup))
+                        Files.createSymbolicLink(replaced.toPath(), outside.toPath())
+                        swapped = true
+                    }
+                }
+                assertTrue(swapped)
+                assertTrue("External file was unlinked through a replaced parent", external.isFile)
+                assertArrayEquals(bytes, external.readBytes())
+                assertEquals(OrionRejectedArtifactRemoval.UNSAFE_PATH, result)
+                assertTrue(File(backup, suffix).isFile)
+            } finally {
+                if (Files.isSymbolicLink(replaced.toPath())) Files.delete(replaced.toPath())
+                if (backup.isDirectory) check(backup.renameTo(replaced))
+            }
+        }
+    }
 }

@@ -11,6 +11,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.nio.file.Files
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.UUID
@@ -350,6 +351,74 @@ class OrionModelImportTest {
             setOf(firstResult.get(), secondResult.get()))
         assertNull(db.models().find(expected.sha256))
         assertFalse(File(root, "orion_model_files/verified/${expected.sha256}.gguf").exists())
+    }
+
+    @Test fun rejectedRemovalRestoresFullRegistryCapacityOnlyForFreshExplicitImport() = fixture { db, files, _ ->
+        val bytes = model()
+        val expected = expected(bytes)
+        files.importModel(expected, { ByteArrayInputStream(bytes) })
+        assertEquals(1, db.models().invalidate(expected.sha256, 2, true))
+        repeat(127) { db.models().registerImported(imported("%064x".format(it + 1), 16)) }
+        assertEquals(128, db.models().countAll())
+        val nextBytes = model(context = 4096)
+        val next = expected(nextBytes)
+        var sourceOpens = 0
+        assertEquals(OrionModelImportResult.Rejected(OrionModelImportBlock.REGISTRY_CAPACITY),
+            files.importModel(next, { sourceOpens++; ByteArrayInputStream(nextBytes) }))
+        assertEquals(0, sourceOpens)
+        assertEquals(OrionModelRemovalOutcome.REMOVED, files.removeRejected(expected.sha256, 3))
+        assertEquals(127, db.models().countAll())
+        assertNull(db.models().find(expected.sha256))
+        val accepted = files.importModel(next, { sourceOpens++; ByteArrayInputStream(nextBytes) }) as OrionModelImportResult.Ready
+        assertFalse(accepted.reused)
+        assertEquals(1, sourceOpens)
+        assertEquals(128, db.models().countAll())
+        assertEquals("READY", db.models().find(next.sha256)?.status)
+        files.openReadOnly(next.sha256)?.close() ?: fail("Fresh import failed full validation")
+    }
+
+    @Test fun replacedParentCannotRedirectRejectedRemovalOutsideItsOwnedDirectory() = fixture { db, files, root ->
+        val bytes = model()
+        val expected = expected(bytes)
+        files.importModel(expected, { ByteArrayInputStream(bytes) })
+        assertEquals(1, db.models().invalidate(expected.sha256, 2, true))
+        val before = checkNotNull(db.models().find(expected.sha256))
+        for (component in listOf("verified", "store", "fixture_root")) {
+            val replaced = when (component) {
+                "verified" -> File(root, "orion_model_files/verified")
+                "store" -> File(root, "orion_model_files")
+                else -> root
+            }
+            val suffix = when (component) {
+                "verified" -> "${expected.sha256}.gguf"
+                "store" -> "verified/${expected.sha256}.gguf"
+                else -> "orion_model_files/verified/${expected.sha256}.gguf"
+            }
+            val outside = File(root.parentFile, "orion_model_removal_external_${UUID.randomUUID()}").also { check(it.mkdir()) }
+            val external = File(outside, suffix).also { check(it.parentFile.mkdirs() || it.parentFile.isDirectory); it.writeBytes(bytes) }
+            val backup = File(replaced.parentFile, replaced.name + "_original")
+            var checksAfterCas = 0
+            var swapped = false
+            try {
+                val result = files.removeRejected(expected.sha256, before.version) {
+                    if (db.models().find(expected.sha256) == null && ++checksAfterCas == 2) {
+                        check(replaced.renameTo(backup))
+                        Os.symlink(outside.path, replaced.path)
+                        swapped = true
+                    }
+                }
+                assertTrue(swapped)
+                assertTrue("External file was unlinked through a replaced parent", external.isFile)
+                assertArrayEquals(bytes, external.readBytes())
+                assertEquals(OrionModelRemovalOutcome.UNSAFE_PATH, result)
+                assertEquals(before, db.models().find(expected.sha256))
+                assertTrue(File(backup, suffix).isFile)
+            } finally {
+                if (Files.isSymbolicLink(replaced.toPath())) Files.delete(replaced.toPath())
+                if (backup.isDirectory) check(backup.renameTo(replaced))
+                outside.deleteRecursively()
+            }
+        }
     }
 
     @Test fun cancellationDuringReadyHashDoesNotQuarantineOrLeakDescriptors() = fixture { db, files, root ->
