@@ -54,3 +54,12 @@ from MAIN's own timeout.
 STATUS: Software protocol and negative contracts only. Physical producer,
 measurement/admission authority and coverage qualification remain separate work
 under #89; the Core and post-Cortex soaks remain unclosed.
+
+CENTRAL VALIDATION: Root executed `docker compose run --rm host-harness-check`
+in canonical Docker at source head 716bc42: 247 cases passed (225 preceding
+contracts plus 22 runtime cases). Independent source review confirmed the deadline
+precedence fix in both terminal origins and every accepted chunk. Tests remain
+synthetic offline metadata; no runtime, device or qualification was observed.
+
+Retained log: `/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/runtime-protocol-final-host.log`.
+Log SHA256: `ab1919727fc6abb3f4044235fa265ac32f285a3dd019fd3f8bc3e19d900768fa`.
