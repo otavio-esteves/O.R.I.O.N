@@ -263,6 +263,27 @@ class PhysicalBaselineRecorderTest(unittest.TestCase):
         self.assertFalse(report["profileQualified"])
         self.assertFalse(report["fullF5GateClosed"])
 
+    def test_cleanup_not_registered_is_typed_failure_and_never_qualification(self):
+        self.adb.output = receipt_output([sample(0)], summary(collected=1, result="INCOMPLETE", failure="CLEANUP_NOT_REGISTERED"), 0)
+        report = self.record()
+        self.assertEqual("INCOMPLETE", report["result"])
+        self.assertEqual("CLEANUP_NOT_REGISTERED", report["summary"]["failureCode"])
+        self.assertEqual("NOT_QUALIFIED", report["qualificationResult"])
+        self.assertFalse(report["profileQualified"])
+        self.assertFalse(report["fullF5GateClosed"])
+        self.assertFalse(report["fullSoakGateClosed"])
+
+    def test_unverified_runner_rejection_cannot_be_relabelled_physical(self):
+        final = summary(collected=0, result="REJECTED", failure="PHYSICAL_ENVIRONMENT_REJECTED")
+        final["environment"] = "UNVERIFIED"
+        self.adb.output = receipt_output([], final, 0)
+        report = self.assert_rejected("SUMMARY_IDENTITY_INVALID")
+        self.assertNotIn("measurementEnvironment", report)
+        self.assertNotIn("samples", report)
+        self.assertNotIn("summary", report)
+        self.assertEqual("HOST", report["environment"])
+        self.assertFalse(report["physicalQualification"])
+
     def test_rejected_runner_result_is_preserved(self):
         self.adb.output = receipt_output([], summary(collected=0, result="REJECTED", failure="BIND_FAILED"), 0)
         report = self.record()

@@ -25,7 +25,8 @@ STREAM = "MEASUREMENT_ONLY / NOT_QUALIFIED"
 MAX_OUTPUT = 1024 * 1024
 LONG_MAX = 2**63 - 1
 FAILURES = {"ARGUMENTS_REJECTED", "PHYSICAL_ENVIRONMENT_REJECTED", "TARGET_IDENTITY_REJECTED", "BIND_FAILED",
-            "OBSERVATION_FAILED", "OBSERVATION_TIMEOUT", "SERVICE_DISCONNECTED", "INTERRUPTED", "CLEANUP_FAILED"}
+            "OBSERVATION_FAILED", "OBSERVATION_TIMEOUT", "SERVICE_DISCONNECTED", "INTERRUPTED", "CLEANUP_FAILED",
+            "CLEANUP_NOT_REGISTERED"}
 SAMPLE_KEYS = set("schemaVersion kind environment qualification packageName sampleIndex sampleCount bootCount mainPid aiPid "
                   "sampledElapsed aiSampledElapsed completedElapsed maximumAgeMillis mainPssBytes aiPssBytes aggregatePssBytes "
                   "systemAvailableMemoryBytes batteryPercent thermalStatus powerSave foreground importance memoryPressure "
@@ -201,6 +202,8 @@ def receipts(output, samples, interval, before, after):
         else:
             raise Rejected("UNEXPECTED_INSTRUMENTATION_OUTPUT")
     require(summary is not None and code is not None and set(summary) == SUMMARY_KEYS, "SUMMARY_FIELDS_INVALID")
+    # UNVERIFIED runner rejections are deliberately not physical observations.
+    # Keep them rejected by identity; never relabel them as PHYSICAL_DEVICE.
     require(type(summary["schemaVersion"]) is int and summary["schemaVersion"] == 1 and
             summary["kind"] == "PHYSICAL_BASELINE_SUMMARY" and summary["environment"] == "PHYSICAL_DEVICE" and
             summary["qualification"] == "NOT_QUALIFIED" and summary["packageName"] == PACKAGE, "SUMMARY_IDENTITY_INVALID")
