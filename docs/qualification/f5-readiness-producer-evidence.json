@@ -236,5 +236,13 @@
     "NO_QUALIFIED_PROFILE is an actual early refusal; resource governor/restart/model/AI were not evaluated and no request or permit was issued.",
     "Later ordinary native probes intentionally launch AI and validate a corrupt synthetic file; AI absence applies to readiness attempts only.",
     "All source/artifact snapshots are software validation, not a frozen physical candidate."
-  ]
+  ],
+  "independentProcessObservation": {
+    "record": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8/ai-process-observation.json",
+    "recordSha256": "4f99927f72c1c5e0e49742cc5b72d23c7ca5bcd03b09548917a77029823906e4",
+    "instrumentationLog": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8/observed-emulator-process-proof.txt",
+    "instrumentationLogSha256": "6a2f406e31a6a80b07f3b49e8f6f4f6da77f9351007ae3c17bb27d7aba7a7a5f",
+    "rawOutput": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8/ai-pidof-after-readiness.txt",
+    "aiProcessFound": false
+  }
 }
