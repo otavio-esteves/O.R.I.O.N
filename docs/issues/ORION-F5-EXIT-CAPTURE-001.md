@@ -34,7 +34,7 @@ all authority/gate flags false; offline validation stays UNVERIFIED_INPUT.
 
 OUT OF SCOPE: Limiter-v1 changes, load/infer/import/
 cancel/unload/run, synthetic policy/governor/fence/revision, stress, native model
-work, device execution, qualification/profile approval or gate closure.
+work, physical execution, qualification/profile approval or gate closure.
 
 VALIDATION: HOST Python: 33 focused parser/correlation/source-contract tests passed
 via `python3 -m unittest discover -s scripts/android -p test_f5_exit_capture_protocol_harness.py -v`.
