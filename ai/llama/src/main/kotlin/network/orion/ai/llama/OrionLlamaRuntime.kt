@@ -35,18 +35,35 @@ class OrionLlamaRuntime : AutoCloseable {
     }
 
     fun generate(prompt: String, maxTokens: Int, temperature: Float,
-        onPiece: OrionLlamaPieceCallback): OrionLlamaFinish {
-        require(prompt.length in 1..MAX_PROMPT_BYTES && maxTokens in 1..32768)
-        require(temperature.isFinite() && temperature in 0f..2f)
-        val bytes = prompt.toByteArray(Charsets.UTF_8)
-        require(bytes.size <= MAX_PROMPT_BYTES)
-        return operation { id ->
-            when (nativeGenerate(id, bytes, maxTokens, temperature, onPiece)) {
-                0 -> OrionLlamaFinish.SUCCEEDED
-                1 -> OrionLlamaFinish.CANCELLED
-                2 -> OrionLlamaFinish.TOKEN_LIMIT
-                else -> error("Invalid native completion.")
+        onPiece: OrionLlamaPieceCallback): OrionLlamaFinish = generateLocal(prompt, maxTokens, temperature, null, onPiece)
+
+    /** Local diagnostic only. A fresh one-shot capture is required; no IPC or admission changes. */
+    internal fun generateObserved(prompt: String, maxTokens: Int, temperature: Float,
+        capture: OrionLlamaGenerationCapture, onPiece: OrionLlamaPieceCallback): OrionLlamaFinish {
+        capture.claim()
+        return generateLocal(prompt, maxTokens, temperature, capture, onPiece)
+    }
+
+    private fun generateLocal(prompt: String, maxTokens: Int, temperature: Float,
+        capture: OrionLlamaGenerationCapture?, onPiece: OrionLlamaPieceCallback): OrionLlamaFinish {
+        var raw: LongArray? = null
+        var returnedCode: Int? = null
+        try {
+            require(prompt.length in 1..MAX_PROMPT_BYTES && maxTokens in 1..32768)
+            require(temperature.isFinite() && temperature in 0f..2f)
+            val bytes = prompt.toByteArray(Charsets.UTF_8)
+            require(bytes.size <= MAX_PROMPT_BYTES)
+            // A diagnostic allocation failure cannot prevent the original generation.
+            if (capture != null) raw = try { LongArray(ORION_NATIVE_METRIC_SLOTS) } catch (_: Throwable) { null }
+            return operation { id ->
+                val code = nativeGenerate(id, bytes, maxTokens, temperature, onPiece, raw)
+                returnedCode = code
+                // Only the observed private JNI representation can contain publication metadata.
+                llamaGenerationFinish(code, capture != null)
             }
+        } finally {
+            // JNI has returned/unwound. Parsing and holder failures never replace its result/exception.
+            capture?.complete(raw, returnedCode, maxTokens)
         }
     }
 
@@ -87,7 +104,7 @@ class OrionLlamaRuntime : AutoCloseable {
     private external fun nativeValidate(handle: Long, path: ByteArray): Boolean
     private external fun nativeLoad(handle: Long, path: ByteArray, contextTokens: Int, threads: Int): Boolean
     private external fun nativeGenerate(handle: Long, prompt: ByteArray, maxTokens: Int, temperature: Float,
-        callback: OrionLlamaPieceCallback): Int
+        callback: OrionLlamaPieceCallback, metrics: LongArray?): Int
     private external fun nativeUnload(handle: Long)
 
     companion object { const val MAX_PROMPT_BYTES = 1024 * 1024 }

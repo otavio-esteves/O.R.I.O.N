@@ -101,6 +101,144 @@ class OrionLlamaModelTest {
         }
     }
 
+    @Test fun realLocalMetricsPreserveGreedyPiecesAndCountNativeTokensSeparately() {
+        val file = fixture()
+        OrionLlamaRuntime().use { runtime ->
+            approved(); assertTrue(runtime.load(file.absolutePath, 512, 2))
+            val prompt = "The capital of France is"
+            val normalPieces = mutableListOf<ByteArray>()
+            approved()
+            val normal = runtime.generate(prompt, 4, 0f) { normalPieces.add(it.copyOf()); true }
+            val capture = OrionLlamaGenerationCapture()
+            val measuredPieces = mutableListOf<ByteArray>()
+            approved()
+            val measured = runtime.generateObserved(prompt, 4, 0f, capture) { measuredPieces.add(it.copyOf()); true }
+            assertEquals(normal, measured)
+            assertEquals(normalPieces.size, measuredPieces.size)
+            normalPieces.indices.forEach { assertArrayEquals(normalPieces[it], measuredPieces[it]) }
+            assertEquals(OrionLlamaObservationState.LOCAL_JNI_RETURNED, capture.observation.state)
+            val metrics = checkNotNull(capture.observation.metrics)
+            assertEquals(measured, metrics.finish)
+            assertTrue(checkNotNull(metrics.promptTokens) > 0)
+            assertNotEquals(prompt.toByteArray(Charsets.UTF_8).size, metrics.promptTokens)
+            assertEquals(2, metrics.tokenizerCalls)
+            assertEquals(metrics.promptTokens, metrics.prefill.tokensInSuccessfulCalls)
+            assertEquals(measuredPieces.size, metrics.callbacksReturnedNormally)
+            assertEquals(metrics.callbacksReturnedNormally + metrics.eogSamples, metrics.sampledTokens)
+            assertTrue(checkNotNull(metrics.tokenizeApiWallNanos) >= 0)
+            assertTrue(checkNotNull(metrics.prefill.apiWallNanos) >= 0)
+            runtime.unload()
+        }
+    }
+
+    @Test fun realOneTokenAndCallbackCancellationDoNotEvaluateFinalOutputToken() {
+        val file = fixture()
+        OrionLlamaRuntime().use { runtime ->
+            approved(); assertTrue(runtime.load(file.absolutePath, 512, 2))
+            val prompt = "The capital of France is"
+            val one = OrionLlamaGenerationCapture()
+            var pieces = 0
+            approved()
+            assertEquals(OrionLlamaFinish.TOKEN_LIMIT,
+                runtime.generateObserved(prompt, 1, 0f, one) { pieces++; true })
+            val single = checkNotNull(one.observation.metrics)
+            assertEquals(1, pieces); assertEquals(1, single.sampledTokens)
+            assertEquals(1, single.callbacksReturnedNormally)
+            assertEquals(0, single.decode.tokensInSuccessfulCalls)
+            assertNull(single.decode.apiWallNanos)
+            val cancel = OrionLlamaGenerationCapture()
+            approved()
+            assertEquals(OrionLlamaFinish.CANCELLED,
+                runtime.generateObserved(prompt, 8, 0f, cancel) { false })
+            val cancelled = checkNotNull(cancel.observation.metrics)
+            assertEquals(1, cancelled.callbacksAttempted)
+            assertEquals(1, cancelled.callbacksReturnedNormally)
+            assertEquals(0, cancelled.decode.tokensSubmitted)
+            assertEquals(OrionLlamaFinish.TOKEN_LIMIT, one.observation.metrics?.finish)
+            runtime.unload()
+        }
+    }
+
+    @Test fun realCallbackExceptionIdentitySurvivesAndMetricsStayUnavailableUntilFreshInvocation() {
+        val file = fixture()
+        OrionLlamaRuntime().use { runtime ->
+            approved(); assertTrue(runtime.load(file.absolutePath, 512, 2))
+            val capture = OrionLlamaGenerationCapture()
+            val original = IllegalStateException("Scripted callback failure")
+            approved()
+            val thrown = assertThrows(IllegalStateException::class.java) {
+                runtime.generateObserved("The capital of France is", 8, 0f, capture) { throw original }
+            }
+            assertSame(original, thrown)
+            assertEquals(OrionLlamaObservationState.UNAVAILABLE_GENERATION, capture.observation.state)
+            assertNull(capture.observation.metrics)
+            val fresh = OrionLlamaGenerationCapture()
+            approved()
+            assertEquals(OrionLlamaFinish.TOKEN_LIMIT,
+                runtime.generateObserved("The capital of France is", 1, 0f, fresh) { true })
+            assertEquals(OrionLlamaObservationState.LOCAL_JNI_RETURNED, fresh.observation.state)
+            assertNull(capture.observation.metrics)
+            runtime.unload()
+        }
+    }
+
+    @Test fun realEogSamplesAreNotOutputCallbacksWhenFixtureReachesEog() {
+        val file = fixture()
+        OrionLlamaRuntime().use { runtime ->
+            approved(); assertTrue(runtime.load(file.absolutePath, 512, 2))
+            val capture = OrionLlamaGenerationCapture()
+            approved()
+            val finish = runtime.generateObserved(
+                "<|im_start|>user\nSay only Hi.<|im_end|>\n<|im_start|>assistant\nHi", 32, 0f, capture) { true }
+            val metrics = checkNotNull(capture.observation.metrics)
+            runtime.unload()
+            assumeTrue("This fixture run did not reach EOG; no real EOG evidence", finish == OrionLlamaFinish.SUCCEEDED)
+            assertEquals(1, metrics.eogSamples)
+            assertEquals(metrics.callbacksReturnedNormally + 1, metrics.sampledTokens)
+            assertEquals(metrics.callbacksReturnedNormally, metrics.decode.tokensInSuccessfulCalls)
+        }
+    }
+
+    @Test fun realCloseDuringObservedCallbackRetainsNativeLifetimeUntilReturnWithoutHandleGetter() {
+        val file = fixture()
+        val runtime = OrionLlamaRuntime()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val completed = CountDownLatch(1)
+        val capture = OrionLlamaGenerationCapture()
+        val outcome = AtomicReference<OrionLlamaFinish>()
+        val failure = AtomicReference<Throwable>()
+        try {
+            approved(); assertTrue(runtime.load(file.absolutePath, 512, 2))
+            approved()
+            val worker = Thread {
+                try {
+                    outcome.set(runtime.generateObserved("The capital of France is", 8, 0f, capture) {
+                        entered.countDown()
+                        check(release.await(10, TimeUnit.SECONDS))
+                        true
+                    })
+                } catch (error: Throwable) { failure.set(error) }
+                  finally { completed.countDown() }
+            }
+            worker.start()
+            assertTrue(entered.await(30, TimeUnit.SECONDS))
+            runtime.close()
+            release.countDown()
+            assertTrue(completed.await(30, TimeUnit.SECONDS))
+            worker.join(1000)
+            failure.get()?.let { throw AssertionError("Observed fixture did not finish", it) }
+            assertEquals(OrionLlamaFinish.CANCELLED, outcome.get())
+            assertEquals(OrionLlamaObservationState.LOCAL_JNI_RETURNED, capture.observation.state)
+            assertEquals(1, capture.observation.metrics?.callbacksReturnedNormally)
+            assertEquals(0, capture.observation.metrics?.decode?.tokensSubmitted)
+            OrionLlamaRuntime().use { it.unload() } // Previous shared Runtime really unwound.
+        } finally {
+            release.countDown(); runtime.close()
+            completed.await(5, TimeUnit.SECONDS)
+        }
+    }
+
     @Test fun realLoadHonorsConcurrentCancellationAndLeavesNoLoadedContext() {
         val file = fixture()
         OrionLlamaRuntime().use { runtime ->
