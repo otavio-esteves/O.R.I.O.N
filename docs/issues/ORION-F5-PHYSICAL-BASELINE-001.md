@@ -45,3 +45,10 @@ and never unloads or cancels existing work. Busy/resident AI is rejected. Techni
 PIDs and memory/resource values are observed without prompts, file paths, content,
 exit descriptions or traces. Measurements of this separate APK do not qualify the
 production identity, model workload or 24/7 operation.
+
+The measurement is not wholly read-only: am instrument starts the separate target
+APK, whose ordinary Application bootstrap may create its own Room database,
+Keystore material and technical WorkManager state. This is owned qualification
+state, not the production identity's state. The Core may still be initializing;
+the probe proves only that AI stays UNLOADED/nativeRuntimeLoaded=false, not that
+the Core or device is quiescent. No settings or model/inference operation is issued.

@@ -292,6 +292,13 @@ never relabel an ordinary probe APK as a baseline APK, or the reverse. Measureme
 of `network.orion.qualification` include this explicit bridge/instrumentation and
 do not qualify the production identity or optimized production footprint.
 
+This measurement is not a read-only device preflight: am instrument starts the
+separate APK and its normal Application bootstrap may create that identity's own
+Room/Keystore/technical WorkManager state. The Core can still be initializing
+during collection. Only the unloaded/native-runtime-free AI state is checked;
+the measurement does not attest a quiescent Core/device. It issues no model,
+inference or settings operation and does not touch the production identity.
+
 After the allocated physical target and exact installed qualification APK pair
 pass the HOST recorder's source/artifact/identity checks, its approved component is:
 
