@@ -11,6 +11,10 @@ contract in [ORION-F5-QUAL-001](../issues/ORION-F5-QUAL-001.md). Remaining Core
 stability work stays under [#64](https://github.com/otavio-esteves/O.R.I.O.N/issues/64).
 No replacement physical issue or waiver is needed.
 
+Memory-specific source review, measurement boundaries and the proposed acquisition
+protocol are in [F5-MemoryEvidence.md](F5-MemoryEvidence.md). They do not approve a
+model/resource profile.
+
 ## Reconcile the source before starting work
 
 The historical local branch ending at `f68ed6d` contained
@@ -172,3 +176,89 @@ This planning package executes no device command and closes no gate. No new
 runtime defect was established by the source-only review of the current AIDL
 client; the old client's unload/status hypotheses must not be reported as current
 main failures without a current-source reproduction.
+
+## Read-only preflight and blocked execution plan
+
+[ORION-F5-QUAL-PREFLIGHT-001](../issues/ORION-F5-QUAL-PREFLIGHT-001.md) supplies
+`scripts/android/prepare-f5-physical-qualification.py`. It prepares identity and
+integrity evidence only. It never installs, instruments, starts/stops a process,
+changes settings, approves a profile or runs a workload.
+
+The source manifest is a JSON object with exactly `schemaVersion: 1`,
+`sourceCommit`, `files` and `artifacts`. `files` must map **every tracked file** of
+the clean source checkout to its SHA256, without omissions, extra files or symlinks.
+`artifacts` maps exactly `app`, `test` and `model` to the selected binaries' SHA256.
+The manifest must live outside the checkout so it does not make its own source
+freeze dirty. One way to generate it after a reviewed build and source freeze is:
+
+```bash
+python3 - <<'PY'
+import hashlib, json, os, subprocess
+from pathlib import Path
+def git(*args):
+    return subprocess.check_output(['git', *args], text=True)
+def sha(path):
+    digest = hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
+assert not git('status', '--porcelain=v1', '-z', '--untracked-files=all')
+paths = list(filter(None, git('ls-files', '-z').split('\0')))
+value = {'schemaVersion': 1, 'sourceCommit': git('rev-parse', 'HEAD').strip(),
+         'files': {name: sha(name) for name in paths},
+         'artifacts': {'app': sha(os.environ['ORION_APP_APK']),
+                       'test': sha(os.environ['ORION_TEST_APK']),
+                       'model': sha(os.environ['ORION_CANDIDATE_MODEL'])}}
+with Path(os.environ['ORION_SOURCE_FREEZE']).open('x') as stream:
+    stream.write(json.dumps(value, indent=2, sort_keys=True) + '\n')
+PY
+```
+
+The candidate model manifest uses the immutable model manifest's existing fields
+(`schemaVersion`, `purpose`, publisher/repository/revision, filename/size/SHA256,
+license/URL/licenseSHA256), with the explicit purpose
+`PHYSICAL_CANDIDATE_NOT_QUALIFIED`. Create a separate candidate provenance record;
+do not rewrite the committed emulator fixture as a qualified profile. The preflight
+rejects synthetic/emulator/fixture markers and unknown fields such as
+`qualified: true`. No operator-supplied boolean is accepted as profile approval.
+
+After the physical target is explicitly allocated and the exact app/test/model
+files are already installed/provisioned by their reviewed procedure:
+
+```bash
+python3 scripts/android/prepare-f5-physical-qualification.py \
+  --adb "$ORION_ADB" --serial "$ORION_S21_SERIAL" --target S21 \
+  --source-root "$ORION_REVIEWED_SOURCE_ROOT" \
+  --source-manifest "$ORION_SOURCE_FREEZE" \
+  --app-apk "$ORION_APP_APK" --test-apk "$ORION_TEST_APK" \
+  --model-file "$ORION_CANDIDATE_MODEL" \
+  --model-manifest "$ORION_CANDIDATE_MODEL_MANIFEST" \
+  --evidence-dir "$ORION_NEW_PREFLIGHT_EVIDENCE"
+```
+
+Use a separately allocated physical API37 device with `--target API37` for that
+role. The tool requires explicit device state, non-emulator qemu/fingerprint/
+hardware signals, supported API/arm64/page size and the expected target model. It
+hashes serial/fingerprint identities instead of retaining raw values. These are
+observable consistency checks, not tamper-proof physical attestation or RAM/model
+performance qualification. It also checks local manifest/artifact hashes against
+installed base APK hashes and the selected regular, app-private model file hash.
+Split APKs, unavailable `run-as` access or any mismatch stop the preflight.
+
+Even when all technical integrity checks agree, the report is **BLOCKED** and the
+CLI exits **3**. The physical runtime, actual API37 MemoryLimiter and post-Cortex
+24-hour memory-stress cases remain **NOT_IMPLEMENTED**, without runnable commands.
+Profile qualification is `NOT_EVALUATED`; all phase/profile approval fields remain
+false. Source/APK/model hash agreement does not prove a build's provenance or
+substitute measurement and review. Invalid/incomplete attempts are **REJECTED**
+(CLI exit **2**) in a fresh evidence directory and retain no raw device errors.
+
+The standard-library HOST tests use synthetic files and a fake ADB executable:
+
+```bash
+python3 scripts/android/test_f5_physical_preflight_harness.py
+```
+
+They establish preflight contracts only. Integration runs the same test module in
+the canonical `host-harness-check` container; this package itself uses no device.
