@@ -2,7 +2,10 @@
 
 Work package: [ORION-F5-UNLOAD-OBSERVATION-001](../issues/ORION-F5-UNLOAD-OBSERVATION-001.md),
 [#110](https://github.com/otavio-esteves/O.R.I.O.N/issues/110).
-Source base: `39cba9d73c15797917135bd396f5b36da8570b09`.
+Original observation source base: `39cba9d73c15797917135bd396f5b36da8570b09`.
+Isolation follow-up: [ORION-F5-UNLOAD-ISOLATION-001](../issues/ORION-F5-UNLOAD-ISOLATION-001.md),
+[#118](https://github.com/otavio-esteves/O.R.I.O.N/issues/118), base `e7cf08b`.
+The validation below for issue110 predates the isolation follow-up.
 This package supplies internal ephemeral diagnostics only. It is not a heavy
 producer, persisted journal, admission path, performance metric or physical
 qualification result. Production owner configuration and its empty qualified
@@ -37,10 +40,20 @@ The old code's return/release behavior remains unchanged in those cases.
 
 The opt-in path snapshots the selected remote and ServiceConnection under the
 client monitor. After the functional timeout/catch completes and loaded becomes
-null, it obtains an isolated clock reading and rechecks the same remote,
-ServiceConnection, local epoch and closed state under that monitor. An already
-known AI PID must still match; no new healthCheck is made to obtain one. An absent
-PID remains null. Unknown local identity cannot become a confirmation.
+null, it submits a typed facts-only ticket without waiting for a clock or worker.
+A single MAIN-owned worker later samples time and checks numeric versions that
+are updated with the actual remote/connection, known-PID, execution and closure
+changes. The ticket retains no Binder, ServiceConnection or client. An already
+known AI PID remains only technical metadata; no new healthCheck obtains one.
+An absent PID stays null. Unknown/exhausted identity cannot become confirmation.
+
+The execution epoch advances only after a request actually obtains the turn.
+A pending observation cannot confirm UNLOADED after another execution starts,
+even on the same Binder/connection. A refused request that obtained a turn still
+invalidates the older observation; queue expiry and retained replay do not.
+Closure and endpoint changes also invalidate pending confirmation. Guard checking
+and bounded offer share one short numeric lock, containing no clock/RPC/IO or
+consumer callback. They describe one publication point, not future residency.
 
 The final check must be in the original deadline's known boot, at/after its start
 and the captured pre-RPC poll time, and **strictly before** its expiry. Equality,
@@ -53,11 +66,18 @@ reply or restart the deadline to manufacture timely confirmation.
 Extra clock reads use the existing OrionClock boundary. AndroidOrionClock reads
 BOOT_COUNT through the settings provider and can therefore involve provider IPC;
 the guarantee is **no additional Cortex RPC**, not no additional Binder activity.
-The extra clock/classification/offer runs outside the original cleanup timeout
-and its catch, after loaded=null. A slow diagnostic cannot trigger that timeout
-or enter the functional lostConnection catch; a throwing diagnostic clock yields
-unavailable time. Clock/provider observation can still add latency to this opt-in
-diagnostic path, and is not a calibrated performance measurement.
+The extra clock runs only on the diagnostic worker, outside the caller, operation,
+turn, cleanup timeout/catch and NonCancellable ownership. The caller neither
+waits for sampling nor joins the worker on cancel/close. A blocked provider cannot
+retain the execution turn or delay the caller's return. A throwing clock yields
+unavailable time; a slow worker may conservatively reject a late sample. The
+original functional clock/RPC calls remain unchanged. The guarantee concerns
+additional diagnostic work, not original synchronous providers or OS scheduling.
+
+The previous synchronous post-cleanup implementation avoided its own timeout/
+catch but still held the turn and could change a queued request/outer timeout.
+Issue118 fixes that isolation defect; the earlier slow-clock test alone did not
+cover this effect.
 
 Nonterminal loop exits retain the existing pre-poll time and ownership facts
 before the original releaseConnection clears them. Functional clock exceptions
@@ -74,14 +94,17 @@ Outcomes are fixed technical enums:
 | NO_ENDPOINT | Existing cleanup found no remote; no unload RPC was issued |
 | IDENTITY_UNAVAILABLE | Local scope/epoch/connection cannot identify the observation |
 | ENDPOINT_CHANGED / CLIENT_CLOSED | Selected endpoint is no longer current or client is closed |
+| EXECUTION_CHANGED | A newer actual turn owner started before pending publication |
 | DEADLINE_EXPIRED / TIME_REFERENCE_INVALID | Expiry, absent/changed boot, regression or unavailable time |
 | STATUS_INVALID | Existing status envelope fails validation, or UNLOADED contains contradictory/extra fields |
 | UNLOAD_REQUEST_FAILED / TRANSPORT_FAILURE | Existing unloadModel/getStatus failed; no inferred completion |
 | POLL_TIMEOUT / CANCELLED | Existing coroutine timeout/cancellation, separate from boot-deadline arithmetic |
 | OBSERVATION_UNAVAILABLE | No stronger supported observation |
 
-UNLOADED_OBSERVED proves only that the selected private endpoint supplied that
-status with these checks at the recorded point. It does not prove physical/native
+UNLOADED_OBSERVED records that the selected private endpoint supplied the earlier
+status and passed these conservative checks at publication. The asynchronous
+clock is not the RPC timestamp and does not prove the remote still has that
+state when sampled. It does not prove physical/native
 release, reclaimed PSS/RSS, future residency, complete process accounting or a
 model/resource profile. `nativeRuntimeLoaded` is not sampled or forced false:
 the JNI wrapper can remain resident after model unload.
@@ -89,17 +112,28 @@ the JNI wrapper can remain resident after model unload.
 ## Bounded collection and identity limits
 
 Each immutable observation contains only clientScope, connectionEpoch,
-knownAiPid, deadlineStartedAt, checkedAt and outcome. The start is the original
+executionEpoch, knownAiPid, deadlineStartedAt, checkedAt and outcome. The start is the original
 post-unload-call deadline start, not the beginning of the void call. Null times
 or PID are retained as unavailable, never zero. No Binder/Context reference,
 request identifier, model ID/path, text, exception or Bundle is retained.
 
-clientScope and connectionEpoch are local ephemeral technical identifiers. A
+clientScope, connectionEpoch and executionEpoch are local ephemeral technical identifiers. A
 scope is allocated by one bounded CAS attempt; contention/exhaustion returns
 unknown rather than reusing an identity. Connection epochs advance only for the
 opt-in client. These identifiers can repeat after MAIN dies, even within the same
 boot, and do not authenticate a process, artifact, physical device or cross-process
 incident. They are not durable leases or a provenance signature.
+
+There is exactly one diagnostic worker and one global in-flight slot, with no
+queue or replacement thread. It is initialized only after MAIN role validation,
+when an opt-in client is constructed outside a turn. Submission uses one CAS and
+wake-up; a busy slot drops the new ticket without calling its Clock. The in-flight
+slot remains occupied while its provider is stuck, even after the originating
+client closes. New/closed clients cannot create extra workers or retained jobs.
+One hung ticket may retain its Clock/technical guard/buffer indefinitely, bounded
+globally to one. Other diagnostics remain unavailable/dropped until it returns;
+there is no timeout-based replacement or claim that Android can interrupt a hung
+provider. MAIN death loses the worker and all ephemeral evidence.
 
 The final owned buffer has capacity 1–64 (default 16), retains the oldest records
 and drops new records when full or contended. offer uses tryLock, never waits and
@@ -108,15 +142,35 @@ and explicitly marks its empty result as contended. Successful drains return a
 bounded immutable copy. Consumers cannot hold the client's monitor/turn through
 an injected callback or mutate retained records.
 
-droppedAtLeast, contendedAtLeast and recordingFailuresAtLeast are cumulative lower
-bounds. Counter updates use one bounded CAS; contention/overflow marks
+droppedAtLeast, contendedAtLeast, samplingBusyDroppedAtLeast and
+recordingFailuresAtLeast are cumulative lower bounds. Sampling-busy drops are
+also included in droppedAtLeast; they are not fake observations with invented
+time/identity. Empty drain while sampling is pending is not completion proof. Counter updates use one bounded CAS; contention/overflow marks
 lossAccountingComplete=false rather than inventing exact zero losses. Counter
 reads and the drain are not an atomic loss snapshot. A recording fault similarly
 marks accounting incomplete; no automatic second publication is attempted.
 Consumers must inspect those flags and cannot treat an empty batch as complete
 coverage. This buffer grants no inference/admission/qualification authority.
 
-## Validation boundary
+## Isolation validation supplied (issue118)
+
+Two regression-first Android cases exercise a blocked diagnostic clock while a
+second request is pending, and a caller with an outer timeout. The fixed caller
+returns and the second request succeeds while the provider remains blocked.
+The pending first observation is then EXECUTION_CHANGED, and the second sample
+is explicitly dropped as busy. Separate Android cases cover actual close/loss
+while sampling is pending and queue expiry without phantom unload/epoch advance.
+Existing observation cases now await evidence only in test code, never in the
+production caller; saturation/replay retain their original Cortex call checks.
+
+Eight new pure JVM cases exercise the actual shared dispatcher/guard: global
+capacity including closed clients and a stuck provider, resumption, execution/
+endpoint/closure invalidation, unavailable versions, clock failure, functional
+failure distinctions, original loop-exit facts, deadline and clock regression.
+Together with the ten existing classifier/buffer cases these await root's
+canonical execution. Author ran no Gradle, Docker, ADB or device commands.
+
+## Original validation boundary (issue110, not issue118 evidence)
 
 Supplied tests include ten JVM cases for the exact classifier used by the client,
 within-window clock regression, bounded/immutable/concurrent collection and busy
