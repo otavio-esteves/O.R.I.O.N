@@ -15,6 +15,9 @@ Memory-specific source review, measurement boundaries and the proposed acquisiti
 protocol are in [F5-MemoryEvidence.md](F5-MemoryEvidence.md). They do not approve a
 model/resource profile.
 
+The opt-in unloaded baseline has a separate [HOST recorder procedure](F5-PhysicalBaselineRecorder.md),
+including its exact model-free source manifest and non-qualifying results.
+
 ## Reconcile the source before starting work
 
 The historical local branch ending at `f68ed6d` contained
