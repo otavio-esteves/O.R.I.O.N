@@ -298,7 +298,7 @@ class OrionModelImportTest {
         assertEquals(before, db.models().find(expected.sha256))
         assertEquals(target.path, Os.readlink(artifact.path))
         assertArrayEquals(bytes, target.readBytes())
-        Os.unlink(artifact.path)
+        Files.delete(artifact.toPath())
         Os.mkfifo(artifact.path, 384)
         assertEquals(OrionModelRemovalOutcome.UNSAFE_PATH, files.removeRejected(expected.sha256, before.version))
         assertEquals(before, db.models().find(expected.sha256))
