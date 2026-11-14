@@ -56,3 +56,12 @@ Gradle command was run. Canonical integration checks remain the root's responsib
 Peer review hardening: reject LOADED/INFERENCING with an absent native runtime,
 retain UNLOADED with a resident wrapper, and restrict service states to the actual
 getStatus surface. Targeted HOST regressions preserve pre-runtime loading/unloading.
+
+CENTRAL VALIDATION: Root executed `docker compose run --rm host-harness-check`
+in canonical Docker at source head cbea3bc: 278 cases passed (247 preceding
+contracts plus 31 soak cases). Independent peer source review confirmed native
+wrapper/state consistency while preserving valid unloaded/transient states.
+All records are synthetic offline inputs; no actual soak or physical observation.
+
+Retained log: `/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/heavy-soak-protocol-final-host.log`.
+Log SHA256: `57694df4b031d3623eb553099ea3efbbc93c11f64e01a41e4bdd5c1a3c04669b`.
