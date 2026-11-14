@@ -15,10 +15,12 @@ import java.io.InterruptedIOException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.StandardOpenOption.WRITE
+import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.CancellationException
@@ -60,6 +62,8 @@ internal sealed interface OrionModelFileRead {
     data object StorageUnavailable : OrionModelFileRead
 }
 
+internal enum class OrionRejectedArtifactRemoval { REMOVED, UNSAFE_PATH, STORAGE_UNAVAILABLE }
+
 /**
  * Synchronous MAIN-owned file staging. No database READY transition or loading authority.
  * Process death can leave a .part or a verified unregistered file; the future registry
@@ -70,6 +74,7 @@ class OrionPrivateModelFiles internal constructor(
     private val maximumModelBytes: Long,
     private val reserveBytes: Long,
     private val validator: OrionModelFileValidator,
+    private val syncDirectory: (File) -> Unit = { syncPrivateDirectory(it) },
     private val availableBytes: (File) -> Long = { it.usableSpace },
 ) {
     init { require(maximumModelBytes > 0 && reserveBytes >= 0) }
@@ -264,6 +269,37 @@ class OrionPrivateModelFiles internal constructor(
         } catch (_: IOException) { OrionModelOrphanCleanup(0, 1, false) to null }
     }
 
+    /**
+     * The coordinator must first CAS-delete a rejected row in its uncommitted
+     * writer transaction. No hash/parse is needed for an explicitly rejected file,
+     * but path/type checks remain mandatory. Never touches staging or other hashes.
+     */
+    internal fun removeRejectedArtifact(expected: OrionExpectedModelFile,
+        checkCancellation: () -> Unit = {}): OrionRejectedArtifactRemoval = synchronized(lock) {
+        checkCancelled(checkCancellation)
+        try {
+            directories()
+            val target = File(ready, "${expected.sha256}.gguf").toPath()
+            val attributes = try { Files.readAttributes(target, BasicFileAttributes::class.java, NOFOLLOW_LINKS) }
+                catch (_: NoSuchFileException) { null }
+            if (attributes != null && !attributes.isRegularFile)
+                return@synchronized OrionRejectedArtifactRemoval.UNSAFE_PATH
+            checkCancelled(checkCancellation)
+            Files.deleteIfExists(target)
+            // Also sync an already-missing artifact: a previous interrupted unlink
+            // must become durable before SQLite may forget its rejected owner.
+            syncDirectory(ready)
+            checkCancelled(checkCancellation)
+            OrionRejectedArtifactRemoval.REMOVED
+        } catch (interrupted: InterruptedException) {
+            Thread.currentThread().interrupt(); throw interrupted
+        } catch (interrupted: InterruptedIOException) {
+            Thread.currentThread().interrupt(); throw interrupted
+        } catch (_: UnsafeModelPath) { OrionRejectedArtifactRemoval.UNSAFE_PATH }
+          catch (_: IOException) { OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE }
+          catch (_: ErrnoException) { OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE }
+    }
+
     private val ready get() = File(root, "verified")
     private val staging get() = File(root, "staging")
     private val quarantined get() = File(root, "quarantine")
@@ -334,6 +370,15 @@ class OrionPrivateModelFiles internal constructor(
         private const val MAX_QUARANTINE_FILES = 4
         private const val MAX_QUARANTINE_BYTES = 1024 * 1024L
         private fun hex(bytes: ByteArray) = bytes.joinToString("") { "%02x".format(it) }
+
+        private fun syncPrivateDirectory(directory: File) {
+            val descriptor = Os.open(directory.path, OsConstants.O_RDONLY or OsConstants.O_CLOEXEC or
+                OsConstants.O_NOFOLLOW or OsConstants.O_NONBLOCK, 0)
+            try {
+                if (!OsConstants.S_ISDIR(Os.fstat(descriptor).st_mode)) throw IOException("Model directory required.")
+                Os.fsync(descriptor)
+            } finally { Os.close(descriptor) }
+        }
 
         fun open(context: Context, maximumModelBytes: Long, reserveBytes: Long,
             validator: OrionModelFileValidator): OrionPrivateModelFiles {

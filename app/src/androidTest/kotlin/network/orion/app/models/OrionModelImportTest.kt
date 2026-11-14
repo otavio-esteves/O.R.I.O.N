@@ -15,6 +15,9 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CancellationException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import network.orion.core.time.WallClock
 import network.orion.data.database.ModelRegistryEntity
 import network.orion.data.database.OrionDatabase
@@ -26,6 +29,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class OrionModelImportTest {
     private val app: Context = ApplicationProvider.getApplicationContext()
+    private class SimulatedProcessDeath : Error()
 
     @Test fun copyBeforeReadyDedupAndReadOnlyDescriptorPreserveExactContent() = fixture { db, files, root ->
         val bytes = model()
@@ -208,6 +212,144 @@ class OrionModelImportTest {
         assertEquals(OrionModelImportResult.Rejected(OrionModelImportBlock.REGISTRY_CAPACITY),
             files.importModel(expected(newBytes), { error("At-capacity source opened") }))
         assertTrue((files.importModel(expected, { error("Duplicate source opened") }) as OrionModelImportResult.Ready).reused)
+    }
+
+    @Test fun rejectedRemovalRequiresCurrentVersionAndFreshReimportRepeatsAllValidation() = fixture { db, files, root ->
+        val bytes = model()
+        val expected = expected(bytes)
+        files.importModel(expected, { ByteArrayInputStream(bytes) })
+        val ready = checkNotNull(db.models().find(expected.sha256))
+        val artifact = File(root, "orion_model_files/verified/${expected.sha256}.gguf")
+        assertEquals(OrionModelRemovalOutcome.NOT_REJECTED, files.removeRejected(expected.sha256, ready.version))
+        assertEquals(ready, db.models().find(expected.sha256))
+        artifact.writeBytes(bytes.copyOf().also { it[it.lastIndex] = 1 })
+        assertNull(files.openReadOnly(expected.sha256))
+        val rejected = checkNotNull(db.models().find(expected.sha256))
+        assertEquals("QUARANTINED", rejected.status)
+        assertEquals(OrionModelRemovalOutcome.CONFLICT, files.removeRejected(expected.sha256, ready.version))
+        assertTrue(artifact.exists())
+        var ownedBeforeUnlink = false
+        assertEquals(OrionModelRemovalOutcome.REMOVED, files.removeRejected(expected.sha256, rejected.version) {
+            if (db.models().find(expected.sha256) == null && artifact.exists()) ownedBeforeUnlink = true
+        })
+        assertTrue(ownedBeforeUnlink)
+        assertNull(db.models().find(expected.sha256))
+        assertFalse(artifact.exists())
+        assertEquals(OrionModelRemovalOutcome.NOT_FOUND, files.removeRejected(expected.sha256, rejected.version))
+        var sourceOpens = 0
+        val reimported = files.importModel(expected, { sourceOpens++; ByteArrayInputStream(bytes) }) as OrionModelImportResult.Ready
+        assertFalse(reimported.reused)
+        assertEquals(1, sourceOpens)
+        assertEquals("READY", db.models().find(expected.sha256)?.status)
+        files.openReadOnly(expected.sha256)?.close() ?: fail("Explicit reimport failed full validation")
+    }
+
+    @Test fun removalCannotChangePendingOrForgedRecords() = fixture { db, files, root ->
+        for ((index, state) in listOf("IMPORTED", "VALIDATING").withIndex()) {
+            val hash = "%064x".format(index + 1)
+            db.models().registerImported(imported(hash, 16))
+            if (state == "VALIDATING") assertEquals(1, db.models().beginValidation(hash, 0))
+            val before = checkNotNull(db.models().find(hash))
+            assertEquals(OrionModelRemovalOutcome.NOT_REJECTED, files.removeRejected(hash, before.version))
+            assertEquals(before, db.models().find(hash))
+        }
+        val hash = "d".repeat(64)
+        db.models().registerImported(imported(hash, 16).copy(filePath = "/outside/model.gguf"))
+        assertEquals(1, db.models().invalidate(hash, 0, true))
+        val before = db.models().find(hash)
+        assertEquals(OrionModelRemovalOutcome.UNSAFE_RECORD, files.removeRejected(hash, 1))
+        assertEquals(before, db.models().find(hash))
+        assertTrue(root.listFiles().orEmpty().isEmpty())
+    }
+
+    @Test fun interruptedUnlinkRollsBackRejectedMetadataAndExplicitRepetitionCompletes() = fixture { db, files, root ->
+        val bytes = model()
+        val expected = expected(bytes)
+        val artifact = File(root, "orion_model_files/verified/${expected.sha256}.gguf")
+        for (interruption in listOf(CancellationException("synthetic post-unlink checkpoint"), SimulatedProcessDeath())) {
+            files.importModel(expected, { ByteArrayInputStream(bytes) })
+            assertEquals(1, db.models().invalidate(expected.sha256, 2, true))
+            val before = checkNotNull(db.models().find(expected.sha256))
+            try {
+                files.removeRejected(expected.sha256, before.version) { if (!artifact.exists()) throw interruption }
+                fail("Post-unlink interruption was swallowed")
+            } catch (actual: Throwable) { assertSame(interruption, actual) }
+            assertEquals(before, db.models().find(expected.sha256))
+            assertFalse(artifact.exists())
+            assertEquals(0, files.recoverPage().ready)
+            assertNull(files.openReadOnly(expected.sha256))
+            assertEquals(OrionModelRemovalOutcome.REMOVED, files.removeRejected(expected.sha256, before.version))
+            assertNull(db.models().find(expected.sha256))
+        }
+    }
+
+    @Test fun rejectedRemovalRefusesSymlinksAndFifosAndRollsBackTheRow() = fixture { db, files, root ->
+        val bytes = model()
+        val expected = expected(bytes)
+        files.importModel(expected, { ByteArrayInputStream(bytes) })
+        assertEquals(1, db.models().invalidate(expected.sha256, 2, false))
+        val before = checkNotNull(db.models().find(expected.sha256))
+        val artifact = File(root, "orion_model_files/verified/${expected.sha256}.gguf")
+        assertTrue(artifact.delete())
+        val target = File(root, "preserved.gguf").also { it.writeBytes(bytes) }
+        Os.symlink(target.path, artifact.path)
+        assertEquals(OrionModelRemovalOutcome.UNSAFE_PATH, files.removeRejected(expected.sha256, before.version))
+        assertEquals(before, db.models().find(expected.sha256))
+        assertEquals(target.path, Os.readlink(artifact.path))
+        assertArrayEquals(bytes, target.readBytes())
+        Os.unlink(artifact.path)
+        Os.mkfifo(artifact.path, 384)
+        assertEquals(OrionModelRemovalOutcome.UNSAFE_PATH, files.removeRejected(expected.sha256, before.version))
+        assertEquals(before, db.models().find(expected.sha256))
+        assertTrue(android.system.OsConstants.S_ISFIFO(Os.lstat(artifact.path).st_mode))
+    }
+
+    @Test fun inaccessibleStoragePreservesRejectedRowUntilExplicitAccessRestoration() = fixture { db, files, root ->
+        val bytes = model()
+        val expected = expected(bytes)
+        files.importModel(expected, { ByteArrayInputStream(bytes) })
+        assertEquals(1, db.models().invalidate(expected.sha256, 2, true))
+        val before = checkNotNull(db.models().find(expected.sha256))
+        val directory = File(root, "orion_model_files/verified")
+        Os.chmod(directory.path, 0)
+        try {
+            assertEquals(OrionModelRemovalOutcome.STORAGE_UNAVAILABLE, files.removeRejected(expected.sha256, before.version))
+            assertEquals(before, db.models().find(expected.sha256))
+        } finally { Os.chmod(directory.path, 448) }
+        assertEquals(OrionModelRemovalOutcome.REMOVED, files.removeRejected(expected.sha256, before.version))
+    }
+
+    @Test fun separateCoordinatorInstancesSerializeSelectedRemoval() = fixture { db, files, root ->
+        val bytes = model()
+        val expected = expected(bytes)
+        files.importModel(expected, { ByteArrayInputStream(bytes) })
+        assertEquals(1, db.models().invalidate(expected.sha256, 2, true))
+        val version = checkNotNull(db.models().find(expected.sha256)).version
+        val context = object : ContextWrapper(app) {
+            override fun getApplicationContext(): Context = this
+            override fun getNoBackupFilesDir(): File = root
+        }
+        val second = OrionModelImportCoordinator.open(context, db, WallClock { Instant.ofEpochMilli(200) },
+            maximumModelBytes = 1024 * 1024, reserveBytes = 100)
+        val start = CountDownLatch(1)
+        val firstResult = AtomicReference<OrionModelRemovalOutcome>()
+        val secondResult = AtomicReference<OrionModelRemovalOutcome>()
+        val failure = AtomicReference<Throwable>()
+        val threads = listOf(files to firstResult, second to secondResult).map { (coordinator, result) ->
+            Thread {
+                try {
+                    check(start.await(10, TimeUnit.SECONDS))
+                    result.set(coordinator.removeRejected(expected.sha256, version))
+                } catch (error: Throwable) { failure.compareAndSet(null, error) }
+            }.also(Thread::start)
+        }
+        start.countDown()
+        threads.forEach { it.join(10_000); assertFalse(it.isAlive) }
+        assertNull(failure.get())
+        assertEquals(setOf(OrionModelRemovalOutcome.REMOVED, OrionModelRemovalOutcome.NOT_FOUND),
+            setOf(firstResult.get(), secondResult.get()))
+        assertNull(db.models().find(expected.sha256))
+        assertFalse(File(root, "orion_model_files/verified/${expected.sha256}.gguf").exists())
     }
 
     @Test fun cancellationDuringReadyHashDoesNotQuarantineOrLeakDescriptors() = fixture { db, files, root ->

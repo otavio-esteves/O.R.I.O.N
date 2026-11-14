@@ -178,4 +178,47 @@ class OrionPrivateModelFilesTest {
         assertEquals(OrionModelFileImport.Rejected(OrionModelFileFailure.LIMIT_EXCEEDED),
             store(temporary.newFolder()).stage(OrionExpectedModelFile(expected().sha256, 1024 * 1024 + 1), { error("Source opened") }))
     }
+
+    @Test fun selectedRejectedArtifactRemovalIsBoundedAndMissingRepetitionStillSyncs() {
+        val root = temporary.newFolder()
+        val synced = mutableListOf<File>()
+        val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true },
+            syncDirectory = { synced += it })
+        files.stage(expected(), { ByteArrayInputStream(bytes) })
+        val other = File(root, "verified/" + "e".repeat(64) + ".gguf").also { it.writeText("preserved") }
+        assertEquals(OrionRejectedArtifactRemoval.REMOVED, files.removeRejectedArtifact(expected()))
+        assertFalse(File(root, "verified/${expected().sha256}.gguf").exists())
+        assertEquals("preserved", other.readText())
+        assertEquals(listOf(File(root, "verified")), synced)
+        assertEquals(OrionRejectedArtifactRemoval.REMOVED, files.removeRejectedArtifact(expected()))
+        assertEquals(2, synced.size)
+    }
+
+    @Test fun selectedRejectedArtifactRemovalRefusesLinksAndNonregularFiles() {
+        val root = temporary.newFolder()
+        val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true }, syncDirectory = {})
+        files.cleanupInterruptedBatch()
+        val victim = temporary.newFile().also { it.writeBytes(bytes) }
+        val selected = File(root, "verified/${expected().sha256}.gguf")
+        Files.createSymbolicLink(selected.toPath(), victim.toPath())
+        assertEquals(OrionRejectedArtifactRemoval.UNSAFE_PATH, files.removeRejectedArtifact(expected()))
+        assertTrue(Files.isSymbolicLink(selected.toPath()))
+        assertArrayEquals(bytes, victim.readBytes())
+        Files.delete(selected.toPath())
+        assertTrue(selected.mkdir())
+        assertEquals(OrionRejectedArtifactRemoval.UNSAFE_PATH, files.removeRejectedArtifact(expected()))
+        assertTrue(selected.isDirectory)
+    }
+
+    @Test fun rejectedArtifactSyncFailureIsReportedAndCanBeExplicitlyRepeated() {
+        val root = temporary.newFolder()
+        var fail = true
+        val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true },
+            syncDirectory = { if (fail) throw IOException("synthetic sync failure") })
+        files.stage(expected(), { ByteArrayInputStream(bytes) })
+        assertEquals(OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE, files.removeRejectedArtifact(expected()))
+        assertTrue(ready(root).isEmpty())
+        fail = false
+        assertEquals(OrionRejectedArtifactRemoval.REMOVED, files.removeRejectedArtifact(expected()))
+    }
 }
