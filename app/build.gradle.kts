@@ -20,7 +20,11 @@ val cortexReadinessFlag = providers.gradleProperty("orionCortexReadinessProbe").
 check(cortexReadinessFlag in setOf("true", "false")) { "orionCortexReadinessProbe must be true or false." }
 val cortexReadinessEnabled = cortexReadinessFlag == "true"
 check(!cortexReadinessEnabled || qualificationEnabled) { "Cortex readiness probe requires the separate qualification identity." }
-check(listOf(physicalBaselineEnabled, cortexReadinessEnabled).count { it } <= 1) {
+val exitEvidenceCaptureFlag = providers.gradleProperty("orionExitEvidenceCapture").orElse("false").get()
+check(exitEvidenceCaptureFlag in setOf("true", "false")) { "orionExitEvidenceCapture must be true or false." }
+val exitEvidenceCaptureEnabled = exitEvidenceCaptureFlag == "true"
+check(!exitEvidenceCaptureEnabled || qualificationEnabled) { "Exit evidence capture requires the separate qualification identity." }
+check(listOf(physicalBaselineEnabled, cortexReadinessEnabled, exitEvidenceCaptureEnabled).count { it } <= 1) {
     "Qualification measurement modes are mutually exclusive."
 }
 
@@ -34,6 +38,7 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
         testInstrumentationRunner = when {
+            exitEvidenceCaptureEnabled -> "network.orion.app.compatibility.OrionExitEvidenceCaptureInstrumentation"
             cortexReadinessEnabled -> "network.orion.app.compatibility.OrionCortexReadinessInstrumentation"
             physicalBaselineEnabled -> "network.orion.app.compatibility.OrionPhysicalBaselineInstrumentation"
             qualificationEnabled -> "network.orion.app.compatibility.OrionQualificationInstrumentation"
@@ -83,6 +88,12 @@ android {
         buildTypes.getByName("qualificationRelease").proguardFiles("src/cortexReadinessTarget/proguard-rules.pro")
         sourceSets.getByName("androidTest").java.directories.clear()
         sourceSets.getByName("androidTest").java.directories.add("src/cortexReadinessAndroidTest/java")
+    }
+    if (exitEvidenceCaptureEnabled) {
+        sourceSets.getByName("qualificationRelease").kotlin.directories.add("src/exitEvidenceCaptureTarget/kotlin")
+        buildTypes.getByName("qualificationRelease").proguardFiles("src/exitEvidenceCaptureTarget/proguard-rules.pro")
+        sourceSets.getByName("androidTest").java.directories.clear()
+        sourceSets.getByName("androidTest").java.directories.add("src/exitEvidenceCaptureAndroidTest/java")
     }
 }
 

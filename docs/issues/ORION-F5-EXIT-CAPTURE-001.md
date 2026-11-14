@@ -1,5 +1,7 @@
 # ORION-F5-EXIT-CAPTURE-001 — qualification-only exit observations
 
+Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/106
+
 OBJECTIVE: Implement bounded actual Android exit-history/live-endpoint observation
 without starting AI, heavy work or policy mutation. Emit CAPTURE_ONLY technical
 receipts with explicit unavailable model/policy/source fields; never manufacture
@@ -47,3 +49,8 @@ pairs in both states and preserves UNLOADED with a resident wrapper.
 The second peer finding adds minimum spacing for later live reads to the parser,
 matching the producer's sleep; before/exact/after interval tests pass, with no
 artificial wait required for the first observation.
+
+ROOT WIRING: app/build.gradle.kts accepts strict orionExitEvidenceCapture=true
+only with orionQualificationRelease=true, mutually exclusive with baseline and
+readiness. The required CI builds each opt-in mode sequentially after normal
+checks, without a device. Root-owned files include .github/workflows/ci.yml.
