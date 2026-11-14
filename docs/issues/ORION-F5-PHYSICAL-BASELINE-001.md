@@ -85,8 +85,8 @@ exit 1). Final Debug/Release/ordinary qualification APKs exclude the baseline
 bridge/runner; the opt-in target keeps the bridge and selects only its own runner.
 
 Owned API35/x86_64/4KiB emulator: all three ordinary R8 native/JNI/startup probes
-passed after correcting an observed SystemUI ANR dialog. The initial failed and
-subsequent interrupted attempts remain retained. The actual opt-in framework
+passed after correcting an observed SystemUI ANR dialog. Both failed startup attempts remain
+retained; a subsequent force-stop does not establish interruption. The actual opt-in framework
 runner rejected the emulator before binding: UNVERIFIED, REJECTED,
 PHYSICAL_ENVIRONMENT_REJECTED, zero samples and all approval flags false. No AI
 process was found afterward. This is a negative Android guard test, not a physical
