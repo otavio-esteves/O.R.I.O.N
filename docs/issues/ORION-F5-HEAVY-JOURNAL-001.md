@@ -2,6 +2,8 @@
 
 Parent: #89; predecessor ORION-F5-HEAVY-SOAK-EVIDENCE-001.
 
+Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/105
+
 OBJECTIVE: Store the bounded offline heavy-soak plan/journal durably, with explicit
 CAS and post-commit uncertainty. No executor, device command or admission authority.
 
@@ -46,3 +48,13 @@ parent replacement, same-instance thread serialization, init/inspect/close lifec
 and fork with another thread holding the mutex. Python AST and whitespace checks
 passed. No device, Docker, Gradle or workload/executor was run. Canonical checks
 remain root integration work.
+
+CENTRAL VALIDATION: Root ran `docker compose run --rm host-harness-check`
+in canonical Docker against the clean author worktree at 23c19fc: all 306 cases
+passed (278 preceding contracts plus 28 store cases). Root cherry-pick b3ecac6
+preserves the implementation byte-for-byte. Independent peer review confirmed the
+same-instance CAS/close serialization fix, including fork-before-mutex guards.
+No Android/device operation or actual soak was performed.
+
+Retained log: `/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/heavy-journal-host.log`.
+Log SHA256: `417e56d364f35a294ffbefb79b8d2f6c1477991b1868e9fce3f15dea1e7e1ea1`.
