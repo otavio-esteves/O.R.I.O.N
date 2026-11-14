@@ -2,6 +2,7 @@ package network.orion.data.repository.models
 
 import android.app.Application
 import android.content.Context
+import android.database.sqlite.SQLiteException
 import android.os.ParcelFileDescriptor
 import android.os.UserManager
 import java.io.InputStream
@@ -13,6 +14,9 @@ import network.orion.data.database.ModelRegistryEntity
 import network.orion.data.database.OrionDatabase
 
 enum class OrionModelImportBlock { FILE_REJECTED, REGISTRY_CAPACITY, REGISTRY_CONFLICT, MODEL_UNAVAILABLE }
+
+/** Technical outcomes only; removal is never an inference, repair or user-action authorization. */
+enum class OrionModelRemovalOutcome { REMOVED, NOT_FOUND, CONFLICT, NOT_REJECTED, UNSAFE_RECORD, UNSAFE_PATH, STORAGE_UNAVAILABLE }
 
 sealed interface OrionModelImportResult {
     class Ready(val modelId: String, val reused: Boolean) : OrionModelImportResult
@@ -147,6 +151,39 @@ class OrionModelImportCoordinator private constructor(
         }
     }
 
+    /**
+     * Explicit trusted technical management only. CAS removes the rejected row
+     * inside a writer transaction BEFORE the bounded filesystem unlink. A failed
+     * unlink/sync rolls the row back. Death after unlink but before commit leaves
+     * rejected metadata with an absent artifact, safe for explicit repetition.
+     * A future UI entry still needs its own authorized ingress; no source is opened.
+     */
+    fun removeRejected(modelId: String, expectedVersion: Long,
+        checkCancellation: () -> Unit = {}): OrionModelRemovalOutcome = synchronized(lock) {
+        require(expectedVersion >= 0)
+        try {
+            database.runInTransaction(Callable {
+                // Recheck after acquiring the writer: waiting for another writer
+                // cannot preserve stale cancellation/ownership evidence.
+                checkCancellation()
+                val row = database.models().find(modelId) ?: return@Callable OrionModelRemovalOutcome.NOT_FOUND
+                if (row.version != expectedVersion) return@Callable OrionModelRemovalOutcome.CONFLICT
+                if (row.status !in setOf("INVALID", "QUARANTINED")) return@Callable OrionModelRemovalOutcome.NOT_REJECTED
+                val expected = expected(row) ?: return@Callable OrionModelRemovalOutcome.UNSAFE_RECORD
+                if (database.models().removeRejected(modelId, expectedVersion) != 1)
+                    return@Callable OrionModelRemovalOutcome.CONFLICT
+                when (files.removeRejectedArtifact(expected, checkCancellation)) {
+                    OrionRejectedArtifactRemoval.REMOVED -> Unit
+                    OrionRejectedArtifactRemoval.UNSAFE_PATH -> throw RemovalRollback(OrionModelRemovalOutcome.UNSAFE_PATH)
+                    OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE -> throw RemovalRollback(OrionModelRemovalOutcome.STORAGE_UNAVAILABLE)
+                }
+                checkCancellation()
+                OrionModelRemovalOutcome.REMOVED
+            })
+        } catch (failure: RemovalRollback) { failure.outcome }
+          catch (_: SQLiteException) { OrionModelRemovalOutcome.STORAGE_UNAVAILABLE }
+    }
+
     fun cleanupInterruptedCopies(limit: Int = 25, checkCancellation: () -> Unit = {}): OrionModelOrphanCleanup =
         files.cleanupInterruptedBatch(limit, checkCancellation)
 
@@ -208,6 +245,8 @@ class OrionModelImportCoordinator private constructor(
     private fun rejected(reason: OrionModelImportBlock) = OrionModelImportResult.Rejected(reason)
     private fun fileName(hash: String) = "verified/$hash.gguf"
     private fun quantization(metadata: OrionGgufMetadata) = metadata.tensorTypes.sortedBy { it.code }.joinToString("+") { it.name }
+
+    private class RemovalRollback(val outcome: OrionModelRemovalOutcome) : RuntimeException()
 
     companion object {
         private const val MAX_REGISTRY_ROWS = 128

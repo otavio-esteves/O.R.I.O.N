@@ -111,6 +111,26 @@ class OrionModelRegistryTest {
         assertEquals(0, models.beginValidation(first.modelId, 1))
     }
 
+    @Test fun selectedRejectedDeletionUsesVersionAndStatePredicates() = withDatabase { db ->
+        val models = db.models()
+        val first = imported()
+        models.registerImported(first)
+        assertEquals(0, models.removeRejected(first.modelId, 0))
+        assertEquals(1, models.beginValidation(first.modelId, 0))
+        assertEquals(0, models.removeRejected(first.modelId, 1))
+        assertEquals(1, models.completeValidation(first.modelId, 1, first.sha256, first.sizeBytes, "llama", "F32", 2048, 200))
+        assertEquals(0, models.removeRejected(first.modelId, 2))
+        assertEquals(1, models.invalidate(first.modelId, 2, true))
+        assertEquals(0, models.removeRejected(first.modelId, 2))
+        assertEquals(1, models.removeRejected(first.modelId, 3))
+        assertNull(models.find(first.modelId))
+        val next = imported("b".repeat(64))
+        models.registerImported(next)
+        assertEquals(1, models.invalidate(next.modelId, 0, false))
+        assertEquals(1, models.removeRejected(next.modelId, 1))
+        assertNull(models.find(next.modelId))
+    }
+
     private fun imported(hash: String = "a".repeat(64)) = ModelRegistryEntity(hash, "Fixture", "models/$hash.gguf",
         hash, 1024, null, null, null, "IMPORTED", 100, null)
 

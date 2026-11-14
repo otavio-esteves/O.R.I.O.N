@@ -60,5 +60,10 @@ abstract class OrionModelRegistryDao {
     fun invalidate(id: String, version: Long, quarantine: Boolean): Int =
         fail(id, version, if (quarantine) "QUARANTINED" else "INVALID")
 
+    /** Coordinator holds the writer transaction until the selected private artifact has been removed. */
+    @Query("""DELETE FROM orion_model_registry WHERE modelId=:id AND version=:version
+        AND status IN ('INVALID','QUARANTINED')""")
+    abstract fun removeRejected(id: String, version: Long): Int
+
     companion object { private val HASH = Regex("[0-9a-f]{64}") }
 }

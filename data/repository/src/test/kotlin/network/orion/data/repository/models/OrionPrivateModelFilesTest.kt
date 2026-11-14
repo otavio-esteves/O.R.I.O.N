@@ -5,6 +5,8 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
+import java.nio.file.DirectoryStream
+import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.CancellationException
@@ -177,5 +179,97 @@ class OrionPrivateModelFilesTest {
         }
         assertEquals(OrionModelFileImport.Rejected(OrionModelFileFailure.LIMIT_EXCEEDED),
             store(temporary.newFolder()).stage(OrionExpectedModelFile(expected().sha256, 1024 * 1024 + 1), { error("Source opened") }))
+    }
+
+    @Test fun selectedRejectedArtifactRemovalIsBoundedAndMissingRepetitionStillSyncs() {
+        val root = temporary.newFolder()
+        var synced = 0
+        val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true },
+            syncDirectory = { synced++; it.force(true) })
+        files.stage(expected(), { ByteArrayInputStream(bytes) })
+        val other = File(root, "verified/" + "e".repeat(64) + ".gguf").also { it.writeText("preserved") }
+        assertEquals(OrionRejectedArtifactRemoval.REMOVED, files.removeRejectedArtifact(expected()))
+        assertFalse(File(root, "verified/${expected().sha256}.gguf").exists())
+        assertEquals("preserved", other.readText())
+        assertEquals(1, synced)
+        assertEquals(OrionRejectedArtifactRemoval.REMOVED, files.removeRejectedArtifact(expected()))
+        assertEquals(2, synced)
+    }
+
+    @Test fun selectedRejectedArtifactRemovalRefusesLinksAndNonregularFiles() {
+        val root = temporary.newFolder()
+        val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true }, syncDirectory = {})
+        files.cleanupInterruptedBatch()
+        val victim = temporary.newFile().also { it.writeBytes(bytes) }
+        val selected = File(root, "verified/${expected().sha256}.gguf")
+        Files.createSymbolicLink(selected.toPath(), victim.toPath())
+        assertEquals(OrionRejectedArtifactRemoval.UNSAFE_PATH, files.removeRejectedArtifact(expected()))
+        assertTrue(Files.isSymbolicLink(selected.toPath()))
+        assertArrayEquals(bytes, victim.readBytes())
+        Files.delete(selected.toPath())
+        assertTrue(selected.mkdir())
+        assertEquals(OrionRejectedArtifactRemoval.UNSAFE_PATH, files.removeRejectedArtifact(expected()))
+        assertTrue(selected.isDirectory)
+    }
+
+    @Test fun rejectedArtifactSyncFailureIsReportedAndCanBeExplicitlyRepeated() {
+        val root = temporary.newFolder()
+        var fail = true
+        val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true },
+            syncDirectory = { if (fail) throw IOException("synthetic sync failure") })
+        files.stage(expected(), { ByteArrayInputStream(bytes) })
+        assertEquals(OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE, files.removeRejectedArtifact(expected()))
+        assertTrue(ready(root).isEmpty())
+        fail = false
+        assertEquals(OrionRejectedArtifactRemoval.REMOVED, files.removeRejectedArtifact(expected()))
+    }
+
+    @Test fun rejectedRemovalNeverFollowsAParentReplacedAfterTheRegularFileCheck() {
+        for (component in listOf("verified", "root")) {
+            val root = temporary.newFolder()
+            val outside = temporary.newFolder()
+            val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true }, syncDirectory = {})
+            files.stage(expected(), { ByteArrayInputStream(bytes) })
+            val replaced = if (component == "verified") File(root, "verified") else root
+            val suffix = if (component == "verified") "${expected().sha256}.gguf" else "verified/${expected().sha256}.gguf"
+            val external = File(outside, suffix).also { check(it.parentFile.mkdirs() || it.parentFile.isDirectory); it.writeBytes(bytes) }
+            val backup = File(replaced.parentFile, replaced.name + "_original")
+            var checks = 0
+            var swapped = false
+            try {
+                val result = files.removeRejectedArtifact(expected()) {
+                    if (++checks == 2) {
+                        check(replaced.renameTo(backup))
+                        Files.createSymbolicLink(replaced.toPath(), outside.toPath())
+                        swapped = true
+                    }
+                }
+                assertTrue(swapped)
+                assertTrue("External file was unlinked through a replaced parent", external.isFile)
+                assertArrayEquals(bytes, external.readBytes())
+                assertEquals(OrionRejectedArtifactRemoval.UNSAFE_PATH, result)
+                assertTrue(File(backup, suffix).isFile)
+            } finally {
+                if (Files.isSymbolicLink(replaced.toPath())) Files.delete(replaced.toPath())
+                if (backup.isDirectory) check(backup.renameTo(replaced))
+            }
+        }
+    }
+
+    @Test fun removalWithoutSecureDirectorySupportRefusesBeforeUnlink() {
+        val root = temporary.newFolder()
+        var synced = false
+        val files = OrionPrivateModelFiles(root, 1024 * 1024, 100, OrionModelFileValidator { true },
+            syncDirectory = { synced = true }, openDirectory = { path ->
+                val delegate = Files.newDirectoryStream(path)
+                object : DirectoryStream<Path> {
+                    override fun iterator(): MutableIterator<Path> = delegate.iterator()
+                    override fun close() = delegate.close()
+                }
+            })
+        files.stage(expected(), { ByteArrayInputStream(bytes) })
+        assertEquals(OrionRejectedArtifactRemoval.STORAGE_UNAVAILABLE, files.removeRejectedArtifact(expected()))
+        assertArrayEquals(bytes, ready(root).single().readBytes())
+        assertFalse(synced)
     }
 }
