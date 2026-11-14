@@ -40,3 +40,17 @@ outside functional ownership, then checks the current guard while publishing to
 the existing bounded buffer. Stuck sampling keeps the global slot occupied; new
 or closed clients do not create another worker. Counter overflow/contention is
 reported conservatively. Publication remains technical, ephemeral and untrusted.
+
+AUTHOR HANDOFF: Regression-first commit supplies the queued/outer-timeout cases
+before implementation. The fix supplies eight focused JVM dispatcher/guard cases
+and two additional Android integration cases (client total32), preserves the ten
+existing pure classifier/buffer cases, and adapts prior evidence assertions for
+asynchronous delivery. Canonical execution remains root-owned and pending; no
+build/runtime/physical result is claimed here. Static source/whitespace review
+checks no new Cortex RPC or synchronous diagnostic Clock call in cleanup.
+
+RECOVERY/SECURITY/MIGRATION: Ephemeral MAIN-only diagnostics; no durable schema,
+replay, recovery or authority changes. Numeric generations are local to this
+instance/process, can repeat after MAIN death, and are not authentication. No
+content is retained. Provider hangs consume the one slot indefinitely; busy/drop
+counters state missing coverage. No heavy/profile/physical/soak gate is closed.
