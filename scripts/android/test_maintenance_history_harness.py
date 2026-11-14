@@ -69,14 +69,18 @@ class MaintenanceHistoryTest(unittest.TestCase):
         self.assertEqual(10148, HISTORY.own_uid(lambda *a: "package:network.orion.test uid:10149\npackage:network.orion uid:10148"))
         with self.assertRaises(ValueError): HISTORY.own_uid(lambda *a: "package:network.orion.test uid:10149")
 
-    def exercise(self, gap=False, interrupted=False, empty=False, mismatch=False):
+    def exercise(self, gap=False, interrupted=False, empty=False, mismatch=False, timing=None):
         clock = [0.0]; event = self.event(); event["origin"] = "HEARTBEAT"
         later = self.event(2); later["origin"] = "HEARTBEAT"
-        calls = []; baseline_hash = "a" * 64
+        calls = []; baseline_hash = "a" * 64; identities = 0
         def adb(*args):
+            nonlocal identities
             calls.append(args)
             if args[-1] == "ro.kernel.qemu": return "1"
-            if args[-1] == "ro.serialno": return "synthetic"
+            if args[-1] == "ro.serialno":
+                identities += 1
+                if timing == "END_WINDOW" and identities == 2: clock[0] += 11
+                return "synthetic"
             if args[:3] == ("shell", "pm", "path"): return "package:/data/app/synthetic/base.apk"
             if args[:2] == ("shell", "sha256sum"):
                 return ("b" if mismatch and clock[0] >= 10 else "a") * 64 + "  /data/app/synthetic/base.apk"
@@ -85,6 +89,7 @@ class MaintenanceHistoryTest(unittest.TestCase):
             if args[0] == "logcat":
                 self.assertIn("--uid=10148", args); self.assertIn("orion_maintenance:I", args)
                 if gap and clock[0] == 5: raise subprocess.TimeoutExpired("synthetic", 10)
+                if timing == "READ_IN_PROGRESS": clock[0] += 11
                 if empty: return ""
                 return json.dumps(event) + ("\n" + json.dumps(later) if clock[0] >= 5 else "")
             self.fail("Unexpected non-read-only command: " + repr(args))
@@ -115,6 +120,16 @@ class MaintenanceHistoryTest(unittest.TestCase):
         self.assertFalse(report["queueHistoryAvailable"])
         self.assertEqual(0, report["heartbeatPassesFirstSeenAfterBaseline"])
         self.assertNotIn("actionUnknown", content)
+
+    def test_long_read_or_final_endpoint_gap_never_completes_history(self):
+        for reason in ("READ_IN_PROGRESS", "END_WINDOW"):
+            with self.subTest(reason=reason):
+                report, content = self.exercise(timing=reason)
+                self.assertEqual("INCOMPLETE", report["result"])
+                self.assertEqual({reason: 1}, report["samplingGapReasons"])
+                self.assertEqual("SYNTHETIC_INJECTED", report["hostTiming"]["clockSource"])
+                self.assertNotEqual("PHYSICAL_OBSERVATION_ONLY", report["androidRuntimeEvidence"])
+                if reason == "END_WINDOW": self.assertEqual(10, report["elapsedHostSeconds"])
 
     def test_transport_identity_loss_and_interruptions_remain_incomplete(self):
         for options in ({"gap": True}, {"interrupted": True}, {"mismatch": True}):

@@ -7,7 +7,18 @@ Runtime protocol: [F4 observability](F4-Observability.md).
 `orion_maintenance` tag through host ADB. It never starts MAIN, opens Room, exports
 raw logs, changes settings, forces jobs or revives a stopped package. Device/APK/UID
 identity is checked at both endpoints; a replacement-and-return between those
-checks is not ruled out. Duration and cadence use the host monotonic clock.
+checks is not ruled out. New runs use Linux HOST `CLOCK_BOOTTIME` nanoseconds,
+including suspend, with explicit source/session/hashed boot identity. Missing,
+regressed or changed-boot timing fails closed. The common
+[HOST timing contract](F4-SoakObservation.md) defines `hostTiming`, typed failures
+and `samplingGapReasons` for gaps between polls, during a slow read, and at the end
+check. The old per-sample `elapsedHostSeconds` remains the poll start; new integer
+`startedElapsedNanoseconds`, `collectionNanoseconds` and `elapsedNanoseconds`
+record the start, read duration and completion relative to the window. Report
+`elapsedHostSeconds`/`elapsedNanoseconds` end at the last completed poll, excluding
+endpoint identity work. Injected clocks are explicitly synthetic/unverified and
+never labeled physical timing. Older evidence retains its original recorded clock;
+this change supplies no new physical, real suspend or 24-hour result.
 
 ```bash
 python3 scripts/android/record-maintenance-history.py \
