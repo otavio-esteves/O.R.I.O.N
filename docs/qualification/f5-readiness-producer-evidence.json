@@ -187,6 +187,15 @@
       "result": "EXPECTED_REJECTION",
       "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8/physical-mismatch.txt",
       "logSha256": "f2c22441afdb82f6f69bc546986a3574b8026fc2f43ee6ff0ba8b51c8e037c77"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "INTEGRATED_HOST_HARNESS_315_CASES",
+      "result": "PASS",
+      "validatedHead": "25109eb480f8a9cecf1df87319f3a5ee416e2320",
+      "command": "docker compose run --rm host-harness-check",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/readiness-integrated-final-host.log",
+      "logSha256": "c8318675d7b40bb3a8e3ebb1408bce65d9f6256f25618f44b02c5c9b452cb29f"
     }
   ],
   "artifactSets": {

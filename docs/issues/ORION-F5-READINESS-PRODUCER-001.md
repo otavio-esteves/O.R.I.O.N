@@ -82,3 +82,9 @@ attempts; ordinary native probes run separately and intentionally start AI.
 Default Debug/test and ordinary R8 target/test/mapping exclude the readiness bridge.
 The original cached-null receipt and APKs remain retained. No physical observation,
 production profile or soak approval; see [the evidence](../qualification/f5-readiness-producer-evidence.json).
+
+After integrating the separately reviewed journal store from main, canonical
+Docker HOST harness passed all 315 cases at 25109eb. The readiness runtime/source
+files remain identical to the earlier fixed Android/R8 evidence. Raw pidof output
+and command status from an additional clean qualification readiness observation
+are retained, and the Release APK is frozen beside its matching manifest.
