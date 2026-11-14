@@ -11,7 +11,9 @@ FILES ALLOWED: New app/src/exitEvidenceCaptureTarget/** bridge/keep;
 app/src/exitEvidenceCaptureAndroidTest/** framework runner; new
 scripts/android/f5_exit_capture_protocol.py and
 test_f5_exit_capture_protocol_harness.py; docs/qualification/F5-ExitCapture.md;
-this work package. Root owns shared Gradle/CI wiring exclusively.
+this work package. Root integration also owns app/build.gradle.kts,
+.github/workflows/ci.yml, docs/qualification/F5-QualificationChecklist.md and
+docs/qualification/f5-exit-capture-evidence.json for mode wiring and evidence.
 
 CONTRACTS INVOLVED: Public ApplicationExitInfo reads, current exit classifier,
 AndroidOrionClock/BOOT_COUNT, existing IOrionCortex getProtocolInfo/getStatus/
@@ -30,7 +32,7 @@ are retained without descriptions/traces. HOST tests pass. Root performs all
 canonical builds/device checks separately. Every receipt remains NOT_QUALIFIED,
 all authority/gate flags false; offline validation stays UNVERIFIED_INPUT.
 
-OUT OF SCOPE: Gradle/CI/shared docs edits, limiter-v1 changes, load/infer/import/
+OUT OF SCOPE: Limiter-v1 changes, load/infer/import/
 cancel/unload/run, synthetic policy/governor/fence/revision, stress, native model
 work, device execution, qualification/profile approval or gate closure.
 
@@ -59,3 +61,25 @@ Canonical compilation reported two nullable Java property warnings. Validation
 now refuses an unavailable initial architecture explicitly; the later output read
 uses a safe nullable path and records UNAVAILABLE, never a guessed architecture.
 HOST source/parser regressions cover both paths; the author did not run a build.
+
+CENTRAL VALIDATION: Canonical Docker HOST harness passed all 348 cases (315
+preceding plus 33 capture contracts). Fixed opt-in R8/native packaging and test
+assembly passed in 6m33s without Kotlin warnings; normal Debug/Release/test APKs
+passed in 2m37s and ordinary R8 scope in 2m22s. Actual Gradle configuration refuses
+the standalone capture flag and simultaneous readiness/capture. Final APKs and
+mapping exclude both diagnostics from normal scopes. Ordinary DEX/native/manifest/
+resources and complete test APK match the previously executed three-probe scope;
+only target version-control metadata changed, so those probes were not repeated.
+
+Owned API35/x86_64/4KiB emulator: actual capture reported AI_NOT_AVAILABLE with
+CONNECTION_TIMEOUT, no live rows and a sanitized TRUNCATED historical snapshot.
+Raw pidof returned exit1/empty after the attempts; no AI was auto-started. A
+physical declaration was rejected before capture. Both actual receipts passed
+the closed validator in canonical Docker, remaining UNVERIFIED_INPUT/NOT_QUALIFIED.
+The initial APK and warnings were retained separately. See [the evidence](../qualification/f5-exit-capture-evidence.json).
+
+Live endpoint/death/correlation paths remain HOST-fixture coverage only. No real
+MemoryLimiter stimulus, current model/policy/fence, physical identity/profile
+qualification or soak is claimed. The shared qualification checklist now links
+implemented preparation separately from remaining heavy producer/configuration/
+performance/physical work; F4/F5 gates remain open.
