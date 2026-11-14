@@ -72,6 +72,34 @@ class OrionCortexUnloadDiagnosticsTest {
         assertEquals(OrionCortexUnloadOutcome.UNLOADED_OBSERVED, nextBuffer.drain().observations.single().outcome)
     }
 
+    @Test fun `permanent disable invalidates blocked pending ticket and cannot be revived by later updates`() {
+        idle()
+        val clock = Clock(at, block = true)
+        val owner = owner()
+        val buffer = OrionCortexUnloadObservationBuffer()
+        assertTrue(OrionCortexUnloadDiagnosticDispatcher.submit(OrionCortexUnloadDiagnosticTicket(clock, owner, facts(), buffer)))
+        try {
+            assertTrue(clock.entered.await(1, TimeUnit.SECONDS))
+            owner.disable()
+            assertTrue(owner.isDisabled())
+            owner.update(selected.copy(endpointVersion = 4, executionEpoch = 2))
+            assertTrue(owner.isDisabled())
+        } finally { clock.release.countDown(); idle() }
+        assertEquals(OrionCortexUnloadOutcome.OBSERVATION_UNAVAILABLE, buffer.drain().observations.single().outcome)
+        // Neither a fresh matching stamp nor another finite worker job can reset disable.
+        owner.update(selected)
+        val later = Clock(at)
+        assertTrue(OrionCortexUnloadDiagnosticDispatcher.submit(OrionCortexUnloadDiagnosticTicket(later, owner, facts(), buffer)))
+        idle()
+        assertEquals(1, later.calls.get())
+        assertTrue(owner.isDisabled())
+        assertEquals(OrionCortexUnloadOutcome.OBSERVATION_UNAVAILABLE, buffer.drain().observations.single().outcome)
+        // The global slot still serves a different healthy owner, rather than being abandoned.
+        assertTrue(OrionCortexUnloadDiagnosticDispatcher.submit(OrionCortexUnloadDiagnosticTicket(Clock(at), this.owner(), facts(), buffer)))
+        idle()
+        assertEquals(OrionCortexUnloadOutcome.UNLOADED_OBSERVED, buffer.drain().observations.single().outcome)
+    }
+
     @Test fun `same endpoint cannot confirm old cleanup after another actual execution starts`() {
         idle()
         val clock = Clock(at, block = true)

@@ -42,7 +42,7 @@ or closed clients do not create another worker. Counter overflow/contention is
 reported conservatively. Publication remains technical, ephemeral and untrusted.
 
 AUTHOR HANDOFF: Regression-first commit supplies the queued/outer-timeout cases
-before implementation. The fix supplies eight focused JVM dispatcher/guard cases
+before implementation. The fix supplies nine focused JVM dispatcher/guard cases
 and two additional Android integration cases (client total32), preserves the ten
 existing pure classifier/buffer cases, and adapts prior evidence assertions for
 asynchronous delivery. Canonical execution remains root-owned and pending; no
@@ -54,3 +54,15 @@ replay, recovery or authority changes. Numeric generations are local to this
 instance/process, can repeat after MAIN death, and are not authentication. No
 content is retained. Provider hangs consume the one slot indefinitely; busy/drop
 counters state missing coverage. No heavy/profile/physical/soak gate is closed.
+
+GUARD FAILURE HARDENING: Owner construction and all optional connection/endpoint/
+execution version boxing and stamp allocation are contained independently of
+turn/bind/cancel/close/release work. A failed update first sets a permanent
+primitive volatile disabled flag without allocation, clock, RPC or guard lock;
+accounting is best-effort and cannot escape. Pending or later tickets can publish only
+OBSERVATION_UNAVAILABLE instead of validating stale versions; allocation/recording
+failure can still drop a record with the existing conservative loss accounting. Initialization
+failure leaves owner/dispatcher absent. A ninth dispatcher JVM case blocks the
+real shared worker clock, disables the owner, proves updates/new tickets cannot
+revive confirmation, and verifies slot release plus a healthy different owner.
+No real OOM, injected allocator/callback or author build/device run is used.

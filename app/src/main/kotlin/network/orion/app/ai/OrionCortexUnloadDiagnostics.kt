@@ -27,8 +27,13 @@ internal data class OrionCortexUnloadFacts(
 internal class OrionCortexUnloadObservationOwner {
     private val lock = Any()
     private var state = OrionCortexUnloadOwnerStamp(0, 0, 0, false)
+    @Volatile private var disabled = false
 
-    fun update(value: OrionCortexUnloadOwnerStamp) = synchronized(lock) { state = value }
+    /** Permanent fail-closed state; no allocation, monitor acquisition or provider call. */
+    fun disable() { disabled = true }
+    fun isDisabled(): Boolean = disabled
+
+    fun update(value: OrionCortexUnloadOwnerStamp) = synchronized(lock) { if (!disabled) state = value }
     fun snapshot(): OrionCortexUnloadOwnerStamp = synchronized(lock) { state }
 
     fun publish(facts: OrionCortexUnloadFacts, checkedAt: MonotonicInstant?, buffer: OrionCortexUnloadObservationBuffer) {
@@ -36,6 +41,7 @@ internal class OrionCortexUnloadObservationOwner {
             val selected = facts.owner
             val current = state
             val outcome = when {
+                disabled -> OrionCortexUnloadOutcome.OBSERVATION_UNAVAILABLE
                 facts.noEndpoint -> OrionCortexUnloadOutcome.NO_ENDPOINT
                 facts.failure != null -> facts.failure
                 facts.unloadedReply -> when {
@@ -55,7 +61,8 @@ internal class OrionCortexUnloadObservationOwner {
             }
             buffer.offer(OrionCortexUnloadObservation(facts.clientScope, selected.connectionEpoch?.takeIf { it > 0 }, facts.knownAiPid,
                 facts.deadline?.start, if (facts.unloadedReply || facts.failure != null || facts.noEndpoint) checkedAt else facts.pollAt,
-                outcome, selected.executionEpoch?.takeIf { it > 0 }))
+                if (disabled) OrionCortexUnloadOutcome.OBSERVATION_UNAVAILABLE else outcome,
+                selected.executionEpoch?.takeIf { it > 0 }))
         }
     }
 }
