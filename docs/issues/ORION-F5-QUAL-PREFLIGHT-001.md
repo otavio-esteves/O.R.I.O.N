@@ -1,5 +1,7 @@
 # ORION-F5-QUAL-PREFLIGHT-001 — Read-only physical qualification preflight
 
+Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/93
+
 OBJECTIVE: Validate selected source/artifact/model provenance and observable target
 identity, then emit a blocked physical execution plan. Never run an emulator-only
 fixture, approve a profile or mutate a device to manufacture qualification.
@@ -46,3 +48,9 @@ Python AST, documented local links/CLI flags and whitespace checks passed. The
 memory-review link is supplied by companion commit `ada2323`. No Docker, Android
 runtime, physical or soak execution was performed by this package; root integration
 must run the canonical host-harness-check with this test module included.
+
+Integrated validation: `docker compose run --rm host-harness-check` passed all
+159 cases (127 preceding contracts plus 32 preflight contracts) in the canonical
+container. Source-review/link checks and exact script/log hashes are recorded in
+[f5-physical-preflight-evidence.json](../qualification/f5-physical-preflight-evidence.json).
+No device, physical case, production profile or soak was executed or approved.
