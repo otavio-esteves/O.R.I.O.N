@@ -139,10 +139,13 @@ normal return can contain a known partial prefix; exceptions contain no metrics.
 
 ## Tests and outstanding evidence
 
-Fifteen JVM tests exercise this exact decoder/holder: EOG, max-one, cancellation,
+Sixteen JVM tests exercise this exact decoder/holder: EOG, max-one, cancellation,
 successful prefix versus unknown partial work, format/flag/type bounds, uncalled
 versus zero duration, failure/no stale observation, immutable snapshots and one-shot
 concurrent claim. The module adds only the related junit4 test dependency.
+The cancellation regression rejects decode work above min(normal callback returns,
+maxTokens-1), while preserving a cancelled invocation after a successful decode
+when maxTokens is larger. This bound follows the current loop for every finish.
 
 One new Android boundary case covers unloaded/argument rejection and fresh holders.
 Five optional real-model Android cases compare greedy observed/default bytes and

@@ -47,8 +47,14 @@ discard every array slot while preserving finish. Counter/duration definitions,
 partial-work limitations and API-return synchronization scope are specified in
 [the technical note](../qualification/F5-NativeLocalMetrics.md).
 
-VALIDATION: Fifteen JVM tests and six new Android cases supplied; not yet executed
+VALIDATION: Sixteen JVM tests and six new Android cases supplied; not yet executed
 by the author. Model-dependent cases preserve explicit fixture skip behavior.
 Lightweight diff whitespace, local Markdown links and private native/Kotlin
 array-size/publication-bit consistency checks passed. Root centralizes all
 Gradle/Docker/native/R8/device execution. No physical/profile/gate outcome.
+
+PEER REVIEW FOLLOW-UP: A CANCELLED result with maxTokens=1 could incorrectly
+accept one decode call. The native loop never evaluates the final allowed output
+token. A test-only commit preserves that failing case and the valid limit=8
+post-decode cancellation control; the fix bounds decode calls/tokens by
+min(callbacksReturnedNormally, maxTokens-1) for every finish. No JNI changes.

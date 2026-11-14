@@ -102,7 +102,7 @@ internal fun decodeLlamaGenerationObservation(raw: LongArray?, code: Int?, maxTo
             return OrionLlamaNativeWork(calls, succeeded, submitted, successful, unknown, duration(nanos, calls))
         }
         val prefill = work(7, 15, 18, prompt ?: 0)
-        val decode = work(11, 16, 19, returned)
+        val decode = work(11, 16, 19, minOf(returned, maxTokens - 1))
         require(decode.callsAttempted == decode.tokensSubmitted && decode.callsSucceeded == decode.tokensInSuccessfulCalls)
         require(sampled == 0 || prompt != null && prefill.tokensInSuccessfulCalls == prompt && !prefill.partialWorkUnknown)
         if (finish == OrionLlamaFinish.SUCCEEDED) {
