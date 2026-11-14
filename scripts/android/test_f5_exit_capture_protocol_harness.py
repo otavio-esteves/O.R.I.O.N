@@ -219,6 +219,22 @@ class ExitCaptureProtocolTest(unittest.TestCase):
         with self.assertRaises(protocol.Rejected):
             validate(value)
 
+    def test_subsequent_live_reads_respect_requested_interval_without_delaying_first_read(self):
+        for gap in (10, 249, 250, 251):
+            value = fixture(live=True)
+            value["config"]["observations"] = 2
+            start = value["liveObservations"][0]["readCompletedElapsed"] + gap
+            value["liveObservations"].append(dict(value["liveObservations"][0], readStartedElapsed=start,
+                                                  sampledElapsed=start + 5, readCompletedElapsed=start + 10,
+                                                  observedWallMillis=10000 + start + 10 - 1000))
+            with self.subTest(gap=gap):
+                if gap >= value["config"]["intervalMillis"]:
+                    self.assert_valid(value)
+                else:
+                    with self.assertRaisesRegex(protocol.Rejected, "LIVE_INTERVAL_INVALID"):
+                        validate(value)
+        self.assert_valid(fixture(live=True))  # First read has no preceding sleep.
+
     def test_result_counts_and_binding_cleanup_cannot_claim_an_unobserved_live_process(self):
         for field, changed in (("result", "AI_STILL_ALIVE"), ("binderDeathCleanup", "UNLINKED")):
             value = fixture()

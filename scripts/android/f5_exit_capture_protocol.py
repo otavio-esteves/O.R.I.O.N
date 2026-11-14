@@ -119,7 +119,7 @@ def validate_json(data):
     if same_boot:
         require(start["elapsedMillis"] <= end["elapsedMillis"], "WINDOW_INVALID")
     previous, previous_wall, backward, pid = start["elapsedMillis"], start["wallMillis"], False, None
-    for row in live:
+    for index, row in enumerate(live):
         fields(row, "pid processName bootCount readStartedElapsed readCompletedElapsed sampledElapsed observedWallMillis serviceState nativeRuntimeLoaded nativeValidationCompleted".split())
         integer(row["pid"], 1, 2**31 - 1)
         require(row["pid"] != value["mainPid"] and (pid is None or pid == row["pid"]) and row["processName"] == AI, "LIVE_IDENTITY_INVALID")
@@ -130,6 +130,8 @@ def validate_json(data):
             integer(row[key])
         require(previous <= row["readStartedElapsed"] <= row["sampledElapsed"] <= row["readCompletedElapsed"] and
                 row["readCompletedElapsed"] - row["readStartedElapsed"] < 1000, "LIVE_TIME_INVALID")
+        if index > 0:
+            require(row["readStartedElapsed"] - previous >= config["intervalMillis"], "LIVE_INTERVAL_INVALID")
         if same_boot:
             require(row["readCompletedElapsed"] <= end["elapsedMillis"], "LIVE_TIME_INVALID")
         previous = row["readCompletedElapsed"]

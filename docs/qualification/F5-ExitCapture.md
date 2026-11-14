@@ -123,6 +123,8 @@ retains explicit status/nulls rather than fake zeros.
 PIDs are positive signed 32-bit and live AI differs from MAIN. Live rows retain
 one PID/boot, ordered read windows, sampled time inside each read window and read
 duration <1000ms; this is a defensive format bound, not a calibrated memory budget.
+Each read after the first starts at least intervalMillis after the preceding read
+completed, matching the producer's sleep; the first read has no artificial delay.
 The record digest is SHA256 of UTF-8 fields in the following pipe-separated order:
 `pid|processName|timestampWallMillis|reason|descriptionEvidence|classification`.
 Names/categories/classifications are closed; no pipe ambiguity or raw content is
