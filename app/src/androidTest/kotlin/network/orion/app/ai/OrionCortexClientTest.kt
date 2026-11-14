@@ -17,10 +17,14 @@ import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -37,11 +41,24 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class OrionCortexClientTest {
     private class Clock : OrionClock {
-        var mark = MonotonicInstant(BootSessionId(1), 1_000)
+        @Volatile var mark = MonotonicInstant(BootSessionId(1), 1_000)
         var failNextRead = false
         var slowNextReadMillis = 0L
         var markAfterSlowRead: MonotonicInstant? = null
+        @Volatile var blockDiagnostic = false
+        @Volatile var diagnosticCallerThread: String? = null
+        val diagnosticEntered = CountDownLatch(1)
+        val releaseDiagnostic = CountDownLatch(1)
+        val diagnosticClaimed = AtomicBoolean()
+        val secondClockObserved = CountDownLatch(1)
         override fun monotonicNow(): MonotonicInstant {
+            val name = Thread.currentThread().name
+            if (name == "orion_test_second") secondClockObserved.countDown()
+            if (blockDiagnostic && (name == diagnosticCallerThread || name == "orion_cortex_unload_diagnostic") &&
+                diagnosticClaimed.compareAndSet(false, true)) {
+                diagnosticEntered.countDown()
+                check(releaseDiagnostic.await(10, TimeUnit.SECONDS))
+            }
             if (failNextRead) { failNextRead = false; error("Scripted observation clock unavailable") }
             if (slowNextReadMillis > 0) {
                 val pause = slowNextReadMillis
@@ -339,6 +356,76 @@ class OrionCortexClientTest {
                 assertEquals(0, endpoint.healthQueries.get()); assertEquals(listOf(true), fixture.availability.toList())
                 if (observing) assertEquals(OrionCortexUnloadOutcome.DEADLINE_EXPIRED, buffer.drain().observations.single().outcome)
                 else assertTrue(buffer.drain().observations.isEmpty())
+            }
+        }
+    }
+
+    @Test fun blockedDiagnosticCannotExpireNextRequestOrHoldItsTurn() = runBlocking {
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
+            val replyEntered = CountDownLatch(1)
+            val releaseReply = CountDownLatch(1)
+            val replies = AtomicInteger()
+            fixture.context.unloadReply = {
+                if (replies.incrementAndGet() == 1) {
+                    replyEntered.countDown()
+                    check(releaseReply.await(5, TimeUnit.SECONDS))
+                    fixture.clock.diagnosticCallerThread = Thread.currentThread().name
+                    fixture.clock.blockDiagnostic = true
+                }
+                OrionCortexWire.reply("UNLOADED")
+            }
+            Executors.newSingleThreadExecutor { Thread(it, "orion_test_first") }.asCoroutineDispatcher().use { firstThread ->
+                Executors.newSingleThreadExecutor { Thread(it, "orion_test_second") }.asCoroutineDispatcher().use { secondThread ->
+                    val first = async(firstThread) { fixture.run() }
+                    var second: kotlinx.coroutines.Deferred<OrionInferenceStatus>? = null
+                    try {
+                        assertTrue(replyEntered.await(5, TimeUnit.SECONDS))
+                        val next = fixture.request(deadline = fixture.clock.mark.deadlineAfter(500))
+                        val queued = async(secondThread) { fixture.run(next) }
+                        second = queued
+                        assertTrue(fixture.clock.secondClockObserved.await(5, TimeUnit.SECONDS))
+                        releaseReply.countDown()
+                        assertTrue(fixture.clock.diagnosticEntered.await(5, TimeUnit.SECONDS))
+                        // If diagnostics still own the turn, this request cannot complete. Advancing
+                        // only the fixture clock then exposes the queued deadline effect explicitly.
+                        val timely = withTimeoutOrNull(500) { queued.await() }
+                        if (timely == null) fixture.clock.mark = MonotonicInstant(BootSessionId(1), 1500)
+                        fixture.clock.releaseDiagnostic.countDown()
+                        assertEquals(OrionInferenceTerminal.SUCCEEDED, withTimeout(3_000) { first.await() }.terminal)
+                        assertEquals(OrionInferenceTerminal.SUCCEEDED,
+                            (timely ?: withTimeout(3_000) { queued.await() }).terminal)
+                        assertEquals(2, fixture.context.endpoints.single().loads.get())
+                        assertEquals(0, fixture.context.unbinds.get())
+                    } finally {
+                        releaseReply.countDown(); fixture.clock.releaseDiagnostic.countDown()
+                        first.cancelAndJoin(); second?.cancelAndJoin()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test fun blockedDiagnosticCannotChangeOuterCallerTimeout() = runBlocking {
+        val buffer = OrionCortexUnloadObservationBuffer()
+        Fixture(buffer).use { fixture ->
+            fixture.context.unloadReply = {
+                fixture.clock.diagnosticCallerThread = Thread.currentThread().name
+                fixture.clock.blockDiagnostic = true
+                OrionCortexWire.reply("UNLOADED")
+            }
+            Executors.newSingleThreadExecutor { Thread(it, "orion_test_first") }.asCoroutineDispatcher().use { caller ->
+                val result = async(caller) { withTimeoutOrNull(300) { fixture.run() } }
+                try {
+                    assertTrue(fixture.clock.diagnosticEntered.await(5, TimeUnit.SECONDS))
+                    val completedWithoutDiagnostic = withTimeoutOrNull(700) { result.await() }
+                    fixture.clock.releaseDiagnostic.countDown()
+                    val actual = completedWithoutDiagnostic ?: withTimeout(3_000) { result.await() }
+                    assertNotNull("The diagnostic changed the outer timeout", actual)
+                    assertEquals(OrionInferenceTerminal.SUCCEEDED, actual?.terminal)
+                    assertEquals(0, fixture.context.unbinds.get())
+                    assertEquals(1, fixture.context.endpoints.single().unloads.get())
+                } finally { fixture.clock.releaseDiagnostic.countDown(); result.cancelAndJoin() }
             }
         }
     }
