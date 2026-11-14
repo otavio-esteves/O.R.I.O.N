@@ -12,6 +12,10 @@ val nativeQualificationStatus = nativeStatusMatches.single().groupValues[1]
 val qualificationFlag = providers.gradleProperty("orionQualificationRelease").orElse("false").get()
 check(qualificationFlag in setOf("true", "false")) { "orionQualificationRelease must be true or false." }
 val qualificationEnabled = qualificationFlag == "true"
+val physicalBaselineFlag = providers.gradleProperty("orionPhysicalBaseline").orElse("false").get()
+check(physicalBaselineFlag in setOf("true", "false")) { "orionPhysicalBaseline must be true or false." }
+val physicalBaselineEnabled = physicalBaselineFlag == "true"
+check(!physicalBaselineEnabled || qualificationEnabled) { "Physical baseline requires the separate qualification identity." }
 
 android {
     namespace = "network.orion.app"
@@ -22,9 +26,11 @@ android {
         applicationId = "network.orion"
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
-        testInstrumentationRunner = if (qualificationEnabled)
-            "network.orion.app.compatibility.OrionQualificationInstrumentation"
-        else "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = when {
+            physicalBaselineEnabled -> "network.orion.app.compatibility.OrionPhysicalBaselineInstrumentation"
+            qualificationEnabled -> "network.orion.app.compatibility.OrionQualificationInstrumentation"
+            else -> "androidx.test.runner.AndroidJUnitRunner"
+        }
         versionCode = 6
         versionName = "0.5.0-development"
         resValue("string", "orion_native_qualification_status", nativeQualificationStatus)
@@ -57,6 +63,12 @@ android {
         sourceSets.getByName("androidTest").java.directories.clear()
         sourceSets.getByName("androidTest").kotlin.directories.clear()
         sourceSets.getByName("androidTest").java.directories.add("src/qualificationAndroidTest/java")
+    }
+    if (physicalBaselineEnabled) {
+        sourceSets.getByName("qualificationRelease").kotlin.directories.add("src/physicalBaselineTarget/kotlin")
+        buildTypes.getByName("qualificationRelease").proguardFiles("src/physicalBaselineTarget/proguard-rules.pro")
+        sourceSets.getByName("androidTest").java.directories.clear()
+        sourceSets.getByName("androidTest").java.directories.add("src/physicalBaselineAndroidTest/java")
     }
 }
 
