@@ -15,6 +15,9 @@ Memory-specific source review, measurement boundaries and the proposed acquisiti
 protocol are in [F5-MemoryEvidence.md](F5-MemoryEvidence.md). They do not approve a
 model/resource profile.
 
+The opt-in unloaded baseline has a separate [HOST recorder procedure](F5-PhysicalBaselineRecorder.md),
+including its exact model-free source manifest and non-qualifying results.
+
 ## Reconcile the source before starting work
 
 The historical local branch ending at `f68ed6d` contained
@@ -262,3 +265,75 @@ python3 scripts/android/test_f5_physical_preflight_harness.py
 
 They establish preflight contracts only. Integration runs the same test module in
 the canonical `host-harness-check` container; this package itself uses no device.
+
+## Prepared unloaded resource baseline
+
+[ORION-F5-PHYSICAL-BASELINE-001](../issues/ORION-F5-PHYSICAL-BASELINE-001.md) adds an
+explicit measurement scope to the existing separate qualification identity. It is
+not a model workload, physical inference test, memory-limiter stimulus or soak.
+
+```bash
+docker compose run --rm android-build \
+  -PorionQualificationRelease=true -PorionPhysicalBaseline=true \
+  :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest \
+  --max-workers=2
+```
+
+The flag requires qualificationRelease and selects a different framework-only
+runner. It includes a qualification-only bridge which calls the actual
+`supportedCortexInventory`, `OrionCortexMemoryTelemetry`,
+`OrionAndroidResourceObserver` and `AndroidOrionClock`. A bridge-specific keep rule
+exists only in this explicit scope; normal Debug/Release and the ordinary three
+R8 probes do not contain this bridge or keep rule. No new variant, ABI, process,
+permission, AIDL method or production profile is introduced. The qualification APK
+has no Debug voice probes; the measurement never removes components to make its
+inventory pass.
+
+This is the same variant output directory as the ordinary qualification APK.
+Freeze/copy both selected artifacts and hashes before changing flags or rebuilding;
+never relabel an ordinary probe APK as a baseline APK, or the reverse. Measurements
+of `network.orion.qualification` include this explicit bridge/instrumentation and
+do not qualify the production identity or optimized production footprint.
+
+This measurement is not a read-only device preflight: am instrument starts the
+separate APK and its normal Application bootstrap may create that identity's own
+Room/Keystore/technical WorkManager state. The Core can still be initializing
+during collection. Only the unloaded/native-runtime-free AI state is checked;
+the measurement does not attest a quiescent Core/device. It issues no model,
+inference or settings operation and does not touch the production identity.
+
+After the allocated physical target and exact installed qualification APK pair
+pass the HOST recorder's source/artifact/identity checks, its approved component is:
+
+```text
+network.orion.qualification.test/network.orion.app.compatibility.OrionPhysicalBaselineInstrumentation
+```
+
+The only accepted instrumentation arguments are `orionEnvironment=PHYSICAL_DEVICE`,
+`orionSampleCount` (1–10) and `orionSampleIntervalMs` (100–1000). The runner rejects
+unknown arguments, an emulator build, the wrong target identity, invalid limits or
+an unsupported manifest inventory before binding. Binding is bounded to five
+seconds; collection is bounded to thirty seconds and owns just one lightweight
+AI-service connection. There is no model file or model/profile parameter.
+
+The AI must report UNLOADED, no native runtime and no native validation before and
+after every sample. Busy/resident work is rejected, never cancelled or unloaded.
+Each row uses actual same-boot/PID-bound native-inclusive MAIN and AI self-PSS,
+their exact aggregate, system memory, battery, thermal, power-save, foreground and
+memory-pressure readings. Missing, stale, malformed or unavailable observations
+produce an incomplete result, never fabricated zero use. Only bounded technical
+metrics leave the target; no prompts, output, file paths, raw exit descriptions,
+traces or device serials are included.
+
+Schema 1 rows use `orionPhysicalBaselineSample`; the terminal summary uses
+`orionPhysicalBaselineSummary`. Samples are sequential and freshness is less than
+1000ms at completion. The summary reports
+`OBSERVATION_COMPLETE_REVIEW_REQUIRED`, `INCOMPLETE` or `REJECTED`, always with
+`NOT_QUALIFIED`, no heavy work, and false profile/production/F5/soak approval fields.
+An owned emulator can verify rejection; it cannot supply physical baseline values.
+No physical sample is claimed by compilation, HOST fixtures or the rejection case.
+The requested PHYSICAL_DEVICE argument is not an observation: rejected arguments,
+target identity or emulator builds retain environment UNVERIFIED in the runner's
+summary. The bridge revalidates the physical Build before any receipt as well.
+Every attempted bind is released even if bindService returns false or throws;
+NOT_REGISTERED cleanup is explicitly non-successful, never a completed observation.

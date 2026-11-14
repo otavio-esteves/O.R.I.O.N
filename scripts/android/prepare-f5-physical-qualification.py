@@ -67,7 +67,9 @@ def git(root, *args):
     return result.stdout.decode("utf-8", errors="strict")
 
 
-def source_identity(root, manifest):
+def source_identity(root, manifest, required_artifacts=frozenset({"app", "test", "model"})):
+    require(type(required_artifacts) in (set, frozenset) and required_artifacts in
+            (frozenset({"app", "test", "model"}), frozenset({"app", "test"})), "INVALID_REQUIRED_ARTIFACTS")
     root = Path(root).resolve()
     value = document(manifest)
     require(set(value) == {"schemaVersion", "sourceCommit", "files", "artifacts"} and
@@ -86,7 +88,7 @@ def source_identity(root, manifest):
         require(not selected.is_symlink() and selected.resolve().is_relative_to(root), "UNSAFE_SOURCE_MANIFEST")
         require(sha_file(selected, 256 * 1024**2) == digest, "SOURCE_HASH_MISMATCH")
     artifacts = value["artifacts"]
-    require(type(artifacts) is dict and set(artifacts) == {"app", "test", "model"} and
+    require(type(artifacts) is dict and set(artifacts) == required_artifacts and
             all(type(v) is str and SHA.fullmatch(v) for v in artifacts.values()), "INVALID_ARTIFACT_MANIFEST")
     return {"commit": value["sourceCommit"], "manifestSha256": sha_file(manifest), "trackedFiles": len(files)}, artifacts
 

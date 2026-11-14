@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F5-PHYSICAL-BASELINE-001",
+  "buildSourceHead": "bf9220a79bf1f2ea919b69323e6d4fef48af2736",
+  "sourceSha256": {
+    "app/build.gradle.kts": "82e464379c3ec29a8c731bde05a08106bf27efaf1c90b58b25fef4dd81e5c43b",
+    "app/src/physicalBaselineAndroidTest/java/network/orion/app/compatibility/OrionPhysicalBaselineInstrumentation.java": "7d8821653ff3b7611f4f63ff6f750b78b833fa60b67e946d1bf47fc8ce4ff2f5",
+    "app/src/physicalBaselineTarget/kotlin/network/orion/app/resources/OrionPhysicalBaselineBridge.kt": "0d6e7c49ad65aabdf3f5cb0de945f2a0a0c69494b3861ee2e990649e2f535f1d",
+    "app/src/physicalBaselineTarget/proguard-rules.pro": "33fb117c3de48c5f8aa087f458d90558bac69de4b16b55aa88ac8b96d2dd9f12",
+    "scripts/android/prepare-f5-physical-qualification.py": "1bf2bc26fa0ace474730faaa2f65cdaf6893c4a3c428d525efe3e2ef0cefa898",
+    "scripts/android/record-f5-physical-baseline.py": "a573ff1056b49b6cc42669666d27d35268e65b8d1d4111f9e46ca776a87679ef",
+    "scripts/android/test_f5_physical_baseline_harness.py": "66870bd8717b854170b7c7c2cc228901314622975db07026948f591e46658ffc",
+    "scripts/android/test_f5_physical_source_contract_harness.py": "a7352d5ee88572fcc54076ab5a43a760288b22f0375803dfbb1785dc5d18020b",
+    ".github/workflows/ci.yml": "6e93d1f6935c46ea5b03087ebdc1db4c7b9fa62be1ff9a66a86abf5cef2fc18c"
+  },
+  "physicalDeviceUsed": false,
+  "physicalSamplesCollected": 0,
+  "profileQualified": false,
+  "productionInferenceEnabled": false,
+  "fullF5GateClosed": false,
+  "fullSoakGateClosed": false,
+  "checks": [
+    {
+      "environment": "CONTAINER",
+      "kind": "INTEGRATED_HOST_HARNESS_195_CASES",
+      "result": "PASS",
+      "command": "docker compose run --rm host-harness-check",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/physical-baseline-host.log",
+      "logSha256": "1d9d712a19458030a52a9d138d542262126086214fe73b361b18ef1ecfbe951a"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "OPT_IN_R8_NATIVE_PACKAGE_AND_TEST_ASSEMBLY",
+      "result": "PASS",
+      "command": "docker compose run --rm android-build -PorionQualificationRelease=true -PorionPhysicalBaseline=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/physical-baseline-build.log",
+      "logSha256": "77c57c11104ce9564f4ee4038d9e1b82855932214da003a3f2e8537bf4aaa4ba"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "DEFAULT_CANONICAL_CHECK_AND_PACKAGES",
+      "result": "PASS",
+      "command": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest :ai:llama:assembleDebugAndroidTest :ai:service:assembleDebugAndroidTest --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/baseline-default-canonical.log",
+      "logSha256": "d649215b242c5c75ce6e25390dd0daba0bdd06a3c10a78ce37d168ffeea98f94"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "ORDINARY_QUALIFICATION_R8_AND_NATIVE_PACKAGE",
+      "result": "PASS",
+      "command": "docker compose run --rm android-build -PorionQualificationRelease=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/baseline-ordinary-r8.log",
+      "logSha256": "c2d6f0bdae2e2857b6b94479d4ae46353b8cfb840383d39d8ab2eb4a00923767"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "INVALID_FLAG_COMBINATION",
+      "result": "EXPECTED_REJECTION",
+      "exitCode": 1,
+      "command": "docker compose run --rm android-build -PorionPhysicalBaseline=true :app:help --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/baseline-invalid-flags.log",
+      "logSha256": "e1b12b1488ce38275ebdace5dfca45e70073db35bb011f9fcfe627a9922b8a75"
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "kind": "ORDINARY_R8_NATIVE_JNI_AND_STARTUP_PROBES",
+      "result": "PASS",
+      "tests": 3,
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/default-package/instrumentation.txt",
+      "logSha256": "37e62aadfd399063c588b748ec6f953afe3a2eb2eb1b906ce9ef20d5f37c753c"
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "kind": "PHYSICAL_ENVIRONMENT_GUARD",
+      "result": "EXPECTED_REJECTION",
+      "receipt": {
+        "schemaVersion": 1,
+        "kind": "PHYSICAL_BASELINE_SUMMARY",
+        "environment": "UNVERIFIED",
+        "qualification": "NOT_QUALIFIED",
+        "packageName": "network.orion.qualification",
+        "result": "REJECTED",
+        "samplesRequested": 3,
+        "samplesCollected": 0,
+        "sampleIntervalMillis": 250,
+        "profileQualified": false,
+        "productionInferenceEnabled": false,
+        "fullF5GateClosed": false,
+        "fullSoakGateClosed": false,
+        "heavyWorkIssued": false,
+        "failureCode": "PHYSICAL_ENVIRONMENT_REJECTED"
+      },
+      "sampleRecordsEmitted": 0,
+      "aiProcessFoundAfterAttempt": false,
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/baseline/emulator-rejection.txt",
+      "logSha256": "eee5f72d11c77acb47c4d81993c58db1eb5683f42f919fe362f25cb96ede3366"
+    }
+  ],
+  "limitations": [
+    "No physical positive-path execution",
+    "No model workload, MemoryLimiter stimulus or soak runner supplied by baseline",
+    "Qualification package bootstrap may create its own technical Room/Keystore/WorkManager state; no claim of a wholly read-only device",
+    "SystemUI ANR invalidated ordinary startup UI probe on initial emulator attempt; evidence retained separately",
+    "803 JVM report cases include cached/up-to-date tasks.",
+    "Opt-in APKs built at buildSourceHead; subsequent integration changes CI/docs only. Future physical use requires a new reviewed source/artifact freeze.",
+    "No calibration thresholds, heavy qualification runner or production approval supplied.",
+    "SystemUI startup ANR dialog was explicitly dismissed before the final successful ordinary probes; both failed attempts retained."
+  ],
+  "artifacts": {
+    "app-qualificationRelease-androidTest.apk": "77503abce1e903764672a79336c06d26a76268cfebff312caa72f89019287cc0",
+    "mapping.txt": "63d9f86c1a65b4465312f75a4aed4cf679922e40d99a6f9d54d9278597c44393",
+    "app-qualificationRelease.apk": "61d768182333201ccdf45ea2556e2dc489a707f201b9e8405eec482491c51994"
+  },
+  "integratedSourceHead": "300db6af15068eb2987b01c6b47f4dd8abaed202",
+  "physicalQualificationCandidateFrozen": false,
+  "requiredCI": "Enforced by PR; this local record does not claim a remote CI outcome.",
+  "packageSeparation": {
+    "optInBridgePresentAndKept": true,
+    "optInRunnerExclusive": true,
+    "default": [
+      {
+        "apk": "app/build/outputs/apk/debug/app-debug.apk",
+        "sha256": "84b0576ae2af837e5e9c7166e1ad07685368f0ddd49be734513f76301e7ce11e",
+        "baselineBridgeAndRunnerAbsent": true
+      },
+      {
+        "apk": "app/build/outputs/apk/release/app-release-unsigned.apk",
+        "sha256": "e2d42ae2d08157e546b922cfa9b5c0e699c813ba8bb2ada24633c49941b13832",
+        "baselineBridgeAndRunnerAbsent": true
+      },
+      {
+        "apk": "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk",
+        "sha256": "dbdd173f5232a2a41276d9e87e65c3e5b5c303b7abe748c94c19c702b6cb79bb",
+        "baselineBridgeAndRunnerAbsent": true
+      }
+    ],
+    "ordinaryR8": {
+      "ordinaryQualificationRunnerPreserved": true,
+      "baselineBridgeAndRunnerAbsent": true,
+      "artifacts": {
+        "app-qualificationRelease-androidTest.apk": "86c6b0058dca8028da7f217271756c3549b418a4bd978a9aea55ad7ec76aa4e7",
+        "mapping.txt": "11770bfd51641ce405d6ce84d6fcf9ca37427e79489865ec305bbefabdd1c470",
+        "app-qualificationRelease.apk": "62d028eeff0212edeb53c5f27f08e91480f7799fec6e927b20ef40ef60f911fe"
+      }
+    }
+  },
+  "startupAttempts": [
+    {
+      "result": "FAILED",
+      "reason": "Expected UI was not observed; SystemUI ANR dialog occupied focus",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/registry/normal-r8/instrumentation.txt"
+    },
+    {
+      "result": "FAILED",
+      "reason": "SystemUI ANR precondition persisted; log records the startup assertion failure. A force-stop was subsequently requested, without proving interruption.",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/default-package/instrumentation-precondition-interrupted.txt"
+    },
+    {
+      "result": "PASS",
+      "reason": "After explicit Wait on own emulator ANR dialog, launcher focused and keyguard absent",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/default-package/instrumentation.txt"
+    }
+  ],
+  "sourceOnlyReview": "Android/recorder cross-contract and dedicated CI coverage approved by independent peer inspection; not runtime evidence.",
+  "jvmReports": {
+    "tests": 803,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 108
+  },
+  "jvmReportScope": "Current modules only; stale outputs of removed ai/cortex and data/modelregistry are excluded."
+}
