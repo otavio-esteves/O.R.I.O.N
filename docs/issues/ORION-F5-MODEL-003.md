@@ -68,6 +68,11 @@ The sync channel is opened as `.` relative to that same stream and must be a
 `FileChannel`; directory force is probed before unlink and repeated after unlink.
 There is no absolute-path unlink/fsync fallback. Unsupported secure stream,
 identity or channel/sync support refuses removal and preserves rejected metadata.
+Only `app.dataDir` is canonicalized. The no-backup path is derived lexically from
+that trusted anchor, so a pre-existing app-owned no_backup/fixture symlink cannot
+be hidden by canonicalization even when it points elsewhere inside app data.
+An Android regression opens the coordinator only after creating that alias and
+checks refused removal, original rejected metadata and unchanged target bytes.
 
 The public [SecureDirectoryStream contract](https://developer.android.com/reference/java/nio/file/SecureDirectoryStream)
 defines directory-relative operations independent of parent replacement. The

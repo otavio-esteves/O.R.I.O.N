@@ -51,13 +51,16 @@ class OrionModelImportTest {
         ParcelFileDescriptor.AutoCloseInputStream(fd).use { assertArrayEquals(bytes, it.readBytes()) }
     }
 
-    @Test fun trustedFrameworkBaseNormalizesAliasesButControlledStoreSymlinksRemainRejected() = fixture { db, _, root ->
-        val alias = File(root, "framework_no_backup_alias")
+    @Test fun trustedDataAnchorNormalizesAliasesButControlledStoreSymlinksRemainRejected() = fixture { db, _, root ->
+        val alias = File(root, "framework_data_alias")
         val base = File(root, "framework_private_base").also { check(it.mkdir()) }
-        Os.symlink(base.path, alias.path)
+        val canonicalData = app.dataDir.canonicalFile
+        val relativeBase = canonicalData.toPath().relativize(base.canonicalFile.toPath())
+        Os.symlink(canonicalData.path, alias.path)
         val context = object : ContextWrapper(app) {
             override fun getApplicationContext(): Context = this
-            override fun getNoBackupFilesDir(): File = alias
+            override fun getDataDir(): File = alias
+            override fun getNoBackupFilesDir(): File = alias.toPath().resolve(relativeBase).toFile()
         }
         val files = OrionModelImportCoordinator.open(context, db, WallClock { Instant.ofEpochMilli(200) },
             maximumModelBytes = 1024 * 1024, reserveBytes = 100)
@@ -81,6 +84,29 @@ class OrionModelImportTest {
         assertEquals(OrionModelImportResult.Rejected(OrionModelImportBlock.FILE_REJECTED,
             OrionModelFileFailure.UNSAFE_PATH), rejected)
         assertTrue(outside.listFiles().orEmpty().isEmpty())
+    }
+
+    @Test fun existingAppOwnedNoBackupAliasCannotRedirectRejectedRemovalAtOpen() = fixture { db, files, root ->
+        val bytes = model()
+        val expected = expected(bytes)
+        files.importModel(expected, { ByteArrayInputStream(bytes) })
+        assertEquals(1, db.models().invalidate(expected.sha256, 2, true))
+        val before = checkNotNull(db.models().find(expected.sha256))
+        val artifact = File(root, "orion_model_files/verified/${expected.sha256}.gguf")
+        val alias = File(root.parentFile, "orion_model_owned_alias_${UUID.randomUUID()}")
+        Os.symlink(root.path, alias.path)
+        try {
+            val context = object : ContextWrapper(app) {
+                override fun getApplicationContext(): Context = this
+                override fun getNoBackupFilesDir(): File = alias
+            }
+            val redirected = OrionModelImportCoordinator.open(context, db, WallClock { Instant.ofEpochMilli(200) },
+                maximumModelBytes = 1024 * 1024, reserveBytes = 100)
+            assertEquals(OrionModelRemovalOutcome.UNSAFE_PATH, redirected.removeRejected(expected.sha256, before.version))
+            assertEquals(before, db.models().find(expected.sha256))
+            assertArrayEquals(bytes, artifact.readBytes())
+            assertEquals(root.path, Os.readlink(alias.path))
+        } finally { Files.delete(alias.toPath()) }
     }
 
     @Test fun interruptionAfterFileCommitLeavesNoReadyAndUnregisteredCleanupIsBounded() = fixture { db, files, root ->

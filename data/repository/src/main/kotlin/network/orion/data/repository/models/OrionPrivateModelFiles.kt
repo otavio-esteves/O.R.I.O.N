@@ -438,15 +438,21 @@ class OrionPrivateModelFiles internal constructor(
             MainProcessStoragePolicy.requireAccess(
                 OrionProcessRole.fromProcessName(app.packageName, Application.getProcessName()),
                 app.getSystemService(UserManager::class.java).isUserUnlocked, context.isDeviceProtectedStorage)
-            // Framework credential-storage paths can contain platform aliases (for
-            // example /data/user/0). Normalize only that trusted base. Resolving the
-            // appended store path would conceal an attacker-controlled child link.
-            val frameworkBase = app.noBackupFilesDir.canonicalFile
+            // Normalize only Android's app-data anchor (whose parent Android owns).
+            // Preserve every app-owned child lexically, including no_backup: its
+            // canonicalFile would conceal a pre-existing link before secure traversal.
+            val lexicalAnchor = app.dataDir.absoluteFile.toPath().normalize()
+            val canonicalAnchor = app.dataDir.canonicalFile
+            val noBackup = app.noBackupFilesDir.absoluteFile.toPath().normalize()
+            require(noBackup.startsWith(lexicalAnchor)) { "Model storage must belong to app data." }
+            val relative = lexicalAnchor.relativize(noBackup)
+            require(relative.nameCount in 1..32) { "Model storage child required." }
+            val frameworkBase = canonicalAnchor.toPath().resolve(relative).toFile()
             // Android owns the binding of the app data directory in its parent.
             // App-controlled children (including no_backup) are opened relatively
             // with NOFOLLOW; no traversal/listing permission on /data is required.
             return OrionPrivateModelFiles(File(frameworkBase, "orion_model_files"), maximumModelBytes, reserveBytes, validator,
-                storageAnchor = app.dataDir.canonicalFile)
+                storageAnchor = canonicalAnchor)
         }
     }
 }
