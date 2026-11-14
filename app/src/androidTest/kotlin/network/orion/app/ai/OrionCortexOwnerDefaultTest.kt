@@ -29,9 +29,11 @@ class OrionCortexOwnerDefaultTest {
         val owner = OrionCortexRuntimeOwner(context, importer, db, clock)
         val request = request(clock)
         runBlocking {
+            assertEquals(OrionCortexPreResourceReadiness.NO_QUALIFIED_PROFILE, owner.preResourceReadiness())
             assertEquals(OrionCortexRunResult.Unavailable(OrionCortexUnavailable.NO_QUALIFIED_PROFILE),
                 owner.run(HASH, request, 128, 1) { error("Unexpected inference") })
             owner.close()
+            assertEquals(OrionCortexPreResourceReadiness.CLOSED, owner.preResourceReadiness())
             assertEquals(OrionCortexRunResult.Unavailable(OrionCortexUnavailable.CLOSED),
                 owner.run(HASH, request, 128, 1) { error("Unexpected inference") })
         }
@@ -45,9 +47,30 @@ class OrionCortexOwnerDefaultTest {
             10_000, 20_000, 100, 20, 2)
         val owner = OrionCortexRuntimeOwner(context, importer, db, clock, listOf(plan), OrionCortexResourceTiming(1000, 1000))
         try { runBlocking {
+            assertEquals(OrionCortexPreResourceReadiness.CORE_NOT_READY, owner.preResourceReadiness())
             assertEquals(OrionCortexRunResult.Unavailable(OrionCortexUnavailable.CORE_NOT_READY),
                 owner.run(HASH, request(clock), 128, 1) { error("Unexpected inference") })
         } } finally { owner.close() }
+        assertEquals(0, bindings.get())
+    }
+
+    @Test fun diagnosticNeverAdvancesPastPreResourcePredicatesEvenWithConfiguredFixture() = fixture { context, db, importer, bindings ->
+        val clock = AndroidOrionClock(context.contentResolver)
+        // Existing mechanical gate fixture, never an approved device profile or executed load.
+        val plan = OrionInferenceResourcePlan(InferenceModelProfile(HASH, 100), "READINESS_GATE_FIXTURE", 1, 128, 8, 0,
+            10_000, 20_000, 100, 20, 2)
+        val missingTiming = OrionCortexRuntimeOwner(context, importer, db, clock, listOf(plan),
+            coreReady = { error("Core readiness must remain lazy when timing is absent") })
+        try {
+            assertEquals(OrionCortexPreResourceReadiness.RESOURCE_CONFIGURATION_UNAVAILABLE, missingTiming.preResourceReadiness())
+        } finally { missingTiming.close() }
+        val coreReads = AtomicInteger()
+        val configured = OrionCortexRuntimeOwner(context, importer, db, clock, listOf(plan), OrionCortexResourceTiming(1000, 1000),
+            coreReady = { coreReads.incrementAndGet(); true })
+        try {
+            assertEquals(OrionCortexPreResourceReadiness.DECISION_NOT_EVALUATED, configured.preResourceReadiness())
+            assertEquals(1, coreReads.get())
+        } finally { configured.close() }
         assertEquals(0, bindings.get())
     }
 

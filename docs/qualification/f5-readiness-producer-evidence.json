@@ -1,0 +1,257 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F5-READINESS-PRODUCER-001",
+  "defaultValidatedHead": "ac2437c",
+  "fixedR8ValidatedHead": "7e9ecc5",
+  "integratedHead": "c3c8631ee4b78f224bfb7db9137d34b5408dd7fb",
+  "sourceSha256": {
+    "app/build.gradle.kts": "85af280c6d9b9f6c363c1422aabfd5d558af44a8c600ba05502ca54527111501",
+    ".github/workflows/ci.yml": "416ce1bcfb752d41bc8ed0cd0f491940a53466f2990457650b5968ad21065a6d",
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeOwner.kt": "37819305cdf1b169e5cc166f104c1156a6977450be6a9f5cf12082c1c679d951",
+    "app/src/cortexReadinessTarget/kotlin/network/orion/app/ai/OrionCortexReadinessBridge.kt": "bfd2f3a80a23864e0d15c04a46be97888fb7f964f40615e8e3b7a2c65714c428",
+    "app/src/cortexReadinessTarget/proguard-rules.pro": "0e477111aab6d7dcabe4a900f17d545974c4ffc564b1e3f54f9d9e0b152d4c1d",
+    "app/src/cortexReadinessAndroidTest/java/network/orion/app/compatibility/OrionCortexReadinessInstrumentation.java": "9b625a21412bf03d29e9fa7210b2f2e6ce6db4fb7672ec5ac6e63a6c33dfa711",
+    "app/src/test/kotlin/network/orion/app/ai/OrionCortexPreResourceReadinessTest.kt": "185c54eaa08d6ef71efbdd28eae86704ca2c4e9d8914653bc9e35527b2eca8e6",
+    "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexOwnerDefaultTest.kt": "c4ff9663a5e455a7025754105804f8b843f01586f044f3da00876c81b15bf036",
+    "scripts/android/test_f5_cortex_readiness_source_contract_harness.py": "8a2fae0fe126f6eb4add7777a1ec5a3f61d534a74ffac70df49d45b5468d0bd1"
+  },
+  "jvmReports": {
+    "tests": 807,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 109
+  },
+  "observations": {
+    "environment": "ANDROID_EMULATOR",
+    "runtimeEvidence": "NON_DEFINITIVE",
+    "observed": {
+      "schemaVersion": 1,
+      "kind": "CORTEX_READINESS_RECEIPT",
+      "packageName": "network.orion.qualification",
+      "qualification": "NOT_QUALIFIED",
+      "result": "OBSERVED",
+      "failureCode": null,
+      "requestedEnvironment": "ANDROID_EMULATOR",
+      "environment": "ANDROID_EMULATOR",
+      "environmentSource": "BUILD_SIGNALS_ONLY",
+      "api": 35,
+      "abi": "x86_64",
+      "buildFingerprintSha256": "6d464d11457987d871c5aa7ecded996bf0b3f775db83587811a5a3f4303186e5",
+      "mainPid": 2529,
+      "bootCount": 1,
+      "completedBootCount": 1,
+      "startedElapsed": 1459381,
+      "completedElapsed": 1459598,
+      "requestedCoreWaitMillis": 10000,
+      "corePortQueries": 4,
+      "coreReadinessBefore": "STARTING",
+      "coreReadinessAfter": "DEGRADED_SAFE",
+      "ownerQueryPerformed": true,
+      "preResourceReadiness": "NO_QUALIFIED_PROFILE",
+      "aiObservation": "NOT_EVALUATED",
+      "aggregateMemoryObservation": "NOT_EVALUATED",
+      "resourceGovernorDecision": "NOT_EVALUATED",
+      "restartDecision": "NOT_EVALUATED",
+      "modelIdentity": "NOT_EVALUATED",
+      "artifactIdentity": "HOST_VERIFICATION_REQUIRED",
+      "physicalDeviceVerified": false,
+      "provenanceAuthenticated": false,
+      "runtimeRequestsIssued": false,
+      "probeIpcBindIssued": false,
+      "heavyWorkIssued": false,
+      "admissionGranted": false,
+      "profileQualified": false,
+      "productionInferenceEnabled": false,
+      "fullF5GateClosed": false,
+      "fullSoakGateClosed": false
+    },
+    "physicalDeclarationMismatch": {
+      "schemaVersion": 1,
+      "kind": "CORTEX_READINESS_RECEIPT",
+      "packageName": "network.orion.qualification",
+      "qualification": "NOT_QUALIFIED",
+      "result": "REJECTED",
+      "failureCode": "ENVIRONMENT_MISMATCH",
+      "requestedEnvironment": "PHYSICAL_DEVICE",
+      "environment": "ANDROID_EMULATOR",
+      "environmentSource": "BUILD_SIGNALS_ONLY",
+      "api": 35,
+      "abi": "x86_64",
+      "buildFingerprintSha256": "6d464d11457987d871c5aa7ecded996bf0b3f775db83587811a5a3f4303186e5",
+      "mainPid": 2567,
+      "bootCount": 1,
+      "completedBootCount": 1,
+      "startedElapsed": 1467367,
+      "completedElapsed": 1467368,
+      "requestedCoreWaitMillis": 10000,
+      "corePortQueries": 0,
+      "coreReadinessBefore": "NOT_EVALUATED",
+      "coreReadinessAfter": "NOT_EVALUATED",
+      "ownerQueryPerformed": false,
+      "preResourceReadiness": "NOT_EVALUATED",
+      "aiObservation": "NOT_EVALUATED",
+      "aggregateMemoryObservation": "NOT_EVALUATED",
+      "resourceGovernorDecision": "NOT_EVALUATED",
+      "restartDecision": "NOT_EVALUATED",
+      "modelIdentity": "NOT_EVALUATED",
+      "artifactIdentity": "HOST_VERIFICATION_REQUIRED",
+      "physicalDeviceVerified": false,
+      "provenanceAuthenticated": false,
+      "runtimeRequestsIssued": false,
+      "probeIpcBindIssued": false,
+      "heavyWorkIssued": false,
+      "admissionGranted": false,
+      "profileQualified": false,
+      "productionInferenceEnabled": false,
+      "fullF5GateClosed": false,
+      "fullSoakGateClosed": false
+    },
+    "aiProcessFoundAfterAttempts": false
+  },
+  "checks": [
+    {
+      "environment": "CONTAINER",
+      "kind": "DEFAULT_CANONICAL_CHECK_AND_PACKAGES",
+      "result": "PASS",
+      "command": "docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest :ai:llama:assembleDebugAndroidTest :ai:service:assembleDebugAndroidTest --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/readiness-default-canonical.log",
+      "logSha256": "bca5670f265c823ff298aeb03f8ade379bb94c6cd4320c74c24b34393d5e5934"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "HOST_HARNESS_287_CASES",
+      "result": "PASS",
+      "command": "docker compose run --rm host-harness-check",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/readiness-host-cold-fix.log",
+      "logSha256": "51c20f5efffee8198d4a168545e621a8460f4c3ea409c309d32dcccaafacadab"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "READINESS_R8_NATIVE_PACKAGE",
+      "result": "PASS",
+      "command": "docker compose run --rm android-build -PorionQualificationRelease=true -PorionCortexReadinessProbe=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/readiness-r8-cold-fix.log",
+      "logSha256": "1e9900ba362211c4c3a57648fa1b2da0734d99757d4567c3c4fadf1e7229d6c0"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "ORDINARY_R8_SCOPE",
+      "result": "PASS",
+      "command": "docker compose run --rm android-build -PorionQualificationRelease=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/readiness-ordinary-r8.log",
+      "logSha256": "ca5ffa0e7b5b2f8c37a902ce072a7584689e6d2bdb7a034bf0a8853333059f5f"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "STANDALONE_READINESS_FLAG",
+      "result": "EXPECTED_REJECTION",
+      "command": "docker compose run --rm android-build -PorionCortexReadinessProbe=true :app:help --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/readiness-invalid-identity.log",
+      "logSha256": "0a237ed5c0163797c3f90b8494e9536f8744731759c2bac3b3051e1983452009"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "CONFLICTING_MEASUREMENT_MODES",
+      "result": "EXPECTED_REJECTION",
+      "command": "docker compose run --rm android-build -PorionQualificationRelease=true -PorionPhysicalBaseline=true -PorionCortexReadinessProbe=true :app:help --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/readiness-conflicting-modes.log",
+      "logSha256": "b31a30337b39278fb3505687ac1520349d1942386a73c94f460f83e62f13c468"
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "kind": "OWNER_GATES",
+      "result": "PASS",
+      "cases": 5,
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/default/owner-gates.txt",
+      "logSha256": "11b1ad1d6468f623b08364645255ecf612ac68ee275db460170a04c360a19ca5"
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "kind": "ORDINARY_R8_NATIVE_JNI_STARTUP",
+      "result": "PASS",
+      "cases": 3,
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/ordinary/instrumentation.txt",
+      "logSha256": "37e62aadfd399063c588b748ec6f953afe3a2eb2eb1b906ce9ef20d5f37c753c"
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "kind": "ACTUAL_READINESS",
+      "result": "OBSERVED_NO_QUALIFIED_PROFILE",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8/observed-emulator.txt",
+      "logSha256": "c0f79253e854dca215ebff368ee912ecf9482f3a94674e891a605352d39b56c2"
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "kind": "PHYSICAL_DECLARATION_MISMATCH",
+      "result": "EXPECTED_REJECTION",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8/physical-mismatch.txt",
+      "logSha256": "f2c22441afdb82f6f69bc546986a3574b8026fc2f43ee6ff0ba8b51c8e037c77"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "INTEGRATED_HOST_HARNESS_315_CASES",
+      "result": "PASS",
+      "validatedHead": "25109eb480f8a9cecf1df87319f3a5ee416e2320",
+      "command": "docker compose run --rm host-harness-check",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/readiness-integrated-final-host.log",
+      "logSha256": "c8318675d7b40bb3a8e3ebb1408bce65d9f6256f25618f44b02c5c9b452cb29f"
+    }
+  ],
+  "artifactSets": {
+    "default": {
+      "app-debug.apk": "bc1be2eca90b6bd726d5458d978651de5fa388675d7b0b71c87ed23a6ad84782",
+      "app-debug-androidTest.apk": "80e070a6ff73015b25689416e1e411fed1ee627013af71336cbe4c2c614ee217",
+      "app-release-unsigned.apk": "def628ab4d765a7f39099603749c3f52dc9d3856ea470d1b3a171cf2cd004c20"
+    },
+    "r8": {
+      "app-qualificationRelease-androidTest.apk": "62c91c3fb98e23816cddbc8bad231468d0888d7481cf98808e5d73e9a3a7f43e",
+      "mapping.txt": "fc4c57ea032a061e4f477482f11a050fc88204f6b0bc7d6d9bf55e980bc21d5d",
+      "app-qualificationRelease.apk": "785aec3d3a92dbafceb9b9815a68a1da324b96bf0b0781ed8ceb3dcd680f54a9"
+    },
+    "ordinary": {
+      "app-qualificationRelease-androidTest.apk": "86c6b0058dca8028da7f217271756c3549b418a4bd978a9aea55ad7ec76aa4e7",
+      "mapping.txt": "11770bfd51641ce405d6ce84d6fcf9ca37427e79489865ec305bbefabdd1c470",
+      "app-qualificationRelease.apk": "04a1baf38126d096f5c01dd7dbe29e0e8441c15333ede95c19375362a6b8ef9b"
+    }
+  },
+  "physicalDeviceUsed": false,
+  "physicalQualificationCandidateFrozen": false,
+  "profileQualified": false,
+  "productionInferenceEnabled": false,
+  "fullF5GateClosed": false,
+  "fullSoakGateClosed": false,
+  "requiredCI": "Tracked by PR; this local record does not claim a remote result.",
+  "packageIsolation": {
+    "defaultDebugTargetAndTestExcludeReadiness": true,
+    "ordinaryR8TargetAndTestAndMappingExcludeReadiness": true,
+    "readinessBridgeKeptOnlyInSelectedScope": true,
+    "ordinaryRunnerPreserved": true,
+    "defaultReleaseExcludesReadiness": true
+  },
+  "beforeFix": {
+    "kind": "CACHED_NULL_COLD_START",
+    "result": "OBSERVED_CORE_PORT_UNAVAILABLE_WITHOUT_REQUESTED_WAIT",
+    "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8-before-cold-fix/observed-emulator.txt",
+    "logSha256": "8971c4825e4015a920cee5eecf3d0964716c61b3a7bc04fe8f4fbbe13d1f3f44",
+    "artifacts": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8-before-cold-fix",
+    "correctedBy": "MAIN dispatcher snapshots within the original bounded deadline; no Application initialization call or production-field change."
+  },
+  "limitations": [
+    "807 JVM report cases include cached/up-to-date tasks; fixed bridge is qualification-only and did not alter default-tested owner code.",
+    "Actual Android observations are API35/x86_64/4KiB owned emulator, NON_DEFINITIVE under ADR-0001.",
+    "Build signals classify environment but do not authenticate physical identity or source/APK provenance.",
+    "Core bootstrap/factory may create its own qualification DB/Keystore/WorkManager/cache state; snapshots are separate points.",
+    "NO_QUALIFIED_PROFILE is an actual early refusal; resource governor/restart/model/AI were not evaluated and no request or permit was issued.",
+    "Later ordinary native probes intentionally launch AI and validate a corrupt synthetic file; AI absence applies to readiness attempts only.",
+    "All source/artifact snapshots are software validation, not a frozen physical candidate."
+  ],
+  "independentProcessObservation": {
+    "record": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8/ai-process-observation.json",
+    "recordSha256": "4f99927f72c1c5e0e49742cc5b72d23c7ca5bcd03b09548917a77029823906e4",
+    "instrumentationLog": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8/observed-emulator-process-proof.txt",
+    "instrumentationLogSha256": "6a2f406e31a6a80b07f3b49e8f6f4f6da77f9351007ae3c17bb27d7aba7a7a5f",
+    "rawOutput": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/readiness/r8/ai-pidof-after-readiness.txt",
+    "aiProcessFound": false
+  }
+}

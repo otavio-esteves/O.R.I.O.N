@@ -34,6 +34,25 @@ internal enum class OrionCortexUnavailable {
     PROCESS_INVENTORY_UNAVAILABLE, MODEL_NOT_READY, MODEL_UNAVAILABLE, PROFILE_MISMATCH, REQUEST_RETIRED,
 }
 
+/** Read-only early configuration state. No entry represents a resource or restart permit. */
+internal enum class OrionCortexPreResourceReadiness(val unavailable: OrionCortexUnavailable?) {
+    CLOSED(OrionCortexUnavailable.CLOSED),
+    NO_QUALIFIED_PROFILE(OrionCortexUnavailable.NO_QUALIFIED_PROFILE),
+    RESOURCE_CONFIGURATION_UNAVAILABLE(OrionCortexUnavailable.RESOURCE_CONFIGURATION_UNAVAILABLE),
+    CORE_NOT_READY(OrionCortexUnavailable.CORE_NOT_READY),
+    DECISION_NOT_EVALUATED(null),
+}
+
+/** Exact shared early predicates; later sources stay lazy after an earlier refusal. */
+internal inline fun evaluateCortexPreResourceReadiness(isClosed: () -> Boolean,
+    hasQualifiedPlans: () -> Boolean, hasTiming: () -> Boolean, isCoreReady: () -> Boolean): OrionCortexPreResourceReadiness = when {
+    isClosed() -> OrionCortexPreResourceReadiness.CLOSED
+    !hasQualifiedPlans() -> OrionCortexPreResourceReadiness.NO_QUALIFIED_PROFILE
+    !hasTiming() -> OrionCortexPreResourceReadiness.RESOURCE_CONFIGURATION_UNAVAILABLE
+    !isCoreReady() -> OrionCortexPreResourceReadiness.CORE_NOT_READY
+    else -> OrionCortexPreResourceReadiness.DECISION_NOT_EVALUATED
+}
+
 internal sealed interface OrionCortexRunResult {
     data class Unavailable(val reason: OrionCortexUnavailable) : OrionCortexRunResult
     data class Completed(val status: OrionInferenceStatus) : OrionCortexRunResult
@@ -85,13 +104,14 @@ internal class OrionCortexRuntimeOwner(
         require(plans.size <= 64 && byId.size == plans.size && plans.all { validModelHash(it.model.modelId) })
     }
 
+    /** Stops before inventory, storage, Binder, governor or restart evaluation, even when configured. */
+    internal fun preResourceReadiness(): OrionCortexPreResourceReadiness = evaluateCortexPreResourceReadiness(
+        { closed }, { plans.isNotEmpty() }, { timing != null }, coreReady)
+
     suspend fun run(modelId: String, request: OrionInferenceRequest, contextTokens: Int, threads: Int,
         onChunks: (List<OrionInferenceChunk>) -> Unit): OrionCortexRunResult = withContext(Dispatchers.IO) {
         fun unavailable(reason: OrionCortexUnavailable) = OrionCortexRunResult.Unavailable(reason)
-        if (closed) return@withContext unavailable(OrionCortexUnavailable.CLOSED)
-        if (plans.isEmpty()) return@withContext unavailable(OrionCortexUnavailable.NO_QUALIFIED_PROFILE)
-        if (timing == null) return@withContext unavailable(OrionCortexUnavailable.RESOURCE_CONFIGURATION_UNAVAILABLE)
-        if (!coreReady()) return@withContext unavailable(OrionCortexUnavailable.CORE_NOT_READY)
+        preResourceReadiness().unavailable?.let { return@withContext unavailable(it) }
         val plan = byId[modelId]
         if (request.modelId != modelId || plan == null) return@withContext unavailable(OrionCortexUnavailable.PROFILE_MISMATCH)
         val preparationContext = currentCoroutineContext()
