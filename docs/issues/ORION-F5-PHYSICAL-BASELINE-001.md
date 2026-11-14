@@ -74,3 +74,24 @@ emulator rejection case before integration.
 CI COVERAGE: The required docker-build-and-check job retains its ordinary builds
 and three-probe R8 scope, then builds the opt-in baseline sequentially in canonical
 Docker. It performs no device execution or physical qualification.
+
+CENTRAL VALIDATION (root, 2026-11-14): Canonical Docker opt-in R8/native packaging
+and test assembly passed in 13m46s. Default canonical check/Debug/Release/four
+Android-test APK assemblies passed in 10m16s; 803 JVM report cases have zero
+failures/errors/skips (cached/up-to-date tasks included). Ordinary qualification
+R8/native packaging/test assembly passed in 2m44s. Docker HOST: 195 cases passed.
+The invalid standalone physical flag was actually refused by Gradle (expected
+exit 1). Final Debug/Release/ordinary qualification APKs exclude the baseline
+bridge/runner; the opt-in target keeps the bridge and selects only its own runner.
+
+Owned API35/x86_64/4KiB emulator: all three ordinary R8 native/JNI/startup probes
+passed after correcting an observed SystemUI ANR dialog. The initial failed and
+subsequent interrupted attempts remain retained. The actual opt-in framework
+runner rejected the emulator before binding: UNVERIFIED, REJECTED,
+PHYSICAL_ENVIRONMENT_REJECTED, zero samples and all approval flags false. No AI
+process was found afterward. This is a negative Android guard test, not a physical
+collection or gate PASS. See [the preparation evidence](../qualification/f5-physical-baseline-preparation-evidence.json).
+
+No S21/API37 physical positive path, model workload, MemoryLimiter stimulus,
+profile approval or soak has run. The retained APKs are software-validation
+snapshots, not a frozen physical qualification candidate.
