@@ -179,12 +179,12 @@ def validate_receipt(receipt):
         for key in ("observedElapsedMillis", "revision", "keepAliveMillis", "fenceStartedElapsedMillis"):
             integer(policy[key])
         integer(policy["cooldownMillis"], 1)
-        fence = (policy["fenceStartedElapsedMillis"], policy["cooldownMillis"])
-        if first_fence is None:
-            first_fence = fence
-        require(first_fence == fence, "DUPLICATE_EXIT_RENEWED_FENCE")
         require(policy["revision"] > last_revision, "POLICY_REVISION_INVALID")
         if not boot_changed:
+            fence = (policy["fenceStartedElapsedMillis"], policy["cooldownMillis"])
+            if first_fence is None:
+                first_fence = fence
+            require(first_fence == fence, "DUPLICATE_EXIT_RENEWED_FENCE")
             require(policy["observedElapsedMillis"] >= last_elapsed and
                     event["observedElapsedMillis"] <= policy["fenceStartedElapsedMillis"] <= policy["observedElapsedMillis"],
                     "POLICY_TIME_INVALID")

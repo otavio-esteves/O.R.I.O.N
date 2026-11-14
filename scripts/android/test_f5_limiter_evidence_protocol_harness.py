@@ -127,6 +127,12 @@ class LimiterEvidenceProtocolTest(unittest.TestCase):
             obj["observedElapsedMillis"] = 1
             self.assert_status(relink(value), "UNSUPPORTED_BOOT_CHANGE")
 
+    def test_later_boot_does_not_compare_previous_fence_or_duration(self):
+        value = fixture()
+        value["policies"].append(dict(value["policies"][0], revision=3, bootIdSha256="3" * 64,
+                                     observedElapsedMillis=2, fenceStartedElapsedMillis=1, cooldownMillis=200))
+        self.assert_status(value, "UNSUPPORTED_BOOT_CHANGE")
+
     def test_absent_public_exit_api_is_unsupported(self):
         value = fixture()
         value["target"]["apiLevel"] = 29
