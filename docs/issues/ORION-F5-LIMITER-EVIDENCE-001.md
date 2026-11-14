@@ -43,3 +43,12 @@ The follow-up keeps schema/identity checks but skips fence equality and elapsed
 arithmetic once a changed boot is detected, returning UNSUPPORTED_BOOT_CHANGE.
 The regression changes both the later epoch's fence and cooldown duration;
 same-boot duplicate-fence renewal remains rejected.
+
+CENTRAL VALIDATION: Root executed `docker compose run --rm host-harness-check`
+in canonical Docker at source head 0892498: all 225 cases passed (195 baseline
+plus 30 limiter contracts). The independent peer confirmed the boot-fence fix
+and same-boot duplicate protection by inspection/reproduction. No Android or
+physical behavior was exercised by this package.
+
+Retained log: `/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/limiter-protocol-final-host.log`.
+Log SHA256: `9e5d9ff4958d0879e0387e7551a31c74bbf249a6cec2f9fbdf57e347500cea84`.
