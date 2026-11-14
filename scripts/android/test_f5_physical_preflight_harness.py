@@ -3,16 +3,19 @@
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 SCRIPT = Path(__file__).with_name("prepare-f5-physical-qualification.py")
 SPEC = importlib.util.spec_from_file_location("f5_physical_preflight", SCRIPT)
 PREFLIGHT = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PREFLIGHT)
+REAL_GIT = PREFLIGHT.git
 
 
 def digest(value):
@@ -60,9 +63,11 @@ class PhysicalPreflightTest(unittest.TestCase):
         self.source = self.root / "source"
         self.source.mkdir()
         (self.source / "seed.kt").write_text("// owned source fixture\n")
-        self.git("init", "--quiet")
-        self.git("add", "seed.kt")
-        self.git("-c", "user.name=Orion Fixture", "-c", "user.email=orion@example.invalid", "commit", "--quiet", "-m", "owned fixture")
+        self.commit = "1" * 40
+        self.source_hash = digest((self.source / "seed.kt").read_bytes())
+        git_fixture = mock.patch.object(PREFLIGHT, "git", side_effect=self.git)
+        git_fixture.start()
+        self.addCleanup(git_fixture.stop)
         self.app = self.root / "app.apk"
         self.test = self.root / "test.apk"
         self.model = self.root / "candidate.gguf"
@@ -70,7 +75,7 @@ class PhysicalPreflightTest(unittest.TestCase):
             path.write_bytes(content)
         self.hashes = {"app": digest(self.app.read_bytes()), "test": digest(self.test.read_bytes()), "model": digest(self.model.read_bytes())}
         self.source_manifest = self.root / "source.json"
-        self.source_record = {"schemaVersion": 1, "sourceCommit": self.git("rev-parse", "HEAD").strip(),
+        self.source_record = {"schemaVersion": 1, "sourceCommit": self.commit,
                               "files": {"seed.kt": digest((self.source / "seed.kt").read_bytes())}, "artifacts": self.hashes}
         self.model_manifest = self.root / "model.json"
         self.model_record = {"schemaVersion": 1, "purpose": "PHYSICAL_CANDIDATE_NOT_QUALIFIED", "publisher": "OwnedCandidate",
@@ -81,8 +86,18 @@ class PhysicalPreflightTest(unittest.TestCase):
         self.adb = FakeAdb(self.hashes)
         self.output = self.root / "evidence"
 
-    def git(self, *args):
-        return subprocess.check_output(["git", "-C", str(self.source), *args], stderr=subprocess.DEVNULL, text=True)
+    def git(self, root, *args):
+        self.assertEqual(self.source.resolve(), Path(root).resolve())
+        if args == ("rev-parse", "--show-toplevel"):
+            return str(self.source) + "\n"
+        if args == ("rev-parse", "HEAD"):
+            return self.commit + "\n"
+        if args == ("status", "--porcelain=v1", "-z", "--untracked-files=all"):
+            clean = {p.name for p in self.source.iterdir()} == {"seed.kt"} and digest((self.source / "seed.kt").read_bytes()) == self.source_hash
+            return "" if clean else "?? unreviewed\0"
+        if args == ("ls-files", "-z"):
+            return "seed.kt\0"
+        raise AssertionError("Unexpected Git fixture command.")
 
     def save_manifests(self):
         self.source_manifest.write_text(json.dumps(self.source_record))
@@ -253,7 +268,32 @@ class PhysicalPreflightTest(unittest.TestCase):
         self.assertEqual("original attempt", sentinel.read_text())
         self.assertEqual([], self.adb.commands)
 
+    def test_real_git_adapter_bounds_output_and_uses_explicit_source_root(self):
+        with mock.patch.object(PREFLIGHT.subprocess, "run", return_value=mock.Mock(returncode=0, stdout=b"owned\n")) as run:
+            self.assertEqual("owned\n", REAL_GIT(self.source, "rev-parse", "HEAD"))
+        self.assertEqual(["git", "-C", str(self.source), "rev-parse", "HEAD"], run.call_args.args[0])
+        self.assertEqual(10, run.call_args.kwargs["timeout"])
+
+    def test_real_git_adapter_rejects_failed_or_unbounded_output(self):
+        for result in [mock.Mock(returncode=1, stdout=b""), mock.Mock(returncode=0, stdout=b"x" * (1024 * 1024 + 1))]:
+            with mock.patch.object(PREFLIGHT.subprocess, "run", return_value=result):
+                with self.assertRaisesRegex(PREFLIGHT.Rejected, "SOURCE_IDENTITY_UNAVAILABLE"):
+                    REAL_GIT(self.source, "status")
+
     def test_cli_uses_explicit_serial_and_returns_non_success_for_blocked_plan(self):
+        binaries = self.root / "bin"
+        binaries.mkdir()
+        git = binaries / "git"
+        git.write_text("#!/usr/bin/env python3\nimport hashlib,sys\nfrom pathlib import Path\n" +
+                       "root=Path(" + repr(str(self.source)) + ")\n" +
+                       "assert sys.argv[1:3] == ['-C',str(root)]\nargs=sys.argv[3:]\n" +
+                       "if args == ['rev-parse','--show-toplevel']: print(root)\n" +
+                       "elif args == ['rev-parse','HEAD']: print(" + repr(self.commit) + ")\n" +
+                       "elif args == ['status','--porcelain=v1','-z','--untracked-files=all']:\n" +
+                       " clean={p.name for p in root.iterdir()} == {'seed.kt'} and hashlib.sha256((root/'seed.kt').read_bytes()).hexdigest() == " + repr(self.source_hash) + "\n" +
+                       " sys.stdout.write('' if clean else '?? unreviewed\\0')\n" +
+                       "elif args == ['ls-files','-z']: sys.stdout.write('seed.kt\\0')\nelse: sys.exit(1)\n")
+        git.chmod(0o755)
         fake = self.root / "fake_adb.py"
         records = [{"command": list(command), "reply": reply} for command, reply in self.adb.answers.items()]
         fake.write_text("#!/usr/bin/env python3\nimport json,sys\n" +
@@ -266,7 +306,8 @@ class PhysicalPreflightTest(unittest.TestCase):
                                  "--target", "S21", "--source-root", str(self.source), "--source-manifest", str(self.source_manifest),
                                  "--app-apk", str(self.app), "--test-apk", str(self.test), "--model-file", str(self.model),
                                  "--model-manifest", str(self.model_manifest), "--evidence-dir", str(self.output)],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20)
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20,
+                                env=dict(os.environ, PATH=str(binaries) + os.pathsep + os.environ.get("PATH", "")))
         self.assertEqual(3, result.returncode, result.stderr)
         self.assertIn("BLOCKED", result.stdout)
         self.assertEqual("BLOCKED", json.loads((self.output / "f5-physical-preflight.json").read_text())["result"])

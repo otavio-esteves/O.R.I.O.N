@@ -38,8 +38,10 @@ and hashes. Fresh output directory and failure reports preserve incomplete check
 No user content, exit descriptions, traces or raw command errors are recorded.
 No app state, permissions, DB or migration is changed.
 
-VALIDATION: 30 standard-library HOST contracts passed without a device, including
-an actual CLI invocation with fake ADB and a clean temporary Git/source freeze.
+VALIDATION: 32 standard-library HOST contracts passed without a device, including
+an actual CLI invocation with fake ADB/Git executables and an owned source freeze.
+The fixtures require no Git package in the pinned Python host-contract container;
+the actual HOST recorder still validates the real Git checkout and explicit HEAD.
 Python AST, documented local links/CLI flags and whitespace checks passed. The
 memory-review link is supplied by companion commit `ada2323`. No Docker, Android
 runtime, physical or soak execution was performed by this package; root integration
