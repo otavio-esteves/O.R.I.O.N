@@ -13,9 +13,11 @@
 Architecture V3.2 §§22/23/32/33/35/99 defines the private Cortex boundary,
 negotiation, lifecycle, governor-first operation, resource backoff and per-inference
 observability. Master Plan §§6.3/11.11 requires meaningful benchmark/runtime
-evidence. [AGENTS §1.1](../../AGENTS.md) requires an accepted ADR before changing
-IPC semantics. A generic Bundle or observability requirement is not permission
-to change an existing closed wire envelope silently.
+evidence. [AGENTS §1.1](../../AGENTS.md) requires an ADR before changing IPC
+semantics; §1 gives normative precedence only to accepted ADRs for their exact
+scope. This proposal therefore awaits acceptance before it can govern an IPC
+change. A generic Bundle or observability requirement is not permission to change
+an existing closed wire envelope silently.
 
 If accepted, this ADR would extend only the current Cortex method/capability
 surface with the two optional operations below and advance supporting peers from
@@ -211,6 +213,18 @@ when present. Bounds follow current Cortex request limits, without increasing
 them: promptTokens and every prefill count <=32768; all generation/decode/callback
 counts <=4096, with eogTokens<=1. Unknown fields/bits/types, booleans as integers,
 negative values, overflow or impossible relationships reject the metrics snapshot.
+
+Those global maxima are only representation guards. Validation also uses the
+actual admitted inference and invocation-bound context, never limits supplied in
+the metrics query or taken from a later/different request/model. Observed sampled,
+callback and decode counts must not exceed that request's maxTokens; current
+one-token decode calls have the tighter bound max(0, maxTokens-1). Where the source
+can prove the actual context and prompt count, promptTokens+admitted maxTokens
+must fit that context with overflow-safe arithmetic. Missing operands remain
+unavailable, never inferred from global maxima or a nominal profile/context size.
+For nativeFinish=TOKEN_LIMIT, available sampledTokens and callbacksReturnedNormally
+must equal admitted maxTokens and available eogTokens must be zero. The finish
+reason cannot synthesize an absent counter or turn partial data into complete data.
 
 | Bit/key | Measurement definition |
 | --- | --- |

@@ -12,8 +12,9 @@ Documentation only; no Kotlin/AIDL/native/build/policy/configuration changes.
 
 CONTRACTS INVOLVED: Architecture §§22/23/32/33/35/99; Master Plan benchmark and
 §11.11 F5 gate; current closed AIDL envelopes; accepted ADR-0001 and the exact
-issued-history scope of ADR-0002. AGENTS §1.1 requires a decision before changing
-IPC semantics. Existing authority remains in force while this ADR is Proposed.
+issued-history scope of ADR-0002. AGENTS §1.1 requires an ADR before changing
+IPC semantics; §1 gives accepted ADRs scoped normative precedence. Existing
+authority remains in force while this ADR is Proposed and awaits acceptance.
 
 INVARIANTS INVOLVED: INV-002/009/011/012/013/027/028/032/035/036.
 
