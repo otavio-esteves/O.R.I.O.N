@@ -1,0 +1,327 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F5-EXIT-CAPTURE-001",
+  "validatedHead": "51cedd9685a677130a3f9d76a66693602213881f",
+  "initialR8Head": "d2ebfed841e2b4c5e2a14ed7ca22efb29444f19f",
+  "sourceSha256": {
+    "app/build.gradle.kts": "f4159efe5f9d00feb47867ff7cbd88f995f11cab7d71d43400c8ce2efe8e6c59",
+    ".github/workflows/ci.yml": "3af110b75cc0aec5c9ae29530e0d83e8a0e6cb3bffef13b3182bfec6dfa1b653",
+    "app/src/exitEvidenceCaptureTarget/kotlin/network/orion/app/resources/OrionExitEvidenceCaptureBridge.kt": "045cf813f95045a14089fecd3cd0456f7246c2c3289f05608614b21b669620fe",
+    "app/src/exitEvidenceCaptureTarget/proguard-rules.pro": "f08e395cde2a53dd271df06996498cc6727b56317229c8ecd45bbd593687d801",
+    "app/src/exitEvidenceCaptureAndroidTest/java/network/orion/app/compatibility/OrionExitEvidenceCaptureInstrumentation.java": "edac60abf12524b32baddd8b2032caf00809d7f708a38875b3491b5f52c6681f",
+    "scripts/android/f5_exit_capture_protocol.py": "9b3b27f87f1fe9b72975f37394f932c874be35a1784908de8060dd9b1dfbf946",
+    "scripts/android/test_f5_exit_capture_protocol_harness.py": "94a3d782d8e97f9e2b926441c7683dc206acfc9e75c030cacb4eaec915f319e9"
+  },
+  "checks": [
+    {
+      "environment": "CONTAINER",
+      "kind": "HOST_HARNESS_348_CASES",
+      "result": "PASS",
+      "command": "docker compose run --rm host-harness-check",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/exit-capture-final-host.log",
+      "logSha256": "1f9be6f5fdff1841e3998f49adb6d8354bd212cbcd7960b8198e46dce504e404"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "FIXED_CAPTURE_R8_NATIVE_PACKAGE",
+      "result": "PASS",
+      "command": "docker compose run --rm android-build -PorionQualificationRelease=true -PorionExitEvidenceCapture=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/exit-capture-r8-architecture-fix.log",
+      "logSha256": "6280b53e1e85e0ff552bd8bbd137cdb2796fc9d473c812dead2d6301b96489ca"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "DEFAULT_DEBUG_RELEASE_TEST_PACKAGES",
+      "result": "PASS",
+      "command": "docker compose run --rm android-build :app:assembleDebug :app:assembleRelease :app:assembleDebugAndroidTest --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/exit-capture-default-packages.log",
+      "logSha256": "d0a54e7fb28a4e1de6d32e825939efa7f83e0d3ceef50f5455ec95315d8cfda9"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "ORDINARY_R8_SCOPE",
+      "result": "PASS",
+      "command": "docker compose run --rm android-build -PorionQualificationRelease=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/exit-capture-ordinary-r8.log",
+      "logSha256": "1fa10b398f99234b7e34283c6695c02368a4474d5d1d7519e07c12b2ea43e684"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "STANDALONE_CAPTURE_FLAG",
+      "result": "EXPECTED_REJECTION",
+      "command": "docker compose run --rm android-build -PorionExitEvidenceCapture=true :app:help --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/exit-capture-invalid-identity.log",
+      "logSha256": "58e4dbf4f433172a6bb9c0b8f5bcfd6d659801d1b63afadfb3808b096ac81fcc"
+    },
+    {
+      "environment": "CONTAINER",
+      "kind": "READINESS_CAPTURE_CONFLICT",
+      "result": "EXPECTED_REJECTION",
+      "command": "docker compose run --rm android-build -PorionQualificationRelease=true -PorionCortexReadinessProbe=true -PorionExitEvidenceCapture=true :app:help --max-workers=2",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/exit-capture-conflicting-modes.log",
+      "logSha256": "3d97217632b3dbf7ee8345af599936c11f52cc0dba1423d0049f26c880a918f7"
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "runtimeEvidence": "NON_DEFINITIVE",
+      "kind": "absent-ai",
+      "result": "CAPTURED_EXPLICIT_AI_UNAVAILABLE",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/exit-capture/r8/absent-ai.txt",
+      "logSha256": "55cdbe0bcf3b6aff5f3f079002015fbf1151f9eb07bdd1f35d34abc045ecf7f2",
+      "canonicalOfflineValidation": {
+        "binderDeathCleanup": "NOT_LINKED",
+        "captureResult": "AI_NOT_AVAILABLE",
+        "cleanup": "UNBOUND",
+        "correlation": "NO_LIVE_OBSERVATION",
+        "environment": "UNVERIFIED_INPUT",
+        "fullF5GateClosed": false,
+        "fullSoakGateClosed": false,
+        "heavyWorkIssued": false,
+        "kind": "ORION_F5_EXIT_CAPTURE_OFFLINE_VALIDATION",
+        "memoryLimiterVerified": false,
+        "physicalDeviceVerified": false,
+        "policyMutationIssued": false,
+        "productionInferenceEnabled": false,
+        "profileQualified": false,
+        "provenanceAuthenticated": false,
+        "qualification": "NOT_QUALIFIED",
+        "runtimeEvidence": "NON_DEFINITIVE",
+        "schemaVersion": 1,
+        "status": "CONSISTENT_CAPTURE_METADATA"
+      },
+      "validationRecord": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/exit-capture/r8/absent-ai-validation.json",
+      "validationSha256": "7debc7a6c5af4b86b5e7880624833f09b597e0fe83080ad9bc8b2b710262d198"
+    },
+    {
+      "environment": "ANDROID_EMULATOR",
+      "runtimeEvidence": "NON_DEFINITIVE",
+      "kind": "physical-mismatch",
+      "result": "EXPECTED_REJECTION",
+      "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/exit-capture/r8/physical-mismatch.txt",
+      "logSha256": "73177180ce392c6904815d89c6ee772fac641e21ba73eea66fe011025e715feb",
+      "canonicalOfflineValidation": {
+        "binderDeathCleanup": null,
+        "captureResult": "REJECTED",
+        "cleanup": "NO_BIND_ATTEMPT",
+        "correlation": null,
+        "environment": "UNVERIFIED_INPUT",
+        "fullF5GateClosed": false,
+        "fullSoakGateClosed": false,
+        "heavyWorkIssued": false,
+        "kind": "ORION_F5_EXIT_CAPTURE_OFFLINE_VALIDATION",
+        "memoryLimiterVerified": false,
+        "physicalDeviceVerified": false,
+        "policyMutationIssued": false,
+        "productionInferenceEnabled": false,
+        "profileQualified": false,
+        "provenanceAuthenticated": false,
+        "qualification": "NOT_QUALIFIED",
+        "runtimeEvidence": "NON_DEFINITIVE",
+        "schemaVersion": 1,
+        "status": "CONSISTENT_REJECTION_METADATA"
+      },
+      "validationRecord": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/exit-capture/r8/physical-mismatch-validation.json",
+      "validationSha256": "6d2327ec4c3795f687e5b8c2ae4ec67092b332a1587287b2c25a004a4b59885c"
+    }
+  ],
+  "artifactSets": {
+    "r8": {
+      "app-qualificationRelease-androidTest.apk": "88a690520fca662fc7ac82180859660c078b9ae41a58378a5e0defccd130b248",
+      "mapping.txt": "b3514d6b9b23199de884d61c95b9cf925bfdf7a8e634661a6e6340c1392da9f6",
+      "app-qualificationRelease.apk": "1f3237e12436d9b69a6ca9843d734425b14813e0868e889c19a87c725dbf8b85"
+    },
+    "default": {
+      "app-debug.apk": "bc1be2eca90b6bd726d5458d978651de5fa388675d7b0b71c87ed23a6ad84782",
+      "app-release-unsigned.apk": "1631f2e1f748e4a2493d3324f77492bb8e0d9ed1be3993be9d21082490d710df",
+      "app-debug-androidTest.apk": "80e070a6ff73015b25689416e1e411fed1ee627013af71336cbe4c2c614ee217"
+    },
+    "ordinary": {
+      "app-qualificationRelease-androidTest.apk": "86c6b0058dca8028da7f217271756c3549b418a4bd978a9aea55ad7ec76aa4e7",
+      "mapping.txt": "11770bfd51641ce405d6ce84d6fcf9ca37427e79489865ec305bbefabdd1c470",
+      "app-qualificationRelease.apk": "edcb30839412b3d3cc0c5880217281f7b5a8b682d806cee33817551412d05ca5"
+    }
+  },
+  "actualObservations": {
+    "environment": "ANDROID_EMULATOR",
+    "runtimeEvidence": "NON_DEFINITIVE",
+    "observedUtc": "2026-11-14T19:25:44.347387+00:00",
+    "receipts": {
+      "absent-ai": {
+        "schemaVersion": 1,
+        "kind": "ORION_F5_EXIT_CAPTURE_ONLY",
+        "packageName": "network.orion.qualification",
+        "declaredEnvironment": "ANDROID_EMULATOR",
+        "environment": "ANDROID_EMULATOR",
+        "runtimeEvidence": "NON_DEFINITIVE",
+        "qualification": "NOT_QUALIFIED",
+        "mainPid": 2979,
+        "result": "AI_NOT_AVAILABLE",
+        "correlation": "NO_LIVE_OBSERVATION",
+        "bindingOutcome": "CONNECTION_TIMEOUT",
+        "binderDeathCleanup": "NOT_LINKED",
+        "matchedRecordSha256": null,
+        "firstLiveObservedElapsed": null,
+        "identity": {
+          "source": "UNAVAILABLE_NOT_EMBEDDED",
+          "appApk": "NOT_CAPTURED",
+          "testApk": "NOT_CAPTURED",
+          "model": "NOT_OBSERVED"
+        },
+        "policy": {
+          "state": "UNAVAILABLE_NOT_EXPOSED",
+          "revision": "UNAVAILABLE_NOT_EXPOSED",
+          "fence": "UNAVAILABLE_NOT_EXPOSED",
+          "cooldown": "UNAVAILABLE_NOT_EXPOSED"
+        },
+        "config": {
+          "observations": 3,
+          "intervalMillis": 250,
+          "historyLimit": 8
+        },
+        "platform": {
+          "apiLevel": 35,
+          "buildFingerprintSha256": "6d464d11457987d871c5aa7ecded996bf0b3f775db83587811a5a3f4303186e5",
+          "abi": "x86_64",
+          "bootSource": "SETTINGS_GLOBAL_BOOT_COUNT",
+          "dedicatedReason": null,
+          "dedicatedReasonStatus": "UNAVAILABLE"
+        },
+        "window": {
+          "start": {
+            "bootCount": 1,
+            "elapsedMillis": 4909911,
+            "wallMillis": 1794684301591
+          },
+          "end": {
+            "bootCount": 1,
+            "elapsedMillis": 4909913,
+            "wallMillis": 1794684301594
+          },
+          "wallClockState": "CONTINUITY_NOT_PROVABLE"
+        },
+        "liveObservations": [],
+        "historyBefore": {
+          "status": "TRUNCATED",
+          "queriedCount": 9,
+          "records": [
+            {
+              "recordSha256": "d854e4a042ce880584b30d5915e8b874d1dd4f3b9f7bf2abf7a3720688aebfa7",
+              "pid": 2697,
+              "processName": "network.orion.qualification:ai",
+              "timestampWallMillis": 1794681690673,
+              "reason": 10,
+              "descriptionEvidence": "NO_MATCH",
+              "classification": "USER_REQUESTED"
+            }
+          ]
+        },
+        "historyAfter": {
+          "status": "TRUNCATED",
+          "queriedCount": 9,
+          "records": [
+            {
+              "recordSha256": "d854e4a042ce880584b30d5915e8b874d1dd4f3b9f7bf2abf7a3720688aebfa7",
+              "pid": 2697,
+              "processName": "network.orion.qualification:ai",
+              "timestampWallMillis": 1794681690673,
+              "reason": 10,
+              "descriptionEvidence": "NO_MATCH",
+              "classification": "USER_REQUESTED"
+            }
+          ]
+        },
+        "cleanup": "UNBOUND",
+        "provenanceAuthenticated": false,
+        "physicalDeviceVerified": false,
+        "memoryLimiterVerified": false,
+        "profileQualified": false,
+        "productionInferenceEnabled": false,
+        "fullF5GateClosed": false,
+        "fullSoakGateClosed": false,
+        "heavyWorkIssued": false,
+        "policyMutationIssued": false
+      },
+      "physical-mismatch": {
+        "schemaVersion": 1,
+        "kind": "ORION_F5_EXIT_CAPTURE_REJECTION",
+        "environment": "UNVERIFIED",
+        "qualification": "NOT_QUALIFIED",
+        "runtimeEvidence": "NON_DEFINITIVE",
+        "result": "REJECTED",
+        "failureCode": "ENVIRONMENT_OR_PLATFORM_REJECTED",
+        "cleanup": "NO_BIND_ATTEMPT",
+        "provenanceAuthenticated": false,
+        "physicalDeviceVerified": false,
+        "memoryLimiterVerified": false,
+        "profileQualified": false,
+        "productionInferenceEnabled": false,
+        "fullF5GateClosed": false,
+        "fullSoakGateClosed": false,
+        "heavyWorkIssued": false,
+        "policyMutationIssued": false
+      }
+    },
+    "aiProcessObservation": {
+      "command": [
+        "/home/otavio/Android/Sdk/platform-tools/adb",
+        "-s",
+        "emulator-5584",
+        "shell",
+        "pidof",
+        "network.orion.qualification:ai"
+      ],
+      "exitCode": 1,
+      "outputBytes": 0,
+      "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "aiProcessFound": false
+    }
+  },
+  "physicalDeviceUsed": false,
+  "physicalQualificationCandidateFrozen": false,
+  "memoryLimiterVerified": false,
+  "profileQualified": false,
+  "productionInferenceEnabled": false,
+  "fullF5GateClosed": false,
+  "fullSoakGateClosed": false,
+  "requiredCI": "Tracked by PR; not claimed by this local record.",
+  "processEvidence": {
+    "rawOutput": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/exit-capture/r8/ai-pidof-after.txt",
+    "rawOutputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "exitCode": 1,
+    "aiProcessFound": false
+  },
+  "ordinaryEquivalence": {
+    "app-qualificationRelease.apk": {
+      "changedZipEntries": [
+        "META-INF/version-control-info.textproto"
+      ],
+      "dexNativeManifestAndResourcesUnchanged": true
+    },
+    "app-qualificationRelease-androidTest.apk": {
+      "changedZipEntries": [],
+      "dexNativeManifestAndResourcesUnchanged": true
+    }
+  },
+  "packageIsolation": {
+    "defaultDebugReleaseAndTestExcludeBothDiagnostics": true,
+    "ordinaryR8TargetAndTestAndMappingExcludeBothDiagnostics": true,
+    "ordinaryRunnerPreserved": true,
+    "captureBridgeAndRunnerKeptOnlyWhenSelected": true
+  },
+  "initialBuild": {
+    "result": "PASS_WITH_NULLABILITY_WARNINGS",
+    "artifacts": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/exit-capture/r8-before-architecture-fix",
+    "log": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114/logs/exit-capture-r8.log",
+    "scope": "Initial functional capture also retained; fixed build rejects unavailable initial architecture and records later absence explicitly."
+  },
+  "limitations": [
+    "Actual Android scope is owned API35/x86_64/4096-byte-page emulator only; no physical collection.",
+    "Only AI-absent/history-only and physical-declaration rejection were executed on Android. Live-endpoint, death/replacement and paired correlation branches have synthetic HOST tests; not runtime qualification.",
+    "Historical USER_REQUESTED is classified as such, never proof of Force Stop or MemoryLimiter.",
+    "History returned limit+1 and remains TRUNCATED; selected AI records do not prove complete history.",
+    "Source/app/test/model and policy/revision/fence/cooldown are explicitly unobserved in CAPTURE_ONLY; current collector APK identity does not authenticate historical incidents.",
+    "BOOT_COUNT is a current clock observation, not an exit boot UUID; no process start is inferred from first live observation.",
+    "No model load, inference, automatic AI creation, stress, policy mutation, profile approval or 24-hour soak.",
+    "The ordinary target changed only version-control metadata from the APK with three executed R8 probes; DEX/native/manifest/resources and complete test APK are unchanged."
+  ]
+}

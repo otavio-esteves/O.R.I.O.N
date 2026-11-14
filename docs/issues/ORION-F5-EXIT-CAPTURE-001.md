@@ -1,0 +1,85 @@
+# ORION-F5-EXIT-CAPTURE-001 — qualification-only exit observations
+
+Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/106
+
+OBJECTIVE: Implement bounded actual Android exit-history/live-endpoint observation
+without starting AI, heavy work or policy mutation. Emit CAPTURE_ONLY technical
+receipts with explicit unavailable model/policy/source fields; never manufacture
+the complete limiter-v1 policy correlation or qualification.
+
+FILES ALLOWED: New app/src/exitEvidenceCaptureTarget/** bridge/keep;
+app/src/exitEvidenceCaptureAndroidTest/** framework runner; new
+scripts/android/f5_exit_capture_protocol.py and
+test_f5_exit_capture_protocol_harness.py; docs/qualification/F5-ExitCapture.md;
+this work package. Root integration also owns app/build.gradle.kts,
+.github/workflows/ci.yml, docs/qualification/F5-QualificationChecklist.md and
+docs/qualification/f5-exit-capture-evidence.json for mode wiring and evidence.
+
+CONTRACTS INVOLVED: Public ApplicationExitInfo reads, current exit classifier,
+AndroidOrionClock/BOOT_COUNT, existing IOrionCortex getProtocolInfo/getStatus/
+healthCheck. Architecture §35.1; no new IPC, authority or persistence contract.
+
+INVARIANTS INVOLVED: INV-011, INV-013, INV-027, INV-028, INV-032, INV-033, INV-036.
+
+TESTS REQUIRED: Closed bounded HOST schema/type/duplicate/nonfinite checks; history
+limit/truncation and dedup, PID/name/boot/time links, absent/live/dead endpoint,
+wall limitations and sanitized classification; source contracts enforcing flags0,
+no rebind/autostart/heavy calls, truthful environment and unavailable policy.
+
+ACCEPTANCE CRITERIA: New opt-in runner calls one no-auto-create binding and only
+existing read methods; timeout/absence/cleanup fail visibly. Real platform fields
+are retained without descriptions/traces. HOST tests pass. Root performs all
+canonical builds/device checks separately. Every receipt remains NOT_QUALIFIED,
+all authority/gate flags false; offline validation stays UNVERIFIED_INPUT.
+
+OUT OF SCOPE: Limiter-v1 changes, load/infer/import/
+cancel/unload/run, synthetic policy/governor/fence/revision, stress, native model
+work, physical execution, qualification/profile approval or gate closure.
+
+VALIDATION: HOST Python: 33 focused parser/correlation/source-contract tests passed
+via `python3 -m unittest discover -s scripts/android -p test_f5_exit_capture_protocol_harness.py -v`.
+Python AST parse, local Markdown links and diff whitespace checks passed. No
+Gradle/Docker/device execution. Android compilation/R8 isolation and actual
+instrumentation remain for root's centralized validation. The actual Android
+producer is implemented, not yet runtime-validated; trusted source/artifact
+admission, model/policy/fence observability and real limiter stimulus remain absent.
+
+Peer review follow-up rejects LOADED/INFERENCING rows unless both native runtime
+and validation flags are true. The producer applies the same guard; unstable
+separate status/health reads fail visibly. HOST regression covers all boolean
+pairs in both states and preserves UNLOADED with a resident wrapper.
+The second peer finding adds minimum spacing for later live reads to the parser,
+matching the producer's sleep; before/exact/after interval tests pass, with no
+artificial wait required for the first observation.
+
+ROOT WIRING: app/build.gradle.kts accepts strict orionExitEvidenceCapture=true
+only with orionQualificationRelease=true, mutually exclusive with baseline and
+readiness. The required CI builds each opt-in mode sequentially after normal
+checks, without a device. Root-owned files include .github/workflows/ci.yml.
+
+Canonical compilation reported two nullable Java property warnings. Validation
+now refuses an unavailable initial architecture explicitly; the later output read
+uses a safe nullable path and records UNAVAILABLE, never a guessed architecture.
+HOST source/parser regressions cover both paths; the author did not run a build.
+
+CENTRAL VALIDATION: Canonical Docker HOST harness passed all 348 cases (315
+preceding plus 33 capture contracts). Fixed opt-in R8/native packaging and test
+assembly passed in 6m33s without Kotlin warnings; normal Debug/Release/test APKs
+passed in 2m37s and ordinary R8 scope in 2m22s. Actual Gradle configuration refuses
+the standalone capture flag and simultaneous readiness/capture. Final APKs and
+mapping exclude both diagnostics from normal scopes. Ordinary DEX/native/manifest/
+resources and complete test APK match the previously executed three-probe scope;
+only target version-control metadata changed, so those probes were not repeated.
+
+Owned API35/x86_64/4KiB emulator: actual capture reported AI_NOT_AVAILABLE with
+CONNECTION_TIMEOUT, no live rows and a sanitized TRUNCATED historical snapshot.
+Raw pidof returned exit1/empty after the attempts; no AI was auto-started. A
+physical declaration was rejected before capture. Both actual receipts passed
+the closed validator in canonical Docker, remaining UNVERIFIED_INPUT/NOT_QUALIFIED.
+The initial APK and warnings were retained separately. See [the evidence](../qualification/f5-exit-capture-evidence.json).
+
+Live endpoint/death/correlation paths remain HOST-fixture coverage only. No real
+MemoryLimiter stimulus, current model/policy/fence, physical identity/profile
+qualification or soak is claimed. The shared qualification checklist now links
+implemented preparation separately from remaining heavy producer/configuration/
+performance/physical work; F4/F5 gates remain open.

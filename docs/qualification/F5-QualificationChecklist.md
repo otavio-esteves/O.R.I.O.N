@@ -156,9 +156,60 @@ duration/interval and a new evidence directory. They retain sampling gaps. They
 do not generate a Cortex load, prove continuous heartbeat autonomy by themselves,
 or qualify undisturbed idle/battery behavior while ADB is polling.
 
+## Software preparation status — 2026-11-14
+
+This inventory separates integrated software from local validation. It does not
+close F5 or imply that all preparation is implemented and only hardware remains.
+Counts below retain their individual execution scopes; they are not additive.
+
+| Package | Current software/evidence scope |
+| --- | --- |
+| PR #94 — physical preflight | Integrated: source/artifact/target integrity checks and blocked execution plan; no heavy runner. [Work package](../issues/ORION-F5-QUAL-PREFLIGHT-001.md). |
+| PR #95 — rejected model management | Integrated: explicit MAIN-owned removal/CAS/recovery of selected rejected artifacts; no inference authority. [Work package](../issues/ORION-F5-MODEL-003.md). |
+| PR #97 — unloaded physical baseline | Integrated: opt-in real MAIN/AI resource collector and HOST recorder; no model load/inference. [Protocol](F5-PhysicalBaselineRecorder.md), [work package](../issues/ORION-F5-PHYSICAL-BASELINE-001.md). |
+| PR #101 — MemoryLimiter protocol | Integrated offline correlation/consistency validator; no stimulus or physical limiter proof. [Protocol](F5-LimiterEvidenceProtocol.md), [work package](../issues/ORION-F5-LIMITER-EVIDENCE-001.md). |
+| PR #102 — runtime protocol | Integrated offline identity/lifecycle/stream/time/PSS consistency validator; no Android heavy producer. [Protocol](F5-RuntimeEvidenceProtocol.md), [work package](../issues/ORION-F5-RUNTIME-EVIDENCE-001.md). |
+| PR #104 — heavy-soak protocol | Integrated offline bounded journal/fence/cleanup consistency validator; no workload executor. [Protocol](F5-HeavySoakEvidenceProtocol.md), [work package](../issues/ORION-F5-HEAVY-SOAK-EVIDENCE-001.md). |
+| PR #107 — durable HOST store | Integrated atomic/fsync/CAS evidence storage with explicit uncertain commit, owned files and serialized writers; no device executor. [Protocol](F5-HeavySoakJournalStore.md), [work package](../issues/ORION-F5-HEAVY-JOURNAL-001.md). |
+| PR #108 — pre-resource readiness | Integrated real read-only diagnostic; required CI passed. Actual emulator receipt reports NO_QUALIFIED_PROFILE. Local checks: 807 JVM, 315 HOST, five owner-gate cases and three ordinary R8 probes. [Producer](F5-CortexReadinessProducer.md), [work package](../issues/ORION-F5-READINESS-PRODUCER-001.md). |
+| Issue #106 — exit capture | Local R8/348-HOST validation and actual emulator AI_NOT_AVAILABLE/truncated-history observations; no AI auto-start. Live-endpoint/death-correlation branches currently have synthetic HOST coverage only. [Producer](F5-ExitCapture.md), [work package](../issues/ORION-F5-EXIT-CAPTURE-001.md). |
+
+Readiness observes only the real owner's early predicates. It never issues a
+request, evaluates resource/restart policy or grants admission, even if trusted
+profiles are added later. A null Core port remains CORE_PORT_UNAVAILABLE; it is
+not assigned a guessed cause. Actual emulator execution is software evidence.
+Exit capture is CAPTURE_ONLY/NON_DEFINITIVE, not a limiter stimulus or proof of
+incident causation; unavailable AI and truncated history remain explicit.
+
+Baseline, readiness and exit capture are mutually exclusive opt-in modes of the
+separate network.orion.qualification APK. Each selected APK/test pair must be
+frozen and bound independently; one mode's receipt cannot qualify another mode
+or the production identity. Bootstrap may create that identity's technical
+DB/Keystore/WorkManager state; these runs do not attest a wholly read-only device
+or quiescent Core. Physical Build candidate classification is not verified
+physical provenance. Neither JSON consistency nor CLI inputs approve a profile.
+
+The following software/protocol dependencies still need bounded implementation
+or reviewed decisions before a complete heavy qualification run:
+
+- A real heavy lifecycle producer and passive hooks for authenticated load,
+  accepted stream/terminal and confirmed asynchronous unload, with current
+  endpoint ownership and complete fresh native/process memory coverage.
+- Actual performance producers for tokenizer/token counts and prefill/decode;
+  chunks/bytes and end-to-end elapsed time cannot substitute for these metrics.
+- Trusted qualified configuration and physical coverage/budget calibration;
+  existing production qualified plans remain empty, with admission blocked.
+- A reviewed real MemoryLimiter stimulus/correlation/policy-transition procedure
+  and a complete post-Cortex 24-hour workload, execution and observation protocol.
+
+Physical S21/API/native/model qualification and real-duration evidence remain
+pending alongside those software gaps. F4 #64 and F5 #89 stay OPEN. No entry here
+declares CORTEX_RUNTIME_READY, enables production inference or opens F6.
+
 ## Bounded work needed before the physical run
 
-1. Define a physical Cortex instrumentation/measurement package under #89. Keep
+1. Implement the remaining heavy physical Cortex instrumentation/measurement
+   producer under #89 using the specified protocol. Keep
    actual device resource observations and reviewed candidate limits separate from
    synthetic functional controls; do not weaken the emulator fixture to manufacture
    physical qualification. Record exact model input, load/prefill/decode/unload,
