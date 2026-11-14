@@ -81,13 +81,13 @@ final class OrionGenerationMetricsQualification {
             @Override public void onBindingDied(ComponentName name) { current.set(null); }
             @Override public void onNullBinding(ComponentName name) { current.set(null); connected.countDown(); }
         };
-        boolean bindAttempted = false;
+        boolean bound = false;
         boolean modelTouched = false;
         boolean unloadIssued = false;
         IBinder service = null;
         try (ParcelFileDescriptor model = pinnedModel(context, (String) rawPath, budget)) {
-            bindAttempted = true;
-            check(context.bindService(new Intent().setComponent(component), connection, Context.BIND_AUTO_CREATE), "Bind rejected");
+            bound = context.bindService(new Intent().setComponent(component), connection, Context.BIND_AUTO_CREATE);
+            check(bound, "Bind rejected");
             check(connected.await(10, TimeUnit.SECONDS), "Bind wait expired");
             service = current.get();
             check(service != null && DESCRIPTOR.equals(service.getInterfaceDescriptor()), "Wrong private descriptor");
@@ -183,7 +183,7 @@ final class OrionGenerationMetricsQualification {
                     voidCall(service, UNLOAD);
                 }
             } finally {
-                if (bindAttempted) context.unbindService(connection);
+                if (bound) context.unbindService(connection);
             }
         }
     }
@@ -425,7 +425,7 @@ final class OrionGenerationMetricsQualification {
         if (state.equals("FINAL")) check(slot.equals("RELEASED") && !text(reply, "logicalTerminal").equals("NONE")
                 && (nativeState.equals("JNI_RETURNED") || nativeState.equals("NOT_EXECUTED")), "Finality invalid");
         if (time.equals("KNOWN_BOOT")) {
-            check(integer(reply, "bootCount") == budget.boot && number(reply, "capturedElapsedMillis") >= 0
+            check(integer(reply, "bootCount") == budget.boot && number(reply, "capturedElapsedMillis") >= started
                     && number(reply, "capturedElapsedMillis") <= budget.now(), "Capture clock invalid");
             long captured = number(reply, "capturedElapsedMillis");
             if (reply.containsKey("wrapperStartedElapsed")) check(number(reply, "wrapperStartedElapsed") >= started
