@@ -1,5 +1,7 @@
 # ORION-F5-HEAVY-SOAK-EVIDENCE-001 — Offline post-Cortex soak evidence protocol
 
+Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/100
+
 Parent: [#89](https://github.com/otavio-esteves/O.R.I.O.N/issues/89); the Core
 stability prerequisite remains [#64](https://github.com/otavio-esteves/O.R.I.O.N/issues/64).
 
