@@ -4,14 +4,18 @@ import android.app.Application
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
+import android.os.Looper
 import android.os.Process
 import java.security.MessageDigest
 import java.util.Locale
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import network.orion.app.OrionApplication
+import network.orion.app.OrionFoundationRuntime
 import network.orion.core.time.AndroidOrionClock
 import org.json.JSONObject
 
@@ -24,6 +28,7 @@ object OrionCortexReadinessBridge {
     @JvmStatic fun collect(context: Context, requestedEnvironment: String, coreWaitMillis: Int): Bundle {
         require(requestedEnvironment in ENVIRONMENTS && coreWaitMillis in 0..10_000) { "ARGUMENTS_REJECTED" }
         require(context.packageName == TARGET && Application.getProcessName() == TARGET) { "TARGET_IDENTITY_REJECTED" }
+        require(Looper.myLooper() != Looper.getMainLooper()) { "COLLECTOR_THREAD_REJECTED" }
         val app = context.applicationContext as? OrionApplication ?: error("TARGET_IDENTITY_REJECTED")
         val clock = AndroidOrionClock(context.contentResolver)
         val start = clock.monotonicNow()
@@ -41,30 +46,40 @@ object OrionCortexReadinessBridge {
             build.environment != requestedEnvironment -> failure = "ENVIRONMENT_MISMATCH"
             start.bootSessionId == null -> { result = "UNAVAILABLE"; failure = "CLOCK_UNAVAILABLE" }
             else -> try {
-                val main = app.mainRuntime
-                before = main?.health?.value?.core?.readiness?.name ?: "UNAVAILABLE"
                 readiness = "CORE_PORT_UNAVAILABLE"
-                if (main != null) runBlocking {
+                runBlocking {
                     withTimeout(12_000) {
                         val waitDeadline = start.deadlineAfter(coreWaitMillis.toLong())
                         // Even a zero wait queries once; no model or request is needed.
                         for (attempt in 0..200) {
                             val now = clock.monotonicNow()
                             check(now.bootSessionId == start.bootSessionId && now.elapsedSince(start) != null)
-                            portQueries++
-                            val owner = main.cortexRuntime()
-                            if (owner != null) {
-                                ownerQueryPerformed = true
-                                readiness = owner.preResourceReadiness().name
+                            if (attempt > 0 && waitDeadline.statusAt(now) != network.orion.core.time.MonotonicDeadlineStatus.ACTIVE)
                                 break
+                            // Instrumentation may start before Application.onCreate publishes MAIN.
+                            // Read on its owning looper every poll; never cache an initial null.
+                            val snapshot = coreSnapshot(app)
+                            if (attempt == 0) before = snapshot.second
+                            if (coreWaitMillis > 0 && waitDeadline.statusAt(clock.monotonicNow()) !=
+                                    network.orion.core.time.MonotonicDeadlineStatus.ACTIVE) break
+                            val main = snapshot.first
+                            if (main != null) {
+                                portQueries++
+                                val owner = main.cortexRuntime()
+                                if (owner != null) {
+                                    ownerQueryPerformed = true
+                                    readiness = owner.preResourceReadiness().name
+                                    break
+                                }
                             }
                             if (waitDeadline.statusAt(clock.monotonicNow()) != network.orion.core.time.MonotonicDeadlineStatus.ACTIVE)
                                 break
                             delay(50)
                         }
+                        // A separate MAIN observation; not atomic with the earlier port/query.
+                        after = coreSnapshot(app).second
                     }
                 }
-                after = main?.health?.value?.core?.readiness?.name ?: "UNAVAILABLE"
                 result = "OBSERVED"
             } catch (_: TimeoutCancellationException) {
                 result = "UNAVAILABLE"; readiness = "NOT_EVALUATED"; failure = "OBSERVATION_TIMEOUT"
@@ -104,6 +119,12 @@ object OrionCortexReadinessBridge {
         check(json.toByteArray(Charsets.UTF_8).size <= 8 * 1024)
         return Bundle().apply { putString(KEY, json) }
     }
+
+    private suspend fun coreSnapshot(app: OrionApplication): Pair<OrionFoundationRuntime?, String> =
+        withContext(Dispatchers.Main.immediate) {
+            val main = app.mainRuntime
+            main to (main?.health?.value?.core?.readiness?.name ?: "UNAVAILABLE")
+        }
 
     private data class BuildObservation(val environment: String, val abi: String, val fingerprintSha256: String?)
 

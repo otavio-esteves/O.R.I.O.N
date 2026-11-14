@@ -32,6 +32,13 @@ existing behavior and continues with all remaining checks after those same early
 predicates. Exceptions and laziness of the Core callback are unchanged. Neither
 an enum name nor an open Core barrier authorizes resource-heavy work.
 
+The instrumentation worker can start before Application.onCreate has assigned
+mainRuntime. Every poll therefore reads the actual Application field and a point
+health snapshot on Dispatchers.Main.immediate, its owning looper; an initial null
+does not end a positive wait. No production visibility/volatile modifier is changed
+and the probe never invokes Application.onCreate. The before snapshot is the first
+such observation; the after snapshot is a separate MAIN observation after polling.
+
 The existing factory itself requires its operational Startup Barrier, health
 readiness and DB before returning the owner. A null port is therefore reported as
 CORE_PORT_UNAVAILABLE; the producer does not guess which condition caused it.
@@ -79,7 +86,12 @@ All durations use `AndroidOrionClock`, including its actual boot-count source;
 there is no wall-clock duration or invented boot identity. A zero wait queries
 once. A positive wait polls the existing Core port every 50ms, at most 201 calls,
 without trying to recover the Core or invoke requests. Same-boot collection must
-complete within the requested wait plus 2000ms to be OBSERVED. Internal coroutine
+complete within the requested wait plus 2000ms to be OBSERVED. The initial
+Application-null interval consumes that same boot-bound deadline; polling does
+not restart it when mainRuntime appears. No Core port is inferred from a null
+Application field or an expired window. A collection call on the MAIN thread is
+refused, since its blocking worker interface must not block that looper.
+Internal coroutine
 timeout is 12000ms; the runner bounds the worker at 15 seconds and cancels it on
 failure. Synchronous platform/storage calls cannot be forcibly preempted; a timed
 out worker can finish technical initialization later, but has no heavy-operation
@@ -134,8 +146,10 @@ mix baseline bindings with the private endpoint of a non-existent runtime reques
 ## Execution and review still required
 
 Implemented checks are four JVM lazy-predicate/mapping/exception cases, owner Android gate
-assertions plus one new configured-fixture diagnostic case, and eight HOST source
-contracts. The tiny preexisting-style profile in the Android gate fixture is only
+assertions plus one new configured-fixture diagnostic case, and nine HOST source
+contracts. The additional cold-start contract requires MAIN-dispatched reads inside
+the bounded polling loop and preserves its initial deadline, rather than accepting
+the former one-time null read. The tiny preexisting-style profile in the Android gate fixture is only
 a mechanical negative-control object behind a closed DB and rejecting inventory/
 bind context; it is not provided to this producer or accepted as configuration.
 Configured fixture readiness must return DECISION_NOT_EVALUATED without touching

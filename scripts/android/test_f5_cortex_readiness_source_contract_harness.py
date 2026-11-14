@@ -89,6 +89,23 @@ class CortexReadinessSourceContractTest(unittest.TestCase):
         self.assertIn("waitMillis >= 0 && waitMillis <= 10_000", self.runner)
         self.assertIn("arguments.keySet().equals(", self.runner)
 
+    def test_cold_application_null_is_reread_on_main_inside_original_bounded_wait(self):
+        loop = self.bridge.split("for (attempt in 0..200)", 1)[1].split("after = coreSnapshot(app).second", 1)[0]
+        self.assertLess(loop.index("val snapshot = coreSnapshot(app)"), loop.index("val main = snapshot.first"))
+        self.assertLess(loop.index("val main = snapshot.first"), loop.index("if (main != null)"))
+        self.assertIn("val owner = main.cortexRuntime()", loop)
+        self.assertIn("if (attempt == 0) before = snapshot.second", loop)
+        self.assertIn("delay(50)", loop)
+        self.assertNotIn("if (main != null) runBlocking", self.bridge)
+        self.assertEqual(1, self.bridge.count("app.mainRuntime"))
+        snapshot = self.bridge.split("private suspend fun coreSnapshot(", 1)[1].split("private data class", 1)[0]
+        self.assertIn("withContext(Dispatchers.Main.immediate)", snapshot)
+        self.assertIn("val main = app.mainRuntime", snapshot)
+        self.assertIn("Looper.myLooper() != Looper.getMainLooper()", self.bridge)
+        self.assertEqual(1, self.bridge.count("start.deadlineAfter(coreWaitMillis.toLong())"))
+        self.assertNotIn("deadlineAfter(", loop)
+        self.assertNotIn(".onCreate(", self.bridge)
+
     def test_reflection_is_limited_to_public_bridge_with_unverified_runner_failures(self):
         self.assertIn('getMethod("collect", Context.class, String.class, int.class)', self.runner)
         failure = self.runner.split("private static Bundle failure(", 1)[1]

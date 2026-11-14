@@ -47,7 +47,7 @@ Only technical hashes/PID/boot/elapsed/enums leave the APK; no prompts, outputs,
 serials, raw Build strings, paths or exception text. Timings and Core snapshots
 are observations, never execution permits.
 
-VALIDATION: Eight HOST source contracts pass, and git diff --check passes. Four
+VALIDATION: Nine HOST source contracts pass, and git diff --check passes. Four
 new JVM cases and the expanded owner Android gate tests are supplied but await
 root's canonical compilation/execution. No Gradle, Docker, Android or device
 command was used in this worktree. Conditional build/CI wiring and actual
@@ -56,3 +56,11 @@ emulator receipts remain root-owned validation dependencies.
 ROOT WIRING: app/build.gradle.kts accepts the strict boolean flag only with
 orionQualificationRelease=true and refuses simultaneous baseline/readiness modes.
 The required CI retains normal/probe/baseline scopes and builds this mode last.
+
+Cold-start correction: the first real root emulator run exposed a one-time null
+Application.mainRuntime read that skipped the requested wait. The bridge now
+re-reads that real field and point health on the owning MAIN looper throughout
+the same original boot-bound window, with a separate final snapshot. It never
+calls Application.onCreate, changes field visibility or starts another owner.
+The source-threading regression requires these properties; root retains the
+initial run and performs the canonical rebuild/actual emulator rerun separately.
