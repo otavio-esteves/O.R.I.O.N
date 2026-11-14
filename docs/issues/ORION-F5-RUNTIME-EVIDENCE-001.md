@@ -1,5 +1,7 @@
 # ORION-F5-RUNTIME-EVIDENCE-001 — Offline runtime evidence protocol
 
+Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/99
+
 OBJECTIVE: Define a bounded, content-free record for one Cortex load/inference/
 unload attempt and validate supplied JSON for schema and internal consistency.
 The validator does not collect measurements or authenticate supplied identities.
