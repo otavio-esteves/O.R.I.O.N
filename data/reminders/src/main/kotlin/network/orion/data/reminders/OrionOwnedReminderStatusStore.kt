@@ -20,7 +20,7 @@ class OrionOwnedReminderStatusStore(private val database: OrionDatabase, encrypt
     private val actions = OrionActionStore(database, encryption, clock)
     private val reminders = OrionReminderStore(database, encryption, clock)
 
-    /** Verify the committed action plus its audit/event receipt, independently of later aggregate mutations. */
+    /** Verify committed action and success audit, independently of later mutations and outbox pruning. */
     fun matchesExisting(change: ValidatedReminderStatusChange, actionId: java.util.UUID): Boolean {
         val action = database.actions().find(actionId.toString()) ?: return false
         if (action.status != ActionStatus.SUCCEEDED || action.idempotencyScope != change.skillName ||
@@ -45,10 +45,9 @@ class OrionOwnedReminderStatusStore(private val database: OrionDatabase, encrypt
         val target = database.reminders().find(change.reminderId.toString()) ?: return false
         if (target.version < change.expectedVersion + 1) return false
         if (target.version == change.expectedVersion + 1 && !matches(target, change)) return false
-        val type = if (change.operation == ReminderStatusOperation.SNOOZE) "REMINDER_SNOOZED" else "REMINDER_CANCELLED"
-        val event = database.reminders().historicalEvents(change.reminderId.toString(), change.expectedVersion + 1, type).singleOrNull()
-            ?: return false
-        return event.schemaVersion == 1 && event.payloadSensitivity == action.payloadSensitivity
+        // Action success, its audit and the local effect committed in one writer transaction.
+        // The audit is retained with the ActionRequest; the publication outbox may be pruned earlier.
+        return true
     }
 
     override fun change(change: ValidatedReminderStatusChange, owner: ReminderExecutionOwner): OwnedReminderStatusResult {

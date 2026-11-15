@@ -308,6 +308,43 @@ class OrionReminderKernelTest {
         assertFalse(owned.matchesExisting(checkNotNull(pending.change).change, pending.display.actionId))
     }
 
+    @Test fun historicalStatusReplaySurvivesPublishedEventRetentionAndReopen() {
+        val created = prepared(); kernel.submit(consent(created), UUID.randomUUID())
+        val snooze = OrionReminderIngressWire("SNOOZE", command.reminderId, UUID.randomUUID(), UUID.randomUUID(),
+            expectedVersion = 0, scheduledAtMillis = command.scheduledAt.plusSeconds(600).toEpochMilli())
+        kernel.submit(snooze, snooze.key)
+        val snoozed = kernel.pending().single()
+        assertEquals(ReminderOperationOutcome.APPLIED, kernel.submit(consent(snoozed), UUID.randomUUID()))
+        val cancel = OrionReminderIngressWire("CANCEL", command.reminderId, UUID.randomUUID(), UUID.randomUUID(), expectedVersion = 1)
+        kernel.submit(cancel, cancel.key)
+        val cancelled = kernel.pending().single()
+        assertEquals(ReminderOperationOutcome.APPLIED, kernel.submit(consent(cancelled), UUID.randomUUID()))
+        val dispatcher = network.orion.data.events.OrionEventDispatcher(db.events(), clock,
+            network.orion.data.events.OrionTechnicalEventConsumer.routes(db.events(), clock))
+        assertEquals(3, dispatcher.dispatchBatch().delivered)
+        wall = wall.plus(java.time.Duration.ofDays(8))
+        val pruned = network.orion.data.repository.OrionRetentionMaintenance(db.retention(), clock).runBatch()
+        assertEquals(3, pruned.events)
+        assertEquals(0, pruned.actions)
+        db.close(); bind(); release()
+        val owned = network.orion.data.reminders.OrionOwnedReminderStatusStore(db, crypto, clock)
+        val preparation = OrionReminderStatusActionStore(db, kernel.actions, owned::matchesExisting, clock, barrier)
+        val runner = OrionReminderStatusRunner(db, kernel.actions, owned, clock, barrier)
+        for ((wire, pending) in listOf(snooze to snoozed, cancel to cancelled)) {
+            val admission = (channel.captureStatusFromUser(wire.change()) as OrionReminderStatusAdmissionResult.Admitted).request
+            assertTrue(preparation.prepare(admission) is OrionReminderStatusActionResult.AlreadySucceeded)
+            assertTrue((runner.execute(admission, checkNotNull(pending.change)) as OrionReminderExecutionResult.Completed).deduplicated)
+        }
+        assertEquals(0, db.events().count())
+        assertEquals(3, count("orion_action_requests"))
+        assertEquals(ReminderStatus.CANCELLED, db.reminders().find(command.reminderId.toString())!!.status)
+        assertEquals(2L, db.reminders().find(command.reminderId.toString())!!.version)
+        // The retained action AND its committed success audit remain mandatory proof.
+        db.openHelper.writableDatabase.execSQL("DELETE FROM orion_action_audit WHERE actionId = ? AND toStatus = 'SUCCEEDED'",
+            arrayOf(cancelled.display.actionId.toString()))
+        assertFalse(owned.matchesExisting(checkNotNull(cancelled.change).change, cancelled.display.actionId))
+    }
+
     @Test fun createAndSnoozeDisplayExactFractionAndOverlapOffset() {
         val id = UUID.randomUUID(); val key = UUID.randomUUID()
         val first = Instant.parse("2024-11-03T05:30:00.001Z")

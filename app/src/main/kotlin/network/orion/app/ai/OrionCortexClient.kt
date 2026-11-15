@@ -10,6 +10,9 @@ import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.os.SharedMemory
 import android.system.OsConstants
+import java.nio.CharBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.CodingErrorAction
 import java.security.MessageDigest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
@@ -737,6 +740,8 @@ internal fun validateOrionInferenceRequest(request: OrionInferenceRequest, conte
     val duration = request.deadline.expiresElapsedRealtimeMillis - request.deadline.start.elapsedRealtimeMillis
     require(duration in 0..120_000)
     require(request.prompt.length.toLong() + request.context.length < OrionCortexWire.MAX_INPUT_BYTES)
+    // Reject malformed UTF-16 before storage preparation, admission or Binder can replace it.
+    for (field in listOf(request.prompt, request.context)) strictInferenceUtf8(field).fill(0)
 }
 
 internal fun orionInferenceRequestFingerprint(request: OrionInferenceRequest, context: Int, threads: Int): String {
@@ -744,9 +749,22 @@ internal fun orionInferenceRequestFingerprint(request: OrionInferenceRequest, co
     for (field in listOf(request.modelId, request.prompt, request.context, request.maxTokens.toString(),
         request.temperature.toString(), request.priority.name, request.deadline.start.toString(),
         request.deadline.expiresElapsedRealtimeMillis.toString(), context.toString(), threads.toString())) {
-        val bytes = field.toByteArray(Charsets.UTF_8)
-        digest.update(java.nio.ByteBuffer.allocate(4).putInt(bytes.size).array()); digest.update(bytes)
-        bytes.fill(0)
+        val bytes = strictInferenceUtf8(field)
+        try {
+            digest.update(java.nio.ByteBuffer.allocate(4).putInt(bytes.size).array()); digest.update(bytes)
+        } finally { bytes.fill(0) }
     }
     return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+/** No replacement bytes: different request text must never alias a retained identity. */
+private fun strictInferenceUtf8(value: String): ByteArray {
+    val encoded = try {
+        Charsets.UTF_8.newEncoder().onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT).encode(CharBuffer.wrap(value))
+    } catch (_: CharacterCodingException) {
+        throw IllegalArgumentException("Inference input requires well-formed Unicode.")
+    }
+    return try { ByteArray(encoded.remaining()).also { encoded.get(it) } }
+        finally { if (encoded.hasArray()) encoded.array().fill(0) }
 }
