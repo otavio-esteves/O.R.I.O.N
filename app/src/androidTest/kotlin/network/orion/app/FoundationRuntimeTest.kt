@@ -25,6 +25,28 @@ import org.junit.runner.RunWith
 class FoundationRuntimeTest {
     private val app: OrionApplication get() = ApplicationProvider.getApplicationContext()
 
+    @Test fun normalCoreKeepsOneCortexOwnerWithoutQualificationObservation() = runBlocking {
+        // Freeze this normal test APK, then target a Debug APK built with both qualification
+        // properties true: observable owner behavior must still have no attached observer.
+        assertEquals("network.orion", app.packageName)
+        val runtime = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { checkNotNull(app.mainRuntime) }
+        withTimeout(30_000) {
+            runtime.health.first { it.core.readiness.isStartupBarrierOpen }
+            while (!runtime.taskStartupBarrier.isOpen()) kotlinx.coroutines.delay(10)
+        }
+        val owner = checkNotNull(runtime.cortexRuntime())
+        assertSame(owner, runtime.cortexRuntime())
+        assertNull(owner.beginCycleObservation())
+        // This test owns neither the shared runtime nor its owner, so it must not close them.
+    }
+
+    @Test fun normalArtifactDoesNotContainSingleAttemptReflectionEntry() {
+        assertEquals("network.orion", app.packageName)
+        assertThrows(ClassNotFoundException::class.java) {
+            Class.forName("network.orion.app.ai.OrionCortexSingleAttemptBridge", false, app.classLoader)
+        }
+    }
+
     @Test fun storageOpensAndHealthPublishesOnlyAfterBothStoresLoad() = runBlocking {
         val runtime = checkNotNull(app.mainRuntime)
         val report = withTimeout(30_000) { runtime.health.first { it.core.readiness.isStartupBarrierOpen } }

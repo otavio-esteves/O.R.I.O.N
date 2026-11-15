@@ -232,12 +232,14 @@ class OrionCortexClientTest {
     }
 
     private suspend fun observedBatch(buffer: OrionCortexUnloadObservationBuffer): OrionCortexUnloadObservationBatch = withTimeout(10_000) {
+        // pending clears only after publish/offer. Draining earlier can make the
+        // nonblocking producer drop its sole observation on this test's drain lock.
+        awaitDiagnosticsIdle()
         var batch = buffer.drain()
         while (batch.observations.isEmpty() && batch.samplingBusyDroppedAtLeast == 0L) {
             kotlinx.coroutines.delay(1)
             batch = buffer.drain()
         }
-        awaitDiagnosticsIdle()
         batch
     }
 
