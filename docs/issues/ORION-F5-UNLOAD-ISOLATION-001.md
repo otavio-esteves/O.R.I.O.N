@@ -66,3 +66,16 @@ failure leaves owner/dispatcher absent. A ninth dispatcher JVM case blocks the
 real shared worker clock, disables the owner, proves updates/new tickets cannot
 revive confirmation, and verifies slot release plus a healthy different owner.
 No real OOM, injected allocator/callback or author build/device run is used.
+
+CANONICAL VALIDATION: Root built source `8e4250a` in Docker: all 151 app JVM
+contracts passed without failures/errors/skips, lintDebug passed, and Debug/Release
+plus the Android test APK assembled. The strengthened regression-only source
+`527e378` against the original target reproduced both expected Android failures:
+queued TIMED_OUT and caller blocked until diagnostic release. The corrected target
+passed all 32 client Android fixtures on an owned API-35 x86_64 / 4-KiB emulator
+(13.274 seconds); installed app/test APK SHA-256 matched the frozen pair both before
+and after execution. Raw reports, APKs, hashes and logs are retained outside the
+repository under `O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/unload-isolation/`.
+These fixtures prove software behavior only, not actual native release, physical
+performance, qualified profiles or a real-duration soak. Required PR CI remains
+independent and must pass before merge.
