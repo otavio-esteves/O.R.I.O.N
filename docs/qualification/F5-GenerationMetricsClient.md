@@ -25,7 +25,9 @@ transactions never treat an unavailable/retired ID as permission to re-execute.
 
 Correlation additionally requires a new valid receipt from the existing
 `currentMemoryTelemetry` call inside that inference's original synchronous
-resource callback, on that callback's thread. A concurrently obtained receipt or
+resource callback, on that callback's thread. Its scope starts only after
+`restartCandidate` returns and surrounds exactly `resources(...)`; a new receipt
+from restart alone cannot supply the inference-resource witness. A concurrently obtained receipt or
 the old load-stage PID pin does not supply this witness. The already-computed
 resource decision remains the same object and only evaluation. Its known boot
 and sample time must agree with the receipt and the original request's active
@@ -55,7 +57,7 @@ The initial service adapter may expose timeState=UNAVAILABLE; the reader does no
 invent wrapper clocks, capture time or boot fields to repair it. No snapshot is
 persisted/exported by this package and correlation metadata is not printed.
 
-Fifteen focused pure JVM and twelve Android local-Stub tests are provided for
+Fifteen focused pure JVM and thirteen Android local-Stub tests are provided for
 root-controlled execution, plus mechanical unsupported implementations of the
 appended methods in the existing client fixture. They are synthetic contract
 fixtures, with no real AI process/native/model or physical result. The author ran

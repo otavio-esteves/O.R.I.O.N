@@ -116,9 +116,22 @@ internal class OrionCortexClient(
         }
     }
 
-    private fun approved(id: String, context: Int, threads: Int, tokens: Int): OrionResourceDecision {
+    private class MetricsResourceCapture {
+        var callback: OrionCortexMetricsCorrelation.ResourceCallback? = null
+    }
+
+    private fun approved(id: String, context: Int, threads: Int, tokens: Int,
+        metricsCapture: MetricsResourceCapture? = null): OrionResourceDecision {
         val candidate = restartCandidate(id, context, threads, tokens)
-        val decision = resources(id, context, threads, tokens)
+        val decision = if (metricsCapture == null) resources(id, context, threads, tokens) else {
+            // The restart callback above cannot provide this inference-resource witness.
+            val callback = synchronized(monitor) { metricsCorrelation.isolatedMetrics { it.beginResourceCallback() } }
+            metricsCapture.callback = callback
+            try { resources(id, context, threads, tokens) }
+            finally { synchronized(monitor) { callback?.let { token ->
+                metricsCorrelation.isolatedMetrics { it.endResourceCallback(token) }
+            } } }
+        }
         check(decision.allowed && decision.plan?.model == candidate.model) { "Cortex resource policy blocked." }
         val plan = checkNotNull(decision.plan)
         check(context <= plan.maxContext && threads <= plan.maxThreads && tokens <= plan.maxTokens)
@@ -254,13 +267,10 @@ internal class OrionCortexClient(
             val mapped = input.mapReadWrite()
             try { mapped.put(content) } finally { SharedMemory.unmap(mapped); content.fill(0) }
             check(input.setProtect(OsConstants.PROT_READ))
-            val resourceCallback = synchronized(monitor) { metricsCorrelation.isolatedMetrics { it.beginResourceCallback() } }
-            val resourceDecision = try { approved(model.modelId, contextTokens, threads, request.maxTokens) }
-                finally { synchronized(monitor) { resourceCallback?.let { token ->
-                    metricsCorrelation.isolatedMetrics { it.endResourceCallback(token) }
-                } } }
+            val metricsCapture = synchronized(monitor) { metricsCorrelation.isolatedMetrics { MetricsResourceCapture() } }
+            val resourceDecision = approved(model.modelId, contextTokens, threads, request.maxTokens, metricsCapture)
             val metricsCandidate = synchronized(monitor) {
-                metricsCorrelation.isolatedMetrics { it.candidate(service, connection, request.requestId, transportId, resourceCallback,
+                metricsCorrelation.isolatedMetrics { it.candidate(service, connection, request.requestId, transportId, metricsCapture?.callback,
                     resourceDecision.allowed, resourceDecision.sampledAt, request.deadline, request.maxTokens, contextTokens) }
             }
             if (lifecycle.status().terminal != null) return@withLock lifecycle.status()

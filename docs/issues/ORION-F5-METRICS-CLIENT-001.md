@@ -59,7 +59,7 @@ model/performance qualification, F4/F5 closure or F6. No Gradle/Docker/ADB here.
 
 ## IMPLEMENTATION / VALIDATION STATUS
 
-Provided 15 pure JVM and 12 Android local-Stub tests. Peer review identified and
+Provided 15 pure JVM and 13 Android local-Stub tests. Peer review identified and
 closed admission-time lower bounds for KNOWN_BOOT capture/wrapper start, plus
 Throwable containment exclusively around optional allocation/projection/query.
 A focused Android case preserves the exact original resource AssertionError;
@@ -68,3 +68,12 @@ repaired and no upper deadline bound is invented for later native completion.
 `git diff --check` passes. No compiler/runtime checks were run by this author;
 root integration must first provide appended AIDL and CURRENT minor 2 and then
 execute the canonical checks. All source/runtime/hardware gates remain separate.
+
+Follow-up causal guard: review found the initial scope enclosed all of `approved`,
+including restart. Regression-only commit `b25b707` supplies a fresh receipt only
+from restart and expects no metrics discovery/query. The fix brackets exactly
+`resources(...)` after restart returns, using one private final optional holder
+allocated inside diagnostic isolation. Load remains on its original uncaptured
+path; resource/restart count, order, returned decision and original exceptions
+are preserved. No new health/RPC/clock is introduced. This Android regression is
+provided for root red/green execution, not claimed executed by the author.
