@@ -8,8 +8,16 @@ llama receipt port are coordinated dependencies, not implemented in this package
 
 The library build property `orionCortexGenerationMetrics` is strictly `true` or
 `false`, default `false`. Enabling it also requires
-`-PorionQualificationRelease=true`, whose application build uses the separate
-qualification identity. This opt-in neither installs a qualified model/resource
+`-PorionQualificationRelease=true`. Only the library's matching
+`qualificationRelease` build type consumes this enable flag; it inherits release
+settings and falls back to release variants for its API/native dependencies.
+The library variant is disabled unless the qualification property is true,
+matching the app's existing variant selection. The separate application
+qualification identity therefore selects the matching source variant by name.
+Ordinary Debug/Release library variants always compile source `false`, including
+when both properties are true and the requested task builds a normal APK.
+Properties alone do not change a requested APK's application ID. This opt-in
+neither installs a qualified model/resource
 profile nor permits inference. The existing admission, deadline, callback,
 cancellation, native watchdog and cleanup paths remain authoritative. With the
 property disabled the potential supported metric mask is zero, no native capture
@@ -91,6 +99,20 @@ unchanged legacy capabilities, malformed/non-inference/unused/retired IDs and no
 runtime initialization, without a model or inference. No tests/builds or device
 operations were executed by this author. Root/CI must validate the combined API,
 AIDL, port and service, including native/Android/R8 compatibility.
+
+The existing default app boundary test also requires the installed target identity
+`network.orion` and an actual Binder discovery source mask of zero. To reproduce
+the variant bug, root can freeze its default Debug test APK, then run it against
+a normal Debug target built with both properties true at test-only commit
+1478241. That commit leaves the vulnerable defaultConfig flag intact. The packaging
+fix confines the flag to the service qualificationRelease variant; the same frozen
+test must then pass against the normal Debug target with both properties true.
+Ordinary Release must likewise remain false, while the explicitly built separate
+qualificationRelease APK can advertise the enabled source. The default tests are
+not replaced by the qualification runner for this artifact comparison. This tests
+installed behavior rather than mirroring Gradle expressions. All builds,
+artifact freezing, installation and execution remain root-owned and pending;
+this author ran no Gradle/Docker/ADB.
 
 The S21 remains absent. This package supplies no physical provenance, calibrated
 budget, qualified profile, memory completeness, MemoryLimiter stimulus, sustained
