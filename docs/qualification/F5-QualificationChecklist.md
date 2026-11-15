@@ -45,6 +45,18 @@ binds that historical source, installed artifacts, raw logs, model and platform 
 Overlapping test selections are not additional unique cases. A discovery run with
 `log=true` is not execution evidence.
 
+The [20261115 audit index](audit-20261115-evidence.json) carries an explicit JVM
+inventory correction. Its original raw collection contains 990 cases in 124 XML
+suites, including three legacy reports outside the Git-tracked module inventory:
+23 cases from `data/modelregistry` (2026-11-08) and 30 from `ai/cortex` (2026-11-14).
+The active audit B total is **937 cases in 121 suites**, with zero failures,
+errors or skips. The original tar, manifest, logs and raw totals remain intact;
+the external index records the exclusion method and exact archived report hashes.
+The later F full check has **952 cases in 122 active suites**, adding only the
+15-case lifecycle-facts suite. This separate run does not replace or add again
+the valid earlier F scoped 264-case snapshot. Correcting report inventory is not
+a new execution, CI approval or qualification result.
+
 ## Remaining gate matrix
 
 | Workstream / owner boundary | Evidence available | Evidence required before closure |
