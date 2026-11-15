@@ -88,3 +88,30 @@ No content, request/model IDs, content hashes, raw application errors, schema or
 migration is introduced. The receipt remains partial: no complete RuntimeEvidence
 v1, native benchmark, physical/API qualification, calibrated or approved profile,
 production inference approval, F4/F5/24-hour soak closure or F6 authorization.
+
+
+FULL-CHECK COMPLEMENT (2026-11-15, later execution scope): The clean tested source
+is 8a80dd7a386878323888240d62787f11ad31ee9a, tree
+f25b26eba0e4e8435172c131101a1f17aff3c31b. Docker's canonical full check passed
+in 20m37s: 4,401 tasks, 1,663 executed, 637 from cache and 2,101 up-to-date.
+The active Git-tracked module inventory contains 952 JVM cases in 122 suites,
+with zero failures/errors/skips. These are current result totals, not a claim
+that every case was freshly executed. The former raw 990/124 audit collection
+included 53 legacy cases in three XMLs outside that inventory; B active937/121
+plus the new 15-case lifecycle suite equals F active952/122. Both correction
+records and every active XML are preserved in the complement.
+
+The qualification single-attempt R8 build/package check subsequently passed
+in 13m57s: 1,736 tasks, 79 executed, 34 from cache and 1,623 up-to-date.
+This is build/package evidence only; no new Android runtime run is claimed.
+The earlier 264-case/35-suite scoped snapshot, its 51 Android and 426 HOST
+executions, and its 68-payload archive remain unchanged. Those 264 JVM cases
+are not added again to the later 952-case total.
+
+[Full-check complement](../qualification/f5-lifecycle-full-check-20261115.json)
+binds the canonical/R8 logs, 122 active XMLs, both count-correction records,
+the complete tracked source-tree manifest and the six unchanged runtime/test
+hashes. This note and the new complement files were added after validation;
+they do not rewrite the tested source tree. Required remote CI remains PENDING
+in this snapshot. No physical/profile/production inference, native benchmark,
+complete RuntimeEvidence v1, F4/F5/soak closure or F6 approval is granted.
