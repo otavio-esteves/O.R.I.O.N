@@ -1,0 +1,550 @@
+{
+  "artifact": {
+    "archiveMembers": 70,
+    "bytes": 109144,
+    "manifest": "manifest.json",
+    "manifestSha256": "215802809907380992da2a07a4b8345eef06a818039b5afe7b7b9a557b68476f",
+    "path": "docs/qualification/artifacts/f5-lifecycle-facts-evidence-20261115.tar.gz",
+    "payloadFiles": 68,
+    "sha256": "8f5819e1d0a4a492c89b173768337590a14d335556c3cfd735c10f8b9afec5e0"
+  },
+  "claim": "Scoped software preparation: passive associated original lifecycle facts only.",
+  "emulatorRestartLog": "emulator/emulator-restart.log",
+  "environments": {
+    "ANDROID_EMULATOR": {
+      "abi": "x86_64",
+      "api": 35,
+      "apkBinariesIncluded": false,
+      "apkSha256": {
+        "network.orion": "f35823f7ef3f01fb870472b84a5f09b7fa6b3c4b55b5e06f08b7c56b52e268e4",
+        "network.orion.test": "09f28a7e2dd4d5eef55f3db21791684c3bd86b2767dcfcb984e726d65c3198a8"
+      },
+      "localAndInstalledApkHashesVerified": true,
+      "ownedAvd": {
+        "cleanup": "emulator/owned-cleanup.json",
+        "otherAvdsChanged": false,
+        "ramMiB": 3072,
+        "removedAfterExecution": true,
+        "vcpus": 4
+      },
+      "pageSizeBytes": 4096,
+      "physicalEvidence": false,
+      "result": "PASS_SCOPED_ANDROID",
+      "results": "emulator/runtime-results.json",
+      "selections": [
+        {
+          "log": "emulator/cycle_facts.log",
+          "result": "PASS",
+          "tests": 10
+        },
+        {
+          "log": "emulator/client_owner_regressions.log",
+          "result": "PASS",
+          "tests": 41
+        }
+      ],
+      "totalTests": 51
+    },
+    "CONTAINER": {
+      "focusedJvmAndAndroidTestAssembly": {
+        "countsAreNotAdditive": true,
+        "duration": "11m55s",
+        "errors": 0,
+        "failures": 0,
+        "log": "container/focused-build.log",
+        "modules": [
+          {
+            "errors": 0,
+            "failures": 0,
+            "module": "ai/api",
+            "skipped": 0,
+            "suites": 4,
+            "tests": 48
+          },
+          {
+            "errors": 0,
+            "failures": 0,
+            "module": "app",
+            "skipped": 0,
+            "suites": 31,
+            "tests": 216
+          }
+        ],
+        "newLifecycleFactTestsIncluded": 15,
+        "result": "PASS",
+        "skipped": 0,
+        "taskCounts": {
+          "executed": 644,
+          "fromCache": 326,
+          "total": 970
+        },
+        "tasks": [
+          ":ai:api:testDebugUnitTest",
+          ":app:testDebugUnitTest",
+          ":app:assembleDebugAndroidTest"
+        ],
+        "totalSuites": 35,
+        "totalTests": 264
+      },
+      "hostHarness": {
+        "candidate": "F integrated lifecycle-facts source over 163e8e0",
+        "durationSeconds": 19.716,
+        "log": "container/host-check.log",
+        "otherCandidateInvocationIncluded": false,
+        "physicalEvidence": false,
+        "result": "PASS",
+        "tests": 426
+      },
+      "reuse": "Gradle reused cached and up-to-date outputs. XML totals describe the two scoped current JVM module results, not a new complete project test run.",
+      "staticAndDebugBuild": {
+        "duration": "8m16s",
+        "log": "container/static-target-build.log",
+        "result": "PASS",
+        "taskCounts": {
+          "executed": 613,
+          "fromCache": 80,
+          "total": 1851,
+          "upToDate": 1158
+        },
+        "tasks": [
+          "verifyModuleBoundaries",
+          "testModuleBoundaries",
+          ":ai:api:lintDebug",
+          ":app:lintDebug",
+          ":app:assembleDebug"
+        ]
+      }
+    }
+  },
+  "gates": {
+    "f6Authorized": false,
+    "fullF4GateClosed": false,
+    "fullF5GateClosed": false,
+    "fullSoakGateClosed": false,
+    "nativeBenchmarkApproved": false,
+    "physicalVerified": false,
+    "productionInferenceApproved": false,
+    "profileApproved": false,
+    "remoteCI": {
+      "approved": false,
+      "included": false,
+      "status": "PENDING"
+    },
+    "runtimeEvidenceV1Complete": false,
+    "sourceAuthenticated": false
+  },
+  "integrityModel": "Unsigned integrity record. Archive SHA-256 covers all members; manifest.json covers payloads, excluding itself and manifest.sha256. Matching metadata does not authenticate source or hardware.",
+  "issue": 132,
+  "limits": [
+    "Readings are associated original deadline samples, not exact callback arrival, validation, native or export times.",
+    "Buffered admission, ordered release, and downstream callback delivery are separate facts; loss remains explicit.",
+    "No new real native model inference or benchmark is established by the scripted Client/Owner Android fixtures.",
+    "No physical target was available and no physical qualification or soak run is claimed.",
+    "No complete RuntimeEvidence v1 producer, calibrated profile, heavy-work executor, actual-duration stability or phase-gate approval is delivered.",
+    "Initial non-passing infrastructure attempts are preserved and are not product regressions.",
+    "The integration includes prior strict UTF-8 and HOST130 code; the old author commit is not the identity of this tested integration.",
+    "APKs are identified by hashes only; no APKs, models, disk images, keystores, physical serials or secrets are bundled."
+  ],
+  "nonPassingAttempts": [
+    {
+      "androidTestsIssued": false,
+      "appInstalled": false,
+      "files": [
+        "emulator/initial-bootstrap.json",
+        "emulator/initial-bootstrap-system-errors.log",
+        "emulator/emulator.log"
+      ],
+      "productFailureInferred": false,
+      "reclassifiedAsPass": false,
+      "reportedSystemPhoneStartupAnr": true,
+      "result": "BOOTSTRAP_NOT_COMPLETE",
+      "stage": "initial emulator bootstrap"
+    },
+    {
+      "appInstalled": false,
+      "files": [
+        "emulator/initial-runner-readiness-error.json",
+        "emulator/initial-runner-readiness-error.log"
+      ],
+      "instrumentationIssued": false,
+      "productFailureInferred": false,
+      "reclassifiedAsPass": false,
+      "result": "HOST_HELPER_READINESS_ERROR",
+      "stage": "initial HOST runner readiness query"
+    }
+  ],
+  "payloadManifest": [
+    {
+      "bytes": 69298,
+      "path": "container/focused-build.log",
+      "sha256": "d51bcc5f2ac56066e89a645c779e7c5e2ab4a1b4ab73b05e71ddd6ab83fe1fab"
+    },
+    {
+      "bytes": 720,
+      "path": "container/host-check.log",
+      "sha256": "57356fd19cf4247ec5639eaccb629a046dc8b9b000b3cd40222691d0c9f311d3"
+    },
+    {
+      "bytes": 119264,
+      "path": "container/static-target-build.log",
+      "sha256": "7066a34d318d98aab5fefb904c553fbf481928fce42404fd0697a0a62b24e4ef"
+    },
+    {
+      "bytes": 5932,
+      "path": "documentation/post-validation-work-package.md",
+      "sha256": "28f9cc5779a7762017400b0d57703e7a52ce25a521cefb25b1354ca31b79eb51"
+    },
+    {
+      "bytes": 28855,
+      "path": "emulator/client_owner_regressions.log",
+      "sha256": "200b9a6689f631490a551510aba172c5d64044e05a8b9d70b5e365902a311eab"
+    },
+    {
+      "bytes": 7072,
+      "path": "emulator/cycle_facts.log",
+      "sha256": "3f55acb0c0bdad00993909419b407b4fff3dc47aea6f38a3e160606aa514c747"
+    },
+    {
+      "bytes": 8627,
+      "path": "emulator/emulator-restart.log",
+      "sha256": "6f848de7a7337c691adf6b8a436eeea7d71d4ced82a4597d9b88d92f1ecb79eb"
+    },
+    {
+      "bytes": 8198,
+      "path": "emulator/emulator.log",
+      "sha256": "2886ce7c49c7fbc171abba9901f8e9e63de99428c593dc7d784dafea5f4f86e8"
+    },
+    {
+      "bytes": 0,
+      "path": "emulator/initial-bootstrap-system-errors.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 452,
+      "path": "emulator/initial-bootstrap.json",
+      "sha256": "eb741bd1865536ed43b78ab98b879cd0368a25ecf1ffb4af5c3a31b0d55bbb23"
+    },
+    {
+      "bytes": 341,
+      "path": "emulator/initial-runner-readiness-error.json",
+      "sha256": "5f7cbc7fb5231b18ddff09d6803774e5d0a04baed8ee0169e7c09a91f78ee739"
+    },
+    {
+      "bytes": 718,
+      "path": "emulator/initial-runner-readiness-error.log",
+      "sha256": "8ca8c03df4faf454e1eab45f973e14d49cbb2ac1cf84d8631864d055987d3731"
+    },
+    {
+      "bytes": 112,
+      "path": "emulator/owned-cleanup.json",
+      "sha256": "079a70519d264e003ae3479a2fde2bc3a15be02a4ab7d980e36824dd7ff48569"
+    },
+    {
+      "bytes": 343,
+      "path": "emulator/owned-emulator-restart.json",
+      "sha256": "b921e032135e927699872cdbea2cb0f1cb2f30ffad6cdb4eb53915ed54f7a61c"
+    },
+    {
+      "bytes": 155,
+      "path": "emulator/owned-emulator.json",
+      "sha256": "4db40156eb435b63393435b667d51e95334763711a06c8e253843310a5b5dbfd"
+    },
+    {
+      "bytes": 101,
+      "path": "emulator/runner.log",
+      "sha256": "bcc40a08c618f7d8cae4eb67933141ecd2864a8b16bd653a7bd5ddaabc99ae89"
+    },
+    {
+      "bytes": 1909,
+      "path": "emulator/runtime-results.json",
+      "sha256": "1409081f891c38d8f31bf864e2425583a85d65d9d4f65bc912346bbe6f18a212"
+    },
+    {
+      "bytes": 8124,
+      "path": "evidence.json",
+      "sha256": "f79f033e41cd4266240371bb9e1f82c16bc9a47fe8ad377c90913d0ea61c8cd9"
+    },
+    {
+      "bytes": 1924,
+      "path": "jvm/ai/api/build/test-results/testDebugUnitTest/TEST-network.orion.ai.api.OrionGenerationMetricsTest.xml",
+      "sha256": "9ea6c322132fae78967105be6a6fc6acbc3b66b752c0ad20c83ea4f15545513f"
+    },
+    {
+      "bytes": 2929,
+      "path": "jvm/ai/api/build/test-results/testDebugUnitTest/TEST-network.orion.ai.api.OrionInferenceLifecycleFactsTest.xml",
+      "sha256": "02ee79c8ee8fdcad7efb426e7c0b0caa881ce3df03ff88d0f1aa1dd17f403f64"
+    },
+    {
+      "bytes": 2676,
+      "path": "jvm/ai/api/build/test-results/testDebugUnitTest/TEST-network.orion.ai.api.OrionInferenceLifecycleTest.xml",
+      "sha256": "e077e15234d503f1a94aa4f180d26f462fa8875594519ff96e754c7f7cd0c6f8"
+    },
+    {
+      "bytes": 1437,
+      "path": "jvm/ai/api/build/test-results/testDebugUnitTest/TEST-network.orion.ai.api.OrionIssuedRequestHistoryTest.xml",
+      "sha256": "9ad7acbcd6685823c58694f3785445bfc7ad26c1a9057cbb2c24180b5a2c3958"
+    },
+    {
+      "bytes": 894,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.CoreReadyLogEventTest.xml",
+      "sha256": "541177617347d2f51a2fd2d5e6c11f920960632c58201e2c54619d801f6c4fdd"
+    },
+    {
+      "bytes": 506,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.OrionHealthObservationsTest.xml",
+      "sha256": "91f1ae6c0b7285466d304ba7479c79f2e6cc451edc1153cfde00d3fff71a1c20"
+    },
+    {
+      "bytes": 945,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.OrionIngressMaintenanceTest.xml",
+      "sha256": "a63d357f27555d54c014436d6bf54f1f2e08d6d03a6c54126d05eaca150a55ce"
+    },
+    {
+      "bytes": 1146,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.OrionMaintenanceOutcomeTest.xml",
+      "sha256": "39ac5849e0c7c8001f308ee4ee4bdb4bf431d7d2dfebbf5e81a198dabc053e58"
+    },
+    {
+      "bytes": 2427,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexCycleObservationTest.xml",
+      "sha256": "b69a33179a13c2b6c63d3f0b76f843c878586159551b49416aa6551985f2649d"
+    },
+    {
+      "bytes": 3276,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexCyclePartialProjectorTest.xml",
+      "sha256": "2bfd187fd821be655b700729fccebb77d80e65e45bacf9d516ba1477696260f2"
+    },
+    {
+      "bytes": 3010,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexMetricsCorrelationTest.xml",
+      "sha256": "ace17b39430b0bb5b0b311066ba32d75f3b16a6db98d106357f91185890a1cf1"
+    },
+    {
+      "bytes": 988,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexPreResourceReadinessTest.xml",
+      "sha256": "d6e8d92fb6b624d458475d95671b99af1a90919e317cbc2d8cdf1be83c171887"
+    },
+    {
+      "bytes": 1408,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexRuntimeOwnerPolicyTest.xml",
+      "sha256": "ec9b8cce89366348caf7399b2259ff28a5e332557ef2d5b3a6bd2c252280ae3e"
+    },
+    {
+      "bytes": 1422,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexSingleAttemptTest.xml",
+      "sha256": "60f2f7a2403bcca2fa2c4eda67fa19e73b8b8a5108810c96e6f9e0de08e50ac3"
+    },
+    {
+      "bytes": 1955,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexUnloadDiagnosticsTest.xml",
+      "sha256": "e16abcaaa9b556b4b021f9a426af0c95c5e6a7b12e5afbfa7402758ada545987"
+    },
+    {
+      "bytes": 2068,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexUnloadObservationTest.xml",
+      "sha256": "968d8fced9afbb3d242622ecf670d4afa814b0486e244dc2f02c242e3dc5a471"
+    },
+    {
+      "bytes": 870,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionInferenceRequestFingerprintTest.xml",
+      "sha256": "b00e446f64c294a09806b4a96b9b356677c57ba01f4b1dcdaee4e9a0e4e01de6"
+    },
+    {
+      "bytes": 1676,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionInferenceRequestLedgerTest.xml",
+      "sha256": "65344747d2b44579b5f2b79bda9948763a6eb93be6b62ebc82f992f44470f624"
+    },
+    {
+      "bytes": 2392,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionInferenceTurnstileTest.xml",
+      "sha256": "fc4f3a6bd098c0c337e187325513cbad0d6647bfc402ab16f769830933b6a148"
+    },
+    {
+      "bytes": 3185,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.memories.OrionMemoryAdmissionOwnerTest.xml",
+      "sha256": "0a3939f398227a4ac3225f7db1d732f80b9989b7da9a9439dccd7d095c1af6b9"
+    },
+    {
+      "bytes": 670,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.memories.OrionMemoryIngressWireTest.xml",
+      "sha256": "30b49a0ad2f1620467217f31888787b504604a38acf36330694560cf1aaeb13d"
+    },
+    {
+      "bytes": 1211,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.notifications.OrionNotificationIngressWireTest.xml",
+      "sha256": "66ce6d9898473e89691f5dd0132dcbe461198e40cbdc210439b51148fb04e147"
+    },
+    {
+      "bytes": 705,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryAdmissionsTest.xml",
+      "sha256": "caa85f0f72d3ca95d6a97572116836d9491109fdb36f05adfbf8e9c195ccd534"
+    },
+    {
+      "bytes": 539,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryPolicyTest.xml",
+      "sha256": "c5abb407c334be4c08727fdb55431a8c3db7a37cab58bd276d8f29adb9138d77"
+    },
+    {
+      "bytes": 689,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryWireTest.xml",
+      "sha256": "1319cd48312a81beb1b0e2f20b9a5425347c6520f17d3049c0fe23cc300b6ed2"
+    },
+    {
+      "bytes": 869,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminderdelivery.OrionReminderSeriesPlanTest.xml",
+      "sha256": "3dc11f05c09ee999cda15046019e5a8d613a695857cb4ce804ab02b2c78f7b04"
+    },
+    {
+      "bytes": 493,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminders.OrionReminderDisplayTest.xml",
+      "sha256": "79d7ad8998c5976c0f2a0d8f6fcdcc85aa232db09c4c6134e98ac17de52fbb4a"
+    },
+    {
+      "bytes": 1124,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminders.OrionReminderIngressWireTest.xml",
+      "sha256": "8a4c79b6f19d01e7bdce1ab40613054343c4fbd284914f31cb7a61bec4c26daa"
+    },
+    {
+      "bytes": 953,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.resources.OrionAndroidMemoryPressureTest.xml",
+      "sha256": "cffaa75befa9116cb5b13190d0177d469397f30194fef7e2719d6dfd5ff8b9f4"
+    },
+    {
+      "bytes": 1619,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.resources.OrionCortexMemoryTelemetryTest.xml",
+      "sha256": "7ba7d35a8267e8bc8216f75d0fb54593d706e38ebc553aea05c58357ecefb84c"
+    },
+    {
+      "bytes": 2489,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.resources.OrionCortexResourceFactsTest.xml",
+      "sha256": "5eb74136e62733e58ced6a93ca500988f2ecb87c66cf8ef9300cc4e3f8049811"
+    },
+    {
+      "bytes": 1924,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.resources.OrionProcessMemoryEvidenceTest.xml",
+      "sha256": "65817f08f157f36cc86e791cc707ddd61efb2c1d309892d6d326836b6d894ece"
+    },
+    {
+      "bytes": 3091,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.tasks.OrionTaskAdmissionOwnerTest.xml",
+      "sha256": "df44f1b3fa306e02902d51220f7409ed8fab38a53878063b0466ffc735d71616"
+    },
+    {
+      "bytes": 1074,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.tasks.OrionTaskIngressWireTest.xml",
+      "sha256": "e47f27e6d0409aab756a13953aafeb351d1560fce5f0f07e785b3c72fae3553f"
+    },
+    {
+      "bytes": 1088,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.timers.OrionTimerIngressWireTest.xml",
+      "sha256": "224c1387f659f34235cf42d69edb82c9da77177976bbe94055e608d059a1fdaa"
+    },
+    {
+      "bytes": 4554,
+      "path": "source/author-handoff-work-package.md",
+      "sha256": "99813584744e2df32895ec8142e7aa3aa103406f2a82b2dcf290d6bcbc7984b1"
+    },
+    {
+      "bytes": 54092,
+      "path": "source/frozen-changes.patch",
+      "sha256": "b485dae319768ff05b5ed5d2798e9ff929ad68769c0f261e5fed155ff246d047"
+    },
+    {
+      "bytes": 9396,
+      "path": "source/frozen/ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycle.kt",
+      "sha256": "dc90857280c3256b240f62bf5364a33087a61aa2b80cbc21fe3f2fddf167c6d8"
+    },
+    {
+      "bytes": 7861,
+      "path": "source/frozen/ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycleFacts.kt",
+      "sha256": "a1b789cba4e96301360956b8bfb65b2eecfc2df97f6b2a214f65769910afdb18"
+    },
+    {
+      "bytes": 18330,
+      "path": "source/frozen/ai/api/src/test/kotlin/network/orion/ai/api/OrionInferenceLifecycleFactsTest.kt",
+      "sha256": "a54e2f27fa145b1ff5dc502158ef3813048078242e935fc63ebe7a5efec75b3b"
+    },
+    {
+      "bytes": 26279,
+      "path": "source/frozen/app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexCycleClientTest.kt",
+      "sha256": "bb90beeec822df0943616b57bfc86bdfad6e23b1022f42181dd600e55eb3eef3"
+    },
+    {
+      "bytes": 44969,
+      "path": "source/frozen/app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt",
+      "sha256": "58c692104de39db9644e49ad8b2733796838d7663446251f58fa965a902d1668"
+    },
+    {
+      "bytes": 15414,
+      "path": "source/frozen/app/src/main/kotlin/network/orion/app/ai/OrionCortexCycleObservation.kt",
+      "sha256": "ede490a94435d8fd92e476e30eaa3b9a7ec352d1cfe8efdef719f48cbdaec638"
+    },
+    {
+      "bytes": 3058,
+      "path": "source/frozen/docs/issues/ORION-F5-MAIN-LIFECYCLE-FACTS-001.md",
+      "sha256": "604a9cca7aa6c91f2a7b29ea370fcdb78ce41b1a7dd553e6e4589f7b430d18a2"
+    },
+    {
+      "bytes": 6125,
+      "path": "source/parent/ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycle.kt",
+      "sha256": "a1c4c4303dcafd351c00ee0ac9b8be7228519401bfc0f4eab49d658923cb7035"
+    },
+    {
+      "bytes": 21765,
+      "path": "source/parent/app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexCycleClientTest.kt",
+      "sha256": "b5bb8b0e83033861a08e141504b892f078d938f2a637c4ae8d55b5ab8edf94b2"
+    },
+    {
+      "bytes": 44612,
+      "path": "source/parent/app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt",
+      "sha256": "03fe82cf387e2ee125b3af750dff6091c1e8c42e45e2098651890c8b8d47a637"
+    },
+    {
+      "bytes": 15034,
+      "path": "source/parent/app/src/main/kotlin/network/orion/app/ai/OrionCortexCycleObservation.kt",
+      "sha256": "ce92bb2806b0f319eb4a194c9f698d9e4f564813f49f42ce7d8a50d5c244fcb4"
+    },
+    {
+      "bytes": 1558,
+      "path": "source/reconstruction.json",
+      "sha256": "df5239638f899656f560d90073ccaa9edd47f97e17bc39654d68ad134eaaa434"
+    },
+    {
+      "bytes": 1191,
+      "path": "source/validation-source-manifest.json",
+      "sha256": "407fb2069e765085a5894919d1f91d41039a9fdb5e02ce8f2dd0103e23770fe9"
+    }
+  ],
+  "recordedAtUtc": "2026-11-15T22:42:07.277087+00:00",
+  "schemaVersion": 1,
+  "snapshotDate": "2026-11-15",
+  "source": {
+    "authorHandoffCommit": "670410cfc26e6e836ba1fd2b3bb5bb148f697c3f",
+    "authorHandoffRecord": "source/author-handoff-work-package.md",
+    "authorHandoffStage": "Partial validation only; later integrated Android/static/HOST evidence must not be retroactively attributed to that handoff.",
+    "codeAndTestSha256": {
+      "ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycle.kt": "dc90857280c3256b240f62bf5364a33087a61aa2b80cbc21fe3f2fddf167c6d8",
+      "ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycleFacts.kt": "a1b789cba4e96301360956b8bfb65b2eecfc2df97f6b2a214f65769910afdb18",
+      "ai/api/src/test/kotlin/network/orion/ai/api/OrionInferenceLifecycleFactsTest.kt": "a54e2f27fa145b1ff5dc502158ef3813048078242e935fc63ebe7a5efec75b3b",
+      "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexCycleClientTest.kt": "bb90beeec822df0943616b57bfc86bdfad6e23b1022f42181dd600e55eb3eef3",
+      "app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt": "58c692104de39db9644e49ad8b2733796838d7663446251f58fa965a902d1668",
+      "app/src/main/kotlin/network/orion/app/ai/OrionCortexCycleObservation.kt": "ede490a94435d8fd92e476e30eaa3b9a7ec352d1cfe8efdef719f48cbdaec638"
+    },
+    "documentationUpdatedAfterValidation": true,
+    "frozenManifest": "source/validation-source-manifest.json",
+    "parentPreservationSha256": {
+      "ai/api/src/test/kotlin/network/orion/ai/api/OrionInferenceLifecycleTest.kt": "bbe842d2f688b1e2df9b4e947202ffa77132faef5784fe6a56a65c33a5a16db1",
+      "app/src/main/kotlin/network/orion/app/ai/OrionCortexCyclePartialProjector.kt": "e05d1603839b57c09b09a2a30cec8f402ec428f51529ae8843e3b73e5e12e553",
+      "scripts/android/record-f5-single-attempt.py": "97abee07c8c430e511608d721155f2a037c564cb1c093bc1336553a0bf9ca15e",
+      "scripts/android/test_f5_single_attempt_host_harness.py": "8e5219ed921a525349ce177de07db69090639754b81e9b4702a23f86cbc4953b"
+    },
+    "parentStrictUtf8AndHost130Preserved": true,
+    "patch": "source/frozen-changes.patch",
+    "postValidationWorkPackageSha256": "28f9cc5779a7762017400b0d57703e7a52ce25a521cefb25b1354ca31b79eb51",
+    "preValidationWorkPackageSha256": "604a9cca7aa6c91f2a7b29ea370fcdb78ce41b1a7dd553e6e4589f7b430d18a2",
+    "reconstruction": "source/reconstruction.json",
+    "sourceParentCommit": "163e8e0bdb718b28891cbe54c4e10b733287ea04",
+    "sourceStatus": "UNCOMMITTED_FROZEN_INTEGRATION_CANDIDATE"
+  },
+  "workPackage": "ORION-F5-MAIN-LIFECYCLE-FACTS-001"
+}

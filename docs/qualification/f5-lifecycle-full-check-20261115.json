@@ -1,0 +1,821 @@
+{
+  "artifact": {
+    "archiveMembers": 136,
+    "bytes": 173726,
+    "manifest": "manifest.json",
+    "manifestSha256": "45664fea3ff5a960dd5aae543d2e156c0dadcd7772d53984c3e3fa6913b9dfcb",
+    "path": "docs/qualification/artifacts/f5-lifecycle-full-check-20261115.tar.gz",
+    "payloadFiles": 134,
+    "sha256": "8ea7c808a6a174a0196fb6ad7412d3f591b913d3a22765d72d34df935fbdd9a3"
+  },
+  "claim": "Later full software check and R8 build/package complement; no new Android runtime execution.",
+  "environments": {
+    "CONTAINER": {
+      "cacheReuse": "Task counts retain cache/up-to-date reuse. XML totals describe current active-module results and are not a claim of 952 freshly executed tests.",
+      "fullCheck": {
+        "activeJvm": {
+          "directory": "jvm/",
+          "errors": 0,
+          "failures": 0,
+          "moduleInventory": "results/active-module-inventory.json",
+          "result": "PASS",
+          "skipped": 0,
+          "suites": 122,
+          "tests": 952
+        },
+        "duration": "20m37s",
+        "freshExecutionOfAll952Claimed": false,
+        "log": "container/canonical-full-check.log",
+        "result": "PASS",
+        "taskCounts": {
+          "executed": 1663,
+          "fromCache": 637,
+          "total": 4401,
+          "upToDate": 2101
+        }
+      },
+      "singleAttemptR8": {
+        "duration": "13m57s",
+        "log": "container/single-attempt-r8-build.log",
+        "newAndroidRuntimeTests": 0,
+        "properties": [
+          "orionQualificationRelease=true",
+          "orionCortexSingleAttempt=true"
+        ],
+        "result": "PASS_BUILD_PACKAGE_ONLY",
+        "rootConfirmedFinalExitCode": 0,
+        "scope": "Minified qualification target/instrumentation build and native-package checks only. No new am instrument/Android runtime execution.",
+        "taskCounts": {
+          "executed": 79,
+          "fromCache": 34,
+          "total": 1736,
+          "upToDate": 1623
+        }
+      }
+    }
+  },
+  "evidenceId": "f5-lifecycle-full-check-20261115",
+  "gates": {
+    "f6Authorized": false,
+    "fullF4GateClosed": false,
+    "fullF5GateClosed": false,
+    "fullSoakGateClosed": false,
+    "nativeBenchmarkApproved": false,
+    "physicalVerified": false,
+    "productionInferenceApproved": false,
+    "profileApproved": false,
+    "remoteCI": {
+      "approved": false,
+      "included": false,
+      "status": "PENDING"
+    },
+    "runtimeEvidenceV1Complete": false,
+    "sourceAuthenticated": false
+  },
+  "integrityModel": "Archive SHA-256 covers all members. manifest.json covers payloads except itself and manifest.sha256. Source tree manifest records every tracked object at the tested commit; this is not signed provenance.",
+  "issue": 132,
+  "jvmInventoryCorrection": {
+    "activeFullF": {
+      "suites": 122,
+      "tests": 952
+    },
+    "activeHistoricalB": {
+      "suites": 121,
+      "tests": 937
+    },
+    "addedLifecycleFacts": {
+      "suites": 1,
+      "tests": 15
+    },
+    "excludedLegacySuites": 3,
+    "excludedLegacyTests": 53,
+    "excludedModules": [
+      "data/modelregistry",
+      "ai/cortex"
+    ],
+    "legacyDetails": "results/stale-jvm-reports.json",
+    "meaning": "937 + 15 = 952; 121 + 1 = 122. Stale historical XMLs are not active verification. No test failed because the predicted raw total included those legacy reports.",
+    "originalAuditTarAndRawReportsRewritten": false,
+    "rawHistoricalB": {
+      "suites": 124,
+      "tests": 990
+    },
+    "setComparison": "results/jvm-report-set-comparison.json"
+  },
+  "limits": [
+    "This is a later software build/check scope; the earlier 264/35 JVM, 51 Android and 426 HOST snapshot remains unchanged and is not added to the 952 total.",
+    "No new Android runtime run, real native inference benchmark, hardware/API qualification, calibrated profile or real-duration soak is supplied.",
+    "The native/R8 build success does not approve physical ABI/page-size runtime behavior or production inference.",
+    "No complete RuntimeEvidence v1 or heavy-work executor is delivered by this complement.",
+    "No APKs, models, emulator disks, keystores, physical serials or secrets are included.",
+    "The JSON and hashes are unsigned integrity records, not source or hardware authentication."
+  ],
+  "payloadManifest": [
+    {
+      "bytes": 295349,
+      "path": "container/canonical-full-check.log",
+      "sha256": "40b532cd29db08b46d2df9e98342b79e859d2e810d17768739456feb48982878"
+    },
+    {
+      "bytes": 117755,
+      "path": "container/single-attempt-r8-build.log",
+      "sha256": "71507b56eec2bc25cee1c60c98d64504db919265c7c9387280e39454eaaf7721"
+    },
+    {
+      "bytes": 6189,
+      "path": "evidence.json",
+      "sha256": "c193a4d835a2927898724aaa379aef2f1245edfe6de7365289f6c0fc139e2140"
+    },
+    {
+      "bytes": 1924,
+      "path": "jvm/ai/api/build/test-results/testDebugUnitTest/TEST-network.orion.ai.api.OrionGenerationMetricsTest.xml",
+      "sha256": "9ea6c322132fae78967105be6a6fc6acbc3b66b752c0ad20c83ea4f15545513f"
+    },
+    {
+      "bytes": 2929,
+      "path": "jvm/ai/api/build/test-results/testDebugUnitTest/TEST-network.orion.ai.api.OrionInferenceLifecycleFactsTest.xml",
+      "sha256": "02ee79c8ee8fdcad7efb426e7c0b0caa881ce3df03ff88d0f1aa1dd17f403f64"
+    },
+    {
+      "bytes": 2676,
+      "path": "jvm/ai/api/build/test-results/testDebugUnitTest/TEST-network.orion.ai.api.OrionInferenceLifecycleTest.xml",
+      "sha256": "e077e15234d503f1a94aa4f180d26f462fa8875594519ff96e754c7f7cd0c6f8"
+    },
+    {
+      "bytes": 1437,
+      "path": "jvm/ai/api/build/test-results/testDebugUnitTest/TEST-network.orion.ai.api.OrionIssuedRequestHistoryTest.xml",
+      "sha256": "9ad7acbcd6685823c58694f3785445bfc7ad26c1a9057cbb2c24180b5a2c3958"
+    },
+    {
+      "bytes": 3121,
+      "path": "jvm/ai/llama/build/test-results/testDebugUnitTest/TEST-network.orion.ai.llama.OrionLlamaGenerationObservationTest.xml",
+      "sha256": "de97e1be80ecd7898a73f45a892dbf1b9c9aad1d5d28d24865328bfd92c78f3f"
+    },
+    {
+      "bytes": 835,
+      "path": "jvm/ai/llama/build/test-results/testDebugUnitTest/TEST-network.orion.ai.llama.OrionLlamaServiceGenerationCaptureTest.xml",
+      "sha256": "7a1566f34fe050b1bb9a41485d7ebda6aae3d24cb0ec89386ba91b61f64bcf36"
+    },
+    {
+      "bytes": 829,
+      "path": "jvm/ai/service/build/test-results/testDebugUnitTest/TEST-network.orion.ai.service.OrionCortexRequestFingerprintTest.xml",
+      "sha256": "a5d484c783e5b94f840e6eb55a03ba33e228c382d44eec5907c0c61d8ea9ed2e"
+    },
+    {
+      "bytes": 2300,
+      "path": "jvm/ai/service/build/test-results/testDebugUnitTest/TEST-network.orion.ai.service.OrionNativeUnresponsiveWatchdogTest.xml",
+      "sha256": "8c025d8e8b6aa9abe3bf1f12d77b75b5b5f6d6dd0800eca03cc87e68dc0d03a9"
+    },
+    {
+      "bytes": 3253,
+      "path": "jvm/ai/service/build/test-results/testDebugUnitTest/TEST-network.orion.ai.service.OrionServiceGenerationMetricsTest.xml",
+      "sha256": "185ad0d9a70a229a2edd990fd52835a9536ee0d347df17da8090907f73fc375e"
+    },
+    {
+      "bytes": 1228,
+      "path": "jvm/ai/service/build/test-results/testDebugUnitTest/TEST-network.orion.ai.service.OrionUtf8PiecesTest.xml",
+      "sha256": "ce84025b253fdf4943dfe1ccdcff671b90b8ca2b869aa5eb535a20d6003576b2"
+    },
+    {
+      "bytes": 894,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.CoreReadyLogEventTest.xml",
+      "sha256": "541177617347d2f51a2fd2d5e6c11f920960632c58201e2c54619d801f6c4fdd"
+    },
+    {
+      "bytes": 506,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.OrionHealthObservationsTest.xml",
+      "sha256": "91f1ae6c0b7285466d304ba7479c79f2e6cc451edc1153cfde00d3fff71a1c20"
+    },
+    {
+      "bytes": 945,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.OrionIngressMaintenanceTest.xml",
+      "sha256": "a63d357f27555d54c014436d6bf54f1f2e08d6d03a6c54126d05eaca150a55ce"
+    },
+    {
+      "bytes": 1146,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.OrionMaintenanceOutcomeTest.xml",
+      "sha256": "39ac5849e0c7c8001f308ee4ee4bdb4bf431d7d2dfebbf5e81a198dabc053e58"
+    },
+    {
+      "bytes": 2427,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexCycleObservationTest.xml",
+      "sha256": "b69a33179a13c2b6c63d3f0b76f843c878586159551b49416aa6551985f2649d"
+    },
+    {
+      "bytes": 3276,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexCyclePartialProjectorTest.xml",
+      "sha256": "2bfd187fd821be655b700729fccebb77d80e65e45bacf9d516ba1477696260f2"
+    },
+    {
+      "bytes": 3010,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexMetricsCorrelationTest.xml",
+      "sha256": "ace17b39430b0bb5b0b311066ba32d75f3b16a6db98d106357f91185890a1cf1"
+    },
+    {
+      "bytes": 988,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexPreResourceReadinessTest.xml",
+      "sha256": "d6e8d92fb6b624d458475d95671b99af1a90919e317cbc2d8cdf1be83c171887"
+    },
+    {
+      "bytes": 1408,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexRuntimeOwnerPolicyTest.xml",
+      "sha256": "ec9b8cce89366348caf7399b2259ff28a5e332557ef2d5b3a6bd2c252280ae3e"
+    },
+    {
+      "bytes": 1422,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexSingleAttemptTest.xml",
+      "sha256": "60f2f7a2403bcca2fa2c4eda67fa19e73b8b8a5108810c96e6f9e0de08e50ac3"
+    },
+    {
+      "bytes": 1955,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexUnloadDiagnosticsTest.xml",
+      "sha256": "e16abcaaa9b556b4b021f9a426af0c95c5e6a7b12e5afbfa7402758ada545987"
+    },
+    {
+      "bytes": 2068,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionCortexUnloadObservationTest.xml",
+      "sha256": "968d8fced9afbb3d242622ecf670d4afa814b0486e244dc2f02c242e3dc5a471"
+    },
+    {
+      "bytes": 870,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionInferenceRequestFingerprintTest.xml",
+      "sha256": "b00e446f64c294a09806b4a96b9b356677c57ba01f4b1dcdaee4e9a0e4e01de6"
+    },
+    {
+      "bytes": 1676,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionInferenceRequestLedgerTest.xml",
+      "sha256": "65344747d2b44579b5f2b79bda9948763a6eb93be6b62ebc82f992f44470f624"
+    },
+    {
+      "bytes": 2392,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.ai.OrionInferenceTurnstileTest.xml",
+      "sha256": "fc4f3a6bd098c0c337e187325513cbad0d6647bfc402ab16f769830933b6a148"
+    },
+    {
+      "bytes": 3185,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.memories.OrionMemoryAdmissionOwnerTest.xml",
+      "sha256": "0a3939f398227a4ac3225f7db1d732f80b9989b7da9a9439dccd7d095c1af6b9"
+    },
+    {
+      "bytes": 670,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.memories.OrionMemoryIngressWireTest.xml",
+      "sha256": "30b49a0ad2f1620467217f31888787b504604a38acf36330694560cf1aaeb13d"
+    },
+    {
+      "bytes": 1211,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.notifications.OrionNotificationIngressWireTest.xml",
+      "sha256": "66ce6d9898473e89691f5dd0132dcbe461198e40cbdc210439b51148fb04e147"
+    },
+    {
+      "bytes": 705,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryAdmissionsTest.xml",
+      "sha256": "caa85f0f72d3ca95d6a97572116836d9491109fdb36f05adfbf8e9c195ccd534"
+    },
+    {
+      "bytes": 539,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryPolicyTest.xml",
+      "sha256": "c5abb407c334be4c08727fdb55431a8c3db7a37cab58bd276d8f29adb9138d77"
+    },
+    {
+      "bytes": 689,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryWireTest.xml",
+      "sha256": "1319cd48312a81beb1b0e2f20b9a5425347c6520f17d3049c0fe23cc300b6ed2"
+    },
+    {
+      "bytes": 869,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminderdelivery.OrionReminderSeriesPlanTest.xml",
+      "sha256": "3dc11f05c09ee999cda15046019e5a8d613a695857cb4ce804ab02b2c78f7b04"
+    },
+    {
+      "bytes": 493,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminders.OrionReminderDisplayTest.xml",
+      "sha256": "79d7ad8998c5976c0f2a0d8f6fcdcc85aa232db09c4c6134e98ac17de52fbb4a"
+    },
+    {
+      "bytes": 1124,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.reminders.OrionReminderIngressWireTest.xml",
+      "sha256": "8a4c79b6f19d01e7bdce1ab40613054343c4fbd284914f31cb7a61bec4c26daa"
+    },
+    {
+      "bytes": 953,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.resources.OrionAndroidMemoryPressureTest.xml",
+      "sha256": "cffaa75befa9116cb5b13190d0177d469397f30194fef7e2719d6dfd5ff8b9f4"
+    },
+    {
+      "bytes": 1619,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.resources.OrionCortexMemoryTelemetryTest.xml",
+      "sha256": "7ba7d35a8267e8bc8216f75d0fb54593d706e38ebc553aea05c58357ecefb84c"
+    },
+    {
+      "bytes": 2489,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.resources.OrionCortexResourceFactsTest.xml",
+      "sha256": "5eb74136e62733e58ced6a93ca500988f2ecb87c66cf8ef9300cc4e3f8049811"
+    },
+    {
+      "bytes": 1924,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.resources.OrionProcessMemoryEvidenceTest.xml",
+      "sha256": "65817f08f157f36cc86e791cc707ddd61efb2c1d309892d6d326836b6d894ece"
+    },
+    {
+      "bytes": 3091,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.tasks.OrionTaskAdmissionOwnerTest.xml",
+      "sha256": "df44f1b3fa306e02902d51220f7409ed8fab38a53878063b0466ffc735d71616"
+    },
+    {
+      "bytes": 1074,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.tasks.OrionTaskIngressWireTest.xml",
+      "sha256": "e47f27e6d0409aab756a13953aafeb351d1560fce5f0f07e785b3c72fae3553f"
+    },
+    {
+      "bytes": 1088,
+      "path": "jvm/app/build/test-results/testDebugUnitTest/TEST-network.orion.app.timers.OrionTimerIngressWireTest.xml",
+      "sha256": "224c1387f659f34235cf42d69edb82c9da77177976bbe94055e608d059a1fdaa"
+    },
+    {
+      "bytes": 2846,
+      "path": "jvm/core/actions/build/test-results/testDebugUnitTest/TEST-network.orion.core.actions.ActionConfirmationBindingTest.xml",
+      "sha256": "ab724744a19a5224d269312577a262645592ae583b86429837ccbbac547605fe"
+    },
+    {
+      "bytes": 1168,
+      "path": "jvm/core/actions/build/test-results/testDebugUnitTest/TEST-network.orion.core.actions.ActionExecutionLeaseTest.xml",
+      "sha256": "d2df501734340eb610f5e6a58bb16c7e707e0e85cdd7ae9f6a774938a2901ce1"
+    },
+    {
+      "bytes": 956,
+      "path": "jvm/core/actions/build/test-results/testDebugUnitTest/TEST-network.orion.core.actions.ActionStateMachineTest.xml",
+      "sha256": "9508300a6ff3118a2f70266e70ad0d8842959db2b7d1e91a511fc77a6a815e02"
+    },
+    {
+      "bytes": 657,
+      "path": "jvm/core/actions/build/test-results/testDebugUnitTest/TEST-network.orion.core.actions.IdempotencyKeyPolicyTest.xml",
+      "sha256": "21b5279bf0a11a2289d0f769c4134aa76d85362f6a6ffe070e9523d283fab157"
+    },
+    {
+      "bytes": 499,
+      "path": "jvm/core/actions/build/test-results/testDebugUnitTest/TEST-network.orion.core.actions.UnavailableActionEngineTest.xml",
+      "sha256": "14c0ff950e9314cb18c6c90229c4a980252676d38f2244b94249798477a52eae"
+    },
+    {
+      "bytes": 609,
+      "path": "jvm/core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.CommandContractTest.xml",
+      "sha256": "ccb4634ad35a5c6757c82bb2957ac32c81598c595fe690ea30389325c61b59cd"
+    },
+    {
+      "bytes": 1397,
+      "path": "jvm/core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.memories.CreateMemoryPreparationTest.xml",
+      "sha256": "bca397098dadb014d0c2829fdb1948796083ce62dbef038acabfe76306580781"
+    },
+    {
+      "bytes": 1417,
+      "path": "jvm/core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.notifications.PostNotificationPreparationTest.xml",
+      "sha256": "a0745523be924a10ce46dbd162fd29ddb87cecf15bf5223e087d05419961ae2c"
+    },
+    {
+      "bytes": 4219,
+      "path": "jvm/core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.reminders.CreateReminderPreparationTest.xml",
+      "sha256": "0a8c8a28ca42f4b2bd9fdfc6f5a823211feed3c28a40f5ced5304713031e0261"
+    },
+    {
+      "bytes": 868,
+      "path": "jvm/core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.reminders.ReminderStatusPreparationTest.xml",
+      "sha256": "567e9c46dab685d359d114b5cf96e5d7d884b2c0f6a1de4c85cb8889c97fa803"
+    },
+    {
+      "bytes": 2835,
+      "path": "jvm/core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.tasks.CreateTaskPreparationTest.xml",
+      "sha256": "1fb6fcf91a6ae75c69de0e04f2e56550f1a616fe1d0d9ffa0436d251e557f2de"
+    },
+    {
+      "bytes": 995,
+      "path": "jvm/core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.tasks.TaskStatusPreparationTest.xml",
+      "sha256": "71f91f28eaf88f6c0279513c7b631777ada4573899b6e49c6bb3b49028f9ad3a"
+    },
+    {
+      "bytes": 1693,
+      "path": "jvm/core/commands/build/test-results/testDebugUnitTest/TEST-network.orion.core.commands.timers.CreateTimerPreparationTest.xml",
+      "sha256": "5c8a43d96469ee492916b0ea4b0958a9b86cd1dd13ec9e2fe37a90a6eb434cd3"
+    },
+    {
+      "bytes": 523,
+      "path": "jvm/core/common/build/test-results/testDebugUnitTest/TEST-network.orion.core.common.process.MainProcessStoragePolicyTest.xml",
+      "sha256": "98e1e757b55b5eda0a07f9cd961feb883803f77d9238a5b347e30969e5e0270b"
+    },
+    {
+      "bytes": 662,
+      "path": "jvm/core/common/build/test-results/testDebugUnitTest/TEST-network.orion.core.common.process.OrionProcessBootstrapperTest.xml",
+      "sha256": "f09114ebafa32ca77d4959bde0ca3f38466e27de6f6905cd9d8d71cb490e575f"
+    },
+    {
+      "bytes": 643,
+      "path": "jvm/core/common/build/test-results/testDebugUnitTest/TEST-network.orion.core.common.process.OrionProcessRoleTest.xml",
+      "sha256": "ce7dda04e4436c5b93acbe0d81b126c53e52f6f2d8ef2ff687e351da94abe9e2"
+    },
+    {
+      "bytes": 1329,
+      "path": "jvm/core/events/build/test-results/testDebugUnitTest/TEST-network.orion.core.events.OrionEventTest.xml",
+      "sha256": "1ea9212f5e9fc96b0acb292e252eab23d80521a8aec98281573e5da150165503"
+    },
+    {
+      "bytes": 1544,
+      "path": "jvm/core/exitinfo/build/test-results/testDebugUnitTest/TEST-network.orion.core.exitinfo.OrionForceStopStartupEvidenceTest.xml",
+      "sha256": "badc496d51c312969b3b09c527b38cffbd201d29043a20693b240f09ea695071"
+    },
+    {
+      "bytes": 1841,
+      "path": "jvm/core/exitinfo/build/test-results/testDebugUnitTest/TEST-network.orion.core.exitinfo.OrionProcessExitClassifierTest.xml",
+      "sha256": "fa5ea05943fe6689e4256f428f76134be5f264518990dad9a1355e445e8b8c44"
+    },
+    {
+      "bytes": 634,
+      "path": "jvm/core/health/build/test-results/testDebugUnitTest/TEST-network.orion.core.health.CoreReadinessTest.xml",
+      "sha256": "698be258a5059a65f72429077d4a864e6f48ce71cb1f2297fb7a7f30e16e07d3"
+    },
+    {
+      "bytes": 796,
+      "path": "jvm/core/health/build/test-results/testDebugUnitTest/TEST-network.orion.core.health.OrionHealthAggregatorTest.xml",
+      "sha256": "b0aa2f7e7fbc45ef178f2a4eb7c8409a3a8a142462bb0dfa4d67ff57480c0e1d"
+    },
+    {
+      "bytes": 9163,
+      "path": "jvm/core/health/build/test-results/testDebugUnitTest/TEST-network.orion.core.health.OrionHealthTest.xml",
+      "sha256": "20702dc148e5d94e7498bcfef109dc70b8a7b1c726cc27c9fc81e95f714429a3"
+    },
+    {
+      "bytes": 663,
+      "path": "jvm/core/health/build/test-results/testDebugUnitTest/TEST-network.orion.core.health.OrionPlatformDiagnosticsTest.xml",
+      "sha256": "0d86eca5680b0ecceffe9106780b06b5c110d05d889172e21009b7ba22b795a7"
+    },
+    {
+      "bytes": 1691,
+      "path": "jvm/core/ingress/build/test-results/testDebugUnitTest/TEST-network.orion.core.ingress.DurableIngressCoordinatorTest.xml",
+      "sha256": "e2b5b59774b101e465caf01ff478e3807ef381e218a7d24e6f6fe5e65bc1766c"
+    },
+    {
+      "bytes": 515,
+      "path": "jvm/core/ingress/build/test-results/testDebugUnitTest/TEST-network.orion.core.ingress.FoundationIngressCoordinatorTest.xml",
+      "sha256": "a04a68d0ab11bb93313dc9e0d72266593849e901f4a209574d53299e2830b02b"
+    },
+    {
+      "bytes": 788,
+      "path": "jvm/core/ipc/build/test-results/testDebugUnitTest/TEST-network.orion.core.ipc.IpcBoundaryPolicyTest.xml",
+      "sha256": "e2fe30730aca0ff520db5864dc142cdb8d9693ae1bf6a58ae483bec60cbaca07"
+    },
+    {
+      "bytes": 1546,
+      "path": "jvm/core/ipc/build/test-results/testDebugUnitTest/TEST-network.orion.core.ipc.ProtocolInfoTest.xml",
+      "sha256": "b4d41e0f1a2c53f7d01055b76e4d16ee0191d969207554c1ac552780fa3672da"
+    },
+    {
+      "bytes": 629,
+      "path": "jvm/core/model/build/test-results/testDebugUnitTest/TEST-network.orion.core.model.CapabilityTest.xml",
+      "sha256": "aa2eebb78a153431ce9c1c974babfb5d85b43ec16b1ce8a064225e3815c061e2"
+    },
+    {
+      "bytes": 1449,
+      "path": "jvm/core/model/build/test-results/testDebugUnitTest/TEST-network.orion.core.model.ModelVocabularyTest.xml",
+      "sha256": "b791d97f952cff547718c8575a2a3e726ffb914af9b38fd73a09d2d2f4a42bda"
+    },
+    {
+      "bytes": 1471,
+      "path": "jvm/core/model/build/test-results/testDebugUnitTest/TEST-network.orion.core.model.OrionIntentTest.xml",
+      "sha256": "9ae51ff47ebd13a7beee27fdb8771bc022b86a18ec7b296d766a6c98812fa2ed"
+    },
+    {
+      "bytes": 1476,
+      "path": "jvm/core/model/build/test-results/testDebugUnitTest/TEST-network.orion.core.model.OrionReminderRecurrenceRuleTest.xml",
+      "sha256": "c824bb5740b381e960d77882f105443eab5d961467eb4785f7f4141f3ad9e259"
+    },
+    {
+      "bytes": 502,
+      "path": "jvm/core/observability/build/test-results/testDebugUnitTest/TEST-network.orion.core.observability.OrionLoggerTest.xml",
+      "sha256": "25193d742653a82345b25037af3a8544808812f5c9d6884af96f920a4e4e2d86"
+    },
+    {
+      "bytes": 700,
+      "path": "jvm/core/observability/build/test-results/testDebugUnitTest/TEST-network.orion.core.observability.OrionMaintenanceSnapshotTest.xml",
+      "sha256": "60579c43a6716da28ea12c71ee7cdaf85ba90859d845480ec52633382279bfd8"
+    },
+    {
+      "bytes": 5182,
+      "path": "jvm/core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.memories.OrionCreateMemoryPolicyTest.xml",
+      "sha256": "395e88c5d2bb4b4c76b6c3fa3429f78f84eca6ac28eeae3da723bd6a83ebba0d"
+    },
+    {
+      "bytes": 695,
+      "path": "jvm/core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.memories.OrionMemoryStatusPolicyTest.xml",
+      "sha256": "0300304fa29479be407c5f1f71362f73eae57d47c2201a4324f1ddd7d9bd02fa"
+    },
+    {
+      "bytes": 5609,
+      "path": "jvm/core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.notifications.OrionPostNotificationPolicyTest.xml",
+      "sha256": "cda4af65093fa11593cbb32de70fa4e460168efee8524278d0d6e7c60040535a"
+    },
+    {
+      "bytes": 5259,
+      "path": "jvm/core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.reminders.OrionCreateReminderPolicyTest.xml",
+      "sha256": "fb8f9868a2adcecb33f3d8fdf0681e8513f712b453da6880020662dc6cc57629"
+    },
+    {
+      "bytes": 2739,
+      "path": "jvm/core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.reminders.OrionReminderStatusPolicyTest.xml",
+      "sha256": "5f4848b9a32010151e25dac1002fe6e325f548adb6b2e5d5c16c98872be53447"
+    },
+    {
+      "bytes": 5030,
+      "path": "jvm/core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.tasks.OrionCreateTaskPolicyTest.xml",
+      "sha256": "fb68b3307679fb76355fcff1717b73ffc04d04735f68912c2745aec41eaa28f6"
+    },
+    {
+      "bytes": 2613,
+      "path": "jvm/core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.tasks.OrionTaskStatusPolicyTest.xml",
+      "sha256": "300cb671184c53ac28a059ef4395a5b7344bdef1472a70381a9a731e871a9fe2"
+    },
+    {
+      "bytes": 5245,
+      "path": "jvm/core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.timers.OrionCreateTimerPolicyTest.xml",
+      "sha256": "bae6a9594e229668ef052496f40438255e937ce5058106eb56007da6f84fbe68"
+    },
+    {
+      "bytes": 2645,
+      "path": "jvm/core/policy/build/test-results/testDebugUnitTest/TEST-network.orion.core.policy.timers.OrionTimerStatusPolicyTest.xml",
+      "sha256": "7ba50a08d81d8685832373aecc6cc344cc15c7b7f73c9bf8173a6fe92b37154a"
+    },
+    {
+      "bytes": 600,
+      "path": "jvm/core/queries/build/test-results/testDebugUnitTest/TEST-network.orion.core.queries.QueryContractTest.xml",
+      "sha256": "5fd6c32c98b5ae10eb47c203d723ba4e255eff4f31f03184bc34a7e3f5f1d1d4"
+    },
+    {
+      "bytes": 705,
+      "path": "jvm/core/queries/build/test-results/testDebugUnitTest/TEST-network.orion.core.queries.TaskQueryTest.xml",
+      "sha256": "e55c0014e7259d6bf8db375dc2a7c1d2b954f1ab6628a7e7d90a1d680c749fa8"
+    },
+    {
+      "bytes": 632,
+      "path": "jvm/core/queries/build/test-results/testDebugUnitTest/TEST-network.orion.core.queries.activity.GetActivityTest.xml",
+      "sha256": "87f0bd25a3c64357c7a7cdef096a6086668fc46ae242ca1cde7e18fc0e8c1b16"
+    },
+    {
+      "bytes": 1474,
+      "path": "jvm/core/queries/build/test-results/testDebugUnitTest/TEST-network.orion.core.queries.timers.OrionTimerRemainingTest.xml",
+      "sha256": "757c8fe0bbe1c4f5107c29b80b48b6038f01fe0ee53ecdb350b28ec18963265b"
+    },
+    {
+      "bytes": 1848,
+      "path": "jvm/core/recovery/build/test-results/testDebugUnitTest/TEST-network.orion.core.recovery.OrderedRecoveryCoordinatorTest.xml",
+      "sha256": "6a0ba4daff4511996e0cdda1d5bc4eb2ad2d1d8221eeaffbe66c916f64208483"
+    },
+    {
+      "bytes": 2828,
+      "path": "jvm/core/resources/build/test-results/testDebugUnitTest/TEST-network.orion.core.resources.OrionCortexRestartGuardTest.xml",
+      "sha256": "c7d37713d6b710b153e15ef72f3e970a046d5686fd42a6bb917670201a7a3fd5"
+    },
+    {
+      "bytes": 4514,
+      "path": "jvm/core/resources/build/test-results/testDebugUnitTest/TEST-network.orion.core.resources.OrionMinimumResourceGovernorTest.xml",
+      "sha256": "f5cd8c3971f4c5558d36a1e2772d7d0491a4faf94c736c4c23d7db0b13651a01"
+    },
+    {
+      "bytes": 510,
+      "path": "jvm/core/resources/build/test-results/testDebugUnitTest/TEST-network.orion.core.resources.UnavailableResourceGovernorTest.xml",
+      "sha256": "8d9d4e6869896ad25274fc79eda9897618bf815714ec31a6ac6f2b2d77807cfd"
+    },
+    {
+      "bytes": 2550,
+      "path": "jvm/core/security/build/test-results/testDebugUnitTest/TEST-network.orion.core.security.DurableFieldKeyProviderTest.xml",
+      "sha256": "73332e7505dd43ec3012d8bf66b9553a8027d03b862c3dee360060ea5ae069df"
+    },
+    {
+      "bytes": 491,
+      "path": "jvm/core/security/build/test-results/testDebugUnitTest/TEST-network.orion.core.security.DurablePayloadPolicyTest.xml",
+      "sha256": "f2925d883228d7a3e2feda3e0d7eb2b787747a4b1b60f7f18dd6884776085992"
+    },
+    {
+      "bytes": 1128,
+      "path": "jvm/core/security/build/test-results/testDebugUnitTest/TEST-network.orion.core.security.FieldEnvelopeCodecTest.xml",
+      "sha256": "b7eee6d13c1f0b4a609fa9f218348d26745e1f5fc986fc7dd545a120761135b9"
+    },
+    {
+      "bytes": 1345,
+      "path": "jvm/core/security/build/test-results/testDebugUnitTest/TEST-network.orion.core.security.FirstInstallFieldKeysTest.xml",
+      "sha256": "6a3a9f1e8569735b459a2e4e927b931770ed2bf7f5901d98f6d3ffd9dc4649a9"
+    },
+    {
+      "bytes": 2277,
+      "path": "jvm/core/security/build/test-results/testDebugUnitTest/TEST-network.orion.core.security.OrionFieldEncryptionTest.xml",
+      "sha256": "d41f88dff21ed725a972f6f0ab3edf51cb6648c86c96e7ec38096ca3430ea6e1"
+    },
+    {
+      "bytes": 831,
+      "path": "jvm/core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.SkillDescriptorTest.xml",
+      "sha256": "8295cc7c53b272fa161056d758ae54c95885ea4bc3a2fd33b9f5fc4336c4af02"
+    },
+    {
+      "bytes": 544,
+      "path": "jvm/core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.device.OrionDeviceDescriptorsTest.xml",
+      "sha256": "08150cf2daeb7b51bd9b68566abbea16e836a2f4bac5889ffd8a4bc25f2093f0"
+    },
+    {
+      "bytes": 710,
+      "path": "jvm/core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.memories.OrionMemoryDescriptorsTest.xml",
+      "sha256": "b2391bbd50fc3ff4c2e7c1ef24e91b83853e91ec175cf70c8add4b94941f7f22"
+    },
+    {
+      "bytes": 582,
+      "path": "jvm/core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.notifications.OrionPostNotificationDescriptorTest.xml",
+      "sha256": "e22ec1b34bfc75493cfdcbfd2e319983e31e07597d3f4069362ea96c63d0054c"
+    },
+    {
+      "bytes": 760,
+      "path": "jvm/core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.reminders.OrionCreateReminderDescriptorTest.xml",
+      "sha256": "45f27fe1763d51564f5b8eb16d72b0dcbf577d671989286fae450728e6c76089"
+    },
+    {
+      "bytes": 762,
+      "path": "jvm/core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptorTest.xml",
+      "sha256": "023ab3254a342b50e4e266d8aa0745b377adaa423664793ae948dda353cff120"
+    },
+    {
+      "bytes": 717,
+      "path": "jvm/core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.tasks.OrionTaskStatusDescriptorsTest.xml",
+      "sha256": "bc5d22af5c7796aafd25a6c418acd69a855bb6d983832f6489418a1320db64d8"
+    },
+    {
+      "bytes": 953,
+      "path": "jvm/core/skills/metadata/build/test-results/testDebugUnitTest/TEST-network.orion.core.skills.metadata.timers.OrionCreateTimerDescriptorTest.xml",
+      "sha256": "3da990aebe266fe3d855132bf13cd200799cd77f21b0b55f3a5aae54df608d2a"
+    },
+    {
+      "bytes": 992,
+      "path": "jvm/core/time/build/test-results/testDebugUnitTest/TEST-network.orion.core.time.AndroidOrionClockTest.xml",
+      "sha256": "606ab8bf6e7aabc2f91bddec63c64782a1a6f1b64d46f81f9f48d97b4749455b"
+    },
+    {
+      "bytes": 1555,
+      "path": "jvm/core/time/build/test-results/testDebugUnitTest/TEST-network.orion.core.time.OrionClockTest.xml",
+      "sha256": "be52e54c5a097768a3e0290c83f43eb93de7df571cbe25382efea0989ef6752d"
+    },
+    {
+      "bytes": 630,
+      "path": "jvm/data/events/build/test-results/testDebugUnitTest/TEST-network.orion.data.events.EventRetryPolicyTest.xml",
+      "sha256": "74c44427dd30fa172e8c3e915119e173a2860edbb5611cb99ae3a9c80fbdf02a"
+    },
+    {
+      "bytes": 985,
+      "path": "jvm/data/events/build/test-results/testDebugUnitTest/TEST-network.orion.data.events.OrionTechnicalEventConsumerTest.xml",
+      "sha256": "cfbc7df175234c0b8ceb41d7b383f6eb2ab7c881ab56ca5220f8bfacf472d257"
+    },
+    {
+      "bytes": 2693,
+      "path": "jvm/data/repository/build/test-results/testDebugUnitTest/TEST-network.orion.data.repository.models.OrionGgufValidatorTest.xml",
+      "sha256": "0e7c729a9df767eb51805f76431591de35114dcc57e5300b237dcecae906b189"
+    },
+    {
+      "bytes": 3356,
+      "path": "jvm/data/repository/build/test-results/testDebugUnitTest/TEST-network.orion.data.repository.models.OrionPrivateModelFilesTest.xml",
+      "sha256": "b0dcd1fa522628a5f389b0ccbcd5315ca1bf9d908b7264df5bf046e1480c0356"
+    },
+    {
+      "bytes": 784,
+      "path": "jvm/scheduler/build/test-results/testDebugUnitTest/TEST-network.orion.scheduler.alarms.OrionAlarmStrategyTest.xml",
+      "sha256": "a3b4d45bb3016effa808271f2f88ddbbdc6c7f6334bc08660d546e5703276b25"
+    },
+    {
+      "bytes": 1769,
+      "path": "jvm/scheduler/build/test-results/testDebugUnitTest/TEST-network.orion.scheduler.alarms.OrionReminderAlarmsTest.xml",
+      "sha256": "de8741d383295f87c24225f14194af47d84f6676a0fbff95f307638eb82cee7b"
+    },
+    {
+      "bytes": 3990,
+      "path": "jvm/scheduler/build/test-results/testDebugUnitTest/TEST-network.orion.scheduler.reconciliation.OrionCivilRecurrenceTest.xml",
+      "sha256": "a3b5653fcc42a08e3cd9ce0e2e63a7fa935dafa55b6b08c4f9bddf0e27508485"
+    },
+    {
+      "bytes": 1311,
+      "path": "jvm/skills/device/build/test-results/testDebugUnitTest/TEST-network.orion.skills.device.OrionDeviceInformationSkillTest.xml",
+      "sha256": "8a29e19b9c50e148fa50ebac0f729325f867727ce4c26927d558667f55477700"
+    },
+    {
+      "bytes": 687,
+      "path": "jvm/skills/notifications/build/test-results/testDebugUnitTest/TEST-network.orion.skills.notifications.OrionPostNotificationSkillTest.xml",
+      "sha256": "83d715c31af0b6e547bc2c2a21819704c3b2df57727e4985f00abd270a63ff81"
+    },
+    {
+      "bytes": 1017,
+      "path": "jvm/skills/reminders/build/test-results/testDebugUnitTest/TEST-network.orion.skills.reminders.OrionCreateReminderSkillTest.xml",
+      "sha256": "2ce5c1e86ef2e461def2af3c8e377c56cefccb14971108ee57afe4e62daf187b"
+    },
+    {
+      "bytes": 830,
+      "path": "jvm/skills/reminders/build/test-results/testDebugUnitTest/TEST-network.orion.skills.reminders.OrionDeliverReminderSkillTest.xml",
+      "sha256": "948fb23d885fce115f48453d36c87b86f43cef0ef341b598314f63b49c156fce"
+    },
+    {
+      "bytes": 836,
+      "path": "jvm/skills/reminders/build/test-results/testDebugUnitTest/TEST-network.orion.skills.reminders.OrionReminderStatusSkillTest.xml",
+      "sha256": "224cd0c8b27d91b9b0852ef1074e32e19b74165b98bf9737488089ad95e9a766"
+    },
+    {
+      "bytes": 972,
+      "path": "jvm/skills/tasks/build/test-results/testDebugUnitTest/TEST-network.orion.skills.tasks.OrionCreateTaskSkillTest.xml",
+      "sha256": "15d3c71d2f2ce19f5b9375e4ab0712a3b693ab827b22b339c085d1721ac183e1"
+    },
+    {
+      "bytes": 804,
+      "path": "jvm/skills/tasks/build/test-results/testDebugUnitTest/TEST-network.orion.skills.tasks.OrionTaskStatusSkillTest.xml",
+      "sha256": "50280a2d6edaf8581dfcd28d3c76de4c6275bddc9985275b23feab1de87920dd"
+    },
+    {
+      "bytes": 985,
+      "path": "jvm/skills/timers/build/test-results/testDebugUnitTest/TEST-network.orion.skills.timers.OrionCreateTimerSkillTest.xml",
+      "sha256": "bb72b0ae0d05b0c7e32a2c94243bfdba8ab33c5afd85f2e1c2f12b6cfd74fc6b"
+    },
+    {
+      "bytes": 490,
+      "path": "jvm/voice/ipc/build/test-results/testDebugUnitTest/TEST-network.orion.voice.ipc.VoiceCoreClientTest.xml",
+      "sha256": "32ed96575e5c4b680fc5b67be7bb6fcc5e99e3b233a835d8bc941a79477affff"
+    },
+    {
+      "bytes": 31404,
+      "path": "results/active-module-inventory.json",
+      "sha256": "7c27eaae611fe62595810fa2117dcbd6b8b60bbd3c2dfe7bdf819bbbea18c06b"
+    },
+    {
+      "bytes": 462,
+      "path": "results/full-jvm-summary.json",
+      "sha256": "48fcf6448928a992b112c6189b2937094e057cad5e7526956e76a9aa263d409c"
+    },
+    {
+      "bytes": 473,
+      "path": "results/jvm-report-set-comparison.json",
+      "sha256": "1b6969e13597612b92d63e5485c6508f35b35b08e62d259ee28c943c4b0fc8bb"
+    },
+    {
+      "bytes": 1348,
+      "path": "results/stale-jvm-reports.json",
+      "sha256": "0930eb3baaf4dd1c860f3924cfdaf51b150df3ade23b4f16892cea50257d4feb"
+    },
+    {
+      "bytes": 5932,
+      "path": "source/frozen-work-package.md",
+      "sha256": "28f9cc5779a7762017400b0d57703e7a52ce25a521cefb25b1354ca31b79eb51"
+    },
+    {
+      "bytes": 1191,
+      "path": "source/original-integrated-source-freeze.json",
+      "sha256": "407fb2069e765085a5894919d1f91d41039a9fdb5e02ce8f2dd0103e23770fe9"
+    },
+    {
+      "bytes": 708,
+      "path": "source/previous-scoped-snapshot-reference.json",
+      "sha256": "f4467513c3cd8c0ddf61eb93cf01b1d5cdfd00fcfc7cbac7f23cb1e20976ef29"
+    },
+    {
+      "bytes": 1181,
+      "path": "source/runtime-source-sha256.json",
+      "sha256": "74d9403c8392e5751ec592ccec64d0de7a34664b010983f5dd1cf6725e2d4704"
+    },
+    {
+      "bytes": 312133,
+      "path": "source/tree-8a80dd7.json",
+      "sha256": "31f6e86a628e997ed2e38c3648e564111cd74e5b481dda7c33c88a131a081526"
+    }
+  ],
+  "previousScopedSnapshot": {
+    "androidTests": 51,
+    "archivePath": "docs/qualification/artifacts/f5-lifecycle-facts-evidence-20261115.tar.gz",
+    "archivePayloadFiles": 68,
+    "archiveSha256": "8f5819e1d0a4a492c89b173768337590a14d335556c3cfd735c10f8b9afec5e0",
+    "hostCases": 426,
+    "indexPath": "docs/qualification/f5-lifecycle-facts-evidence-20261115.json",
+    "indexSha256": "93a434100572698c4c776b9c38163a1def626c10358c064fecbc6dbdb41b0df3",
+    "jvmSuites": 35,
+    "jvmTests": 264,
+    "scope": "Earlier scoped execution remains valid and immutable. Its 264 JVM cases are included within the later 952 full-check total, not added to it. Its Android/HOST executions are not rerun by this build/package complement.",
+    "unchanged": true
+  },
+  "recordedAtUtc": "2026-11-15T23:25:38.417140+00:00",
+  "schemaVersion": 1,
+  "snapshotDate": "2026-11-15",
+  "source": {
+    "buildProvenance": "UNSIGNED_SOURCE_AND_LOG_INTEGRITY_ONLY",
+    "documentationBoundary": "This complement is created after validation. Its files and later work-package note do not belong to, or rewrite, the tested 8a80dd7 tree.",
+    "integrationParent": "163e8e0bdb718b28891cbe54c4e10b733287ea04",
+    "originalScopedFreeze": "source/original-integrated-source-freeze.json",
+    "runtimeCodeAndTestSha256": {
+      "ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycle.kt": "dc90857280c3256b240f62bf5364a33087a61aa2b80cbc21fe3f2fddf167c6d8",
+      "ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycleFacts.kt": "a1b789cba4e96301360956b8bfb65b2eecfc2df97f6b2a214f65769910afdb18",
+      "ai/api/src/test/kotlin/network/orion/ai/api/OrionInferenceLifecycleFactsTest.kt": "a54e2f27fa145b1ff5dc502158ef3813048078242e935fc63ebe7a5efec75b3b",
+      "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexCycleClientTest.kt": "bb90beeec822df0943616b57bfc86bdfad6e23b1022f42181dd600e55eb3eef3",
+      "app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt": "58c692104de39db9644e49ad8b2733796838d7663446251f58fa965a902d1668",
+      "app/src/main/kotlin/network/orion/app/ai/OrionCortexCycleObservation.kt": "ede490a94435d8fd92e476e30eaa3b9a7ec352d1cfe8efdef719f48cbdaec638"
+    },
+    "runtimeManifest": "source/runtime-source-sha256.json",
+    "sourceCleanAtCapture": true,
+    "sourceTreeIdentityPreservedBeforeArchive": true,
+    "testedCommit": "8a80dd7a386878323888240d62787f11ad31ee9a",
+    "testedTree": "f25b26eba0e4e8435172c131101a1f17aff3c31b",
+    "treeManifest": "source/tree-8a80dd7.json"
+  }
+}

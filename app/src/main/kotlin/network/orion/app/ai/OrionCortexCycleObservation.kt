@@ -6,6 +6,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
 import network.orion.ai.api.OrionGenerationMetricsSnapshot
+import network.orion.ai.api.OrionInferenceLifecycleFactBuffer
+import network.orion.ai.api.OrionInferenceLifecycleFacts
 import network.orion.app.resources.*
 import network.orion.core.resources.OrionResourceDecision
 import network.orion.core.resources.OrionRestartDecision
@@ -51,6 +53,7 @@ internal class OrionCortexCycleReceipt internal constructor(
     val resources: List<OrionCycleResourceFact>, val unload: OrionCycleUnloadFact?,
     val nativeMetrics: OrionGenerationMetricsSnapshot?, val issues: Set<OrionCycleIssue>,
     val droppedAtLeast: Long, val recordingFailuresAtLeast: Long, val lossAccountingComplete: Boolean,
+    val lifecycleFacts: OrionInferenceLifecycleFacts? = null,
 ) {
     val retainedSnapshot = true
     val qualification = "NOT_QUALIFIED"
@@ -74,6 +77,7 @@ internal class OrionCortexCycleObserver(private val capacity: Int = 4) {
         var thrown: OrionCycleThrown? = null
         var model: String? = null
         var logicalId: String? = null // Only set inside the admitted original runOnce operation.
+        var lifecycleFacts: OrionInferenceLifecycleFactBuffer? = null
         var clientScope: Any? = null
         var endpoint: OrionCycleEndpoint? = null
         var inferenceAccepted = false
@@ -137,8 +141,8 @@ internal class OrionCortexCycleObserver(private val capacity: Int = 4) {
     fun trustedModel(token: OrionCortexCycleToken?, hash: String) = write(token) {
         if (validModelHash(hash)) it.model = hash else token?.lost = true
     }
-    fun logicalOwner(token: OrionCortexCycleToken?, logicalId: String) = write(token) {
-        it.source = OrionCycleSource.LOGICAL_OWNER; it.logicalId = logicalId
+    fun logicalOwner(token: OrionCortexCycleToken?, logicalId: String, lifecycleFacts: OrionInferenceLifecycleFactBuffer? = null) = write(token) {
+        it.source = OrionCycleSource.LOGICAL_OWNER; it.logicalId = logicalId; it.lifecycleFacts = lifecycleFacts
     }
     fun turn(token: OrionCortexCycleToken?, clientScope: Any) = write(token) {
         it.source = OrionCycleSource.TURN_ENTERED; it.clientScope = clientScope
@@ -220,7 +224,7 @@ internal class OrionCortexCycleObserver(private val capacity: Int = 4) {
             if (actual) OrionCycleStreamSummary(entry.chunks, entry.attempts, entry.returned) else null,
             Collections.unmodifiableList(ArrayList(entry.resources)), entry.unload,
             if (actual && current) metrics else null, Collections.unmodifiableSet(issues),
-            dropped.get(), failures.get(), accounting.get())
+            dropped.get(), failures.get(), accounting.get(), entry.lifecycleFacts?.snapshot())
     }
 
     /** A pending read never claims the manual metrics phase. A completed call permits one explicit query. */
