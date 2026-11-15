@@ -40,6 +40,7 @@ internal class OrionCortexClient(
     private val availabilityChanged: (Boolean) -> Unit = {},
     private val requestHistory: OrionInferenceRequestLedger = OrionInferenceRequestLedger(),
     private val unloadObservations: OrionCortexUnloadObservationBuffer? = null,
+    private val cycleObservations: OrionCortexCycleObserver? = null,
 ) : AutoCloseable {
     private val app = context.applicationContext
     private val session = OrionInferenceTurnstile(clock)
@@ -58,6 +59,11 @@ internal class OrionCortexClient(
     private var pinnedAiPid: Int? = null
     private var metricsConnectionEpoch: Long? = 0
     private val metricsCorrelation = try { OrionCortexMetricsCorrelation() } catch (_: Throwable) { null }
+    private val cycleClientScope = cycleObservations.isolatedCycle { Any() }
+    @Volatile private var activeCycle: OrionCortexCycleToken? = null
+    private var lastCycle: OrionCortexCycleToken? = null
+    @Volatile private var cycleCallback: OrionCycleCallbackScope? = null
+    @Volatile private var cycleEndpointSnapshot: OrionCycleEndpoint? = null
     private val unloadObservationScope: Long?
     private val unloadObservationOwner: OrionCortexUnloadObservationOwner?
     private val unloadDiagnosticDispatcher: OrionCortexUnloadDiagnosticDispatcher?
@@ -107,8 +113,10 @@ internal class OrionCortexClient(
 
     fun newRequestId(): String { check(!closed); return requestHistory.newRequestId() }
 
-    private fun restartCandidate(id: String, context: Int, threads: Int, tokens: Int): network.orion.core.resources.OrionInferenceResourcePlan {
-        val decision = restart()
+    private fun restartCandidate(id: String, context: Int, threads: Int, tokens: Int,
+        cycle: OrionCortexCycleToken? = null, phase: Int = CYCLE_BEFORE_LOAD): network.orion.core.resources.OrionInferenceResourcePlan {
+        val scope = enterCycleCallback(cycle, CYCLE_RESTART, phase)
+        val decision = try { restart() } finally { leaveCycleCallback(scope) }
         check(decision.eligibleForResourceEvaluation) { "Cortex restart guard blocked." }
         return checkNotNull(decision.candidatePlan).also { candidate ->
             check(candidate.model.modelId == id && context in 1..candidate.maxContext &&
@@ -121,9 +129,11 @@ internal class OrionCortexClient(
     }
 
     private fun approved(id: String, context: Int, threads: Int, tokens: Int,
-        metricsCapture: MetricsResourceCapture? = null): OrionResourceDecision {
-        val candidate = restartCandidate(id, context, threads, tokens)
-        val decision = if (metricsCapture == null) resources(id, context, threads, tokens) else {
+        metricsCapture: MetricsResourceCapture? = null, cycle: OrionCortexCycleToken? = null,
+        phase: Int = CYCLE_LOAD): OrionResourceDecision {
+        val candidate = restartCandidate(id, context, threads, tokens, cycle, phase)
+        val resourceScope = enterCycleCallback(cycle, CYCLE_RESOURCE, phase)
+        val decision = try { if (metricsCapture == null) resources(id, context, threads, tokens) else {
             // The restart callback above cannot provide this inference-resource witness.
             val callback = synchronized(monitor) { metricsCorrelation.isolatedMetrics { it.beginResourceCallback() } }
             metricsCapture.callback = callback
@@ -131,7 +141,7 @@ internal class OrionCortexClient(
             finally { synchronized(monitor) { callback?.let { token ->
                 metricsCorrelation.isolatedMetrics { it.endResourceCallback(token) }
             } } }
-        }
+        } } finally { leaveCycleCallback(resourceScope) }
         check(decision.allowed && decision.plan?.model == candidate.model) { "Cortex resource policy blocked." }
         val plan = checkNotNull(decision.plan)
         check(context <= plan.maxContext && threads <= plan.maxThreads && tokens <= plan.maxTokens)
@@ -141,6 +151,11 @@ internal class OrionCortexClient(
     /** Conservative residency: each request loads, infers and unloads even if a plan allows keep-alive. */
     suspend fun runInference(model: ModelRegistryEntity, descriptor: ParcelFileDescriptor,
         request: OrionInferenceRequest, contextTokens: Int, threads: Int,
+        onChunks: (List<OrionInferenceChunk>) -> Unit): OrionInferenceStatus =
+        runInference(model, descriptor, request, contextTokens, threads, null, onChunks)
+
+    suspend fun runInference(model: ModelRegistryEntity, descriptor: ParcelFileDescriptor,
+        request: OrionInferenceRequest, contextTokens: Int, threads: Int, cycle: OrionCortexCycleToken?,
         onChunks: (List<OrionInferenceChunk>) -> Unit): OrionInferenceStatus {
         check(!closed)
         validateOrionInferenceRequest(request, contextTokens, threads)
@@ -149,27 +164,37 @@ internal class OrionCortexClient(
         require(modelContextLimit != null && contextTokens <= modelContextLimit)
         val fingerprint = orionInferenceRequestFingerprint(request, contextTokens, threads)
         val lifecycle = OrionInferenceLifecycle(request, clock)
-        return requestHistory.runOnce(request.requestId, fingerprint, cancelledStatus = { lifecycle.cancel() }) {
+        val cycleInvocation = cycleObservations.isolatedCycle(cycle) { if (cycle == null) null else OrionCortexCycleInvocation() }
+        val result = requestHistory.runOnce(request.requestId, fingerprint, cancelledStatus = { lifecycle.cancel() }) {
+            cycleInvocation?.logicalOwnerEntered = true
+            cycleObservations.isolatedCycle(cycle) { it.logicalOwner(cycle, request.requestId) }
             val initial = lifecycle.status()
             if (initial.terminal != null) return@runOnce initial
             try {
                 session.withTurn(request.priority, request.deadline) {
-                    synchronized(monitor) { check(!closed); updateUnloadOwner(executionStarted = true); active = lifecycle }
+                    synchronized(monitor) {
+                        check(!closed); updateUnloadOwner(executionStarted = true); active = lifecycle
+                        activeCycle = cycle; lastCycle = cycle
+                        cycleObservations.isolatedCycle(cycle) {
+                            cycleClientScope?.let { scope -> it.turn(cycle, scope) } ?: it.failed(cycle)
+                        }
+                    }
                     lifecycle.markLoading()
                     try {
                         // Memory-exit cooldown/exhaustion blocks even a lightweight process rebind.
-                        restartCandidate(model.modelId, contextTokens, threads, request.maxTokens)
+                        restartCandidate(model.modelId, contextTokens, threads, request.maxTokens, cycle)
                         val remaining = request.deadline.expiresElapsedRealtimeMillis - clock.monotonicNow().elapsedRealtimeMillis
-                        if (remaining <= 0 || !loadModel(model, descriptor, contextTokens, threads, minOf(remaining, 120_000)))
+                        if (remaining <= 0 || !loadModel(model, descriptor, contextTokens, threads, minOf(remaining, 120_000), cycle))
                             lifecycle.run { if (status().terminal == null) failTransport() else status() }
-                        else infer(request, contextTokens, threads, onChunks)
+                        else infer(request, contextTokens, threads, onChunks, cycle)
                     } catch (cancelled: CancellationException) {
                         lifecycle.cancel(); throw cancelled
                     } catch (_: Exception) {
                         lifecycle.failTransport()
                     } finally {
-                        withContext(NonCancellable) { runCatching { unload() } }
+                        withContext(NonCancellable) { runCatching { unload(cycle) } }
                         active = null
+                        activeCycle = null; cycleCallback = null
                     }
                 }
             } catch (expired: OrionInferenceQueueDeadlineException) {
@@ -182,18 +207,20 @@ internal class OrionCortexClient(
                     OrionInferenceFailure.INVALID_TIME_REFERENCE)
             }
         }
+        cycleObservations.isolatedCycle(cycle) { it.clientResult(cycle, cycleInvocation?.logicalOwnerEntered?.not()) }
+        return result
     }
 
     /** Caller opens a freshly revalidated private READY file; service checks its digest again. */
     private suspend fun loadModel(model: ModelRegistryEntity, descriptor: ParcelFileDescriptor,
-        contextTokens: Int, threads: Int, durationMillis: Long = 120_000): Boolean = operation.withLock {
+        contextTokens: Int, threads: Int, durationMillis: Long = 120_000, cycle: OrionCortexCycleToken? = null): Boolean = operation.withLock {
         require(model.status == "READY" && model.modelId == model.sha256 && model.sizeBytes > 0)
         require(durationMillis in 1..120_000)
         // Bind is lightweight; heavy work remains blocked until a fresh decision immediately before IPC.
         val service = withTimeout(10_000) { acquire() }
         OrionCortexWire.requireReadOnlyFile(descriptor, model.sizeBytes, 4L * 1024 * 1024 * 1024)
         val id = issueTransportRequestId(service)
-        approved(model.modelId, contextTokens, threads, 1)
+        approved(model.modelId, contextTokens, threads, 1, cycle = cycle)
         val started = clock.monotonicNow()
         val deadline = started.deadlineAfter(durationMillis)
         val specification = Bundle().apply {
@@ -244,7 +271,7 @@ internal class OrionCortexClient(
 
     /** Receives structured text only; this client never creates or invokes a Skill. */
     private suspend fun infer(request: OrionInferenceRequest, contextTokens: Int, threads: Int,
-        onChunks: (List<OrionInferenceChunk>) -> Unit): OrionInferenceStatus = operation.withLock {
+        onChunks: (List<OrionInferenceChunk>) -> Unit, cycle: OrionCortexCycleToken? = null): OrionInferenceStatus = operation.withLock {
         val model = checkNotNull(loaded) { "Cortex model is not loaded." }
         require(request.modelId == model.modelId && contextTokens == loadedContext && threads == loadedThreads)
         val service = withTimeout(10_000) { acquire() }
@@ -268,7 +295,8 @@ internal class OrionCortexClient(
             try { mapped.put(content) } finally { SharedMemory.unmap(mapped); content.fill(0) }
             check(input.setProtect(OsConstants.PROT_READ))
             val metricsCapture = synchronized(monitor) { metricsCorrelation.isolatedMetrics { MetricsResourceCapture() } }
-            val resourceDecision = approved(model.modelId, contextTokens, threads, request.maxTokens, metricsCapture)
+            val resourceDecision = approved(model.modelId, contextTokens, threads, request.maxTokens, metricsCapture,
+                cycle, CYCLE_INFERENCE)
             val metricsCandidate = synchronized(monitor) {
                 metricsCorrelation.isolatedMetrics { it.candidate(service, connection, request.requestId, transportId, metricsCapture?.callback,
                     resourceDecision.allowed, resourceDecision.sampledAt, request.deadline, request.maxTokens, contextTokens) }
@@ -292,6 +320,7 @@ internal class OrionCortexClient(
             synchronized(monitor) { metricsCorrelation.isolatedMetrics { it.beginningInference() } }
             checkReply(service.startInference(input, specification, callback), setOf("ACCEPTED"))
             synchronized(monitor) { metricsCorrelation.isolatedMetrics { it.admitted(metricsCandidate) } }
+            cycleObservations.isolatedCycle(cycle) { it.inferenceAccepted(cycle, snapshotCycleEndpoint()) }
             lifecycle.markDecoding()
             while (lifecycle.status().terminal == null) {
                 val chunk = callbacks.tryReceive().getOrNull()
@@ -305,7 +334,11 @@ internal class OrionCortexClient(
                         OrionCortexWire.long(chunk, "sequence"), OrionCortexWire.optionalText(chunk, "delta"), isFinal = final,
                         finishReason = if (final) OrionInferenceTerminal.valueOf(OrionCortexWire.text(chunk, "finishReason")) else null,
                     ))
-                    if (update.chunks.isNotEmpty()) onChunks(update.chunks)
+                    if (update.chunks.isNotEmpty()) {
+                        cycleObservations.isolatedCycle(cycle) { it.streamAttempt(cycle, update.chunks.size) }
+                        onChunks(update.chunks)
+                        cycleObservations.isolatedCycle(cycle) { it.streamReturned(cycle) }
+                    }
                 } catch (_: IllegalArgumentException) { lifecycle.failTransport() }
             }
             if (lifecycle.status().terminal != OrionInferenceTerminal.SUCCEEDED)
@@ -327,8 +360,57 @@ internal class OrionCortexClient(
         active?.cancel(); activeId?.let { id -> runCatching { remote?.cancelInference(id) } }; Unit
     }
 
-    private suspend fun unload() = operation.withLock {
+    private fun enterCycleCallback(token: OrionCortexCycleToken?, callback: Int,
+        phase: Int): OrionCycleCallbackScope? = cycleObservations.isolatedCycle(token) {
+        val scope = cycleClientScope
+        if (token == null || scope == null || closed || activeCycle !== token || token.observer !== cycleObservations) null
+        else OrionCycleCallbackScope(token, scope, OrionCycleCallback.entries[callback],
+            OrionCyclePhase.entries[phase], Thread.currentThread()).also { cycleCallback = it }
+    }
+
+    private fun leaveCycleCallback(scope: OrionCycleCallbackScope?) {
+        cycleObservations.isolatedCycle(scope?.token) {
+            if (cycleCallback === scope) cycleCallback = null
+        }
+    }
+
+    internal fun cycleCallbackScope(callback: OrionCycleCallback): OrionCycleCallbackScope? =
+        cycleCallback?.takeIf { !closed && it.callback == callback && it.thread === Thread.currentThread() &&
+            it.token === activeCycle && it.clientScope === cycleClientScope }
+
+    internal fun cycleEndpoint(scope: OrionCycleCallbackScope): OrionCycleEndpoint? {
+        if (cycleCallbackScope(scope.callback) !== scope) return null
+        val endpoint = snapshotCycleEndpoint()
+        return if (cycleCallbackScope(scope.callback) === scope && cycleEndpointSnapshot === endpoint) endpoint else null
+    }
+
+    private fun snapshotCycleEndpoint(): OrionCycleEndpoint? = if (closed) null else cycleEndpointSnapshot
+
+    /** Called only while the original functional path already holds monitor. Never adds a wait. */
+    private fun updateCycleEndpoint() {
+        val scope = cycleClientScope ?: return
+        val value = cycleObservations.isolatedCycle(activeCycle) {
+            if (closed || remote == null || connection == null) null else {
+                val previous = cycleEndpointSnapshot
+                if (previous != null && previous.connectionEpoch == metricsConnectionEpoch && previous.aiPid == pinnedAiPid) previous
+                else OrionCycleEndpoint(scope, metricsConnectionEpoch, pinnedAiPid)
+            }
+        }
+        cycleEndpointSnapshot = value
+    }
+
+    internal fun cycleEndpointCurrent(token: OrionCortexCycleToken, scope: Any?, expected: OrionCycleEndpoint?): Boolean =
+        synchronized(monitor) {
+            !closed && lastCycle === token && scope != null && scope === cycleClientScope && expected != null &&
+                expected.clientScope === scope && expected.connectionEpoch != null && expected.connectionEpoch > 0 &&
+                metricsConnectionEpoch == expected.connectionEpoch && expected.aiPid != null && expected.aiPid > 0 &&
+                pinnedAiPid == expected.aiPid && remote != null && connection != null
+        }
+
+    private suspend fun unload(cycle: OrionCortexCycleToken? = null) = operation.withLock {
         val observing = unloadObservations != null
+        val cycling = cycle != null && cycleObservations != null
+        var cycleEndpoint: OrionCycleEndpoint? = null
         var selectedService: IOrionCortex? = null
         var selectedOwner: ServiceConnection? = null
         var selectedEpoch: Long? = null
@@ -345,16 +427,17 @@ internal class OrionCortexClient(
         var currentAtLoopExit = false
         var closedAtLoopExit = false
         fun observe(action: () -> Unit) {
-            if (observing) try { action() } catch (_: Throwable) {
+            if (observing || cycling) try { action() } catch (_: Throwable) {
                 outcome = OrionCortexUnloadOutcome.OBSERVATION_UNAVAILABLE
                 runCatching { unloadObservations?.recordingFailed() }
+                cycleObservations.isolatedCycle(cycle) { it.failed(cycle) }
             }
         }
         fun endpointCurrent() = remote === selectedService && connection === selectedOwner && unloadConnectionEpoch == selectedEpoch &&
             (selectedPid == null || pinnedAiPid == selectedPid)
         fun pollingClock(): network.orion.core.time.MonotonicInstant {
             failurePhase = OrionCortexUnloadOutcome.TIME_REFERENCE_INVALID
-            return clock.monotonicNow().also { if (observing) pollAt = it }
+            return clock.monotonicNow().also { if (observing || cycling) pollAt = it }
         }
         try {
             val service = if (!observing) remote else synchronized(monitor) {
@@ -363,6 +446,10 @@ internal class OrionCortexClient(
                 selectedPid = pinnedAiPid
                 selectedStamp = unloadObservationOwner?.snapshot()
                 selectedService
+            }
+            if (cycling) cycleObservations.isolatedCycle(cycle) {
+                val view = snapshotCycleEndpoint()
+                cycleEndpoint = view?.takeIf { !closed && remote === service && cycleEndpointSnapshot === view }
             }
             if (service == null) {
                 observe { outcome = OrionCortexUnloadOutcome.NO_ENDPOINT }
@@ -388,7 +475,7 @@ internal class OrionCortexClient(
                     failurePhase = OrionCortexUnloadOutcome.OBSERVATION_UNAVAILABLE
                     delay(25)
                 }
-                observe { synchronized(monitor) {
+                if (observing) observe { synchronized(monitor) {
                     currentAtLoopExit = endpointCurrent(); closedAtLoopExit = closed
                 } }
                 releaseConnection()
@@ -405,8 +492,12 @@ internal class OrionCortexClient(
             throw failure
         } finally {
             loaded = null
+            if (cycling) cycleObservations.isolatedCycle(cycle) {
+                it.unloaded(cycle, OrionCycleUnloadFact(cycleEndpoint, observedDeadline, pollAt,
+                    outcome == OrionCortexUnloadOutcome.NO_ENDPOINT, unloadedReply, validUnloadedReply, failureOutcome))
+            }
             // Facts-only submission: no extra Clock/provider call or await in cleanup/turn.
-            observe {
+            if (observing) observe {
                 val buffer = checkNotNull(unloadObservations)
                 val owner = checkNotNull(unloadObservationOwner)
                 val dispatcher = checkNotNull(unloadDiagnosticDispatcher)
@@ -435,7 +526,11 @@ internal class OrionCortexClient(
             synchronized(monitor) {
                 if (closed || remote !== selected.first || connection !== selected.second) return null
                 require(pinnedAiPid == null || pinnedAiPid == pid)
-                if (pinnedAiPid != pid) { pinnedAiPid = pid; updateUnloadOwner(endpointChanged = true) }
+                if (pinnedAiPid != pid) {
+                    cycleEndpointSnapshot = null
+                    pinnedAiPid = pid; updateUnloadOwner(endpointChanged = true)
+                }
+                updateCycleEndpoint()
                 // Optional correlation only. Parsing failures cannot change this health call.
                 metricsCorrelation.isolatedMetrics { correlation ->
                     require(OrionCortexWire.text(receipt, "status") == "OK" &&
@@ -530,7 +625,9 @@ internal class OrionCortexClient(
                         synchronized(monitor) {
                             check(!closed && connection === this)
                             binder.linkToDeath(death, 0)
+                            cycleEndpointSnapshot = null
                             deathRecipient = death; remote = service
+                            updateCycleEndpoint()
                             updateUnloadOwner(endpointChanged = true)
                             metricsCorrelation.isolatedMetrics { it.connected(service, this, metricsConnectionEpoch, negotiated.protocolMinor) }
                         }
@@ -557,6 +654,7 @@ internal class OrionCortexClient(
             val bound = synchronized(monitor) {
                 check(!closed)
                 if (!pending.isActive) false else {
+                    cycleEndpointSnapshot = null
                     connection = owner
                     metricsConnectionEpoch = try {
                         metricsConnectionEpoch?.let { if (it < Long.MAX_VALUE) it + 1 else null }
@@ -575,6 +673,7 @@ internal class OrionCortexClient(
     private fun lostConnection(expected: ServiceConnection? = null) {
         synchronized(monitor) {
             if (expected != null && connection !== expected) return
+            cycleEndpointSnapshot = null
             updateUnloadOwner(endpointChanged = true)
             loaded = null; active?.processDied()
         }
@@ -586,18 +685,20 @@ internal class OrionCortexClient(
         synchronized(monitor) {
             if (expected != null && connection !== expected) return
             val service = remote
+            cycleEndpointSnapshot = null
             val changed = remote != null || connection != null || pinnedAiPid != null
             // Invalidate before any potentially remote unlink/unbind work can delay release.
             if (changed) updateUnloadOwner(endpointChanged = true)
             deathRecipient?.let { death -> runCatching { service?.asBinder()?.unlinkToDeath(death, 0) } }
             remote = null; loaded = null; deathRecipient = null; pinnedAiPid = null
             metricsCorrelation.isolatedMetrics { it.clear() }
+            cycleCallback = null
             connection?.let { runCatching { app.unbindService(it) } }; connection = null
         }
     }
 
     override fun close() {
-        synchronized(monitor) { closed = true; updateUnloadOwner(); cancel() }
+        synchronized(monitor) { cycleEndpointSnapshot = null; closed = true; updateUnloadOwner(); cancel() }
         session.close()
         releaseConnection()
     }
@@ -616,6 +717,11 @@ internal class OrionCortexClient(
     }
 
     companion object {
+        private const val CYCLE_RESTART = 0
+        private const val CYCLE_RESOURCE = 1
+        private const val CYCLE_BEFORE_LOAD = 0
+        private const val CYCLE_LOAD = 1
+        private const val CYCLE_INFERENCE = 2
         private val REPLY_KEYS = setOf("schemaVersion", "status", "requestId", "state", "modelId")
         private val MEMORY_KEYS = setOf("schemaVersion", "status", "processName", "pid", "bootCount",
             "sampledElapsed", "totalPssBytes", "nativeIncluded", "nativeRuntimeLoaded", "nativeValidationCompleted")
