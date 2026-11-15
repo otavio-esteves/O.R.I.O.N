@@ -83,3 +83,15 @@ A lost finish event can remain PENDING+LOSS permanently; it is incomplete eviden
 not recovery/progress or proof that inference remains active. Observer counters
 are global cumulative lower bounds, not per-token or atomic. No profile, R8 driver,
 export, physical result or phase closure is supplied.
+
+## ROOT INTEGRATION VALIDATION
+
+Canonical Docker validation on source `80eb05a` passed: 190 app JVM tests, lint,
+module boundaries, Debug/Release builds and the Android test APK. Owned API35
+x86_64/4KiB emulator: 87 Android controls passed (ten new cases). Installed app
+and test hashes were verified before and after. The initial compile error in one
+test return type and a root test-selection error were preserved separately.
+
+[evidence index](../qualification/f5-owner-cycle-evidence.json) records exact
+source, artifacts and limitations. This remains software contract evidence; it
+does not exercise a qualified heavy owner cycle or close any hardware/soak gate.
