@@ -310,7 +310,7 @@ class OrionCortexCycleClientTest {
         }
     }
 
-    @Test fun queuedExpiryDoesNotBorrowActiveCycleResourcesOrCleanup() = runBlocking {
+    @Test fun queuedExpiryDoesNotBorrowActiveCycleResourcesOrCleanup() = runBlocking<Unit> {
         Fixture().use { f ->
             f.context.endpoint.automatic = false
             val firstToken = f.token(); val queuedToken = f.token()
