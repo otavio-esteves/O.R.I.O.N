@@ -243,6 +243,12 @@ internal class OrionCortexCycleObserver(private val capacity: Int = 4) {
         value
     }
 
+    /** Exact-owner reservation never claimed/invoked. No result, finish or app side effect. */
+    fun discardUnclaimed(owner: Any, token: OrionCortexCycleToken): Boolean = access(token) {
+        if (token.owner !== owner || token.lost || it.claimed || it.finished) false
+        else { entries.remove(token); true }
+    } ?: false
+
     /** Explicit technical eviction only; no cleanup, state replay or app side effect. */
     fun release(owner: Any, token: OrionCortexCycleToken): Boolean = access(token) {
         if (token.owner !== owner || !it.finished) false else { entries.remove(token); true }

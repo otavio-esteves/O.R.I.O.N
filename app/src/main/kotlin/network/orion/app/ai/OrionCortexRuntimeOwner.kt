@@ -72,6 +72,7 @@ internal class OrionCortexRuntimeOwner(
     private val coreReady: () -> Boolean = { false },
     private val resourceFacts: OrionCortexResourceFactBuffer? = null,
     private val cycleObservations: OrionCortexCycleObserver? = null,
+    private val singleAttemptTemplate: OrionCortexAttemptTemplate? = null,
 ) : AutoCloseable {
     private val app = context.applicationContext
     private val plans = qualifiedPlans.toList()
@@ -113,6 +114,36 @@ internal class OrionCortexRuntimeOwner(
     /** Stops before inventory, storage, Binder, governor or restart evaluation, even when configured. */
     internal fun preResourceReadiness(): OrionCortexPreResourceReadiness = evaluateCortexPreResourceReadiness(
         { closed }, { plans.isNotEmpty() }, { timing != null }, coreReady)
+
+    /** Candidature only. Early refusals precede even the one selected registry lookup. */
+    internal suspend fun selectSingleAttemptTemplate(): OrionCortexAttemptConfiguration = withContext(Dispatchers.IO) {
+        fun refuse(reason: OrionCortexAttemptRefusal) = OrionCortexAttemptConfiguration.Refused(reason)
+        preResourceReadiness().unavailable?.let { return@withContext refuse(singleAttemptRefusal(it)) }
+        if (cycleScope == null) return@withContext refuse(OrionCortexAttemptRefusal.OBSERVER_UNAVAILABLE)
+        val template = singleAttemptTemplate ?: return@withContext refuse(OrionCortexAttemptRefusal.TEMPLATE_UNAVAILABLE)
+        if (!template.isValid()) return@withContext refuse(OrionCortexAttemptRefusal.TEMPLATE_INVALID)
+        val plan = byId[template.modelId] ?: return@withContext refuse(OrionCortexAttemptRefusal.PROFILE_MISMATCH)
+        val selected = database.models().find(template.modelId)
+        if (selected?.status != "READY") return@withContext refuse(OrionCortexAttemptRefusal.MODEL_NOT_READY)
+        if (!profileMatchesReadyModel(plan, selected, template.contextTokens, template.threads, template.maxTokens))
+            return@withContext refuse(OrionCortexAttemptRefusal.PROFILE_MISMATCH)
+        OrionCortexAttemptConfiguration.Ready(template)
+    }
+
+    /** Called only after candidate consumption and observer reservation, never for evidence time. */
+    internal fun prepareSingleAttemptRequest(template: OrionCortexAttemptTemplate): OrionInferenceRequest? {
+        if (closed || template !== singleAttemptTemplate) return null
+        val now = clock.monotonicNow()
+        if (now.bootSessionId == null) return null
+        val deadline = now.deadlineAfter(template.requestDurationMillis)
+        val id = newRequestId()
+        return OrionInferenceRequest(id, 1, template.modelId, template.workloadPrompt, template.workloadContext,
+            template.maxTokens, template.temperature, template.priority, deadline, id)
+    }
+
+    internal fun discardSingleAttemptReservation(token: OrionCortexCycleToken): Boolean = cycleScope?.let { scope ->
+        cycleObservations.isolatedCycle(token) { it.discardUnclaimed(scope, token) }
+    } == true
 
     fun beginCycleObservation(): OrionCortexCycleToken? = cycleScope?.let { scope ->
         cycleObservations.isolatedCycle { it.begin(scope) }
