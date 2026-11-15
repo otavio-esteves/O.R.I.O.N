@@ -2,10 +2,10 @@
 
 REVIEW RENEWAL: 2026-11-15, tracked by
 [#135](https://github.com/otavio-esteves/O.R.I.O.N/issues/135). Reviewed main
-317122bd1777cc4da848913b935365e5f84c57ff, including integrated PRs #134, #136
-and #137. Reviewed lifecycle source:
+96d0ce9d6239761b48c594a3f22a87c00a8c39b6, including integrated PRs #134, #136, #137
+and #138. Reviewed lifecycle source:
 89924f8ba0768c2ec4a5a7ee4891ac7a6e65d3b4 / PR #138.
-Lifecycle integration status: CANDIDATE; required remote CI PENDING; issue #132 OPEN.
+Lifecycle integration status: INTEGRATED via PR #138; required remote CI SUCCESS; issue #132 CLOSED.
 A source review does not substitute for required CI or qualification approval.
 The user confirmed on this date that no physical devices are available. Physical
 S21/API37 qualification, measured profile calibration and real-duration stability

@@ -2,11 +2,11 @@
 
 Work package: [ORION-F5-QUAL-PLAN-001](../issues/ORION-F5-QUAL-PLAN-001.md).
 Review renewed on 2026-11-15 against main
-`317122bd1777cc4da848913b935365e5f84c57ff`, including integrated PRs #134, #136
-and #137. Reviewed lifecycle source:
+`96d0ce9d6239761b48c594a3f22a87c00a8c39b6`, including integrated PRs #134, #136, #137
+and #138. Reviewed lifecycle source:
 `89924f8ba0768c2ec4a5a7ee4891ac7a6e65d3b4`,
 [PR #138](https://github.com/otavio-esteves/O.R.I.O.N/pull/138).
-Lifecycle integration status: **CANDIDATE; required remote CI PENDING; issue #132 OPEN**.
+Lifecycle integration status: **INTEGRATED via PR #138; required remote CI SUCCESS; issue #132 CLOSED**.
 Local execution records are separate from integration status. This document is a
 plan, not a new execution or qualification approval record.
 
