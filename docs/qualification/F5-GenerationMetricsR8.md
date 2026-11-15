@@ -90,3 +90,12 @@ At author handoff this is source preparation only: no Gradle, Docker or ADB was
 executed by the author. Root owns canonical build/R8/Android validation and its
 source/artifact/log evidence. Production qualified plans and F4#64/F5#89 remain
 pending; no F6 authority is granted.
+
+The canonical path must be validated in the target application's mount namespace.
+The HOST root-shell `realpath` result can differ from `File.getCanonicalFile()` in
+that process. On the owned API-35 image, the existing guard rejected the HOST's
+`/data/user/0/...` spelling and accepted the `/data/data/...` spelling for the same
+private inode. Preserve both failed attempts and the successful attempt; never
+relax the canonical-parent, UID, NOFOLLOW, size/hash or same-FD guards to accommodate
+an alias. The diagnostic runner reports only a closed phase and numeric check
+code (or a closed OS-error category), never raw paths, IDs, output or exception text.
