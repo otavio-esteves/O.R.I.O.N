@@ -36,3 +36,16 @@ execution remains pending root/CI. `git diff --check` passed before review.
 No Gradle/Docker/ADB or device execution by this author. Technical scope and
 unavailable correlations are documented in
 [F5-ResourceFacts](../qualification/F5-ResourceFacts.md).
+
+## Canonical software validation
+
+Root built source `d82b01a` in Docker: all 154 app JVM contracts passed without
+failures/errors/skips (including the 12 focused resource-fact contracts), lintDebug
+passed, and Debug/Release plus the Android test APK assembled. The six owner-default
+Android fixtures passed on the owned API-35 emulator, including refusal paths that
+must create no resource fact or binding. Frozen APKs, hashes, JVM XML, lint and raw
+Android/build reports are retained outside the repository under
+`O.R.I.O.N-evidence/f5-next-gates-20261114/qualification/resource-facts/`.
+This is software evidence: the Android fixture run did not independently capture
+installed APK hashes, and no physical resource calibration or profile qualification
+is claimed. Required PR CI remains independent and must pass before merge.
