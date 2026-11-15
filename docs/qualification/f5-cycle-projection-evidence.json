@@ -1,0 +1,362 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F5-CYCLE-PROJECTION-001",
+  "issue": 125,
+  "sourceValidationCommit": "fdb41877f5e7089e4d8a83310334b6c6d05067d9",
+  "sourceHashes": {
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexCyclePartialProjector.kt": "e05d1603839b57c09b09a2a30cec8f402ec428f51529ae8843e3b73e5e12e553",
+    "app/src/test/kotlin/network/orion/app/ai/OrionCortexCyclePartialProjectorTest.kt": "a2a5786d8189691ab2120b7df0a79eb65a33ad5c540e82f36af877fa4bb8e6ae",
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexCycleObservation.kt": "618cc0aca7f0ed6ddd10307dfb7539a8d64a2b793ec241f849a06cf1b2c804be",
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt": "af68425974f648cf425764e3de8b7cfe8e89a62be5be7f859260458874f04851",
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeOwner.kt": "8ad81aebf32a7a70ec32c90e22627fb9db359ca492e8d1f5845d28c683dff473",
+    "app/src/main/kotlin/network/orion/app/resources/OrionCortexResourceFacts.kt": "a80e7241d741d047529e425dfcb8ab7e807c179fcaa5c9983811f1c084857708",
+    "ai/api/src/main/kotlin/network/orion/ai/api/OrionGenerationMetrics.kt": "081026510aba659795f49910742b113677582cabd535d04955f44bd0cd56b278"
+  },
+  "externalEvidenceRoot": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114",
+  "validation": {
+    "source": "fdb41877f5e7089e4d8a83310334b6c6d05067d9",
+    "environment": "DOCKER",
+    "build": "PASS",
+    "jvm": {
+      "tests": 927,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "activeTestTasks": {
+      ":ai:api:testDebugUnitTest": {
+        "tests": 33,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":ai:llama:testDebugUnitTest": {
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":ai:service:testDebugUnitTest": {
+        "tests": 36,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":app:testDebugUnitTest": {
+        "tests": 206,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:actions:testDebugUnitTest": {
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:commands:testDebugUnitTest": {
+        "tests": 64,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:common:testDebugUnitTest": {
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:events:testDebugUnitTest": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:exitinfo:testDebugUnitTest": {
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:health:testDebugUnitTest": {
+        "tests": 57,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:ingress:testDebugUnitTest": {
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:ipc:testDebugUnitTest": {
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:model:testDebugUnitTest": {
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:observability:testDebugUnitTest": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:policy:testDebugUnitTest": {
+        "tests": 181,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:queries:testDebugUnitTest": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:recovery:testDebugUnitTest": {
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:resources:testDebugUnitTest": {
+        "tests": 39,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:security:testDebugUnitTest": {
+        "tests": 37,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:skills:metadata:testDebugUnitTest": {
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":core:time:testDebugUnitTest": {
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":data:events:testDebugUnitTest": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":data:repository:testDebugUnitTest": {
+        "tests": 33,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":scheduler:testDebugUnitTest": {
+        "tests": 33,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":skills:device:testDebugUnitTest": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":skills:notifications:testDebugUnitTest": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":skills:reminders:testDebugUnitTest": {
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":skills:tasks:testDebugUnitTest": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":skills:timers:testDebugUnitTest": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      ":voice:ipc:testDebugUnitTest": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "lint": "PASS",
+    "boundaries": "PASS",
+    "packaging": "PASS",
+    "projectorTests": 16,
+    "artifacts": {
+      "app-debug-androidTest.apk": "9c12479b0752ad680ce1239fba42d2e7f1e77ec64b995a852ab5fe1c6598e335",
+      "app-debug.apk": "84b5165725f883f839978187973c1ae1bedb0c8b806a4a93197f43795183ba76",
+      "app-release-unsigned.apk": "edbf16fdc54a9dd2399391458aadcd9b7b5b7918cf9ce5ba94dedc0a4730b137",
+      "app-release.aab": "91029c8f261743359fb45ce4717f1229c678278c464d2141165bb9dbf4974094"
+    }
+  },
+  "runtimeScope": "PURE_MANUAL_PROJECTOR_NO_ANDROID_RUNTIME_OR_HEAVY_EXECUTION_REQUIRED",
+  "format": "ORION_MAIN_CYCLE_PARTIAL",
+  "maximumAsciiBytes": 8192,
+  "limits": [
+    "New pure projector tested by 16 JVM controls and an independent JSON parser.",
+    "927 is the complete JVM total and includes both the 12 issue123 tests and the 16 issue125 tests.",
+    "No new Android or native execution is claimed; existing issue123 runtime evidence remains separate.",
+    "No factory composition, operational driver, output sink, complete RuntimeEvidence v1 or physical/soak/profile/F6 closure."
+  ],
+  "flags": {
+    "sourceAuthenticated": false,
+    "physicalVerified": false,
+    "profileApproved": false,
+    "productionInferenceApproved": false,
+    "runtimeProtocolV1Complete": false,
+    "fullF5GateClosed": false,
+    "fullSoakGateClosed": false,
+    "f6Authorized": false
+  },
+  "externalFiles": {
+    "qualification/cycle-projection/full-check/build.log": "2ba95c91f459a7a7c6b11da34f1cfb765983831f9fe3999d4d1c93f287627729",
+    "qualification/cycle-projection/full-check/jvm/ai/api/TEST-network.orion.ai.api.OrionGenerationMetricsTest.xml": "7a4dddb179d293d014e48dd25a4a07da74dc5edb2b208434b3b35aa9b40389e3",
+    "qualification/cycle-projection/full-check/jvm/ai/api/TEST-network.orion.ai.api.OrionInferenceLifecycleTest.xml": "8c5586729e955a9588c2bf4bc5ec2062b4b1784cddc2c873eef3b7edb2aa6f72",
+    "qualification/cycle-projection/full-check/jvm/ai/api/TEST-network.orion.ai.api.OrionIssuedRequestHistoryTest.xml": "0babf4cb82332b7e1990ae5554b006d84027659c454222a78fcfd9c9a5224592",
+    "qualification/cycle-projection/full-check/jvm/ai/llama/TEST-network.orion.ai.llama.OrionLlamaGenerationObservationTest.xml": "de97e1be80ecd7898a73f45a892dbf1b9c9aad1d5d28d24865328bfd92c78f3f",
+    "qualification/cycle-projection/full-check/jvm/ai/llama/TEST-network.orion.ai.llama.OrionLlamaServiceGenerationCaptureTest.xml": "7a1566f34fe050b1bb9a41485d7ebda6aae3d24cb0ec89386ba91b61f64bcf36",
+    "qualification/cycle-projection/full-check/jvm/ai/service/TEST-network.orion.ai.service.OrionCortexRequestFingerprintTest.xml": "39844f8a3771ec1a86f1c39b091ae2a42f1d49ccef649a4e722828fada01aae4",
+    "qualification/cycle-projection/full-check/jvm/ai/service/TEST-network.orion.ai.service.OrionNativeUnresponsiveWatchdogTest.xml": "1988537815abc991ed039acbb07fa98c9116858fba00715cd7ecb773ffab5e40",
+    "qualification/cycle-projection/full-check/jvm/ai/service/TEST-network.orion.ai.service.OrionServiceGenerationMetricsTest.xml": "90160d2589bd8dd6f0456fb05f09849613845b50dedbb0bf8597e07d15f07132",
+    "qualification/cycle-projection/full-check/jvm/ai/service/TEST-network.orion.ai.service.OrionUtf8PiecesTest.xml": "fce672004280aeb03274f527ae3178d4583598a7310994ad626ea5d00da41e2c",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.CoreReadyLogEventTest.xml": "e7a640281efa2d1b46dc7ae473f1af4e76fa12e7a0c5dd7e415fe87f7f2357b8",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.OrionHealthObservationsTest.xml": "cd8e65d337adf2785da1ffdd80f085aa455881e4ec36a95cd8caf53e7d1ac132",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.OrionIngressMaintenanceTest.xml": "cb5308e12579aec2ac08ea6e7bfe89b676b0fbd0855408358a9306ce72f0886f",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.OrionMaintenanceOutcomeTest.xml": "d3c7e22525d83acfae100ddff320d7426ab54311c4932136a263cb3e57349628",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.ai.OrionCortexCycleObservationTest.xml": "e6bb8d4a8ef5f235e3d35cd38400c3d12414b2641028d93604e68e067c628a92",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.ai.OrionCortexCyclePartialProjectorTest.xml": "f38ffb840cccb44f2e8c661bad8de67b786e3709c9d041a31c956c8d798bacae",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.ai.OrionCortexMetricsCorrelationTest.xml": "e1ed15bdd1c67101abaabe4f59a9a7ab9669edcc00b0a9f6512bf0530994bc2c",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.ai.OrionCortexPreResourceReadinessTest.xml": "8216c631cd3c4fdd0d592d828f4186872dceaedcc200eecba52b1ab87e944c3f",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.ai.OrionCortexRuntimeOwnerPolicyTest.xml": "9e3fe40c9c1ae1c56228278d8a62979f82734b1bb281f81cdedfc02b0c658dea",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.ai.OrionCortexUnloadDiagnosticsTest.xml": "13fdb89b2cd3040d1535da96bb95bb3e4fbadea7db39935a58cd69f057d7b27a",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.ai.OrionCortexUnloadObservationTest.xml": "69af37bb8d92752699e6ec7de85a159c8bb1765b97909abe3b6f17335e7c5ecf",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.ai.OrionInferenceRequestLedgerTest.xml": "2e878f2cca7ea94ffc39d715e4a28ee3464422c7c4a23814ce2d931ff000d99e",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.ai.OrionInferenceTurnstileTest.xml": "1a1cb329b778b01c28f40718008e7e1e0c152dd4d4cba0c23d745168337046f5",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.memories.OrionMemoryAdmissionOwnerTest.xml": "02e0e22b83cda035b53aa12490516bd0f82ae69fa834647cdab44d179cdb2148",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.memories.OrionMemoryIngressWireTest.xml": "e22360534c1b3a3cbd040961b2e6283a9b83ff02eb4c11f44a629f785b9dd6e3",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.notifications.OrionNotificationIngressWireTest.xml": "bec278d30c9ed4eb8737e4c9fadb42d56789a3da3c25986b18d5fb4c05b6bd9d",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryAdmissionsTest.xml": "34c9c5364f7864da3baec8620a7c2c2a4364424a8f0b1481004ae9d2f946b0da",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryPolicyTest.xml": "70a0f0692e4458d58f7340d1c533ee917ce0bc5d00e08546514268be1b1d1418",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryWireTest.xml": "948930f4c9fea28e9de1f1d086126ae21c8341a3a7c5e7ded50d13acd7c237fb",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.reminderdelivery.OrionReminderSeriesPlanTest.xml": "b4036d831ef9e7c875fb22cba6cea5af085e9f785c59e4ede69f25f4de7c574c",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.reminders.OrionReminderDisplayTest.xml": "7c5d765b9d4e292d78f982e7a1ba7e9da766588320abde5b4557db03f9552940",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.reminders.OrionReminderIngressWireTest.xml": "dddf46cbe510d090ec64596cc8bab3fd983050710a9f1fcab82adee38ec8d8df",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.resources.OrionAndroidMemoryPressureTest.xml": "ffa4e4d3b190ef1146336eaa99dbd9f5e44c2c85b2f983ddbfd8d781d5252cb0",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.resources.OrionCortexMemoryTelemetryTest.xml": "6e437eb53ba10c19585ceb1334231f528a3f57d5b9ec2a7fe7a293038a79031d",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.resources.OrionCortexResourceFactsTest.xml": "885564f3a51b79ea722968fd4170f8d4ba0849c76fcd622fbcd35d91efd3af9a",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.resources.OrionProcessMemoryEvidenceTest.xml": "fea5ff8cf6b27f7303be1bfdd05969cc408659c165dc32935a6a1abb1cebba7e",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.tasks.OrionTaskAdmissionOwnerTest.xml": "4ed088d1633928057f4b8407b23a387fdd1894f2742f562578281b2b56ca2760",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.tasks.OrionTaskIngressWireTest.xml": "78d6f43271e3e5cbee11d8447bb782957a4ab8722f553026b474205055c8bde2",
+    "qualification/cycle-projection/full-check/jvm/app/TEST-network.orion.app.timers.OrionTimerIngressWireTest.xml": "b087a1cf209eccf797feab2d6abea01c09c31fef6c5b099c2d661efe8401d88f",
+    "qualification/cycle-projection/full-check/jvm/core/actions/TEST-network.orion.core.actions.ActionConfirmationBindingTest.xml": "89fc29d2a7167e0e58e7eb0ccdcfa5fba3096027a203fbe8a985f774a473364c",
+    "qualification/cycle-projection/full-check/jvm/core/actions/TEST-network.orion.core.actions.ActionExecutionLeaseTest.xml": "61f711f3463540bb1a846f5b3be5ee36e083826bc2fbe78370ae0f960e69c718",
+    "qualification/cycle-projection/full-check/jvm/core/actions/TEST-network.orion.core.actions.ActionStateMachineTest.xml": "e543e4371dec55ffe6deba9c9955879240843a55b4de1e6f1b8492ee50ed82f1",
+    "qualification/cycle-projection/full-check/jvm/core/actions/TEST-network.orion.core.actions.IdempotencyKeyPolicyTest.xml": "ed568a3e633efc86a64ffd6fcd02a265c334e875aad7a9c971d2202f741cc5a2",
+    "qualification/cycle-projection/full-check/jvm/core/actions/TEST-network.orion.core.actions.UnavailableActionEngineTest.xml": "5ced7c777ddac3f04d5a559b3b6f5eed0ee7b935a50548f08bbb7eef7ddf0798",
+    "qualification/cycle-projection/full-check/jvm/core/commands/TEST-network.orion.core.commands.CommandContractTest.xml": "06e74a3033a78760a375cdda5deff4c924544b207030b31251296a8fff93c499",
+    "qualification/cycle-projection/full-check/jvm/core/commands/TEST-network.orion.core.commands.memories.CreateMemoryPreparationTest.xml": "d4df7c7e6484b4fd2821907936786889355d79c4b8381d5c09bb0dfb5ddd6e95",
+    "qualification/cycle-projection/full-check/jvm/core/commands/TEST-network.orion.core.commands.notifications.PostNotificationPreparationTest.xml": "ba0616e7626faed1c2c553a6c8a2610e999e4e2de16c80e8ed53a406643fcb17",
+    "qualification/cycle-projection/full-check/jvm/core/commands/TEST-network.orion.core.commands.reminders.CreateReminderPreparationTest.xml": "f5979291319a13369bc08cb5bd6d35c391837cb63108f23c1b76389db00ba939",
+    "qualification/cycle-projection/full-check/jvm/core/commands/TEST-network.orion.core.commands.reminders.ReminderStatusPreparationTest.xml": "af51b6b550779af3065cf685b592b8af91314f30636a1ccffe4be429b137724f",
+    "qualification/cycle-projection/full-check/jvm/core/commands/TEST-network.orion.core.commands.tasks.CreateTaskPreparationTest.xml": "e518f6ff06f40fb5a4abb212c39a116fffae53353eada4e048bf3c27931fcc14",
+    "qualification/cycle-projection/full-check/jvm/core/commands/TEST-network.orion.core.commands.tasks.TaskStatusPreparationTest.xml": "6592a878444607b2c773b975edcbae39a80a799d8d30f8fd2cd1bff10a6d271d",
+    "qualification/cycle-projection/full-check/jvm/core/commands/TEST-network.orion.core.commands.timers.CreateTimerPreparationTest.xml": "1e93d4aba0fce3582af218e6b6807fc2cb4ac96e23bb651ca21c8ee58403d161",
+    "qualification/cycle-projection/full-check/jvm/core/common/TEST-network.orion.core.common.process.MainProcessStoragePolicyTest.xml": "6c7dc5416bd5cdef392a9629420e6c6dd4ec6d5cf76519f69979bc9ae44daf88",
+    "qualification/cycle-projection/full-check/jvm/core/common/TEST-network.orion.core.common.process.OrionProcessBootstrapperTest.xml": "d72bac34c2957c095aeb72025ebf53b94a77a9596abbd055465a595b3daaaea4",
+    "qualification/cycle-projection/full-check/jvm/core/common/TEST-network.orion.core.common.process.OrionProcessRoleTest.xml": "b6f1b57c1e58ec46595da7668278395a55db1d75f5dd02a12283692840293725",
+    "qualification/cycle-projection/full-check/jvm/core/events/TEST-network.orion.core.events.OrionEventTest.xml": "af8e3f40c7d2aa3f677b99aad530a3e9ae356f40d2f7c4b52baf36de88031f6f",
+    "qualification/cycle-projection/full-check/jvm/core/exitinfo/TEST-network.orion.core.exitinfo.OrionForceStopStartupEvidenceTest.xml": "ee3955c9dec8597533a33721a7a0e2a90929dae59c8bdfcedb09a4391e5ae7e3",
+    "qualification/cycle-projection/full-check/jvm/core/exitinfo/TEST-network.orion.core.exitinfo.OrionProcessExitClassifierTest.xml": "8776b94567c6279d872f43cadb8257bcaee6b979b5132da5a4ffc25f09f3f750",
+    "qualification/cycle-projection/full-check/jvm/core/health/TEST-network.orion.core.health.CoreReadinessTest.xml": "698be258a5059a65f72429077d4a864e6f48ce71cb1f2297fb7a7f30e16e07d3",
+    "qualification/cycle-projection/full-check/jvm/core/health/TEST-network.orion.core.health.OrionHealthAggregatorTest.xml": "b0aa2f7e7fbc45ef178f2a4eb7c8409a3a8a142462bb0dfa4d67ff57480c0e1d",
+    "qualification/cycle-projection/full-check/jvm/core/health/TEST-network.orion.core.health.OrionHealthTest.xml": "20702dc148e5d94e7498bcfef109dc70b8a7b1c726cc27c9fc81e95f714429a3",
+    "qualification/cycle-projection/full-check/jvm/core/health/TEST-network.orion.core.health.OrionPlatformDiagnosticsTest.xml": "0d86eca5680b0ecceffe9106780b06b5c110d05d889172e21009b7ba22b795a7",
+    "qualification/cycle-projection/full-check/jvm/core/ingress/TEST-network.orion.core.ingress.DurableIngressCoordinatorTest.xml": "e2b5b59774b101e465caf01ff478e3807ef381e218a7d24e6f6fe5e65bc1766c",
+    "qualification/cycle-projection/full-check/jvm/core/ingress/TEST-network.orion.core.ingress.FoundationIngressCoordinatorTest.xml": "a04a68d0ab11bb93313dc9e0d72266593849e901f4a209574d53299e2830b02b",
+    "qualification/cycle-projection/full-check/jvm/core/ipc/TEST-network.orion.core.ipc.IpcBoundaryPolicyTest.xml": "b6393c3d03493e283cd86670acd25571e8995bb226df51ff6b633de2244cdc42",
+    "qualification/cycle-projection/full-check/jvm/core/ipc/TEST-network.orion.core.ipc.ProtocolInfoTest.xml": "431f9c09bf45081eaca0c18fd2480b01e7c1abe7313ca8bf8e405eef133e6485",
+    "qualification/cycle-projection/full-check/jvm/core/model/TEST-network.orion.core.model.CapabilityTest.xml": "a281d2b94be66df7993733f18c7b30e9205d6278a26ed5b580973c67c98a2569",
+    "qualification/cycle-projection/full-check/jvm/core/model/TEST-network.orion.core.model.ModelVocabularyTest.xml": "f4f45481e9b6ad89383d586658116f14b13c72021722d89cf9e2625ed7ba878b",
+    "qualification/cycle-projection/full-check/jvm/core/model/TEST-network.orion.core.model.OrionIntentTest.xml": "13d95686ea05c0336f53e791a7c0ae421ca50be72e34f40a28f75ebbb66a7f9a",
+    "qualification/cycle-projection/full-check/jvm/core/model/TEST-network.orion.core.model.OrionReminderRecurrenceRuleTest.xml": "fd5593a8545e180b740321cd634e81ae3e690e478ca8194702a54778461cd91b",
+    "qualification/cycle-projection/full-check/jvm/core/observability/TEST-network.orion.core.observability.OrionLoggerTest.xml": "365820a9556460079d67c849717c7c9d67d943f0e8096bc88fa2b268e47203e0",
+    "qualification/cycle-projection/full-check/jvm/core/observability/TEST-network.orion.core.observability.OrionMaintenanceSnapshotTest.xml": "52a38749c9d250ee7464181d6108c4790b1146ad7d0aeb4c382b9b1b5bb25b01",
+    "qualification/cycle-projection/full-check/jvm/core/policy/TEST-network.orion.core.policy.memories.OrionCreateMemoryPolicyTest.xml": "9441584a71b05517a5424cf5a8983798add73032908e96c21a348f72ea5bc6b9",
+    "qualification/cycle-projection/full-check/jvm/core/policy/TEST-network.orion.core.policy.memories.OrionMemoryStatusPolicyTest.xml": "c1dd95b9ef97edda023c0eb2b8ea547ceee7ac1e51aefb15c6ac41fba4436cf1",
+    "qualification/cycle-projection/full-check/jvm/core/policy/TEST-network.orion.core.policy.notifications.OrionPostNotificationPolicyTest.xml": "434312f51bb09d9e01e720b508ab6fe395e82f5d5f5c0ecd80db88afcfbd02f3",
+    "qualification/cycle-projection/full-check/jvm/core/policy/TEST-network.orion.core.policy.reminders.OrionCreateReminderPolicyTest.xml": "3b4f97d79bf5b7069efb9676d80546980532e53cf53f01f2be08bb44bed2dbd8",
+    "qualification/cycle-projection/full-check/jvm/core/policy/TEST-network.orion.core.policy.reminders.OrionReminderStatusPolicyTest.xml": "0bed6df41d66dfad49ed37e74c962e819f0e38b167829dd223650f500f56f641",
+    "qualification/cycle-projection/full-check/jvm/core/policy/TEST-network.orion.core.policy.tasks.OrionCreateTaskPolicyTest.xml": "44c6c8fcf41e36c3dda0b5da29294ce8484d631c4b16d7647e3db46b909856d3",
+    "qualification/cycle-projection/full-check/jvm/core/policy/TEST-network.orion.core.policy.tasks.OrionTaskStatusPolicyTest.xml": "a9b9f6076e8349688bf29fbb40db5dce9239bf449e03601a08a6bab1abdec03c",
+    "qualification/cycle-projection/full-check/jvm/core/policy/TEST-network.orion.core.policy.timers.OrionCreateTimerPolicyTest.xml": "cbbf4ca92907347b0e5c393cb4ab68c03df4b85fac23fc406ce6b82f0a879cff",
+    "qualification/cycle-projection/full-check/jvm/core/policy/TEST-network.orion.core.policy.timers.OrionTimerStatusPolicyTest.xml": "d629431bcfa63754637ea6fe98edaaa22d491cf7d64e247b5012e81fe122ff34",
+    "qualification/cycle-projection/full-check/jvm/core/queries/TEST-network.orion.core.queries.QueryContractTest.xml": "9ce10df15ae6e5d060d05e2ab3c33ea635b4b2fac6f4d19c96712211a3198ae5",
+    "qualification/cycle-projection/full-check/jvm/core/queries/TEST-network.orion.core.queries.TaskQueryTest.xml": "06ba28261bace5907cf6f604aa691cfdc1452f223b279b8f120b32dec64f5664",
+    "qualification/cycle-projection/full-check/jvm/core/queries/TEST-network.orion.core.queries.activity.GetActivityTest.xml": "93bf9a2695eeef8e3dd042a85e36a8a6f26dfa3f78d647f4e81af238a83d0219",
+    "qualification/cycle-projection/full-check/jvm/core/queries/TEST-network.orion.core.queries.timers.OrionTimerRemainingTest.xml": "8f5624bafdc2ae2e048682a4faa44bb8bccd577131a8e1e0dc247964531bd7dd",
+    "qualification/cycle-projection/full-check/jvm/core/recovery/TEST-network.orion.core.recovery.OrderedRecoveryCoordinatorTest.xml": "6a0ba4daff4511996e0cdda1d5bc4eb2ad2d1d8221eeaffbe66c916f64208483",
+    "qualification/cycle-projection/full-check/jvm/core/resources/TEST-network.orion.core.resources.OrionCortexRestartGuardTest.xml": "c7d37713d6b710b153e15ef72f3e970a046d5686fd42a6bb917670201a7a3fd5",
+    "qualification/cycle-projection/full-check/jvm/core/resources/TEST-network.orion.core.resources.OrionMinimumResourceGovernorTest.xml": "f5cd8c3971f4c5558d36a1e2772d7d0491a4faf94c736c4c23d7db0b13651a01",
+    "qualification/cycle-projection/full-check/jvm/core/resources/TEST-network.orion.core.resources.UnavailableResourceGovernorTest.xml": "8d9d4e6869896ad25274fc79eda9897618bf815714ec31a6ac6f2b2d77807cfd",
+    "qualification/cycle-projection/full-check/jvm/core/security/TEST-network.orion.core.security.DurableFieldKeyProviderTest.xml": "51c292c0306367907b668d8bbca637ec07ea4f58115742e54ba08eb379c9a750",
+    "qualification/cycle-projection/full-check/jvm/core/security/TEST-network.orion.core.security.DurablePayloadPolicyTest.xml": "62ebc20c366633a4b070ee22434859cb7c3823d347b247aa5129f216f7403f29",
+    "qualification/cycle-projection/full-check/jvm/core/security/TEST-network.orion.core.security.FieldEnvelopeCodecTest.xml": "d542e3b447e3f9d28555d2dbe7faa802af9f427d3353306a49d7f6c51358bffc",
+    "qualification/cycle-projection/full-check/jvm/core/security/TEST-network.orion.core.security.FirstInstallFieldKeysTest.xml": "0515242efe041ec18e0c8a7a36d7938a9a4c7d1efd44835c990c02eea3c1d2e6",
+    "qualification/cycle-projection/full-check/jvm/core/security/TEST-network.orion.core.security.OrionFieldEncryptionTest.xml": "dd1ff878e9e0fc808bec0d0dbd99da29996e6a43a920379a8f567620ad00a1a3",
+    "qualification/cycle-projection/full-check/jvm/core/skills/metadata/TEST-network.orion.core.skills.metadata.SkillDescriptorTest.xml": "142f7cfbff13b8529f715ac4dd2a8d6b9d5aaa56c25d8c88ab581ce7e25653b3",
+    "qualification/cycle-projection/full-check/jvm/core/skills/metadata/TEST-network.orion.core.skills.metadata.device.OrionDeviceDescriptorsTest.xml": "d500749eb7ba1a20ceee5a8d1464ef1be56f18ea68cc97ee67431bf4d359d57c",
+    "qualification/cycle-projection/full-check/jvm/core/skills/metadata/TEST-network.orion.core.skills.metadata.memories.OrionMemoryDescriptorsTest.xml": "c0c5b45c1fbf278481a1f13cb0c295cc537b94725e1e508f099501d07cf045f8",
+    "qualification/cycle-projection/full-check/jvm/core/skills/metadata/TEST-network.orion.core.skills.metadata.notifications.OrionPostNotificationDescriptorTest.xml": "f734335f3afb3308df6fcdfd30948982262fbc9cab0acc3593a43387512bfd7b",
+    "qualification/cycle-projection/full-check/jvm/core/skills/metadata/TEST-network.orion.core.skills.metadata.reminders.OrionCreateReminderDescriptorTest.xml": "b81a6dde194c6e257d0dc89a54c64fa0684c92b6782a4ba7c04b7787b6d3ffe8",
+    "qualification/cycle-projection/full-check/jvm/core/skills/metadata/TEST-network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptorTest.xml": "1fd51c4232dc3f03972d48b24f415ab3e8c4d3ec60f9d4eb5877a96a4dbe3772",
+    "qualification/cycle-projection/full-check/jvm/core/skills/metadata/TEST-network.orion.core.skills.metadata.tasks.OrionTaskStatusDescriptorsTest.xml": "010a63f6a7ae4159ce51c4abe98d9cfaf3b8ba467698494cd024a2ee346bad69",
+    "qualification/cycle-projection/full-check/jvm/core/skills/metadata/TEST-network.orion.core.skills.metadata.timers.OrionCreateTimerDescriptorTest.xml": "8bcf374de11eede8a9af65a481e84c44d6533afd7422068bac269ce3259916e3",
+    "qualification/cycle-projection/full-check/jvm/core/time/TEST-network.orion.core.time.AndroidOrionClockTest.xml": "ca359b1fdf6120d598ebfd93952995181b0613c4085397987e2354c1c72ed52a",
+    "qualification/cycle-projection/full-check/jvm/core/time/TEST-network.orion.core.time.OrionClockTest.xml": "34bba0a702b5aa62a5aa7a3fd95e3f2727da94acb7575b408e6d5224d980b7f2",
+    "qualification/cycle-projection/full-check/jvm/data/events/TEST-network.orion.data.events.EventRetryPolicyTest.xml": "74c44427dd30fa172e8c3e915119e173a2860edbb5611cb99ae3a9c80fbdf02a",
+    "qualification/cycle-projection/full-check/jvm/data/events/TEST-network.orion.data.events.OrionTechnicalEventConsumerTest.xml": "cfbc7df175234c0b8ceb41d7b383f6eb2ab7c881ab56ca5220f8bfacf472d257",
+    "qualification/cycle-projection/full-check/jvm/data/repository/TEST-network.orion.data.repository.models.OrionGgufValidatorTest.xml": "0e7c729a9df767eb51805f76431591de35114dcc57e5300b237dcecae906b189",
+    "qualification/cycle-projection/full-check/jvm/data/repository/TEST-network.orion.data.repository.models.OrionPrivateModelFilesTest.xml": "b0dcd1fa522628a5f389b0ccbcd5315ca1bf9d908b7264df5bf046e1480c0356",
+    "qualification/cycle-projection/full-check/jvm/scheduler/TEST-network.orion.scheduler.alarms.OrionAlarmStrategyTest.xml": "17d85f07173fc5cadf335fd44660468eb5e5a621af9d019287882650710f7627",
+    "qualification/cycle-projection/full-check/jvm/scheduler/TEST-network.orion.scheduler.alarms.OrionReminderAlarmsTest.xml": "4f2d4d120bc9423015f88b8c67caed4aa17fc2df4fdc08ec0902b8dd77d8a010",
+    "qualification/cycle-projection/full-check/jvm/scheduler/TEST-network.orion.scheduler.reconciliation.OrionCivilRecurrenceTest.xml": "54ffc1f53e7e02abfa67989c52ceda9ceaa2dd0474e3b5052ec0d7e442a6af72",
+    "qualification/cycle-projection/full-check/jvm/skills/device/TEST-network.orion.skills.device.OrionDeviceInformationSkillTest.xml": "0d2f19662bfa565387e6d89253adb876a1666399f834ea84382e7371595eb458",
+    "qualification/cycle-projection/full-check/jvm/skills/notifications/TEST-network.orion.skills.notifications.OrionPostNotificationSkillTest.xml": "95bac0b7d7bd798d8593759a2c21f180fd70b64df0a247ddd3dcc28f671326c8",
+    "qualification/cycle-projection/full-check/jvm/skills/reminders/TEST-network.orion.skills.reminders.OrionCreateReminderSkillTest.xml": "ab6ee1bf62e1b0f63339e7b38fff4345943598d721fbca881f47c398c62ca2c7",
+    "qualification/cycle-projection/full-check/jvm/skills/reminders/TEST-network.orion.skills.reminders.OrionDeliverReminderSkillTest.xml": "e5f6b91ce4d01d52dd73a05fe3244db93742b5848825c70f0c4f7b46a9589e8a",
+    "qualification/cycle-projection/full-check/jvm/skills/reminders/TEST-network.orion.skills.reminders.OrionReminderStatusSkillTest.xml": "2ce8b00573a51312542609252da153d9689b0f4a09f3b486ef7d5f9f40044f6d",
+    "qualification/cycle-projection/full-check/jvm/skills/tasks/TEST-network.orion.skills.tasks.OrionCreateTaskSkillTest.xml": "15d3c71d2f2ce19f5b9375e4ab0712a3b693ab827b22b339c085d1721ac183e1",
+    "qualification/cycle-projection/full-check/jvm/skills/tasks/TEST-network.orion.skills.tasks.OrionTaskStatusSkillTest.xml": "50280a2d6edaf8581dfcd28d3c76de4c6275bddc9985275b23feab1de87920dd",
+    "qualification/cycle-projection/full-check/jvm/skills/timers/TEST-network.orion.skills.timers.OrionCreateTimerSkillTest.xml": "bb72b0ae0d05b0c7e32a2c94243bfdba8ab33c5afd85f2e1c2f12b6cfd74fc6b",
+    "qualification/cycle-projection/full-check/jvm/voice/ipc/TEST-network.orion.voice.ipc.VoiceCoreClientTest.xml": "7db2bd7b365704eba7cd85b50441c1b71429ae824cf0b346d399b7f9e37be497",
+    "qualification/cycle-projection/full-check/lint-results-debug.xml": "0d5fc69658bf308a9e44e54eea21f04d38fe3bbeaff23640a10fa8865ce802d1",
+    "qualification/cycle-projection/full-check/result.json": "230ad699ebfd2b5460ccd18c57ba2b83ddf48a7a9f03f894b5f5ebcca5029b88"
+  }
+}
