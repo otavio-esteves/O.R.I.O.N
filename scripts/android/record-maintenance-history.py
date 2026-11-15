@@ -110,15 +110,16 @@ def own_uid(adb):
 
 
 def observe(adb, directory, expected_hash, environment, duration, interval,
-            monotonic=time.monotonic, sleep=time.sleep):
+            monotonic=None, sleep=time.sleep, *, clock=None):
     limit = OBS.bounds(duration, interval)
     directory.mkdir(parents=True, exist_ok=False)
-    report = {"result": "INCOMPLETE", "environment": environment, "fullSoakGateClosed": False, "fullF4GateClosed": False,
+    report = {"hostTiming": OBS.HOST_TIME.unavailable_metadata(), "result": "INCOMPLETE", "environment": environment, "fullSoakGateClosed": False, "fullF4GateClosed": False,
               "continuousCoverageProven": False, "heartbeatAutonomyProven": False, "requestedSeconds": duration,
               "intervalSeconds": interval, "startedAtUtc": datetime.now(timezone.utc).isoformat(), "samples": 0,
-              "samplesWithGaps": 0, "samplingGaps": 0, "baselineEvents": 0, "firstSeenSubsequentEvents": 0,
+              "samplesWithGaps": 0, "samplingGaps": 0, "samplingGapReasons": {}, "elapsedNanoseconds": None, "baselineEvents": 0, "firstSeenSubsequentEvents": 0,
               "heartbeatPassesFirstSeenAfterBaseline": 0, "expectedApkSha256": expected_hash,
               "collectorSha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              "clockHelperSha256": hashlib.sha256(Path(OBS.HOST_TIME.__file__).read_bytes()).hexdigest(),
               "identityCheckedAtEndpointsOnly": True,
               "limitations": ["Logcat is a bounded buffer; events before baseline are not new progress.",
                   "Subsequent means first seen after baseline, not independently proven event time or autonomy.",
@@ -126,22 +127,24 @@ def observe(adb, directory, expected_hash, environment, duration, interval,
                   "Queue/UNKNOWN and database sizes are sampled; no observations between passes are inferred.",
                   "Pruning counters describe the explicit maintenance-policy batch, not every recovery cleanup.",
                   "ADB polling changes battery/idle conditions; this is not undisturbed battery qualification."]}
-    history = History(); start = monotonic(); previous_poll = None
+    history = History(); window = None
     try:
+        clock = OBS.HOST_TIME.clock_for(monotonic, clock)
+        report["hostTiming"] = clock.metadata
+        clock.read_ns()
         qemu = adb("shell", "getprop", "ro.kernel.qemu")
         if qemu not in ("", "0", "1") or environment not in ("PHYSICAL_DEVICE", "ANDROID_EMULATOR") or (qemu == "1") != (environment == "ANDROID_EMULATOR"):
             raise ValueError("Environment mismatch.")
         report["deviceIdentitySha256"] = OBS.device_identity(adb)
         if OBS.installed_hash(adb) != expected_hash: raise ValueError("Installed APK mismatch.")
         uid = own_uid(adb)
-        report["androidRuntimeEvidence"] = "NON_DEFINITIVE" if qemu == "1" else "PHYSICAL_OBSERVATION_ONLY"
-        start = monotonic()
+        report["androidRuntimeEvidence"] = ("UNVERIFIED_SYNTHETIC_HOST_TIME" if clock.metadata["clockSource"] != "CLOCK_BOOTTIME"
+                                            else "NON_DEFINITIVE" if qemu == "1" else "PHYSICAL_OBSERVATION_ONLY")
+        window = OBS.HOST_TIME.ObservationWindow(clock, duration, interval)
         with (directory / "maintenance-history.jsonl").open("x") as stream:
             for index in range(limit):
-                poll = monotonic()
-                if previous_poll is not None and poll - previous_poll > interval * 2: report["samplingGaps"] += 1
-                previous_poll = poll
-                sample = {"index": index, "elapsedHostSeconds": round(poll - start, 3), "baseline": index == 0,
+                poll = window.start_sample()
+                sample = {"index": index, "elapsedHostSeconds": round((poll - window.start_ns) / OBS.HOST_TIME.NANOS, 3), "baseline": index == 0,
                           "events": [], "unavailable": []}
                 try:
                     boot = OBS.integer(adb("shell", "settings", "get", "global", "boot_count"))
@@ -156,20 +159,27 @@ def observe(adb, directory, expected_hash, environment, duration, interval,
                 except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired):
                     sample["unavailable"].append("maintenanceProtocol")
                     report["samplesWithGaps"] += 1
+                completed = window.complete_sample()
+                sample.update(elapsedNanoseconds=window.elapsed_ns, startedElapsedNanoseconds=poll - window.start_ns,
+                              collectionNanoseconds=completed - poll)
                 stream.write(json.dumps(sample, sort_keys=True) + "\n"); stream.flush()
                 report["samples"] += 1
-                if monotonic() - start >= duration: break
-                sleep(max(0, min(interval, duration - (monotonic() - start))))
+                if completed >= window.deadline_ns: break
+                sleep(min(interval, window.remaining_seconds()))
         if OBS.installed_hash(adb) != expected_hash or own_uid(adb) != uid or OBS.device_identity(adb) != report["deviceIdentitySha256"]:
             raise ValueError("Endpoint identity mismatch.")
-        if not any(report[k] for k in ("samplesWithGaps", "samplingGaps")) and history.sequence_gaps == 0 and monotonic() - start >= duration:
+        window.end_check()
+        window.update_report(report)
+        if not any(report[k] for k in ("samplesWithGaps", "samplingGaps")) and history.sequence_gaps == 0 and window.last_completed_ns >= window.deadline_ns:
             report["result"] = "HISTORY_COLLECTION_COMPLETE_REVIEW_REQUIRED"
     except KeyboardInterrupt:
         report["interrupted"] = True
     except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
         report["failureType"] = type(error).__name__
+        if isinstance(error, OBS.HOST_TIME.HostTimingError): report["hostTimingFailure"] = error.code
     finally:
-        report.update(elapsedHostSeconds=round(monotonic() - start, 3), sequenceGaps=history.sequence_gaps,
+        if window is not None: window.update_report(report)
+        report.update(elapsedHostSeconds=round(window.elapsed_ns / OBS.HOST_TIME.NANOS, 3) if window is not None else 0, sequenceGaps=history.sequence_gaps,
                       duplicateObservations=history.duplicates,
                       queueHistoryAvailable=bool(history.seen))
         samples = directory / "maintenance-history.jsonl"

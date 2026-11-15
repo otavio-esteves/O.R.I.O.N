@@ -36,10 +36,41 @@ The evidence directory must be new. Samples are appended and flushed to
 `INCOMPLETE` report. Abrupt host/power termination may leave only flushed samples;
 missing summaries must never be interpreted as success. Reruns use a new directory.
 Commands time out after ten seconds; decoded output is capped at 1 MiB per command.
-Collection is limited to seven days and 20,000 samples. Timing uses the host
-monotonic clock; a start-to-start sampling gap exceeding twice the requested
-interval prevents a complete observation result. Connection failures remain gaps,
-even after the device reconnects.
+Collection is limited to seven days and 20,000 samples. New runs use the Linux
+HOST `CLOCK_BOOTTIME` nanosecond clock, which includes suspend, and a pinned hashed
+HOST boot identity. The clock must be available and nondecreasing in the same boot;
+there is no wall-clock or suspend-excluding fallback. Connection failures remain
+gaps even after the device reconnects.
+
+[ORION-QUAL-HOST-TIME-001](../issues/ORION-QUAL-HOST-TIME-001.md) adds `hostTiming`
+with closed fields `schemaVersion=1`, `clockSource`, `bootIdentitySha256`,
+`sessionId`, `evidence` and `qualification=NOT_QUALIFIED`. Normal CLI timing uses
+`clockSource=CLOCK_BOOTTIME`, `evidence=HOST_CLOCK_ONLY`, a SHA-256 of the HOST boot
+UUID and a fresh session UUID per invocation. This clock identity is separate from
+Android boot count/time; no durations are compared across sessions or boots.
+Unavailable timing at initialization has `clockSource=UNAVAILABLE`,
+`evidence=UNAVAILABLE` and a null boot hash. A later failure retains its pinned
+source/session metadata and rejects continuity. A clock failure is a typed `hostTimingFailure`, never raw source data.
+Injected clocks, including legacy Python `observe(..., monotonic=...)` calls, use
+`clockSource=SYNTHETIC_INJECTED`, `evidence=UNVERIFIED_INPUT`, and cannot create a
+physical or actual 24-hour approval. Their `androidRuntimeEvidence` is explicitly
+`UNVERIFIED_SYNTHETIC_HOST_TIME`, regardless of the requested device label.
+
+A gap exceeding twice the requested interval prevents completion. The report's
+`samplingGapReasons` counts `START_TO_START`, `READ_IN_PROGRESS` and `END_WINDOW`;
+`samplingGaps` is their sum. This detects suspend/slow collection even during the
+last read, plus a delayed endpoint identity check. Samples retain the old seconds
+fields and add integer `startedElapsedNanoseconds`, `collectionNanoseconds` and
+`elapsedNanoseconds` at read completion. Report `elapsedNanoseconds` and
+`elapsedSeconds` stop at the last completed sample; endpoint APK/device reads
+cannot inflate sampled duration. Exact boundary arithmetic uses nanoseconds before
+seconds are rounded for display. `clockHelperSha256` freezes the timing helper
+alongside `collectorSha256`.
+
+Earlier evidence below used its recorded clock implementation. It has not been
+relabeled as BOOTTIME or revalidated for suspend. These changes supply software
+preparation and synthetic HOST regression evidence only, with no new physical,
+real suspend or 24-hour result.
 
 `OBSERVATION_COMPLETE_REVIEW_REQUIRED` means only that bounded collection finished
 without detected identity/metric/cadence gaps. It is never a soak PASS. Retained
@@ -111,6 +142,23 @@ profile. Review still needs planned reboot/unlock with increased boot count and
 independent delivery, actual heartbeat execution across checkpoints (registration
 alone is insufficient), queue/UNKNOWN histories, crashes/ANRs, retention/growth,
 resource observations and declared effects of collection on idle/battery behavior.
+
+The controlled recorder pins the same HOST clock before any preparation effect.
+Its timed window starts after preparation. Poll starts/reads/end checks use the
+same source, with a 20-second maximum gap for the 10-second workload poll cadence.
+A lost/changed/regressed clock or cadence gap leaves `INCOMPLETE`. The original
+window is rechecked after the PID lookup, after the persisted diagnostic death
+intent, and immediately before the UID-scoped SIGKILL. Equality with the deadline
+refuses the effect; missed work is never caught up after the window. The diagnostic
+intent is not proof of execution. `elapsedWorkloadNanoseconds` and the existing
+seconds field end before endpoint instrumentation; system rows, notification
+observations and controlled death also include integer nanoseconds. Helper identity is included in
+`sourceSha256`. `real24HourDurationObserved` stays false for injected timing; even
+true HOST duration alone does not prove physical autonomy or the full profile.
+Owned endpoint verification/cleanup and restoration remain separately scoped;
+`ownedCleanupSeparateFromWorkload=true` does not make the run complete. Cleanup
+still runs after time failure or expiration and never resumes abandoned work.
+F4 recovery journal versions and heavy HOST journal v1 clock semantics are unchanged.
 
 Endpoint Room reads restart MAIN and are explicitly marked
 `instrumentationCheckpoint`; they are not passive backlog observations. Settings

@@ -73,13 +73,28 @@ class SoakWorkloadTest(unittest.TestCase):
     def test_emulator_never_timeout_is_accepted_and_restored_exactly(self):
         self.exercise_recorder(large_timeout=True)
 
-    def exercise_recorder(self, interrupted=False, maintenance_history=False, history_available=True, absent_timeout=False, large_timeout=False):
+    def test_window_expiry_after_pid_lookup_never_catches_up_sigkill(self):
+        self.exercise_recorder(timing_fault="PID_LOOKUP")
+
+    def test_window_expiry_after_durable_intent_never_catches_up_sigkill(self):
+        self.exercise_recorder(timing_fault="INTENT_PERSIST")
+
+    def test_slow_read_and_suspended_sleep_preserve_incomplete_cleanup(self):
+        for fault in ("SLOW_READ", "SUSPENDED_SLEEP"):
+            with self.subTest(fault=fault): self.exercise_recorder(timing_fault=fault)
+
+    def test_clock_failure_after_preparation_still_runs_owned_cleanup(self):
+        self.exercise_recorder(timing_fault="CLOCK_FAILURE")
+
+    def exercise_recorder(self, interrupted=False, maintenance_history=False, history_available=True, absent_timeout=False, large_timeout=False, timing_fault=None):
         with tempfile.TemporaryDirectory() as tmp:
             directory=Path(tmp); app=directory/"app-debug.apk"; test=directory/"app-debug-androidTest.apk"
             app.write_bytes(b"synthetic artifact"); test.write_bytes(app.read_bytes()); digest=hashlib.sha256(app.read_bytes()).hexdigest()
             original_timeout = "null" if absent_timeout else "2147483647" if large_timeout else "17000"
             clock=[0.0]; state={"power":"0","notifications":False,"exact":"default","timeout":original_timeout,"killed":False,"passiveComplete":False,"historyComplete":False,"reminders":{}}
             observed=[]
+            clock_failed = [False]
+            failed_run = interrupted or not history_available or timing_fault is not None
             def run(command,**kwargs):
                 args=command[3:]; output=""
                 if args[:3] in (["shell","pm","grant"], ["shell","appops","set"]):
@@ -101,7 +116,9 @@ class SoakWorkloadTest(unittest.TestCase):
                 elif args[:3]==["shell","dumpsys","package"]:output="android.permission.POST_NOTIFICATIONS: granted="+str(state["notifications"]).lower()
                 elif args[:2]==["shell","pm"]:state["notifications"]=args[2]=="grant"
                 elif args[:4]==["shell","cmd","package","list"]:output="package:network.orion uid:10369"
-                elif args[:3]==["shell","dumpsys","thermalservice"]:output="Thermal Status: 1"
+                elif args[:3]==["shell","dumpsys","thermalservice"]:
+                    if timing_fault == "SLOW_READ": clock[0] += 600
+                    output="Thermal Status: 1"
                 elif args[:3]==["shell","dumpsys","power"]:output="Wake Locks: size=0\nSuspend Blockers: size=0"
                 elif args[:4]==["shell","cmd","power","set-mode"]:state["power"]=args[-1]
                 elif args[:3]==["shell","am","instrument"]:
@@ -116,8 +133,9 @@ class SoakWorkloadTest(unittest.TestCase):
                             self.assertIn(item,[entry["fixtureId"] for entry in json.loads((directory/"evidence/soak-recovery-journal.json").read_text())["reminders"]])
                             if interrupted:raise KeyboardInterrupt()
                             state["reminders"][item]=int(args[args.index("orion_scheduled_delay_seconds")+1])
+                            if timing_fault == "CLOCK_FAILURE": clock_failed[0] = True
                         elif mode=="cleanup":
-                            self.assertTrue(interrupted or not history_available)
+                            self.assertTrue(failed_run)
                             output+="orion_scheduled_cleanup=OWNED_FIXTURE_REMOVED"
                         else:
                             self.assertIn(item,observed,"Verification cannot precede independent notification observation")
@@ -132,6 +150,7 @@ class SoakWorkloadTest(unittest.TestCase):
                             output=json.dumps({"fixtureId":item,"reminderId":item,"actionId":item,"normalizedPayloadHash":"a"*64,"confirmationFingerprint":"b"*64})
                     elif args[3]=="kill":state["killed"]=True
                 elif args[:2]==["shell","pidof"]:
+                    if timing_fault == "PID_LOOKUP" and clock[0] >= 300: clock[0] = 600
                     output="123" if not state["killed"] else "456" if clock[0]>=420 else ""
                 elif args[:4]==["shell","cmd","notification","list"]:
                     active=[item for item,due in state["reminders"].items() if clock[0]>=due]
@@ -154,13 +173,31 @@ class SoakWorkloadTest(unittest.TestCase):
                   "--app-apk",str(app),"--test-apk",str(test),"--evidence-dir",str(directory/"evidence"),
                   "--duration-seconds","600","--reminder-interval-seconds","300","--dedicated-target"]
             if maintenance_history:argv.append("--maintenance-history")
-            with patch("sys.argv",argv),patch.object(RECORDER.subprocess,"run",run),patch.object(RECORDER.subprocess,"Popen",Telemetry), \
-                 patch.object(RECORDER.time,"monotonic",lambda:clock[0]),patch.object(RECORDER.time,"sleep",lambda seconds:clock.__setitem__(0,clock[0]+seconds)),patch("sys.stdout",io.StringIO()):
-                self.assertEqual(1 if interrupted or not history_available else 0,RECORDER.main())
+            original_atomic_json = RECORDER.RECOVERY.atomic_json
+            def persist(path, value):
+                original_atomic_json(path, value)
+                if timing_fault == "INTENT_PERSIST" and "controlledDeathIntent" in value: clock[0] = 600
+            def read_ns():
+                if clock_failed[0]: raise OSError("SECRET source error")
+                return RECORDER.HOST_TIME.seconds_ns(clock[0])
+            def sleep(seconds):
+                clock[0] += seconds + (600 if timing_fault == "SUSPENDED_SLEEP" and clock[0] == 290 else 0)
+            with patch.object(RECORDER.RECOVERY,"atomic_json",persist), patch("sys.argv",argv),patch.object(RECORDER.subprocess,"run",run),patch.object(RECORDER.subprocess,"Popen",Telemetry), \
+                 patch.object(RECORDER.HOST_TIME.HostClock,"linux",lambda:RECORDER.HOST_TIME.HostClock(read_ns)),patch.object(RECORDER.time,"sleep",sleep),patch("sys.stdout",io.StringIO()):
+                self.assertEqual(1 if failed_run else 0,RECORDER.main())
             report=json.loads((directory/"evidence/f4-soak-runtime-report.json").read_text())
-            self.assertEqual("INCOMPLETE" if interrupted or not history_available else "SHORT_RUN_COMPLETE_REVIEW_REQUIRED",report["result"])
+            self.assertEqual("INCOMPLETE" if failed_run else "SHORT_RUN_COMPLETE_REVIEW_REQUIRED",report["result"])
             self.assertFalse(report["fullSoakGateClosed"]);self.assertFalse(report["eligibleFor24HourReview"])
-            if interrupted:
+            self.assertEqual("SYNTHETIC_INJECTED", report["hostTiming"]["clockSource"])
+            self.assertNotIn("SECRET", json.dumps(report))
+            self.assertTrue(report["ownedCleanupSeparateFromWorkload"])
+            if timing_fault:
+                self.assertFalse(state["killed"])
+                self.assertNotIn("controlledProcessDeath", report)
+                self.assertIn("hostTimingFailure", report)
+                self.assertEqual({"PASS"}, set(report["reminderFixtureCleanup"].values()))
+                self.assertEqual("PASS", report["stateFixtureCleanup"])
+            elif interrupted:
                 self.assertEqual("KeyboardInterrupt",report["failureType"])
                 self.assertEqual(["PASS"],list(report["reminderFixtureCleanup"].values()))
             else:
