@@ -19,6 +19,9 @@ SPEC.loader.exec_module(CAP)
 RECOVERY_SPEC = importlib.util.spec_from_file_location("orion_soak_recovery", Path(__file__).with_name("recover-f4-soak-runtime.py"))
 RECOVERY = importlib.util.module_from_spec(RECOVERY_SPEC)
 RECOVERY_SPEC.loader.exec_module(RECOVERY)
+CLOCK_SPEC = importlib.util.spec_from_file_location("qualification_host_clock", Path(__file__).with_name("qualification_host_clock.py"))
+HOST_TIME = importlib.util.module_from_spec(CLOCK_SPEC)
+CLOCK_SPEC.loader.exec_module(HOST_TIME)
 STATE_CLASS = "network.orion.app.scheduling.OrionF4SoakStateTest"
 
 
@@ -68,9 +71,10 @@ def system_metrics(thermal, power, own_uid):
             "systemWakeLocks": int(locks.group(1)), "attributionSnapshotOnly": True}
 
 
-def terminate_main(adb, process):
+def terminate_main(adb, process, window=None):
     if not re.fullmatch(r"[1-9][0-9]{0,9}", process):
         raise ValueError("One exact main PID is required.")
+    if window is not None: window.require_effect()
     adb("shell", "run-as", CAP.BASE.PACKAGE, "kill", "-9", process)
 
 
@@ -99,9 +103,11 @@ def main():
     args.evidence_dir.mkdir(parents=True)
     run_lock = RECOVERY.acquire_lock(args.evidence_dir)
     fixture = str(uuid.uuid4())
-    report = {"result": "INCOMPLETE", "fullF4GateClosed": False, "fullSoakGateClosed": False,
+    report = {"hostTiming": HOST_TIME.unavailable_metadata(), "result": "INCOMPLETE", "fullF4GateClosed": False, "fullSoakGateClosed": False,
               "durationRequestedSeconds": args.duration_seconds, "eligibleFor24HourReview": False,
-              "fullSoakProfileComplete": False,
+              "fullSoakProfileComplete": False, "real24HourDurationObserved": False,
+              "samplingGaps": 0, "samplingGapReasons": {}, "elapsedNanoseconds": None,
+              "elapsedWorkloadNanoseconds": None,
               "maintenanceHistoryRequested": args.maintenance_history,
               "environment": args.environment, "fixtureId": fixture, "checks": {},
               "instrumentationCheckpointsRestartMain": True,
@@ -111,7 +117,7 @@ def main():
                               "Boot/unlock, passive backlog histories and actual heartbeat execution need separate qualification evidence."],
               "artifactSha256": {"app-debug.apk": hashlib.sha256(args.app_apk.read_bytes()).hexdigest(),
                                  "app-debug-androidTest.apk": hashlib.sha256(args.test_apk.read_bytes()).hexdigest()},
-              "sourceSha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (Path(__file__), observer, Path(CAP.__file__), Path(RECOVERY.__file__))},
+              "sourceSha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (Path(__file__), observer, Path(CAP.__file__), Path(RECOVERY.__file__), Path(HOST_TIME.__file__))},
               "manifestDelaysSeconds": delays, "reminders": [], "observedNotifications": {}}
     state_prepared = False
     telemetry = telemetry_output = None
@@ -120,6 +126,8 @@ def main():
     original_timeout = None
     timeout_captured = False
     verified = set()
+    clock = window = None
+    cleaning_up = False
 
     def persist():
         RECOVERY.atomic_json(args.evidence_dir / "f4-soak-runtime-report.json", report)
@@ -127,6 +135,14 @@ def main():
     persist()
 
     def adb(*command, check=True, timeout=15):
+        # Preparation/owned endpoint checkpoints are separate from the timed death.
+        # Clock availability is required immediately before preparation effects;
+        # finally cleanup must still run after clock failure/window expiration.
+        if not cleaning_up and clock is not None and (command[:3] in (
+                ("shell", "pm", "grant"), ("shell", "appops", "set"),
+                ("shell", "settings", "put"), ("shell", "input", "keyevent")) or
+                command[:3] == ("shell", "am", "instrument")):
+            clock.read_ns()
         result = subprocess.run([args.adb, "-s", args.serial, *command], capture_output=True,
                                 text=True, timeout=timeout, check=False)
         if check and result.returncode:
@@ -145,12 +161,16 @@ def main():
             raise RuntimeError("Workload checkpoint marker is absent.")
 
     try:
+        clock = HOST_TIME.HostClock.linux()
+        report["hostTiming"] = clock.metadata
         qemu = adb("shell", "getprop", "ro.kernel.qemu")
         if qemu not in ("", "0", "1"):
             raise RuntimeError("Environment property is unavailable.")
         emulated = qemu == "1"
         if emulated != (args.environment == "ANDROID_EMULATOR"):
             raise RuntimeError("Environment mismatch.")
+        report["androidRuntimeEvidence"] = ("UNVERIFIED_SYNTHETIC_HOST_TIME" if clock.metadata["clockSource"] != "CLOCK_BOOTTIME"
+                                            else "NON_DEFINITIVE" if emulated else "PHYSICAL_OBSERVATION_ONLY")
         if adb("shell", "am", "get-current-user") != "0":
             raise RuntimeError("The dedicated workload requires the primary user.")
         report["apiLevel"] = adb("shell", "getprop", "ro.build.version.sdk")
@@ -221,10 +241,14 @@ def main():
                                       "--duration-seconds", str(args.duration_seconds), "--interval-seconds", "60",
                                       "--evidence-dir", str(args.evidence_dir / "telemetry")],
                                      stdout=telemetry_output, stderr=subprocess.STDOUT)
-        start = time.monotonic(); next_metrics = start; injected = False
+        window = HOST_TIME.ObservationWindow(clock, args.duration_seconds, 10)
+        next_metrics = window.start_ns; injected = False
         with (args.evidence_dir / "system-snapshots.jsonl").open("w") as stream:
-            while time.monotonic() - start < args.duration_seconds:
-                elapsed = time.monotonic() - start
+            while True:
+                poll = window.start_sample()
+                if window.gaps: raise HOST_TIME.HostTimingError("HOST_OBSERVATION_GAP")
+                if poll >= window.deadline_ns: break
+                elapsed = (poll - window.start_ns) / HOST_TIME.NANOS
                 output = adb("shell", "cmd", "notification", "list")
                 for item in report["reminders"]:
                     action = item["binding"]["actionId"]
@@ -233,32 +257,53 @@ def main():
                         raise RuntimeError("Duplicate notification identity observed.")
                     if keys and action not in report["observedNotifications"]:
                         process = adb("shell", "pidof", "network.orion", check=False)
-                        report["observedNotifications"][action] = {"elapsedSeconds": round(elapsed, 3), "key": keys[0],
+                        observed_ns = clock.read_ns() - window.start_ns
+                        report["observedNotifications"][action] = {"elapsedSeconds": round(observed_ns / HOST_TIME.NANOS, 3),
+                            "elapsedNanoseconds": observed_ns, "key": keys[0],
                             "productionPidAtObservation": process if re.fullmatch(r"[1-9][0-9]{0,9}", process) else None}
-                if time.monotonic() >= next_metrics:
+                if clock.read_ns() >= next_metrics:
+                    metrics_start = clock.read_ns()
                     row = system_metrics(adb("shell", "dumpsys", "thermalservice"), adb("shell", "dumpsys", "power"), own_uid)
+                    metrics_completed = clock.read_ns()
                     row["elapsedSeconds"] = round(elapsed, 3)
+                    row.update(startedElapsedNanoseconds=metrics_start - window.start_ns,
+                               elapsedNanoseconds=metrics_completed - window.start_ns,
+                               collectionNanoseconds=metrics_completed - metrics_start)
                     stream.write(json.dumps(row) + "\n"); stream.flush()
                     print(str(round(elapsed)) + "s: " + str(len(report["observedNotifications"])) + "/" + str(len(delays)) + " real notifications observed", flush=True)
-                    next_metrics = time.monotonic() + 60
+                    next_metrics = clock.read_ns() + 60 * HOST_TIME.NANOS
                     persist()
-                if not injected and elapsed >= args.duration_seconds / 2:
+                if not injected and clock.read_ns() - window.start_ns >= HOST_TIME.seconds_ns(args.duration_seconds) // 2:
+                    window.require_effect()
                     process = adb("shell", "pidof", "network.orion", check=False)
+                    window.require_effect()
                     if process:
-                        terminate_main(adb, process)
-                        death_deadline = time.monotonic() + 10
+                        report["controlledDeathIntent"] = {"state": "RECORDED_NOT_EXECUTED", "beforePid": process}
+                        persist()
+                        injection_ns = window.require_effect()
+                        terminate_main(adb, process, window)
+                        report["controlledDeathIntent"]["state"] = "SIGKILL_SENT"
+                        death_deadline = clock.read_ns() + 10 * HOST_TIME.NANOS
                         while adb("shell", "pidof", "network.orion", check=False) == process:
-                            if time.monotonic() >= death_deadline:
+                            if clock.read_ns() >= death_deadline:
                                 raise RuntimeError("The controlled process death was not observed.")
                             time.sleep(0.1)
                         report["controlledProcessDeath"] = {"method": "RUN_AS_SIGKILL", "beforePid": process,
-                                                            "elapsedSeconds": round(elapsed, 3)}
+                                                            "elapsedNanoseconds": injection_ns - window.start_ns,
+                                                            "elapsedSeconds": round((injection_ns - window.start_ns) / HOST_TIME.NANOS, 3)}
                     else:
                         report["controlledProcessDeath"] = {"result": "NOT_RUNNING_NO_INJECTION"}
                     injected = True
                     persist()
-                time.sleep(min(10, max(0, args.duration_seconds - (time.monotonic() - start))))
-        report["elapsedWorkloadSeconds"] = round(time.monotonic() - start, 3)
+                window.complete_sample()
+                window.update_report(report)
+                if window.gaps: raise HOST_TIME.HostTimingError("HOST_OBSERVATION_GAP")
+                time.sleep(min(10, window.remaining_seconds()))
+        end_ns = window.end_check()
+        window.update_report(report)
+        if window.gaps: raise HOST_TIME.HostTimingError("HOST_OBSERVATION_GAP")
+        report["elapsedWorkloadNanoseconds"] = end_ns - window.start_ns
+        report["elapsedWorkloadSeconds"] = round(report["elapsedWorkloadNanoseconds"] / HOST_TIME.NANOS, 3)
         if len(report["observedNotifications"]) != len(delays):
             raise RuntimeError("Not every approved notification was independently observed.")
         # The observer takes its final sample at the duration boundary. Instrumentation
@@ -291,12 +336,18 @@ def main():
         final = adb("shell", "run-as", "network.orion", "cat", "files/orion_soak_snapshot_" + fixture + ".json")
         (args.evidence_dir / "final-state.json").write_text(final + "\n")
         report["checks"].update(originalBindingsAndSingleCommittedDelivery="PASS", taskTimerAndUncertaintyPreserved="PASS", passiveObservation="PASS")
-        report["real24HourDurationObserved"] = args.duration_seconds >= 86400 and report["elapsedWorkloadSeconds"] >= 86400
+        report["real24HourDurationObserved"] = (clock.metadata["clockSource"] == "CLOCK_BOOTTIME" and
+                                                 args.duration_seconds >= 86400 and
+                                                 report["elapsedWorkloadNanoseconds"] >= 86400 * HOST_TIME.NANOS)
         report["result"] = "SOAK_RUN_COMPLETE_REVIEW_REQUIRED" if report["real24HourDurationObserved"] else "SHORT_RUN_COMPLETE_REVIEW_REQUIRED"
     except (Exception, KeyboardInterrupt) as error:
         report["failureType"] = type(error).__name__
-        report["failure"] = str(error) if isinstance(error, RuntimeError) else "Workload interrupted or bounded command unavailable."
+        report["failure"] = "Workload interrupted or bounded command unavailable."
+        if isinstance(error, HOST_TIME.HostTimingError): report["hostTimingFailure"] = error.code
     finally:
+        cleaning_up = True
+        report["ownedCleanupSeparateFromWorkload"] = True
+        if window is not None: window.update_report(report)
         for process, output in ((telemetry, telemetry_output), (history, history_output)):
             if process and process.poll() is None:
                 try: process.send_signal(signal.SIGINT)
