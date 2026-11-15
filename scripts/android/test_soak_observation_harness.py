@@ -216,6 +216,75 @@ class SoakObservationTest(unittest.TestCase):
         self.assertEqual("INCOMPLETE", report["result"])
         self.assertEqual(1, report["samplingGaps"])
 
+    def test_slow_final_read_is_a_gap_even_without_a_later_poll(self):
+        clock = Clock(); adb = FakeAdb()
+        def slow(*args, **kwargs):
+            if args == ("shell", "dumpsys", "battery"): clock.now += 11
+            return adb(*args, **kwargs)
+        with tempfile.TemporaryDirectory() as tmp:
+            report = RECORDER.observe(slow, Path(tmp)/"new", HASH, "PHYSICAL_DEVICE", 10, 5, clock.read, clock.sleep)
+        self.assertEqual("INCOMPLETE", report["result"])
+        self.assertGreater(report["samplingGaps"], 0)
+
+    def test_injected_clock_is_explicitly_synthetic(self):
+        report, _ = self.collect()
+        self.assertEqual("SYNTHETIC_INJECTED", report["hostTiming"]["clockSource"])
+        self.assertEqual("UNVERIFIED_INPUT", report["hostTiming"]["evidence"])
+        self.assertNotEqual("PHYSICAL_OBSERVATION_ONLY", report["androidRuntimeEvidence"])
+
+    def test_suspend_visible_only_to_boot_clock_prevents_completion(self):
+        active = Clock(); boot = [0]
+        clock = RECORDER.HOST_TIME.HostClock(lambda: boot[0])
+        def suspend(seconds):
+            active.sleep(seconds)
+            boot[0] += round((seconds + 60) * RECORDER.HOST_TIME.NANOS)
+        with tempfile.TemporaryDirectory() as tmp:
+            report = RECORDER.observe(FakeAdb(), Path(tmp)/"new", HASH, "PHYSICAL_DEVICE", 10, 5,
+                                      sleep=suspend, clock=clock)
+        self.assertEqual(5, active.now)
+        self.assertEqual("INCOMPLETE", report["result"])
+        self.assertEqual(1, report["samplingGapReasons"]["START_TO_START"])
+        self.assertEqual(65_000_000_000, report["elapsedNanoseconds"])
+
+    def test_endpoint_identity_delay_is_a_gap_and_cannot_inflate_sample_duration(self):
+        clock = Clock(); adb = FakeAdb(); identities = 0
+        def slow_endpoint(*args, **kwargs):
+            nonlocal identities
+            if args == ("shell", "getprop", "ro.serialno"):
+                identities += 1
+                if identities == 2: clock.now += 11
+            return adb(*args, **kwargs)
+        with tempfile.TemporaryDirectory() as tmp:
+            report = RECORDER.observe(slow_endpoint, Path(tmp)/"new", HASH, "PHYSICAL_DEVICE", 10, 5, clock.read, clock.sleep)
+        self.assertEqual("INCOMPLETE", report["result"])
+        self.assertEqual({"END_WINDOW": 1}, report["samplingGapReasons"])
+        self.assertEqual(10, report["elapsedSeconds"])
+        self.assertEqual(10_000_000_000, report["elapsedNanoseconds"])
+
+    def test_unavailable_default_clock_fails_before_device_read_and_keeps_report(self):
+        adb = FakeAdb()
+        with tempfile.TemporaryDirectory() as tmp, patch.object(RECORDER.HOST_TIME.HostClock, "linux",
+                side_effect=RECORDER.HOST_TIME.HostTimingError("CLOCK_BOOTTIME_UNAVAILABLE")):
+            directory = Path(tmp)/"new"
+            report = RECORDER.observe(adb, directory, HASH, "PHYSICAL_DEVICE", 10, 5)
+            self.assertTrue((directory/"soak-observation-report.json").exists())
+        self.assertEqual([], adb.calls)
+        self.assertEqual("INCOMPLETE", report["result"])
+        self.assertEqual("UNAVAILABLE", report["hostTiming"]["clockSource"])
+        self.assertEqual("CLOCK_BOOTTIME_UNAVAILABLE", report["hostTimingFailure"])
+
+    def test_changed_host_boot_preserves_flushed_samples_without_reinterpreting_time(self):
+        now = [0]; boot = ["00000000-0000-0000-0000-000000000001"]
+        clock = RECORDER.HOST_TIME.HostClock(lambda: now[0], lambda: boot[0])
+        def reboot(_):
+            boot[0] = "00000000-0000-0000-0000-000000000002"; now[0] = 1
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)/"new"
+            report = RECORDER.observe(FakeAdb(), directory, HASH, "PHYSICAL_DEVICE", 10, 5, sleep=reboot, clock=clock)
+            self.assertEqual(1, len((directory/"samples.jsonl").read_text().splitlines()))
+        self.assertEqual("INCOMPLETE", report["result"])
+        self.assertEqual("HOST_BOOT_CHANGED", report["hostTimingFailure"])
+
     def test_multiple_main_pids_cannot_be_mislabeled_as_one_process_memory(self):
         adb = FakeAdb(); adb.responses[("shell", "pidof", "network.orion")] = "123 456"
         report, rows = self.collect(adb)

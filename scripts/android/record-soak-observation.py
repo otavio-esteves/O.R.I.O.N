@@ -3,6 +3,7 @@
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import importlib.util
 import json
 import math
 from pathlib import Path
@@ -11,6 +12,10 @@ import shutil
 import subprocess
 import tempfile
 import time
+
+CLOCK_SPEC = importlib.util.spec_from_file_location("qualification_host_clock", Path(__file__).with_name("qualification_host_clock.py"))
+HOST_TIME = importlib.util.module_from_spec(CLOCK_SPEC)
+CLOCK_SPEC.loader.exec_module(HOST_TIME)
 
 PACKAGE = "network.orion"
 MAX_SAMPLES = 20_000
@@ -158,30 +163,35 @@ def snapshot(adb):
 
 
 def observe(adb, directory, expected_hash, environment, duration, interval,
-            monotonic=time.monotonic, sleep=time.sleep):
+            monotonic=None, sleep=time.sleep, *, clock=None):
     limit = bounds(duration, interval)
     directory.mkdir(parents=True, exist_ok=False)
-    report = {"result": "INCOMPLETE", "fullSoakGateClosed": False,
+    report = {"hostTiming": HOST_TIME.unavailable_metadata(), "result": "INCOMPLETE", "fullSoakGateClosed": False,
               "environment": environment, "expectedApkSha256": expected_hash,
               "requestedSeconds": duration, "intervalSeconds": interval,
-              "samples": 0, "samplesWithGaps": 0, "samplingGaps": 0,
+              "samples": 0, "samplesWithGaps": 0, "samplingGaps": 0, "samplingGapReasons": {}, "elapsedNanoseconds": None,
               "artifactMismatch": False, "deviceMismatch": False,
               "startedAtUtc": datetime.now(timezone.utc).isoformat(),
               "collectorSha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              "clockHelperSha256": hashlib.sha256(Path(HOST_TIME.__file__).read_bytes()).hexdigest(),
               "limitations": ["Passive sampled telemetry requires human review; completion is not PASS.",
                               "No queue, UNKNOWN, delivery, retention or wakelock proof is collected.",
                               "Retained exit snapshots can truncate history and include pre-run exits.",
                               "ADB polling affects battery/idle behavior; it is not battery qualification.",
                               "Missing-process snapshots do not prove a crash, Force Stop or restart loop."]}
-    start = monotonic()
+    window = None
     try:
+        clock = HOST_TIME.clock_for(monotonic, clock)
+        report["hostTiming"] = clock.metadata
+        clock.read_ns()
         qemu = adb("shell", "getprop", "ro.kernel.qemu")
         if qemu not in ("", "0", "1"):
             raise ValueError("Unrecognized environment property.")
         emulated = qemu == "1"
         if environment not in ("PHYSICAL_DEVICE", "ANDROID_EMULATOR") or emulated != (environment == "ANDROID_EMULATOR"):
             raise ValueError("Environment mismatch.")
-        report["androidRuntimeEvidence"] = "NON_DEFINITIVE" if emulated else "PHYSICAL_OBSERVATION_ONLY"
+        report["androidRuntimeEvidence"] = ("UNVERIFIED_SYNTHETIC_HOST_TIME" if clock.metadata["clockSource"] != "CLOCK_BOOTTIME"
+                                            else "NON_DEFINITIVE" if emulated else "PHYSICAL_OBSERVATION_ONLY")
         report["apiLevel"] = integer(adb("shell", "getprop", "ro.build.version.sdk"))
         report["deviceIdentitySha256"] = device_identity(adb)
         initial_hash = installed_hash(adb)
@@ -189,37 +199,41 @@ def observe(adb, directory, expected_hash, environment, duration, interval,
         if initial_hash != expected_hash:
             report["artifactMismatch"] = True
             raise ValueError("Installed APK mismatch.")
-        start = monotonic()
-        previous_start = None
+        window = HOST_TIME.ObservationWindow(clock, duration, interval)
         with (directory / "samples.jsonl").open("x") as stream:
             for index in range(limit):
-                sample_start = monotonic()
-                if previous_start is not None and sample_start - previous_start > interval * 2:
-                    report["samplingGaps"] += 1
-                previous_start = sample_start
+                sample_start = window.start_sample()
                 sample = snapshot(adb)
-                sample.update({"index": index, "elapsedSeconds": round(monotonic() - start, 3),
-                               "startedElapsedSeconds": round(sample_start - start, 3),
-                               "collectionSeconds": round(monotonic() - sample_start, 3)})
+                completed = window.complete_sample()
+                sample.update({"index": index, "elapsedSeconds": round(window.elapsed_ns / HOST_TIME.NANOS, 3),
+                               "startedElapsedSeconds": round((sample_start - window.start_ns) / HOST_TIME.NANOS, 3),
+                               "collectionSeconds": round((completed - sample_start) / HOST_TIME.NANOS, 3),
+                               "elapsedNanoseconds": window.elapsed_ns,
+                               "startedElapsedNanoseconds": sample_start - window.start_ns,
+                               "collectionNanoseconds": completed - sample_start})
                 stream.write(json.dumps(sample, sort_keys=True) + "\n")
                 stream.flush()
                 report["samples"] += 1
                 report["samplesWithGaps"] += bool(sample["unavailable"])
-                if monotonic() - start >= duration:
+                if completed >= window.deadline_ns:
                     break
-                sleep(max(0, min(interval, duration - (monotonic() - start))))
+                sleep(min(interval, window.remaining_seconds()))
         report["installedApkSha256After"] = installed_hash(adb)
         report["artifactMismatch"] = report["installedApkSha256After"] != expected_hash
         report["deviceMismatch"] = device_identity(adb) != report["deviceIdentitySha256"]
-        if not any(report[k] for k in ("artifactMismatch", "deviceMismatch", "samplesWithGaps", "samplingGaps")) and monotonic() - start >= duration:
+        window.end_check()
+        window.update_report(report)
+        if not any(report[k] for k in ("artifactMismatch", "deviceMismatch", "samplesWithGaps", "samplingGaps")) and window.last_completed_ns >= window.deadline_ns:
             report["result"] = "OBSERVATION_COMPLETE_REVIEW_REQUIRED"
     except KeyboardInterrupt:
         report["interrupted"] = True
     except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
         # Error types only: exception text can contain device/user data.
         report["failureType"] = type(error).__name__
+        if isinstance(error, HOST_TIME.HostTimingError): report["hostTimingFailure"] = error.code
     finally:
-        report["elapsedSeconds"] = round(monotonic() - start, 3)
+        if window is not None: window.update_report(report)
+        report["elapsedSeconds"] = round(window.elapsed_ns / HOST_TIME.NANOS, 3) if window is not None else 0
         samples = directory / "samples.jsonl"
         if samples.exists():
             report["samplesSha256"] = hashlib.sha256(samples.read_bytes()).hexdigest()
