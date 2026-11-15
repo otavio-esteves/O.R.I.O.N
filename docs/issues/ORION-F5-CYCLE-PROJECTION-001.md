@@ -45,3 +45,11 @@ Light source/dependency/bound-shape checks, local document links and
 companion initialization containment and size-independent bounded iteration.
 Technical format/limits are documented in
 [F5-CyclePartialProjection](../qualification/F5-CyclePartialProjection.md).
+
+ROOT VALIDATION: Canonical Docker full check, lint, boundaries, APK/AAB static
+packaging, Debug/Release and app/service test APKs passed on source `fdb4187`: 927
+JVM tests, zero failures/errors/skips, including all16 projector cases (206 app
+JVM total). No extra Android/heavy execution is needed for this pure manual
+projector. [Evidence index](../qualification/f5-cycle-projection-evidence.json)
+records source/artifact/result hashes and scope limits. Required PR CI remains
+the merge gate; no qualification gate closes.
