@@ -58,7 +58,156 @@ final class OrionGenerationMetricsQualification {
     private static final String[] OPTIONAL_HEADERS = { "invocationId", "bootCount", "capturedElapsedMillis",
             "wrapperStartedElapsed", "wrapperFinishedElapsed" };
 
+    private enum ProbePhase { ENVIRONMENT, PIN_FILE, BIND, NEGOTIATE, LOAD, GENERATE, SNAPSHOT, CACHE, UNLOAD, COMPLETE }
+    private static volatile ProbePhase phase = ProbePhase.ENVIRONMENT;
+    // Only compile-time labels enter this finite code table; never print an exception message.
+    private static final java.util.List<String> CHECK_LABELS = Arrays.asList(
+            "AI identity changed",
+            "ANDROID_EMULATOR",
+            "API_WALL_NS_ONLY_NO_THROUGHPUT",
+            "Actual generation bound invalid",
+            "Actual one-token decode bound invalid",
+            "Actual prompt context bound invalid",
+            "Bind rejected",
+            "Bind wait expired",
+            "Boot changed",
+            "Boot unavailable",
+            "Cached FINAL changed",
+            "Callback contract invalid",
+            "Callback framing invalid",
+            "Callback payload invalid",
+            "Canonical direct private file required",
+            "Capture clock invalid",
+            "Cleanup framing invalid",
+            "Cleanup reply too large",
+            "Cleanup unavailable",
+            "Closed schema invalid",
+            "Compiled optional source unavailable",
+            "Count equality invalid",
+            "Count relation invalid",
+            "DISCONTINUOUS",
+            "EOG callback relation invalid",
+            "Empty call relation invalid",
+            "Emulator Build signals required",
+            "Emulator declaration required",
+            "Endpoint changed",
+            "Engine state mismatch",
+            "Explicit metrics opt-in required",
+            "Finality invalid",
+            "Fixture did not complete observed stages",
+            "Fixture work counts invalid",
+            "Health types invalid",
+            "Int field required",
+            "Invocation invalid",
+            "Invocation missing",
+            "Issued identity control invalid",
+            "Issued identity invalid",
+            "Issued scope invalid",
+            "Issued sequence invalid",
+            "LOADED",
+            "Legacy history changed",
+            "Load did not succeed",
+            "Load poll count exhausted",
+            "Load receipt mismatch",
+            "Load slot state invalid",
+            "Loaded fixture mismatch",
+            "Loading fixture mismatch",
+            "Long field required",
+            "Loop stage unproven",
+            "MAIN fixture process required",
+            "MINIFIED_PRIVATE_AI_SOURCE_OBSERVED",
+            "Metric field set invalid",
+            "Metric representation bound invalid",
+            "Metrics Bundle required",
+            "Metrics mask invalid",
+            "Metrics poll count exhausted",
+            "Missing Bundle",
+            "NOT_QUALIFIED",
+            "Native clock domain invalid",
+            "Native finish premature",
+            "Native fixture load unavailable",
+            "No decode-call time can be measured without a call",
+            "No-work state invalid",
+            "Nonterminal finish invalid",
+            "One-token finish semantics invalid",
+            "Opened file identity changed",
+            "Optional metrics protocol unavailable",
+            "PROCESS_DIED",
+            "Pinned file changed during verification",
+            "Pinned file identity invalid",
+            "Pinned file read incomplete",
+            "Pinned model hash mismatch",
+            "Pinned private model path required",
+            "Prefill stage unproven",
+            "Private AI service required",
+            "Probe budget expired",
+            "Readonly input unavailable",
+            "Reply Parcel too large",
+            "Reply framing invalid",
+            "Request Parcel too large",
+            "Request not accepted",
+            "Required measured counters absent",
+            "SAME_BOUND_SEPARATE_AI_PID",
+            "SHA-256",
+            "SYNTHETIC_FIXTURE_ONLY",
+            "Single successful terminal unavailable",
+            "Snapshot identity invalid",
+            "String field required",
+            "Token-limit EOG invalid",
+            "Token-limit counter invalid",
+            "Tokenizer stage unproven",
+            "Transaction unavailable",
+            "UNKNOWN",
+            "UNLOADED",
+            "Unavailable clock has timestamps",
+            "Unknown enum value",
+            "Unknown stage bit",
+            "Unload poll count exhausted",
+            "Unload state invalid",
+            "Wrapper finish invalid",
+            "Wrapper start invalid",
+            "Wrong private descriptor",
+            "availableMetricsMask",
+            "callbacksAttempted",
+            "callbacksReturnedNormally",
+            "capturedElapsedMillis",
+            "clockDomain",
+            "completedCallStagesMask",
+            "decodeCalls",
+            "decodeSubmittedTokens",
+            "decodeSuccessfulCalls",
+            "eogTokens",
+            "finishReason",
+            "metrics",
+            "modelId",
+            "orionGenerationMetricsModelPath",
+            "pid",
+            "prefillCalls",
+            "prefillSubmittedTokens",
+            "prefillTokensInSuccessfulCalls",
+            "promptTokens",
+            "requestId",
+            "sampledTokens",
+            "startedElapsed",
+            "state",
+            "supportedMetricsMask",
+            "timeState");
+    private static final class ProbeCheckFailure extends AssertionError {
+        final int code;
+        ProbeCheckFailure(String label) { super("Closed probe check failed"); code = CHECK_LABELS.indexOf(label) + 1; }
+    }
+    static String failureCode(Throwable failure) {
+        String code = failure instanceof ProbeCheckFailure ? "CHECK_" + ((ProbeCheckFailure) failure).code
+                : failure instanceof android.system.ErrnoException ? "ERRNO_" + ((android.system.ErrnoException) failure).errno
+                : failure instanceof SecurityException ? "PERMISSION"
+                : failure instanceof android.os.RemoteException ? "RPC"
+                : failure instanceof java.io.IOException ? "FILE_IO"
+                : failure instanceof LinkageError ? "LINKAGE" : "UNEXPECTED";
+        return phase.name() + ":" + code;
+    }
+
     static Bundle run(Context context, Bundle arguments) throws Exception {
+        phase = ProbePhase.ENVIRONMENT;
         check("true".equals(arguments.get("orionGenerationMetricsProbe")), "Explicit metrics opt-in required");
         check("ANDROID_EMULATOR".equals(arguments.get("orionGenerationMetricsEnvironment")), "Emulator declaration required");
         check(context.getPackageName().equals(Application.getProcessName()), "MAIN fixture process required");
@@ -85,13 +234,16 @@ final class OrionGenerationMetricsQualification {
         boolean modelTouched = false;
         boolean unloadIssued = false;
         IBinder service = null;
+        phase = ProbePhase.PIN_FILE;
         try (ParcelFileDescriptor model = pinnedModel(context, (String) rawPath, budget)) {
+            phase = ProbePhase.BIND;
             bound = context.bindService(new Intent().setComponent(component), connection, Context.BIND_AUTO_CREATE);
             check(bound, "Bind rejected");
             check(connected.await(10, TimeUnit.SECONDS), "Bind wait expired");
             service = current.get();
             check(service != null && DESCRIPTOR.equals(service.getInterfaceDescriptor()), "Wrong private descriptor");
             endpoint(current, service, budget);
+            phase = ProbePhase.NEGOTIATE;
             Bundle protocol = call(service, PROTOCOL, null, 16384);
             keys(protocol, new String[] { "schemaVersion", "status", "major", "minor" });
             check(text(protocol, "status").equals("OK") && integer(protocol, "major") == 1 && integer(protocol, "minor") >= 2,
@@ -108,6 +260,7 @@ final class OrionGenerationMetricsQualification {
                     "Compiled optional source unavailable");
             engineState(call(service, STATUS, null, 16384), "UNLOADED");
             int aiPid = identity(context, call(service, HEALTH, null, 16384), budget, null);
+            phase = ProbePhase.LOAD;
             String loadId = issue(service);
             Bundle load = specification(loadId, budget);
             load.putString("modelId", SHA); load.putString("sha256", SHA); load.putLong("sizeBytes", MODEL_BYTES);
@@ -120,6 +273,7 @@ final class OrionGenerationMetricsQualification {
             identity(context, loadedHealth, budget, aiPid);
             check(Boolean.TRUE.equals(loadedHealth.get("nativeRuntimeLoaded")) &&
                     Boolean.TRUE.equals(loadedHealth.get("nativeValidationCompleted")), "Native fixture load unavailable");
+            phase = ProbePhase.GENERATE;
             String requestId = issue(service);
             ChunkReceiver receiver = new ChunkReceiver(requestId);
             byte[] input = "Hello".getBytes(StandardCharsets.UTF_8);
@@ -141,7 +295,9 @@ final class OrionGenerationMetricsQualification {
                 receiver.awaitTick();
             }
             receiver.assertSuccess();
+            phase = ProbePhase.SNAPSHOT;
             Snapshot first = awaitFinal(service, current, requestId, supported, aiPid, requestStarted, receiver, budget);
+            phase = ProbePhase.CACHE;
             for (int repeat = 0; repeat < 2; repeat++) {
                 endpoint(current, service, budget);
                 Bundle cachedReply = query(service, requestId);
@@ -150,6 +306,7 @@ final class OrionGenerationMetricsQualification {
                 check(first.facts.equals(cached.facts), "Cached FINAL changed");
                 cached.assertFixtureCompletion();
             }
+            phase = ProbePhase.UNLOAD;
             unloadIssued = true;
             unload(service, current, budget);
             receiver.assertSuccess();
@@ -175,6 +332,7 @@ final class OrionGenerationMetricsQualification {
             result.putString("orion_generation_metrics_time_state", (String) first.facts.get("timeState"));
             result.putString("orion_generation_metrics_duration_meaning", "API_WALL_NS_ONLY_NO_THROUGHPUT");
             for (Map.Entry<String, Long> entry : first.metrics.entrySet()) result.putLong("orion_metric_" + entry.getKey(), entry.getValue());
+            phase = ProbePhase.COMPLETE;
             return result;
         } finally {
             try {
@@ -517,5 +675,5 @@ final class OrionGenerationMetricsQualification {
         check(value.keySet().containsAll(Arrays.asList(required)) && allowed.containsAll(value.keySet())
                 && integer(value, "schemaVersion") == 1, "Closed schema invalid");
     }
-    private static void check(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
+    private static void check(boolean condition, String message) { if (!condition) throw new ProbeCheckFailure(message); }
 }

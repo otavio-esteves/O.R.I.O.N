@@ -57,7 +57,7 @@ public final class OrionQualificationInstrumentation extends Instrumentation {
         } catch (Throwable failure) {
             // The optional real-model probe never prints an input/path/request ID or raw failure.
             result.putString("stream", generationMetricsArguments != null
-                    ? "\nFAIL: GENERATION_METRICS_PROBE_FAILED\n"
+                    ? "\nFAIL: GENERATION_METRICS_PROBE_FAILED " + OrionGenerationMetricsQualification.failureCode(failure) + "\n"
                     : "\nFAIL: " + failure.getClass().getSimpleName() + ": " + failure.getMessage() + "\n");
             finish(Activity.RESULT_CANCELED, result);
         }
