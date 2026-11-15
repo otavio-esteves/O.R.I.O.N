@@ -37,6 +37,11 @@ class OrionLlamaRuntime : AutoCloseable {
     fun generate(prompt: String, maxTokens: Int, temperature: Float,
         onPiece: OrionLlamaPieceCallback): OrionLlamaFinish = generateLocal(prompt, maxTokens, temperature, null, onPiece)
 
+    /** Explicit opt-in service port; same runtime/handle and original finish/exception. */
+    fun generateWithReceipt(prompt: String, maxTokens: Int, temperature: Float,
+        capture: OrionLlamaServiceGenerationCapture, onPiece: OrionLlamaPieceCallback): OrionLlamaFinish =
+        generateObserved(prompt, maxTokens, temperature, capture.local, onPiece)
+
     /** Local diagnostic only. A fresh one-shot capture is required; no IPC or admission changes. */
     internal fun generateObserved(prompt: String, maxTokens: Int, temperature: Float,
         capture: OrionLlamaGenerationCapture, onPiece: OrionLlamaPieceCallback): OrionLlamaFinish {

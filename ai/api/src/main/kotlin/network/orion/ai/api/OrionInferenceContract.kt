@@ -8,7 +8,7 @@ import network.orion.core.time.MonotonicDeadline
 /** Uses the existing baseline major/minor negotiation; no subsystem-specific authority. */
 object OrionCortexProtocol {
     val ISSUED_HISTORY = IpcCapabilityId("orion_issued_request_history_v1")
-    val CURRENT = ProtocolInfo(OrionIpcProtocol.CURRENT.protocolMajor, 1, setOf(ISSUED_HISTORY))
+    val CURRENT = ProtocolInfo(OrionIpcProtocol.CURRENT.protocolMajor, 2, setOf(ISSUED_HISTORY))
     const val SCHEMA_VERSION = 1
 }
 

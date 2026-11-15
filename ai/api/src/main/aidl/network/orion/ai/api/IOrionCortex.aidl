@@ -18,4 +18,8 @@ interface IOrionCortex {
     Bundle issueRequestId();
     /** Optional minor-1 capability discovery; call after version checks, before issuing IDs. */
     Bundle getCapabilities();
+    /** ADR-0003 optional minor-2 discovery; original transactions 1–10 stay unchanged. */
+    Bundle getGenerationMetricsCapabilities();
+    /** Read-only retained inference facts; never enables instrumentation or starts work. */
+    Bundle getGenerationMetrics(in Bundle query);
 }

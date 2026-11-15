@@ -56,6 +56,8 @@ internal class OrionCortexClient(
     private var connection: ServiceConnection? = null
     private var deathRecipient: IBinder.DeathRecipient? = null
     private var pinnedAiPid: Int? = null
+    private var metricsConnectionEpoch: Long? = 0
+    private val metricsCorrelation = try { OrionCortexMetricsCorrelation() } catch (_: Throwable) { null }
     private val unloadObservationScope: Long?
     private val unloadObservationOwner: OrionCortexUnloadObservationOwner?
     private val unloadDiagnosticDispatcher: OrionCortexUnloadDiagnosticDispatcher?
@@ -114,12 +116,26 @@ internal class OrionCortexClient(
         }
     }
 
-    private fun approved(id: String, context: Int, threads: Int, tokens: Int) {
+    private class MetricsResourceCapture {
+        var callback: OrionCortexMetricsCorrelation.ResourceCallback? = null
+    }
+
+    private fun approved(id: String, context: Int, threads: Int, tokens: Int,
+        metricsCapture: MetricsResourceCapture? = null): OrionResourceDecision {
         val candidate = restartCandidate(id, context, threads, tokens)
-        val decision = resources(id, context, threads, tokens)
+        val decision = if (metricsCapture == null) resources(id, context, threads, tokens) else {
+            // The restart callback above cannot provide this inference-resource witness.
+            val callback = synchronized(monitor) { metricsCorrelation.isolatedMetrics { it.beginResourceCallback() } }
+            metricsCapture.callback = callback
+            try { resources(id, context, threads, tokens) }
+            finally { synchronized(monitor) { callback?.let { token ->
+                metricsCorrelation.isolatedMetrics { it.endResourceCallback(token) }
+            } } }
+        }
         check(decision.allowed && decision.plan?.model == candidate.model) { "Cortex resource policy blocked." }
         val plan = checkNotNull(decision.plan)
         check(context <= plan.maxContext && threads <= plan.maxThreads && tokens <= plan.maxTokens)
+        return decision
     }
 
     /** Conservative residency: each request loads, infers and unloads even if a plan allows keep-alive. */
@@ -251,7 +267,12 @@ internal class OrionCortexClient(
             val mapped = input.mapReadWrite()
             try { mapped.put(content) } finally { SharedMemory.unmap(mapped); content.fill(0) }
             check(input.setProtect(OsConstants.PROT_READ))
-            approved(model.modelId, contextTokens, threads, request.maxTokens)
+            val metricsCapture = synchronized(monitor) { metricsCorrelation.isolatedMetrics { MetricsResourceCapture() } }
+            val resourceDecision = approved(model.modelId, contextTokens, threads, request.maxTokens, metricsCapture)
+            val metricsCandidate = synchronized(monitor) {
+                metricsCorrelation.isolatedMetrics { it.candidate(service, connection, request.requestId, transportId, metricsCapture?.callback,
+                    resourceDecision.allowed, resourceDecision.sampledAt, request.deadline, request.maxTokens, contextTokens) }
+            }
             if (lifecycle.status().terminal != null) return@withLock lifecycle.status()
             val start = request.deadline.start
             val specification = Bundle().apply {
@@ -268,7 +289,9 @@ internal class OrionCortexClient(
                 }
             }
             lifecycle.markLoading()
+            synchronized(monitor) { metricsCorrelation.isolatedMetrics { it.beginningInference() } }
             checkReply(service.startInference(input, specification, callback), setOf("ACCEPTED"))
+            synchronized(monitor) { metricsCorrelation.isolatedMetrics { it.admitted(metricsCandidate) } }
             lifecycle.markDecoding()
             while (lifecycle.status().terminal == null) {
                 val chunk = callbacks.tryReceive().getOrNull()
@@ -413,6 +436,15 @@ internal class OrionCortexClient(
                 if (closed || remote !== selected.first || connection !== selected.second) return null
                 require(pinnedAiPid == null || pinnedAiPid == pid)
                 if (pinnedAiPid != pid) { pinnedAiPid = pid; updateUnloadOwner(endpointChanged = true) }
+                // Optional correlation only. Parsing failures cannot change this health call.
+                metricsCorrelation.isolatedMetrics { correlation ->
+                    require(OrionCortexWire.text(receipt, "status") == "OK" &&
+                        OrionCortexWire.long(receipt, "totalPssBytes") > 0 && OrionCortexWire.boolean(receipt, "nativeIncluded"))
+                    val boot = OrionCortexWire.int(receipt, "bootCount").also { require(it >= 0) }
+                    val at = network.orion.core.time.MonotonicInstant(network.orion.core.time.BootSessionId(boot),
+                        OrionCortexWire.long(receipt, "sampledElapsed"))
+                    correlation.memory(selected.first, selected.second, pid, at)
+                }
             }
             Bundle(receipt)
         } catch (_: Exception) {
@@ -420,6 +452,46 @@ internal class OrionCortexClient(
             null
         }
     }
+
+    /** Manual optional read on the current endpoint; never binds, polls or refreshes resource facts. */
+    fun generationMetrics(logicalRequestId: String): OrionGenerationMetricsSnapshot? {
+        val selected = synchronized(monitor) {
+            if (closed) return null
+            metricsCorrelation.isolatedMetrics { it.select(logicalRequestId)?.takeIf(::metricsEndpointCurrent) } ?: return null
+        }
+        val discovery = synchronized(monitor) {
+            if (closed) return null
+            metricsCorrelation.isolatedMetrics { if (metricsEndpointCurrent(selected)) it.claimDiscovery(selected) else null }
+        }
+        if (discovery != null) {
+            val mask = try {
+                OrionGenerationMetricsWire.capabilityMask((discovery.service as IOrionCortex).getGenerationMetricsCapabilities())
+            } catch (_: Throwable) { null }
+            synchronized(monitor) {
+                if (closed) return null
+                metricsCorrelation.isolatedMetrics { it.discovered(discovery, mask) }
+            }
+        }
+        val mask = synchronized(monitor) {
+            if (closed) return null
+            metricsCorrelation.isolatedMetrics { if (metricsEndpointCurrent(selected)) it.mask(selected) else null } ?: return null
+        }
+        val snapshot = try {
+            val reply = (selected.endpoint.service as IOrionCortex).getGenerationMetrics(
+                OrionGenerationMetricsWire.query(selected.transportId))
+            OrionGenerationMetricsWire.decodeSnapshot(reply, mask, selected.maxTokens, selected.contextTokens)
+        } catch (_: Throwable) { null } ?: return null
+        return synchronized(monitor) {
+            if (closed || metricsCorrelation.isolatedMetrics {
+                metricsEndpointCurrent(selected) && it.accepts(selected, snapshot)
+            } != true) null else snapshot
+        }
+    }
+
+    /** Called only under monitor, checking the actual owner fields as well as the detached mapping. */
+    private fun metricsEndpointCurrent(selected: OrionCortexMetricsCorrelation.Binding): Boolean =
+        remote === selected.endpoint.service && connection === selected.endpoint.owner &&
+            metricsConnectionEpoch == selected.endpoint.epoch && pinnedAiPid == selected.witness.pid
 
     private suspend fun acquire(): IOrionCortex = connectionMutex.withLock {
         check(!closed)
@@ -460,6 +532,7 @@ internal class OrionCortexClient(
                             binder.linkToDeath(death, 0)
                             deathRecipient = death; remote = service
                             updateUnloadOwner(endpointChanged = true)
+                            metricsCorrelation.isolatedMetrics { it.connected(service, this, metricsConnectionEpoch, negotiated.protocolMinor) }
                         }
                         availabilityChanged(true)
                         pending.resume(service)
@@ -485,6 +558,9 @@ internal class OrionCortexClient(
                 check(!closed)
                 if (!pending.isActive) false else {
                     connection = owner
+                    metricsConnectionEpoch = try {
+                        metricsConnectionEpoch?.let { if (it < Long.MAX_VALUE) it + 1 else null }
+                    } catch (_: Throwable) { null }
                     updateUnloadOwner(endpointChanged = true, connectionStarted = true)
                     app.bindService(intent, owner, Context.BIND_AUTO_CREATE)
                 }
@@ -515,6 +591,7 @@ internal class OrionCortexClient(
             if (changed) updateUnloadOwner(endpointChanged = true)
             deathRecipient?.let { death -> runCatching { service?.asBinder()?.unlinkToDeath(death, 0) } }
             remote = null; loaded = null; deathRecipient = null; pinnedAiPid = null
+            metricsCorrelation.isolatedMetrics { it.clear() }
             connection?.let { runCatching { app.unbindService(it) } }; connection = null
         }
     }

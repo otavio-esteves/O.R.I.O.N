@@ -23,8 +23,14 @@ import network.orion.ai.api.OrionCortexWire
 import network.orion.ai.api.OrionCortexProtocol
 import network.orion.ai.api.OrionIssuedRequestHistory
 import network.orion.ai.api.OrionRetiredRequestException
+import network.orion.ai.api.OrionGenerationMetric
+import network.orion.ai.api.OrionGenerationMetricsWire
+import network.orion.ai.api.OrionGenerationMetricsUnsupportedSchema
+import network.orion.ai.api.OrionInferenceTerminal
 import network.orion.ai.llama.OrionLlamaFinish
 import network.orion.ai.llama.OrionLlamaRuntime
+import network.orion.ai.llama.OrionLlamaPieceCallback
+import network.orion.ai.llama.OrionLlamaServiceGenerationCapture
 import network.orion.core.time.AndroidOrionClock
 import network.orion.core.time.BootSessionId
 import network.orion.core.time.MonotonicDeadline
@@ -43,6 +49,7 @@ class OrionCortexService : Service() {
     @Volatile private var runtime: OrionLlamaRuntime? = null
     @Volatile private var active: Request? = null
     private var loadedId: String? = null
+    private var loadedContextTokens: Int? = null
     private var modelFd: ParcelFileDescriptor? = null
     @Volatile private var closing = false
     private var unloading = false
@@ -50,12 +57,13 @@ class OrionCortexService : Service() {
 
     private class Request(val id: String, val deadline: MonotonicDeadline?,
         val callback: IOrionInferenceCallback? = null, val loading: Boolean = false,
-        var fingerprint: String? = null) {
+        var fingerprint: String? = null, val inference: Boolean = false) {
         @Volatile var terminal: String? = null
         var sequence = 0L
         var watcher: ScheduledFuture<*>? = null
         var death: IBinder.DeathRecipient? = null
         var work: OrionNativeUnresponsiveWatchdog.Ticket? = null
+        @Volatile var metrics: OrionServiceGenerationMetrics? = null
     }
 
     override fun onCreate() {
@@ -82,6 +90,29 @@ class OrionCortexService : Service() {
         override fun getCapabilities(): Bundle {
             caller()
             return reply("OK") { putString("capabilities", OrionCortexProtocol.ISSUED_HISTORY.value) }
+        }
+
+        override fun getGenerationMetricsCapabilities(): Bundle {
+            caller()
+            return OrionGenerationMetricsWire.capabilities(if (BuildConfig.ORION_GENERATION_METRICS) OrionGenerationMetric.ALL_MASK else 0L)
+        }
+
+        override fun getGenerationMetrics(query: Bundle?): Bundle {
+            caller()
+            return try {
+                val id = OrionGenerationMetricsWire.queryId(requireNotNull(query))
+                synchronized(lock) {
+                    val request = try { findRequest(id) }
+                    catch (_: OrionRetiredRequestException) { return@synchronized OrionGenerationMetricsWire.status("RETIRED") }
+                    catch (_: IllegalArgumentException) { return@synchronized OrionGenerationMetricsWire.status("NOT_FOUND") }
+                    if (request == null) OrionGenerationMetricsWire.status("NOT_FOUND")
+                    else if (!request.inference) OrionGenerationMetricsWire.status("INVALID_QUERY")
+                    else request.metrics?.snapshot()?.let(OrionGenerationMetricsWire::snapshot)
+                        ?: OrionGenerationMetricsWire.status("UNAVAILABLE")
+                }
+            } catch (_: OrionGenerationMetricsUnsupportedSchema) { OrionGenerationMetricsWire.status("UNSUPPORTED") }
+              catch (_: IllegalArgumentException) { OrionGenerationMetricsWire.status("INVALID_QUERY") }
+              catch (_: Throwable) { OrionGenerationMetricsWire.status("UNAVAILABLE") }
         }
 
         override fun issueRequestId(): Bundle {
@@ -133,7 +164,7 @@ class OrionCortexService : Service() {
                             else {
                                 synchronized(lock) { synchronized(request) {
                                     ensureActive(request)
-                                    loadedId = modelId; modelFd = owned; retained = true
+                                    loadedId = modelId; loadedContextTokens = context; modelFd = owned; retained = true
                                     finish(request, "SUCCEEDED")
                                 } }
                             }
@@ -162,7 +193,7 @@ class OrionCortexService : Service() {
                 // Snapshot exactly once before admission; the digest and native worker use the same immutable text.
                 val prompt = OrionCortexWire.readUtf8(memory, bytes)
                 val fingerprint = OrionCortexRequestFingerprint.inference(modelId, prompt, bytes, tokens, temperature, deadline)
-                val request = Request(id, deadline, target, fingerprint = fingerprint)
+                val request = Request(id, deadline, target, fingerprint = fingerprint, inference = true)
                 synchronized(lock) {
                     findRequest(id)?.let { return@guardedInput duplicateReply(it, fingerprint, deadline) }
                     require(deadline.statusAt(clock.monotonicNow()) == MonotonicDeadlineStatus.ACTIVE)
@@ -170,12 +201,29 @@ class OrionCortexService : Service() {
                     if (closing || unloading || active != null) return@guardedInput reply("BUSY")
                     if (loadedId != modelId) return@guardedInput reply("MODEL_MISMATCH")
                     admit(request)
+                    if (BuildConfig.ORION_GENERATION_METRICS && OrionIssuedRequestHistory.isIssuedIdentity(id)) {
+                        request.metrics = createServiceGenerationMetrics(true, id, Process.myPid(), tokens,
+                            loadedContextTokens, request.terminal)
+                        recordMetricsTerminal(request) // Includes a terminal racing initial allocation.
+                    }
                     worker.execute { perform(request) {
                             ensureActive(request)
                             val decoder = OrionUtf8Pieces()
-                            val result = checkNotNull(runtime).generate(prompt, tokens, temperature) { piece ->
+                            val native = checkNotNull(runtime)
+                            val capture = if (request.metrics != null) try { OrionLlamaServiceGenerationCapture() }
+                                catch (_: Throwable) { request.metrics?.unavailable(); null } else null
+                            val onPiece = OrionLlamaPieceCallback { piece ->
                                 if (!isActive(request)) false
                                 else { emitText(request, decoder.accept(piece)); isActive(request) }
+                            }
+                            request.metrics?.wrapperAttempted()
+                            val result = try {
+                                if (capture == null) native.generate(prompt, tokens, temperature, onPiece)
+                                else native.generateWithReceipt(prompt, tokens, temperature, capture, onPiece)
+                            } finally {
+                                // Diagnostic faults never replace the original return/throw outcome.
+                                try { request.metrics?.returned(capture?.receipt()) }
+                                catch (_: Throwable) { request.metrics?.unavailable() }
                             }
                             if (result != OrionLlamaFinish.CANCELLED && isActive(request)) {
                                 emitText(request, decoder.accept(ByteArray(0), final = true))
@@ -220,6 +268,7 @@ class OrionCortexService : Service() {
             synchronized(lock) {
                 active?.let { finish(it, "CANCELLED"); runtime?.cancel() }
                 loadedId = null
+                loadedContextTokens = null
                 // Reserved worker owns cleanup after any still-running native call returns.
                 if (!closing && !unloading) {
                     unloading = true
@@ -304,6 +353,12 @@ class OrionCortexService : Service() {
             request.death?.let { death -> try { request.callback?.asBinder()?.unlinkToDeath(death, 0) } catch (_: Exception) { } }
             try { synchronized(lock) { if (active === request) active = null } }
             finally { request.work?.let(watchdog::finishWork) }
+            // No new clock: this marker follows the original owned cleanup, not JNI return.
+            val metrics = request.metrics
+            if (metrics != null) try { synchronized(lock) {
+                if (findRequest(request.id) === request) metrics.workerReleased()
+                else metrics.unavailable()
+            } } catch (_: Throwable) { metrics.unavailable() }
         }
     }
 
@@ -324,6 +379,7 @@ class OrionCortexService : Service() {
         synchronized(request) {
             if (request.terminal != null) return@synchronized
             request.terminal = state
+            recordMetricsTerminal(request)
             sendChunk(request, "", state)
         }
     }
@@ -348,7 +404,16 @@ class OrionCortexService : Service() {
         try { OrionCortexWire.requireEnvelope(chunk, CHUNK_KEYS); callback.onChunk(chunk) }
         // The watcher cancels only the matching active slot. Never acquire the
         // service lock while holding a request monitor (service -> request order).
-        catch (_: Exception) { request.work?.let(watchdog::arm); request.terminal = request.terminal ?: "CANCELLED" }
+        catch (_: Exception) {
+            request.work?.let(watchdog::arm); request.terminal = request.terminal ?: "CANCELLED"
+            recordMetricsTerminal(request)
+        }
+    }
+
+    /** Never acquire service lock from a request monitor; only the request-owned recorder changes. */
+    private fun recordMetricsTerminal(request: Request) {
+        try { request.terminal?.let { request.metrics?.terminal(OrionInferenceTerminal.valueOf(it)) } }
+        catch (_: Throwable) { request.metrics?.unavailable() }
     }
 
     private fun hash(fd: ParcelFileDescriptor, size: Long, request: Request): String {
@@ -411,7 +476,7 @@ class OrionCortexService : Service() {
             worker.execute {
                 try {
                     runtime?.close(); runtime = null
-                    synchronized(lock) { modelFd?.close(); modelFd = null; loadedId = null }
+                    synchronized(lock) { modelFd?.close(); modelFd = null; loadedId = null; loadedContextTokens = null }
                 } finally { watchdog.finishWork(cleanup) }
             }
             worker.shutdown()

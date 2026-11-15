@@ -23,6 +23,7 @@ import network.orion.ai.api.IOrionInferenceCallback
 import network.orion.ai.api.OrionCortexWire
 import network.orion.ai.api.OrionCortexProtocol
 import network.orion.ai.api.OrionIssuedRequestHistory
+import network.orion.ai.api.OrionGenerationMetricsWire
 import network.orion.core.time.AndroidOrionClock
 import network.orion.core.time.MonotonicDeadlineStatus
 import org.junit.AfterClass
@@ -78,14 +79,29 @@ class OrionCortexBoundaryTest {
         assertEquals("${app.packageName}:ai", info.processName)
         val protocol = remote.getProtocolInfo()
         OrionCortexWire.requireEnvelope(protocol, setOf("schemaVersion", "status", "major", "minor"))
-        assertEquals(1, protocol.getInt("major")); assertEquals(1, protocol.getInt("minor"))
+        assertEquals(setOf("schemaVersion", "status", "major", "minor"), protocol.keySet())
+        assertEquals(1, protocol.getInt("major")); assertEquals(2, protocol.getInt("minor"))
         assertEquals("OK", protocol.getString("status"))
         val capabilities = remote.getCapabilities()
         OrionCortexWire.requireEnvelope(capabilities, setOf("schemaVersion", "status", "capabilities"))
         assertEquals("OK", OrionCortexWire.text(capabilities, "status"))
         assertEquals(OrionCortexProtocol.ISSUED_HISTORY.value, OrionCortexWire.text(capabilities, "capabilities"))
+        // This default test APK can be frozen and run against a normal Debug target
+        // built with both opt-in properties true. The installed identity owns the boundary.
+        assertEquals("network.orion", app.packageName)
+        assertEquals(0L, OrionGenerationMetricsWire.capabilityMask(remote.getGenerationMetricsCapabilities()))
         assertEquals("UNLOADED", remote.getStatus().getString("status"))
         assertEquals("OK", remote.healthCheck().getString("status"))
+    }
+
+    @Test fun optionalTransactionsAppendWithoutRenumberingLegacyOperations() {
+        val names = listOf("getProtocolInfo", "loadModel", "startInference", "cancelInference", "getRequestStatus",
+            "getStatus", "unloadModel", "healthCheck", "issueRequestId", "getCapabilities",
+            "getGenerationMetricsCapabilities", "getGenerationMetrics")
+        for ((offset, name) in names.withIndex()) {
+            val field = IOrionCortex.Stub::class.java.getDeclaredField("TRANSACTION_$name").apply { isAccessible = true }
+            assertEquals(IBinder.FIRST_CALL_TRANSACTION + offset, field.getInt(null))
+        }
     }
 
     @Test fun b_invalidSchemaWritableAndPipeDescriptorsFailBeforeNativeLoad() {

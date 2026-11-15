@@ -72,6 +72,8 @@ class OrionCortexClientTest {
     }
 
     private class Endpoint : IOrionCortex.Stub() {
+        override fun getGenerationMetricsCapabilities() = OrionGenerationMetricsWire.status("UNSUPPORTED")
+        override fun getGenerationMetrics(query: Bundle?) = OrionGenerationMetricsWire.status("UNSUPPORTED")
         private val identities = OrionIssuedRequestHistory<Unit> { true }
         var protocolMajor = 1
         var protocolMinor = 1

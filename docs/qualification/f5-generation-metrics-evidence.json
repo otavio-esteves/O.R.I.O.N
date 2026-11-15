@@ -1,0 +1,300 @@
+{
+  "schemaVersion": 1,
+  "workPackage": "ORION-F5-GENERATION-IPC-001",
+  "issue": 119,
+  "adr": "ADR-0003 ACCEPTED / PR114 MERGED",
+  "sourceCodeValidationCommit": "727ec07",
+  "sourceHashes": {
+    ".github/workflows/ci.yml": "24634291ed86edc8fd14511d87ebff2fc4fe3a29a66f182e3b710e87836423bd",
+    "ai/api/src/main/aidl/network/orion/ai/api/IOrionCortex.aidl": "21605064851a8f927e84ed69395fef62ff4da53453c760bf38f65ae5c1cb9018",
+    "ai/api/src/main/kotlin/network/orion/ai/api/OrionGenerationMetrics.kt": "081026510aba659795f49910742b113677582cabd535d04955f44bd0cd56b278",
+    "ai/api/src/main/kotlin/network/orion/ai/api/OrionGenerationMetricsWire.kt": "3ed84dd32bf9c76a6c979a4d4853ff61fd588e776ebea851f581a1a6e5c46194",
+    "ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceContract.kt": "e1d913675356c0ab736dda203f83dbbad7a75825c97433ac5c84f1709e7d1743",
+    "ai/api/src/test/kotlin/network/orion/ai/api/OrionGenerationMetricsTest.kt": "934d6a0d27e10ec5e298e3f16b60a5634b209672b1f3c0d11941d376669f56b0",
+    "ai/api/src/test/kotlin/network/orion/ai/api/OrionInferenceLifecycleTest.kt": "bbe842d2f688b1e2df9b4e947202ffa77132faef5784fe6a56a65c33a5a16db1",
+    "ai/llama/src/main/cpp/orion_llama_jni.cpp": "b39b98f030789a25965ca99f7ab73d804c7afa876c97169c93eb294715bff1e6",
+    "ai/llama/src/main/kotlin/network/orion/ai/llama/OrionLlamaGenerationObservation.kt": "3ecdbfb251262445f9ec08d7902692fac46acf8ccee605a18c381c595f4a7131",
+    "ai/llama/src/main/kotlin/network/orion/ai/llama/OrionLlamaRuntime.kt": "1be72055e0ae68cc3242c05237d02c0e1c0d2699b8f3d485265623c64f7e1396",
+    "ai/llama/src/main/kotlin/network/orion/ai/llama/OrionLlamaServiceGenerationCapture.kt": "516422665aca44f6172fd8d18bb79f844228f0823b764688e261cd98e49e8d98",
+    "ai/llama/src/test/kotlin/network/orion/ai/llama/OrionLlamaServiceGenerationCaptureTest.kt": "8e5af4003bf1341768a8be8496f58627ea357a864837c22240b0fca373ae7e78",
+    "ai/service/build.gradle.kts": "d38aa029f2319cc14e4b3e846e37c86d40e1ff21e2f22135aa3e26eb6de21cea",
+    "ai/service/src/androidTest/kotlin/network/orion/ai/service/OrionGenerationMetricsServiceTest.kt": "11323076f65e3e3c4d6017cb49be78fc388890334b726c0ae4cf9e283752ad8d",
+    "ai/service/src/main/kotlin/network/orion/ai/service/OrionCortexService.kt": "85ab66327debcc0dfb7ce464c3e512b036fa48349b1b6289d1fb993292c76cba",
+    "ai/service/src/main/kotlin/network/orion/ai/service/OrionServiceGenerationMetrics.kt": "4beac8216afb19ea3a9046fc795ffc620d8e522231010759e2abb8f991d4d5b3",
+    "ai/service/src/test/kotlin/network/orion/ai/service/OrionServiceGenerationMetricsTest.kt": "be1ce28b2357b2f7dc11c6f071570c3cef14473310a86a920d4d5a5be262cac2",
+    "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexBoundaryTest.kt": "6f9e728db4ba116cf40df7f3ebf2e08a5f884c504c21577496f83fd1f592c7ba",
+    "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexClientTest.kt": "d22fbed76170a6a16d6d912af6d1d566c913605337b94ab063af51252bec82b8",
+    "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexGenerationMetricsClientTest.kt": "4cb33aac61a0eceae4f67bb51942a13aabffd335ecf6d866ced6165c4040711d",
+    "app/src/androidTest/kotlin/network/orion/app/ai/OrionGenerationMetricsWireTest.kt": "6f7632fa0d18e6ac53f6815ea101be34da867b5ca11be15174dd3335a3084592",
+    "app/src/main/kotlin/network/orion/app/OrionFoundationRuntime.kt": "353a55478b2dcaf4f8273707b81414152a1429a93c57104b6e9e0a1cc1f9cb49",
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt": "0f2dc880643ec7e297dae95950aa7561e8fffc2d3d2bca8cafa8c5238e276373",
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexMetricsCorrelation.kt": "ce231cf427f34841e959d0226441314d04e2c7ac8310630bfcf26f24b73cafec",
+    "app/src/qualificationAndroidTest/java/network/orion/app/compatibility/OrionCortexNativeQualification.java": "15c21a07814284349d48633734cb6ece948bbf686e5899a8f5d6464c4746a763",
+    "app/src/qualificationAndroidTest/java/network/orion/app/compatibility/OrionGenerationMetricsQualification.java": "bd700cdced85376354beb89ab62c7cdcc263165d7aa4eeb8c2f0ad1a5c109d6d",
+    "app/src/qualificationAndroidTest/java/network/orion/app/compatibility/OrionQualificationInstrumentation.java": "7692c8e30e34d385cf7037a32a277376a961737d055b57dc1f12fcf636f62398",
+    "app/src/test/kotlin/network/orion/app/ai/OrionCortexMetricsCorrelationTest.kt": "a8afadfcf65ce79cfe6aadb1bef0d34c0c70cd8ffe90ee86e74da269a383a786",
+    "docs/adr/ADR-0003-optional-cortex-generation-metrics.md": "9a875a3b2fd57f8bad6e1ae18216a759689163c2af723b4e6cb6c5245d4566fa"
+  },
+  "externalEvidenceRoot": "/home/otavio/Projects/O.R.I.O.N-evidence/f5-next-gates-20261114",
+  "gates": {
+    "physicalQualified": false,
+    "productionProfilesApproved": false,
+    "cortexRuntimeReady": false,
+    "fullF4Closed": false,
+    "fullF5Closed": false,
+    "fullSoakClosed": false,
+    "F6Authorized": false
+  },
+  "canonical": {
+    "fullCheckEnvironment": "DOCKER",
+    "fullCheckJvm": {
+      "tests": 899,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "focusedJvmSubset": 266,
+    "androidAppFixtures": 77,
+    "androidServiceMetadataFixtures": 2,
+    "normalDebugBothPropertiesEnabledBoundary": {
+      "negativeMask": 65535,
+      "positiveMask": 0,
+      "tests": 1
+    },
+    "missingQualificationProperty": {
+      "exitCode": 1,
+      "expectedFailure": true
+    },
+    "finalDefaultMinifiedRuntime": {
+      "tests": 3,
+      "failures": 0,
+      "metricsProperty": false,
+      "installedArtifactHashesBeforeAndAfterVerified": true
+    }
+  },
+  "realMinifiedObservation": {
+    "environment": "ANDROID_EMULATOR",
+    "api": 35,
+    "abi": "x86_64",
+    "pageSize": 4096,
+    "syntheticAdmissionOnly": true,
+    "modelBytes": 491400032,
+    "modelSha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "modelCanonicalGuard": "PASS_WITH_APP_NAMESPACE_ALIAS",
+    "samePrivateFdAndUidVerified": true,
+    "installedArtifactHashesBeforeAndAfterVerified": true,
+    "actualOneGeneration": true,
+    "cachedFinalUnchanged": true,
+    "unloadObserved": true,
+    "wireTimeState": "UNAVAILABLE",
+    "fields": {
+      "orion_generation_metrics_admission": "SYNTHETIC_FIXTURE_ONLY",
+      "orion_generation_metrics_available_mask": "32767",
+      "orion_generation_metrics_cached_final_unchanged": "true",
+      "orion_generation_metrics_callback_chunks": "2",
+      "orion_generation_metrics_context": "512",
+      "orion_generation_metrics_duration_meaning": "API_WALL_NS_ONLY_NO_THROUGHPUT",
+      "orion_generation_metrics_environment": "ANDROID_EMULATOR",
+      "orion_generation_metrics_logical_terminals": "1",
+      "orion_generation_metrics_native_finish": "TOKEN_LIMIT",
+      "orion_generation_metrics_physical_verified": "false",
+      "orion_generation_metrics_pinned_model_verified": "true",
+      "orion_generation_metrics_process": "SAME_BOUND_SEPARATE_AI_PID",
+      "orion_generation_metrics_profile_approved": "false",
+      "orion_generation_metrics_qualification": "NOT_QUALIFIED",
+      "orion_generation_metrics_requested_tokens": "1",
+      "orion_generation_metrics_result": "MINIFIED_PRIVATE_AI_SOURCE_OBSERVED",
+      "orion_generation_metrics_supported_mask": "65535",
+      "orion_generation_metrics_time_state": "UNAVAILABLE",
+      "orion_metric_callbacksAttempted": "1",
+      "orion_metric_callbacksReturnedNormally": "1",
+      "orion_metric_decodeCalls": "0",
+      "orion_metric_decodeSubmittedTokens": "0",
+      "orion_metric_decodeSuccessfulCalls": "0",
+      "orion_metric_decodeTokensInSuccessfulCalls": "0",
+      "orion_metric_eogTokens": "0",
+      "orion_metric_prefillApiWallNanos": "857456249",
+      "orion_metric_prefillCalls": "1",
+      "orion_metric_prefillSubmittedTokens": "1",
+      "orion_metric_prefillSuccessfulCalls": "1",
+      "orion_metric_prefillTokensInSuccessfulCalls": "1",
+      "orion_metric_promptTokens": "1",
+      "orion_metric_sampledTokens": "1",
+      "orion_metric_tokenizationApiWallNanos": "46834"
+    }
+  },
+  "runs": {
+    "default-red": {
+      "files": {
+        "qualification/metrics-ipc/default-red/app-debug-androidTest.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/default-red/app-debug.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/default-red/artifacts.json": "88c06db177daeb91216bf90d29021b74e1e118b3a4221d0ae4d8ff2d729b2e37",
+        "qualification/metrics-ipc/default-red/build.log": "cce9c395faa2d446a3d7e55409680ff0cbae4c7be41e2bfa0000ae416284b37d",
+        "qualification/metrics-ipc/default-red/client-regression.log": "5a942252b4d5ca09bee0e5cb5809bb381b48336212f543cd2cea584e0800e4d8",
+        "qualification/metrics-ipc/default-red/installed-artifacts.json": "d9cfd529e55f896abc255626c7a87b057118d4c001dcd4036eefd9f27d30b2de"
+      },
+      "environments": [
+        "DOCKER_BUILD",
+        "ANDROID_EMULATOR"
+      ]
+    },
+    "default-green": {
+      "files": {
+        "qualification/metrics-ipc/default-green/app-debug-androidTest.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/default-green/app-debug.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/default-green/artifacts.json": "774284dc8120aa2a663d12cf61889671c1acde51920a36883ae43a3eb9c66614",
+        "qualification/metrics-ipc/default-green/build.log": "264d5a3c97fd671e5a16bd2452db289c8ef768733008a275443cd93f1280ab9d",
+        "qualification/metrics-ipc/default-green/installed-artifacts.json": "5a18cdd04472ec6ac5742eba9f48c5f9bbae7d212785429b0177d96cdfbd94dd",
+        "qualification/metrics-ipc/default-green/instrumentation.log": "7adc79519f3b048c51826bac76fc4328c812c80d6f96e0df34c9563363fac89b"
+      },
+      "environments": [
+        "DOCKER_BUILD",
+        "ANDROID_EMULATOR"
+      ]
+    },
+    "service-metadata": {
+      "files": {
+        "qualification/metrics-ipc/service-metadata/installed-artifacts.json": "b66c539633e98234a47b3cceff5bb984e59c662cb8512051d1af61606f2ec3de",
+        "qualification/metrics-ipc/service-metadata/instrumentation.log": "efd10171d9d6a58d247c4a5230dcf31f697bec7f64e4f721eef8b95e29c4d827",
+        "qualification/metrics-ipc/service-metadata/service-debug-androidTest.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/service-metadata/source.json": "1b51e93bca1ffad17fe318cd37bfa2a5e09650a17522fee2fa353631d56d3cc2"
+      },
+      "environments": [
+        "DOCKER_BUILD",
+        "ANDROID_EMULATOR"
+      ]
+    },
+    "variant-red": {
+      "files": {
+        "qualification/metrics-ipc/variant-red/app-debug-androidTest.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/variant-red/app-debug.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/variant-red/installed-artifacts.json": "bc36f36e3109b37c1573aaaa6c7364955c72307c5b38e85eb87af381516d0061",
+        "qualification/metrics-ipc/variant-red/instrumentation.log": "ab29c2a1f1bab69174bd82036e75a718a4bb10197510306094fff92af1dd6094",
+        "qualification/metrics-ipc/variant-red/source.json": "4f30d42ff3f02de47f1f38a8129103fd8fe2b87cdd77b022e8d53376ebfe0928",
+        "qualification/metrics-ipc/variant-red/target-build.log": "d206a5cac266eea0ab0dba914db0d32232e6dd7d5a8bba820557d1ecd7358bf5",
+        "qualification/metrics-ipc/variant-red/test-build.log": "395633197254f4c9af80a2ecb3a43b6b3a88df3ae5c27adc0711da23efdba219"
+      },
+      "environments": [
+        "DOCKER_BUILD",
+        "ANDROID_EMULATOR"
+      ]
+    },
+    "variant-green-normal": {
+      "files": {
+        "qualification/metrics-ipc/variant-green-normal/app-debug-androidTest.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/variant-green-normal/app-debug.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/variant-green-normal/debug-BuildConfig.java": "8f84e844109cfc0ea4218c42fbec294e3864a405b7544266ddc586a3d2fbffb6",
+        "qualification/metrics-ipc/variant-green-normal/installed-artifacts.json": "1ca9f697e676937578264b8498e4d2b70871f7e26a8fe321b3cfabb2b2dc483c",
+        "qualification/metrics-ipc/variant-green-normal/instrumentation.log": "8900c0718e87b86772b97addf11d689e937c06d5136cb127b8d919e1d320464d",
+        "qualification/metrics-ipc/variant-green-normal/qualificationRelease-BuildConfig.java": "f93c3057b39aca6bc065129187ecdf1fd5652985d41f141b4e4fb2683df48d3f",
+        "qualification/metrics-ipc/variant-green-normal/release-BuildConfig.java": "ccd8d3b4645af6dc972417ccfea7a24da02d14bf67f443a33f694191f2c37f98",
+        "qualification/metrics-ipc/variant-green-normal/source.json": "4ca6ed3255b9b08714f3138ad219a4dfc3a7b802012a873bc4beefbf264aec8a"
+      },
+      "environments": [
+        "DOCKER_BUILD",
+        "ANDROID_EMULATOR"
+      ]
+    },
+    "r8-default-before-variant": {
+      "files": {
+        "qualification/metrics-ipc/r8-default-before-variant/app-qualificationRelease-androidTest.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/r8-default-before-variant/app-qualificationRelease.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/r8-default-before-variant/artifacts.json": "ffd81f910fd4f57f795d32a3b7777174db4d480a733c0c41c9697828d34d74d7",
+        "qualification/metrics-ipc/r8-default-before-variant/build.log": "5828103fcdbfcb8637b3f7c9235d48db0a9730242f2254fd9fc6fe90293d0f08",
+        "qualification/metrics-ipc/r8-default-before-variant/installed-artifacts.json": "42e0ee5892edcdad37b78bb4780e8b68028d81aaeaf64475762e1d38486f76ce",
+        "qualification/metrics-ipc/r8-default-before-variant/instrumentation.log": "37e62aadfd399063c588b748ec6f953afe3a2eb2eb1b906ce9ef20d5f37c753c"
+      },
+      "environments": [
+        "DOCKER_BUILD",
+        "ANDROID_EMULATOR"
+      ]
+    },
+    "r8-optin": {
+      "files": {
+        "qualification/metrics-ipc/r8-optin/adb-root.log": "cbfc5f4f46947a84c46216ae8ee0bfaebce09bbac37337972e033b39056106eb",
+        "qualification/metrics-ipc/r8-optin/app-qualificationRelease-androidTest.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/r8-optin/app-qualificationRelease.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/r8-optin/artifacts.json": "c3e540e4318dfd65c66cbed82e0a6b978a9f4ce63f2fd773fb50851bf9dec875",
+        "qualification/metrics-ipc/r8-optin/build.log": "b28168b46e468d7fcf1f84dc61559b6d4439ad9be83fb1cf3bf41d8185be60ed",
+        "qualification/metrics-ipc/r8-optin/debug-BuildConfig.java": "8f84e844109cfc0ea4218c42fbec294e3864a405b7544266ddc586a3d2fbffb6",
+        "qualification/metrics-ipc/r8-optin/fixture.json": "62852814d1c1df2c92031dffc5313b01f1da7a6d78143d5ba1e472d487110a15",
+        "qualification/metrics-ipc/r8-optin/installed-artifacts.json": "ace2a2f1b948e0bb57184f06b1ff383a6aa88bc3d3abe6fc251aae43da196b42",
+        "qualification/metrics-ipc/r8-optin/instrumentation.log": "92520715d23a5e8b381a6b4b6ecd05a50b78c1a9a0d2a64025ee5367d620632c",
+        "qualification/metrics-ipc/r8-optin/model-push.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "qualification/metrics-ipc/r8-optin/qualificationRelease-BuildConfig.java": "f93c3057b39aca6bc065129187ecdf1fd5652985d41f141b4e4fb2683df48d3f",
+        "qualification/metrics-ipc/r8-optin/release-BuildConfig.java": "ccd8d3b4645af6dc972417ccfea7a24da02d14bf67f443a33f694191f2c37f98"
+      },
+      "environments": [
+        "DOCKER_BUILD",
+        "ANDROID_EMULATOR"
+      ]
+    },
+    "r8-diagnostic": {
+      "files": {
+        "qualification/metrics-ipc/r8-diagnostic/app-qualificationRelease-androidTest.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/r8-diagnostic/app-qualificationRelease.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/r8-diagnostic/build.log": "940b41d0ac149c2389b77d79ac3fc204a5be59b0303ff35a3f53493b9f0ccf1b",
+        "qualification/metrics-ipc/r8-diagnostic/fixture.json": "62852814d1c1df2c92031dffc5313b01f1da7a6d78143d5ba1e472d487110a15",
+        "qualification/metrics-ipc/r8-diagnostic/installed-artifacts.json": "6223a9f8c66fb7c499a1532ae210d89f9a0dcebb82646d49ffb1311b14d35ba5",
+        "qualification/metrics-ipc/r8-diagnostic/instrumentation.log": "77ad71c74337e6e1e8601c7397d0650a11aeb35996dd5b380183e79405f615fc",
+        "qualification/metrics-ipc/r8-diagnostic/source.json": "cb0db14095c52ca9358ac2e5eb7f408a9b8adec832da08481d76ac5c03fdcdc2"
+      },
+      "environments": [
+        "DOCKER_BUILD",
+        "ANDROID_EMULATOR"
+      ]
+    },
+    "r8-app-canonical": {
+      "files": {
+        "qualification/metrics-ipc/r8-app-canonical/app-qualificationRelease-androidTest.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/r8-app-canonical/app-qualificationRelease.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/r8-app-canonical/fixture.json": "aafb60c7273655327836884a45077eb8f848d733d4388beb0e0b917f4e856ad9",
+        "qualification/metrics-ipc/r8-app-canonical/installed-artifacts.json": "6223a9f8c66fb7c499a1532ae210d89f9a0dcebb82646d49ffb1311b14d35ba5",
+        "qualification/metrics-ipc/r8-app-canonical/instrumentation.log": "f8e2fb0e137a53ab4537f2d107d1d86cf564ea89890da20039dd7f0196afd9d7",
+        "qualification/metrics-ipc/r8-app-canonical/source.json": "cb0db14095c52ca9358ac2e5eb7f408a9b8adec832da08481d76ac5c03fdcdc2"
+      },
+      "environments": [
+        "DOCKER_BUILD",
+        "ANDROID_EMULATOR"
+      ]
+    },
+    "config-negative": {
+      "files": {
+        "qualification/metrics-ipc/config-negative/build.log": "1513a78d5565735b28d832e4000196678c5ba0265c8fbcfcd1657b176eeb54e1",
+        "qualification/metrics-ipc/config-negative/result.json": "c53b981c1bc3f5e0a767d78c8964ed43816888a913f538c93f52d18dd0d33ca3"
+      },
+      "environments": [
+        "DOCKER"
+      ]
+    },
+    "final-check": {
+      "files": {
+        "qualification/metrics-ipc/final-check/build.log": "59fa8710ef8a25fdea79158d657ccdb01238ab31bd67cff9986b97c269a3f99b",
+        "qualification/metrics-ipc/final-check/result.json": "a03087a5f24323e1de9ed0aeee9befbd9d72cc45461ab95fd160ffc69a34b75b"
+      },
+      "environments": [
+        "DOCKER"
+      ]
+    },
+    "r8-final-default": {
+      "environments": [
+        "DOCKER_BUILD",
+        "ANDROID_EMULATOR"
+      ],
+      "files": {
+        "qualification/metrics-ipc/r8-final-default/app-qualificationRelease-androidTest.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/r8-final-default/app-qualificationRelease.apk.install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "qualification/metrics-ipc/r8-final-default/build.log": "5600552ee684acff3c9eea7881f47755a0ddaad5116a71e8c63cdc87a29d05fa",
+        "qualification/metrics-ipc/r8-final-default/installed-artifacts.json": "d530afe93d73cda51066948444ed97641e78bbf1a8bcdd0724f79661678df937",
+        "qualification/metrics-ipc/r8-final-default/instrumentation.log": "37e62aadfd399063c588b748ec6f953afe3a2eb2eb1b906ce9ef20d5f37c753c",
+        "qualification/metrics-ipc/r8-final-default/source.json": "0a8008faa52c9e8b4efa7ed502b8fdaefc80eea0e6f39ab11b382ae27ae4baae"
+      }
+    }
+  },
+  "limitations": [
+    "Android runtime evidence was captured on an owned API35 x86_64 4KiB emulator; no physical qualification is claimed.",
+    "The real-model minified probe uses synthetic admission and does not enable production profiles.",
+    "Issue123 tracks observing the existing MAIN owner cycle; the raw Binder probe does not prove the complete Core producer.",
+    "Physical gates, memory-limiter measurements, qualified stress and the complete 24-hour soak remain open."
+  ]
+}

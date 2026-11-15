@@ -28,3 +28,5 @@ jobs:
         run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build -PorionQualificationRelease=true -PorionCortexReadinessProbe=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2
       - name: Build opt-in sanitized exit capture artifacts
         run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build -PorionQualificationRelease=true -PorionExitEvidenceCapture=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2
+      - name: Build opt-in Cortex generation metrics qualification artifacts
+        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build -PorionQualificationRelease=true -PorionCortexGenerationMetrics=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2
