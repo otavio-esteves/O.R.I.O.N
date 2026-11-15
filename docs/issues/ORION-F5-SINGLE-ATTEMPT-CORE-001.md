@@ -67,3 +67,10 @@ are unchanged from base 8fb0b81. No Kotlin/build/Docker/ADB/device execution cla
 profile enrollment changes. Process death discards only ephemeral candidates and
 observations; no automatic resume/replay is introduced. Qualification note:
 [F5-SingleAttemptCore](../qualification/F5-SingleAttemptCore.md).
+
+ROOT VALIDATION: source `e2a76d1` passed canonical Docker app JVM213 (seven new),
+lint, module boundaries, Debug/Release and Android test packaging. Owned API35
+x86_64/4KiB emulator passed96 focused Android controls (nine new), with installed
+app/test hashes verified before and after. [Evidence index](../qualification/f5-single-attempt-core-evidence.json)
+records exact source/artifact/report hashes. No heavy owner admission, physical
+qualification, configured workload or phase closure is claimed.
