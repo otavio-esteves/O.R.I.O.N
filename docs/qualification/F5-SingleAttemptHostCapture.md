@@ -142,5 +142,13 @@ record. An absent/incomplete report is never permission to replay the invocation
 No app schema, migration, persisted domain state, IPC, owner lifetime or recovery
 strategy changes. No hardware/soak/F4/F5 gate or F6 entry is established.
 
-The author performed syntax/whitespace inspection only. Focused pure HOST fixtures
-are supplied for canonical Docker execution by root; no ADB/device workload was run.
+The original author performed syntax/whitespace inspection only. Root then ran
+the canonical Docker HOST harness on 2026-11-15: all 426 cases passed, including
+48 single-attempt capture cases. The parser also accepted the retained actual
+API35 emulator runner transcript as PREPARE_REFUSED / NO_QUALIFIED_PROFILE with
+1/0/0/0 method counters and no partial/release, as offline software evidence only.
+The physical CLI refused an emulator serial before constructing ADB transport;
+its fixed CLI refusal creates no capture report or Android operation.
+Independent source review found no blocker against #130. Required repository CI
+must pass on the exact delivery head before merge. No physical capture, Android
+workload, model/profile approval or gate closure is claimed by these validations.
