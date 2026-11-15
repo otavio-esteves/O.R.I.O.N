@@ -111,7 +111,7 @@ class OrionCortexCycleClientTest {
         fun disconnect() = connection.onServiceDisconnected(ComponentName(packageName, "network.orion.ai.service.OrionCortexService"))
     }
 
-    private class Fixture : AutoCloseable {
+    private class Fixture(observeClient: Boolean = true) : AutoCloseable {
         private val app = InstrumentationRegistry.getInstrumentation().targetContext
         private val id = UUID.randomUUID().toString()
         private val root = File(app.noBackupFilesDir, "orion_cycle_control_$id").apply { check(mkdirs()) }
@@ -148,7 +148,7 @@ class OrionCortexCycleClientTest {
                 val decision = guard.evaluate(snapshot.aiExitHistory)
                 if (scope != null) observer.restart(scope, client.cycleEndpoint(scope), snapshot, decision)
                 decision
-            }, cycleObservations = observer)
+            }, cycleObservations = observer.takeIf { observeClient })
             // Only this mechanical test installs an existing scripted client into the real
             // manual reader. No production constructor/port/plan or reflection path is added.
             owner.javaClass.getDeclaredField("client").apply { isAccessible = true }.set(owner, client)
@@ -191,6 +191,15 @@ class OrionCortexCycleClientTest {
             } finally { release.countDown() }
             val receipt = checkNotNull(read.await())
             assertSame(original, receipt.originalResult)
+            val lifecycleFacts = checkNotNull(receipt.lifecycleFacts)
+            assertEquals(OrionLifecycleTerminalOrigin.FINAL_CHUNK_TRANSITION, lifecycleFacts.firstTerminal?.origin)
+            assertSame(original.status, lifecycleFacts.firstTerminal?.status)
+            val accepted = lifecycleFacts.updates.single()
+            assertEquals(OrionInferenceReceipt.ACCEPTED, accepted.receipt)
+            assertEquals(listOf(0L), checkNotNull(accepted.orderedRelease).map { it.sequence })
+            assertEquals("SECRET_OUTPUT_NOT_RETAINED".toByteArray(Charsets.UTF_8).size,
+                accepted.submitted.validatedTotalContentUtf8Bytes)
+            assertFalse(lifecycleFacts.toString().contains("SECRET"))
             assertTrue(receipt.actualTurnEntered == true); assertTrue(receipt.inferenceAccepted == true)
             assertEquals(OrionCycleStreamSummary(1, 1, 1), receipt.stream); assertEquals(1, lists.size)
             assertEquals(5, receipt.resources.size)
@@ -239,11 +248,14 @@ class OrionCortexCycleClientTest {
             val receipt = checkNotNull(f.owner.readCycleObservation(token))
             assertEquals(OrionCycleThrown.OTHER, receipt.thrown); assertNull(receipt.originalResult)
             assertEquals(OrionCycleStreamSummary(1, 1, 0), receipt.stream)
+            // Accepted original update and downstream delivery are separate facts even when delivery throws.
+            assertEquals(OrionLifecycleTerminalOrigin.FINAL_CHUNK_TRANSITION, receipt.lifecycleFacts?.firstTerminal?.origin)
+            assertEquals(OrionInferenceReceipt.ACCEPTED, receipt.lifecycleFacts?.updates?.single()?.receipt)
             val replay = f.token(); val result = f.run(replay, request) { error("Replay callback") }
             assertEquals(OrionInferenceTerminal.FAILED, result.status.terminal)
             val retained = checkNotNull(f.owner.readCycleObservation(replay))
             assertEquals(OrionCycleState.RETAINED_RESULT, retained.state)
-            assertNull(retained.stream); assertNull(retained.nativeMetrics)
+            assertNull(retained.stream); assertNull(retained.nativeMetrics); assertNull(retained.lifecycleFacts)
             assertEquals(1, f.context.endpoint.infers.get()); assertEquals(1, f.context.endpoint.unloads.get())
         }
     }
@@ -262,6 +274,8 @@ class OrionCortexCycleClientTest {
             val retained = checkNotNull(f.owner.readCycleObservation(joinedToken))
             assertEquals(OrionCycleState.RETAINED_RESULT, retained.state); assertTrue(retained.resources.isEmpty())
             assertNull(retained.stream); assertFalse(retained.actualTurnEntered == true)
+            assertNull(retained.lifecycleFacts)
+            assertNotNull(f.owner.readCycleObservation(actualToken)?.lifecycleFacts)
             assertEquals(1, f.context.endpoint.infers.get())
         }
     }
@@ -306,6 +320,7 @@ class OrionCortexCycleClientTest {
             val receipt = checkNotNull(f.owner.readCycleObservation(token))
             assertEquals(OrionCycleThrown.CANCELLED, receipt.thrown); assertNull(receipt.originalResult)
             assertEquals(OrionCycleStreamSummary(1, 1, 0), receipt.stream)
+            assertEquals(OrionLifecycleTerminalOrigin.FINAL_CHUNK_TRANSITION, receipt.lifecycleFacts?.firstTerminal?.origin)
             assertEquals(1, f.context.endpoint.unloads.get())
         }
     }
@@ -324,6 +339,12 @@ class OrionCortexCycleClientTest {
             val receipt = checkNotNull(f.owner.readCycleObservation(queuedToken))
             assertFalse(receipt.actualTurnEntered == true); assertTrue(receipt.resources.isEmpty())
             assertNull(receipt.stream); assertNull(receipt.unload); assertNull(receipt.nativeMetrics)
+            val facts = checkNotNull(receipt.lifecycleFacts)
+            assertEquals(OrionLifecycleTerminalOrigin.DEADLINE_EXPIRED, facts.firstTerminal?.origin)
+            assertEquals(OrionLifecycleOperation.STATUS, facts.firstTerminal?.operation)
+            assertEquals(MonotonicDeadlineStatus.EXPIRED, facts.firstTerminal?.associatedOriginalDeadlineSample?.classification)
+            assertEquals(f.clock.mark, facts.firstTerminal?.associatedOriginalDeadlineSample?.sampledAt)
+            assertTrue(facts.updates.isEmpty())
             assertEquals(0, f.context.endpoint.unloads.get())
             f.context.endpoint.complete(); first.await()
         }
@@ -341,4 +362,45 @@ class OrionCortexCycleClientTest {
             assertEquals(1, f.context.binds.get())
         }
     }
+
+    @Test fun lifecycleCollectionAddsNoOriginalClockRpcOrCallbackChanges() = runBlocking {
+        suspend fun run(observe: Boolean): Pair<List<Any>, Int> = Fixture(observe).use { f ->
+            val delivered = mutableListOf<List<OrionInferenceChunk>>()
+            val callback: (List<OrionInferenceChunk>) -> Unit = { delivered.add(it) }
+            val result = f.run(f.token(), f.request(), callback)
+            assertEquals(1, delivered.size)
+            val originalList = delivered.single()
+            assertEquals("SECRET_OUTPUT_NOT_RETAINED", originalList.single().textDelta)
+            assertThrows(UnsupportedOperationException::class.java) { (originalList as MutableList<*>).clear() }
+            // No manual observation read: counts end at the original caller return.
+            listOf(result.status, f.context.endpoint.loads.get(), f.context.endpoint.infers.get(),
+                f.context.endpoint.unloads.get(), f.context.endpoint.health.get(), f.context.binds.get(),
+                f.context.endpoint.discoveries.get(), f.context.endpoint.queries.get(),
+                originalList.map { it.sequence }, originalList.map { it.textDelta }) to f.clock.reads.get()
+        }
+        assertEquals(run(false), run(true))
+    }
+
+    @Test fun activeCancellationKeepsOnlyItsActualLifecycleOrigin() = runBlocking {
+        Fixture().use { f ->
+            f.context.endpoint.automatic = false
+            val token = f.token()
+            val running = async(Dispatchers.Default) { f.run(token, f.request()) }
+            withTimeout(3000) { f.context.endpoint.started.await() }
+            f.client.cancel()
+            val original = withTimeout(3000) { running.await() }
+            assertEquals(OrionInferenceTerminal.CANCELLED, original.status.terminal)
+            val receipt = checkNotNull(f.owner.readCycleObservation(token))
+            val facts = checkNotNull(receipt.lifecycleFacts)
+            assertSame(original.status, facts.firstTerminal?.status)
+            assertEquals(OrionLifecycleTerminalOrigin.CANCELLATION, facts.firstTerminal?.origin)
+            assertEquals(OrionLifecycleOperation.CANCEL, facts.firstTerminal?.operation)
+            assertTrue(facts.updates.isEmpty())
+            val reads = f.clock.reads.get()
+            f.context.endpoint.complete() // Late callback cannot alter the retained terminal or restart inference.
+            assertSame(receipt, f.owner.readCycleObservation(token))
+            assertEquals(reads, f.clock.reads.get()); assertEquals(1, f.context.endpoint.infers.get())
+        }
+    }
+
 }

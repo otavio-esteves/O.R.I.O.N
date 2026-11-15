@@ -166,11 +166,15 @@ internal class OrionCortexClient(
         val modelContextLimit = model.contextLimit
         require(modelContextLimit != null && contextTokens <= modelContextLimit)
         val fingerprint = orionInferenceRequestFingerprint(request, contextTokens, threads)
-        val lifecycle = OrionInferenceLifecycle(request, clock)
+        val lifecycleFacts = if (cycle == null || cycleObservations == null || cycle.observer !== cycleObservations) null else try {
+            OrionInferenceLifecycleFactBuffer(32)
+        } catch (_: Throwable) { null }
+        val lifecycle = OrionInferenceLifecycle(request, clock, lifecycleFacts)
         val cycleInvocation = cycleObservations.isolatedCycle(cycle) { if (cycle == null) null else OrionCortexCycleInvocation() }
         val result = requestHistory.runOnce(request.requestId, fingerprint, cancelledStatus = { lifecycle.cancel() }) {
             cycleInvocation?.logicalOwnerEntered = true
-            cycleObservations.isolatedCycle(cycle) { it.logicalOwner(cycle, request.requestId) }
+            // Constructor samples exist even on replay; only this real ledger owner may attach them.
+            cycleObservations.isolatedCycle(cycle) { it.logicalOwner(cycle, request.requestId, lifecycleFacts) }
             val initial = lifecycle.status()
             if (initial.terminal != null) return@runOnce initial
             try {
