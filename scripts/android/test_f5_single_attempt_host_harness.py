@@ -74,7 +74,10 @@ def transcript(primary=None, partial=None, release=None, code=-1, stream=None):
     if release is not None:
         fields[REC.RELEASE] = compact(release)
     rows = ["INSTRUMENTATION_RESULT: " + key + "=" + value for key, value in fields.items()]
-    rows += ["INSTRUMENTATION_RESULT: stream=", stream or (REC.STREAM_FAILURE if code == 0 else REC.STREAM_NOT_ATTEMPTED if primary["phase"] in {"PREPARE_REFUSED", "EXECUTE_NOT_ATTEMPTED"} else REC.STREAM_OK),
+    phase = primary.get("phase")
+    not_attempted = phase == "PREPARE_REFUSED" or phase == "EXECUTE_NOT_ATTEMPTED"
+    default_stream = REC.STREAM_FAILURE if code == 0 else REC.STREAM_NOT_ATTEMPTED if not_attempted else REC.STREAM_OK
+    rows += ["INSTRUMENTATION_RESULT: stream=", stream or default_stream,
              "", "INSTRUMENTATION_CODE: " + str(code)]
     return "\n".join(rows)
 
@@ -439,6 +442,13 @@ class SingleAttemptParserTest(unittest.TestCase):
                        {"secret": "SECRET"}, {"refusal": "UNKNOWN_VALUE"}, {"failureCode": "SECRET"},
                        {"environment": "PHYSICAL_DEVICE" * 500}]:
             value = header(); value.update(change); self.reject(transcript(value))
+        for phase in ([], True, {}, None):
+            value = header(); value["phase"] = phase
+            with self.assertRaisesRegex(REC.Rejected, "^RECEIPT_ENUM_INVALID$"):
+                REC.receipts(transcript(value))
+        missing_phase = header(); del missing_phase["phase"]
+        with self.assertRaisesRegex(REC.Rejected, "^RECEIPT_FIELDS_INVALID$"):
+            REC.receipts(transcript(missing_phase))
 
     def test_literal_restart_shape_matches_projector125_and_preserves_its_booleans(self):
         # Literal producer shape, not field names derived from the parser under test.
