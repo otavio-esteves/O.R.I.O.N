@@ -2,10 +2,11 @@
 
 REVIEW RENEWAL: 2026-11-15, tracked by
 [#135](https://github.com/otavio-esteves/O.R.I.O.N/issues/135). Reviewed main
-2226b77c8293ae0544ba34fcdbca1e43cb932d80 through PR #131 and the separate
-single-attempt R8 candidate cce5ece43bff1954a347ee3926665719e9c67cd5 / PR #134.
-PR #134 remains pending integration and required CI at this review; its presence
-in the reviewed branch is not main integration or gate approval.
+317122bd1777cc4da848913b935365e5f84c57ff, including integrated PRs #134, #136
+and #137. Reviewed lifecycle source:
+89924f8ba0768c2ec4a5a7ee4891ac7a6e65d3b4 / PR #138.
+Lifecycle integration status: CANDIDATE; required remote CI PENDING; issue #132 OPEN.
+A source review does not substitute for required CI or qualification approval.
 The user confirmed on this date that no physical devices are available. Physical
 S21/API37 qualification, measured profile calibration and real-duration stability
 remain blocked; this renewal starts no physical run or soak and closes no gate.
@@ -35,8 +36,9 @@ TESTS REQUIRED: Read the current gate/evidence records and actual command target
 check local documentation links, named test selectors and CLI flags against source;
 verify the diff is documentation-only and clean. No new Gradle, Android runtime,
 hardware or soak result is claimed by this planning package.
-Review main-integrated packages separately from PR #134's candidate composition;
-retain #130 HOST capture and #132 passive lifecycle work as open at this review.
+Review main-integrated packages separately from the lifecycle source/status above.
+Record #130 HOST capture as integrated by PR #137 and closed. Keep local lifecycle
+JVM/Android/R8 evidence separate from remote CI approval and physical qualification.
 Reconcile archived JVM reports against Git-tracked build.gradle.kts module paths;
 verify the legacy exclusions and active totals independently from the immutable
 archive. Check that its SHA-256, original manifest and raw counts are preserved.
@@ -54,6 +56,12 @@ The audit index retains raw 990 cases/124 suites and records the correction to
 The later F full-check total of 952/122 is a separate result adding the 15-case
 lifecycle-facts suite; it does not replace the valid earlier F scoped 264-case
 snapshot or add those 264 again. Corrected inventory is not a new test execution.
+Link both F evidence indices without rewriting their historical source freezes
+or snapshot CI states. Record the reviewed source's 51 scoped emulator cases as local
+software evidence. Lifecycle time is an associated original deadline sample,
+not an exact event timestamp; HOST hash/window binding does not authenticate the
+producer or selected READY model. Complete RuntimeEvidence v1, a reviewed physical
+MemoryLimiter stimulus procedure and the heavy-work/stress executor remain absent.
 
 OUT OF SCOPE: Runtime changes; a replacement memory/history design; new IPC,
 persistence or recovery semantics; installation or mutation of devices; running a

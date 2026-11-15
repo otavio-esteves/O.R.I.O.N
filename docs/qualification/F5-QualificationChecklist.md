@@ -2,11 +2,13 @@
 
 Work package: [ORION-F5-QUAL-PLAN-001](../issues/ORION-F5-QUAL-PLAN-001.md).
 Review renewed on 2026-11-15 against main
-`2226b77c8293ae0544ba34fcdbca1e43cb932d80`, through PR #131. The separate
-single-attempt R8 composition is reviewed at `cce5ece43bff1954a347ee3926665719e9c67cd5`
-in [PR #134](https://github.com/otavio-esteves/O.R.I.O.N/pull/134), still a candidate
-pending integration and required CI at this review. This document is a plan, not
-a new execution or approval record.
+`317122bd1777cc4da848913b935365e5f84c57ff`, including integrated PRs #134, #136
+and #137. Reviewed lifecycle source:
+`89924f8ba0768c2ec4a5a7ee4891ac7a6e65d3b4`,
+[PR #138](https://github.com/otavio-esteves/O.R.I.O.N/pull/138).
+Lifecycle integration status: **CANDIDATE; required remote CI PENDING; issue #132 OPEN**.
+Local execution records are separate from integration status. This document is a
+plan, not a new execution or qualification approval record.
 
 F5 remains **OPEN**. Production inference stays disabled and
 `CORTEX_RUNTIME_READY` is not declared. Physical qualification is already tracked
@@ -57,17 +59,31 @@ The later F full check has **952 cases in 122 active suites**, adding only the
 the valid earlier F scoped 264-case snapshot. Correcting report inventory is not
 a new execution, CI approval or qualification result.
 
+The reviewed lifecycle source's [scoped local evidence](f5-lifecycle-facts-evidence-20261115.json)
+records 264 JVM cases/35 suites, including 15 new lifecycle-fact cases, and 51
+API35/x86_64/4KiB Android cases (10 cycle plus 41 Client/Owner/Queued). Its
+[later full-check complement](f5-lifecycle-full-check-20261115.json) records the
+952/122 active JVM result and a successful single-attempt R8 build/package check,
+with no additional Android runtime execution. The 426-case HOST invocation is
+also scoped separately; another candidate's invocation is not added to it.
+Both indices bind their own frozen source and artifact/log identities. The scoped
+index preserves the initial non-passing bootstrap/readiness attempts without
+inferring a product defect; the later complement references that unchanged
+snapshot. These local CONTAINER and ANDROID_EMULATOR results do not establish
+remote CI approval. Their snapshot CI fields remain PENDING; current lifecycle
+integration status is stated above.
+
 ## Remaining gate matrix
 
 | Workstream / owner boundary | Evidence available | Evidence required before closure |
 | --- | --- | --- |
 | S21/arm64 Cortex lifecycle | Real-model import/load/stream/cancel/timeout/unload and actual AI death/rebind on scoped emulators | Same paths on Galaxy S21 8GB, with the exact source, installed APK pair, model hash, API/build, ABI and page size recorded; failures retained |
 | Resource/model profiles | Fail-closed governor, authenticated fresh telemetry and deterministic restart/backoff tests | Real cold/warm load, prefill/decode, per-process and aggregate memory/headroom, thermal/battery, foreground/background and storage-pressure measurements; reviewed bounds for the exact model/context/threads/tokens |
-| API37 memory limiter | Synthetic exit classification/backoff and watchdog coverage | Actual compatible physical API37 build, actual reported reason/description classification, changed policy before the next heavy request, bounded cooldown/fallback and eventual refusal under repeated resource deaths |
+| API37 memory limiter | Synthetic exit classification/backoff, watchdog coverage and an offline consistency protocol; no real stimulus procedure | A reviewed stimulus/correlation/policy-transition procedure on an actual compatible physical API37 build, actual reported reason/description classification, changed policy before the next heavy request, bounded cooldown/fallback and eventual refusal under repeated resource deaths |
 | Native/API compatibility | Docker ELF/ABI/APK/AAB/16KiB checks, scoped API35/API37 x86_64 R8 probes, an API35 x86_64 real-model minified optional-metrics probe with synthetic admission, historical earlier physical loads | Complete the declared physical/native/API cells using current artifact identities; production admission and physical arm64/16KiB qualification cannot be inferred from the scoped emulator probes or debug loading |
 | Core stability (#64) | Functional F4 exit and short, artifact-bound workloads | Complete approved 24-hour Core workload, including tasks/reminders/heartbeat, reboot/unlock, actual process death, continuous backlog/UNKNOWN observations, retention and growth review |
 | Post-Cortex stability (#89) | 33-cycle regression; no 24-hour approval | At least 24 real elapsed hours plus memory stress, with actual heavy work and crash/ANR/resource-exit/recovery/queue/reminder/thermal/battery/storage review |
-| Complete MAIN/HOST runtime and heavy-work producers | Integrated bounded partial sources; single-attempt R8 composition remains a separate candidate | Complete the source-bound RuntimeEvidence v1 producer and reviewed heavy-work/memory-stress executor, preserving identity, timing, missing phases, loss, interruption, owned cleanup and existing admission boundaries |
+| Complete MAIN/HOST runtime and heavy-work producers | Integrated bounded partial sources, R8 entry and one-shot HOST capture; lifecycle facts have the review status above | Complete the source-bound RuntimeEvidence v1 producer and reviewed heavy-work/memory-stress executor, preserving identity, timing, missing phases, loss, interruption, owned cleanup and existing admission boundaries |
 | Final F5 decision | Software checklist and explicit remaining gates | Review every §11.11 criterion, #64 prerequisite and #89 evidence against the frozen candidate; only then decide CORTEX_RUNTIME_READY and F6 entry |
 
 The user reconfirmed on 2026-11-15 that no physical devices are available,
@@ -203,7 +219,10 @@ Counts below retain their individual execution scopes; they are not additive.
 | PR #126 / issue #123 — owner cycle | Integrated bounded observation of one existing MAIN owner invocation and a separate manual metrics read; receipts remain incomplete and NOT_QUALIFIED. [Technical note](F5-OwnerCycleObservation.md), [evidence](f5-owner-cycle-evidence.json). |
 | PR #129 / issue #125 — partial projection | Integrated pure bounded ORION_MAIN_CYCLE_PARTIAL projection; no persistence/export sink or RuntimeEvidence v1 completion. [Technical note](F5-CyclePartialProjection.md), [evidence](f5-cycle-projection-evidence.json). |
 | PR #131 / issue #127 — single-attempt core | Integrated one-use trusted-candidate preparation/consumption API. Default plans remain empty and template null; no operational workload is supplied. [Technical note](F5-SingleAttemptCore.md), [evidence](f5-single-attempt-core-evidence.json). |
-| PR #134 / issue #128 — single-attempt R8 composition | Candidate qualification-only composition on the existing MAIN owner. The current expected negative observation is PREPARE_REFUSED / NO_QUALIFIED_PROFILE, with Driver method counters 1/0/0/0 and no partial. Integration and required CI remain pending at this review. [Technical note](F5-SingleAttemptR8.md). |
+| PR #134 / issue #128 — single-attempt R8 composition | Integrated qualification-only composition on the existing MAIN owner. Current empty configuration yields PREPARE_REFUSED / NO_QUALIFIED_PROFILE, with Driver method counters 1/0/0/0 and no partial. [Technical note](F5-SingleAttemptR8.md). |
+| PR #136 / issue #133 — replay and Unicode audit | Integrated reminder replay proof independent of prunable domain events, strict inference Unicode/fingerprint validation and scoped audit evidence. [Index with active-module correction](audit-20261115-evidence.json); its archived raw reports remain unchanged. |
+| PR #137 / issue #130 — one-shot HOST capture | Integrated; issue #130 is closed. One already-installed runner invocation, source/local/installed APK hash checks and HOST/device windows, with UNKNOWN on interruption or timeout and no retry. This is partial capture integrity, not source authentication or proof of selected READY model identity. [Procedure](F5-SingleAttemptHostCapture.md). |
+| PR #138 / issue #132 — passive lifecycle facts | Optional bounded facts reuse original deadline samples and validated byte totals; first terminal, buffered admission, ordered release and downstream delivery remain distinct. No extra clock/RPC/content-byte validation, exact event timestamp or complete RuntimeEvidence v1 is supplied. Integration status is stated above. [Work package](../issues/ORION-F5-MAIN-LIFECYCLE-FACTS-001.md), [scoped local evidence](f5-lifecycle-facts-evidence-20261115.json), [full-check complement](f5-lifecycle-full-check-20261115.json). |
 
 Readiness observes only the real owner's early predicates. It never issues a
 request, evaluates resource/restart policy or grants admission, even if trusted
@@ -212,7 +231,7 @@ not assigned a guessed cause. Actual emulator execution is software evidence.
 Exit capture is CAPTURE_ONLY/NON_DEFINITIVE, not a limiter stimulus or proof of
 incident causation; unavailable AI and truncated history remain explicit.
 
-Baseline, readiness, exit capture and the candidate single-attempt program are
+Baseline, readiness, exit capture and the single-attempt program are
 mutually exclusive opt-in modes of the separate network.orion.qualification APK.
 The independent `orionCortexGenerationMetrics` property is not enabled by the
 single-attempt mode. Normal Debug/Release keep single-attempt disabled even when
@@ -233,11 +252,15 @@ or reviewed decisions before a complete heavy qualification run:
   metadata, seven-phase fresh memory coverage or independently bound installed
   source/model/device provenance. The partial projector deliberately omits
   identifiers and timestamps; successful projection cannot repair those gaps.
-- [Issue #132](https://github.com/otavio-esteves/O.R.I.O.N/issues/132), still open,
-  tracks passive original lifecycle/deadline samples and accepted-chunk facts.
-  [Issue #130](https://github.com/otavio-esteves/O.R.I.O.N/issues/130), still open,
-  tracks one source-bound HOST capture of the #128 program. Each is another
-  partial source, not a complete runtime producer or heavy-soak executor.
+- The lifecycle source under review retains the MonotonicInstant already returned
+  by an original deadline check and its existing classification. It is an
+  associated original deadline sample, not exact callback arrival, validation,
+  transition, native or export time. Existing validated byte totals describe
+  buffered/ordered updates, not downstream delivery or tokens. Loss and missing
+  samples remain explicit; formatter125 is unchanged. The integrated #130 HOST
+  tool captures one minimized program result. Neither source authenticates its
+  producer or selected READY model, completes seven-phase memory/lifecycle
+  evidence, or provides an automatic execution loop.
 - Native token counters and API-wall measurements are implemented under accepted
   ADR-0003. Their integration does not provide synchronized backend phase compute,
   throughput, authenticated TTFT, calibrated budgets or approved production
@@ -249,8 +272,11 @@ or reviewed decisions before a complete heavy qualification run:
   physical memory/native coverage and budget calibration. Production qualified
   plans remain empty and the attempt template null, with admission blocked.
 - A reviewed physical MemoryLimiter stimulus/correlation/policy-transition
-  procedure and an executable post-Cortex workload/stress/observation program.
-  The offline heavy-soak validator and durable journal are not workload executors.
+  procedure. Passive facts and offline consistency checks do not stimulate or
+  prove the physical limiter's behavior.
+- An executable post-Cortex workload/stress/observation program for the actual
+  24-hour window. The offline heavy-soak validator, durable journal and one-shot
+  HOST capture are not heavy-work executors.
 
 The accepted optional IPC, retained cycle, partial projection and one-use driver
 do not approve an integrated MAIN/HOST heavy receipt or performance/profile
