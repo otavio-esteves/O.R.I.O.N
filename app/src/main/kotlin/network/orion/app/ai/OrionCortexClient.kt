@@ -56,11 +56,52 @@ internal class OrionCortexClient(
     private var connection: ServiceConnection? = null
     private var deathRecipient: IBinder.DeathRecipient? = null
     private var pinnedAiPid: Int? = null
-    private val unloadObservationScope = if (unloadObservations == null) null else
-        runCatching { newCortexUnloadObservationScope() }.getOrNull()
+    private val unloadObservationScope: Long?
+    private val unloadObservationOwner: OrionCortexUnloadObservationOwner?
+    private val unloadDiagnosticDispatcher: OrionCortexUnloadDiagnosticDispatcher?
     private var unloadConnectionEpoch: Long? = 0
+    private var unloadEndpointVersion: Long? = 0
+    private var unloadExecutionEpoch: Long? = 0
 
-    init { require(Application.getProcessName() == app.packageName) { "Cortex client belongs to MAIN." } }
+    init {
+        require(Application.getProcessName() == app.packageName) { "Cortex client belongs to MAIN." }
+        unloadObservationScope = if (unloadObservations == null) null else
+            runCatching { newCortexUnloadObservationScope() }.getOrNull()
+        unloadObservationOwner = if (unloadObservations == null) null else try {
+            OrionCortexUnloadObservationOwner()
+        } catch (_: Throwable) { unloadRecordingFailed(); null }
+        // Starting the sole diagnostic thread is opt-in and occurs only after MAIN validation,
+        // outside functional execution. A startup failure cannot prevent normal inference.
+        unloadDiagnosticDispatcher = if (unloadObservationOwner == null) null else try {
+            OrionCortexUnloadDiagnosticDispatcher
+        } catch (_: Throwable) { unloadObservationOwner.disable(); unloadRecordingFailed(); null }
+    }
+
+    private fun nextUnloadVersion(previous: Long?): Long? = previous?.let { if (it < Long.MAX_VALUE) it + 1 else null }
+
+    /** Diagnostic accounting itself must never prevent the original operation or cleanup. */
+    private fun unloadRecordingFailed() {
+        try { unloadObservations?.recordingFailed() } catch (_: Throwable) { }
+    }
+
+    /** Called only under monitor; catch covers diagnostic versions/allocations, never normative work. */
+    private fun updateUnloadOwner(endpointChanged: Boolean = false, executionStarted: Boolean = false,
+        connectionStarted: Boolean = false) {
+        val owner = unloadObservationOwner ?: return
+        if (owner.isDisabled()) return
+        try {
+            if (connectionStarted) unloadConnectionEpoch = nextUnloadVersion(unloadConnectionEpoch)
+            if (endpointChanged) unloadEndpointVersion = nextUnloadVersion(unloadEndpointVersion)
+            if (executionStarted) unloadExecutionEpoch = nextUnloadVersion(unloadExecutionEpoch)
+            owner.update(OrionCortexUnloadOwnerStamp(
+                unloadEndpointVersion, unloadConnectionEpoch, unloadExecutionEpoch, closed))
+        } catch (_: Throwable) {
+            // A primitive volatile write: no allocation/clock/RPC/guard lock while MAIN owns monitor.
+            // Old pending tickets must never validate against the last successfully published stamp.
+            owner.disable()
+            unloadRecordingFailed()
+        }
+    }
 
     fun newRequestId(): String { check(!closed); return requestHistory.newRequestId() }
 
@@ -97,7 +138,7 @@ internal class OrionCortexClient(
             if (initial.terminal != null) return@runOnce initial
             try {
                 session.withTurn(request.priority, request.deadline) {
-                    synchronized(monitor) { check(!closed); active = lifecycle }
+                    synchronized(monitor) { check(!closed); updateUnloadOwner(executionStarted = true); active = lifecycle }
                     lifecycle.markLoading()
                     try {
                         // Memory-exit cooldown/exhaustion blocks even a lightweight process rebind.
@@ -271,7 +312,7 @@ internal class OrionCortexClient(
         var selectedPid: Int? = null
         var initiallyClosed = false
         var observedDeadline: network.orion.core.time.MonotonicDeadline? = null
-        var checkedAt: network.orion.core.time.MonotonicInstant? = null
+        var selectedStamp: OrionCortexUnloadOwnerStamp? = null
         var pollAt: network.orion.core.time.MonotonicInstant? = null
         var outcome = OrionCortexUnloadOutcome.OBSERVATION_UNAVAILABLE
         var failurePhase = OrionCortexUnloadOutcome.UNLOAD_REQUEST_FAILED
@@ -286,13 +327,8 @@ internal class OrionCortexClient(
                 runCatching { unloadObservations?.recordingFailed() }
             }
         }
-        fun observationClock() = try { clock.monotonicNow() } catch (_: Throwable) { null }
         fun endpointCurrent() = remote === selectedService && connection === selectedOwner && unloadConnectionEpoch == selectedEpoch &&
             (selectedPid == null || pinnedAiPid == selectedPid)
-        fun classify(at: network.orion.core.time.MonotonicInstant?, current: Boolean, endedClosed: Boolean, valid: Boolean, unloaded: Boolean) =
-            classifyCortexUnloadObservation(observedDeadline, at, pollAt,
-                identityKnown = unloadObservationScope != null && selectedEpoch != null && selectedOwner != null,
-                endpointCurrent = current, clientClosed = initiallyClosed || endedClosed, validEnvelope = valid, unloaded = unloaded)
         fun pollingClock(): network.orion.core.time.MonotonicInstant {
             failurePhase = OrionCortexUnloadOutcome.TIME_REFERENCE_INVALID
             return clock.monotonicNow().also { if (observing) pollAt = it }
@@ -302,6 +338,7 @@ internal class OrionCortexClient(
                 selectedService = remote; selectedOwner = connection; initiallyClosed = closed
                 selectedEpoch = if (connection == null) null else unloadConnectionEpoch?.takeIf { it > 0 }
                 selectedPid = pinnedAiPid
+                selectedStamp = unloadObservationOwner?.snapshot()
                 selectedService
             }
             if (service == null) {
@@ -345,26 +382,16 @@ internal class OrionCortexClient(
             throw failure
         } finally {
             loaded = null
-            // No user callbacks. Publication cannot enter the cleanup catch or affect terminality.
+            // Facts-only submission: no extra Clock/provider call or await in cleanup/turn.
             observe {
-                // Extra diagnostic clock/classification run only AFTER the original timeout/catch.
-                // A slow/throwing clock must not turn a successful cleanup into lostConnection().
-                when {
-                    outcome == OrionCortexUnloadOutcome.NO_ENDPOINT -> checkedAt = observationClock()
-                    failureOutcome != null -> { checkedAt = observationClock(); outcome = checkNotNull(failureOutcome) }
-                    unloadedReply -> {
-                        checkedAt = observationClock()
-                        outcome = synchronized(monitor) {
-                            classify(checkedAt, endpointCurrent(), closed, validUnloadedReply, true)
-                        }
-                    }
-                    else -> {
-                        checkedAt = pollAt
-                        outcome = classify(checkedAt, currentAtLoopExit, closedAtLoopExit, true, false)
-                    }
-                }
-                unloadObservations?.offer(OrionCortexUnloadObservation(unloadObservationScope, selectedEpoch, selectedPid,
-                    observedDeadline?.start, checkedAt, outcome))
+                val buffer = checkNotNull(unloadObservations)
+                val owner = checkNotNull(unloadObservationOwner)
+                val dispatcher = checkNotNull(unloadDiagnosticDispatcher)
+                val stamp = checkNotNull(selectedStamp)
+                dispatcher.submit(OrionCortexUnloadDiagnosticTicket(clock, owner,
+                    OrionCortexUnloadFacts(unloadObservationScope, stamp, selectedPid, observedDeadline, pollAt,
+                        outcome == OrionCortexUnloadOutcome.NO_ENDPOINT, failureOutcome, unloadedReply,
+                        validUnloadedReply, currentAtLoopExit, initiallyClosed || closedAtLoopExit), buffer))
             }
         }
     }
@@ -385,7 +412,7 @@ internal class OrionCortexClient(
             synchronized(monitor) {
                 if (closed || remote !== selected.first || connection !== selected.second) return null
                 require(pinnedAiPid == null || pinnedAiPid == pid)
-                pinnedAiPid = pid
+                if (pinnedAiPid != pid) { pinnedAiPid = pid; updateUnloadOwner(endpointChanged = true) }
             }
             Bundle(receipt)
         } catch (_: Exception) {
@@ -432,6 +459,7 @@ internal class OrionCortexClient(
                             check(!closed && connection === this)
                             binder.linkToDeath(death, 0)
                             deathRecipient = death; remote = service
+                            updateUnloadOwner(endpointChanged = true)
                         }
                         availabilityChanged(true)
                         pending.resume(service)
@@ -457,9 +485,7 @@ internal class OrionCortexClient(
                 check(!closed)
                 if (!pending.isActive) false else {
                     connection = owner
-                    if (unloadObservations != null) unloadConnectionEpoch = unloadConnectionEpoch?.let {
-                        if (it < Long.MAX_VALUE) it + 1 else null
-                    }
+                    updateUnloadOwner(endpointChanged = true, connectionStarted = true)
                     app.bindService(intent, owner, Context.BIND_AUTO_CREATE)
                 }
             }
@@ -473,6 +499,7 @@ internal class OrionCortexClient(
     private fun lostConnection(expected: ServiceConnection? = null) {
         synchronized(monitor) {
             if (expected != null && connection !== expected) return
+            updateUnloadOwner(endpointChanged = true)
             loaded = null; active?.processDied()
         }
         releaseConnection(expected)
@@ -483,6 +510,9 @@ internal class OrionCortexClient(
         synchronized(monitor) {
             if (expected != null && connection !== expected) return
             val service = remote
+            val changed = remote != null || connection != null || pinnedAiPid != null
+            // Invalidate before any potentially remote unlink/unbind work can delay release.
+            if (changed) updateUnloadOwner(endpointChanged = true)
             deathRecipient?.let { death -> runCatching { service?.asBinder()?.unlinkToDeath(death, 0) } }
             remote = null; loaded = null; deathRecipient = null; pinnedAiPid = null
             connection?.let { runCatching { app.unbindService(it) } }; connection = null
@@ -490,7 +520,7 @@ internal class OrionCortexClient(
     }
 
     override fun close() {
-        synchronized(monitor) { closed = true; cancel() }
+        synchronized(monitor) { closed = true; updateUnloadOwner(); cancel() }
         session.close()
         releaseConnection()
     }

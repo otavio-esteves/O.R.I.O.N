@@ -9,7 +9,7 @@ import network.orion.core.time.MonotonicDeadlineStatus
 import network.orion.core.time.MonotonicInstant
 
 internal enum class OrionCortexUnloadOutcome {
-    UNLOADED_OBSERVED, NO_ENDPOINT, IDENTITY_UNAVAILABLE, ENDPOINT_CHANGED, CLIENT_CLOSED,
+    UNLOADED_OBSERVED, NO_ENDPOINT, IDENTITY_UNAVAILABLE, ENDPOINT_CHANGED, CLIENT_CLOSED, EXECUTION_CHANGED,
     DEADLINE_EXPIRED, TIME_REFERENCE_INVALID, STATUS_INVALID, TRANSPORT_FAILURE,
     UNLOAD_REQUEST_FAILED, POLL_TIMEOUT, CANCELLED, OBSERVATION_UNAVAILABLE,
 }
@@ -18,7 +18,7 @@ internal enum class OrionCortexUnloadOutcome {
 internal data class OrionCortexUnloadObservation(
     val clientScope: Long?, val connectionEpoch: Long?, val knownAiPid: Int?,
     val deadlineStartedAt: MonotonicInstant?, val checkedAt: MonotonicInstant?,
-    val outcome: OrionCortexUnloadOutcome,
+    val outcome: OrionCortexUnloadOutcome, val executionEpoch: Long? = null,
 )
 
 /** Pure classification; the caller supplies only observations of the existing cleanup path. */
@@ -48,6 +48,7 @@ internal data class OrionCortexUnloadObservationBatch(
     val observations: List<OrionCortexUnloadObservation>,
     val droppedAtLeast: Long, val contendedAtLeast: Long, val recordingFailuresAtLeast: Long,
     val lossAccountingComplete: Boolean, val drainContended: Boolean,
+    val samplingBusyDroppedAtLeast: Long,
 )
 
 /** Final owned collector. No callback, IO, waiting, policy or unbounded result retention. */
@@ -58,6 +59,7 @@ internal class OrionCortexUnloadObservationBuffer(private val capacity: Int = 16
     private val dropped = AtomicLong()
     private val contended = AtomicLong()
     private val failures = AtomicLong()
+    private val samplingBusy = AtomicLong()
     private val complete = AtomicBoolean(true)
 
     private fun count(counter: AtomicLong) {
@@ -76,6 +78,8 @@ internal class OrionCortexUnloadObservationBuffer(private val capacity: Int = 16
         } finally { lock.unlock() }
     }
 
+    fun samplingBusyDropped() { count(dropped); count(samplingBusy) }
+
     fun recordingFailed() { count(failures); complete.set(false) }
 
     /** A busy drain consumes nothing; its empty result is explicitly marked contended. */
@@ -89,5 +93,5 @@ internal class OrionCortexUnloadObservationBuffer(private val capacity: Int = 16
     }
 
     private fun batch(values: List<OrionCortexUnloadObservation>, busy: Boolean) = OrionCortexUnloadObservationBatch(
-        values, dropped.get(), contended.get(), failures.get(), complete.get(), busy)
+        values, dropped.get(), contended.get(), failures.get(), complete.get(), busy, samplingBusy.get())
 }
