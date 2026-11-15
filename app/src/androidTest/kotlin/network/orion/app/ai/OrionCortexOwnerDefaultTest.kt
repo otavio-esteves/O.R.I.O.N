@@ -15,6 +15,7 @@ import kotlinx.coroutines.runBlocking
 import network.orion.ai.api.*
 import network.orion.core.resources.*
 import network.orion.core.time.AndroidOrionClock
+import network.orion.app.resources.OrionCortexResourceFactBuffer
 import network.orion.data.database.OrionDatabase
 import network.orion.data.repository.models.OrionModelImportCoordinator
 import org.junit.Assert.*
@@ -24,6 +25,32 @@ import org.junit.runner.RunWith
 /** No usable model or resource calibration: proves gates precede storage and binding. */
 @RunWith(AndroidJUnit4::class)
 class OrionCortexOwnerDefaultTest {
+    @Test fun earlyRefusalsAndReadOnlyQueryNeverFabricateResourceEvaluations() = fixture { context, db, importer, bindings ->
+        val clock = AndroidOrionClock(context.contentResolver)
+        val facts = OrionCortexResourceFactBuffer()
+        val plan = OrionInferenceResourcePlan(InferenceModelProfile(HASH, 100), "FACT_GATE_FIXTURE", 1, 128, 8, 0,
+            10_000, 20_000, 100, 20, 2) // Mechanical negative control, never passed to a workload.
+        val owners = listOf(
+            OrionCortexRuntimeOwner(context, importer, db, clock, coreReady = { error("Plans must stay lazy") }, resourceFacts = facts)
+                to OrionCortexUnavailable.NO_QUALIFIED_PROFILE,
+            OrionCortexRuntimeOwner(context, importer, db, clock, listOf(plan), coreReady = { error("Timing must stay lazy") }, resourceFacts = facts)
+                to OrionCortexUnavailable.RESOURCE_CONFIGURATION_UNAVAILABLE,
+            OrionCortexRuntimeOwner(context, importer, db, clock, listOf(plan), OrionCortexResourceTiming(1000, 1000),
+                coreReady = { false }, resourceFacts = facts) to OrionCortexUnavailable.CORE_NOT_READY,
+        )
+        try { runBlocking {
+            for ((owner, reason) in owners) {
+                assertEquals(reason, owner.preResourceReadiness().unavailable)
+                assertEquals(OrionCortexRunResult.Unavailable(reason),
+                    owner.run(HASH, request(clock), 128, 1) { error("Unexpected output") })
+            }
+        } } finally { owners.forEach { it.first.close() } }
+        val batch = facts.drain()
+        assertTrue(batch.facts.isEmpty())
+        assertEquals(0L, batch.droppedAtLeast); assertEquals(0L, batch.recordingFailuresAtLeast)
+        assertEquals(0, bindings.get())
+    }
+
     @Test fun defaultProfileAndClosedOwnerNeverAccessDatabaseInventoryOrBinder() = fixture { context, db, importer, bindings ->
         val clock = AndroidOrionClock(context.contentResolver)
         val owner = OrionCortexRuntimeOwner(context, importer, db, clock)
