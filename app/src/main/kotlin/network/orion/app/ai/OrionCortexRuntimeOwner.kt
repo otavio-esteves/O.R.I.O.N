@@ -16,6 +16,9 @@ import network.orion.ai.api.OrionInferenceRequest
 import network.orion.ai.api.OrionInferenceStatus
 import network.orion.app.resources.OrionAndroidResourceObserver
 import network.orion.app.resources.OrionCortexMemoryTelemetry
+import network.orion.app.resources.OrionCortexResourceFactBuffer
+import network.orion.app.resources.recordGovernorFact
+import network.orion.app.resources.recordRestartFact
 import network.orion.core.resources.OrionCortexRestartGuard
 import network.orion.core.resources.OrionInferenceResourcePlan
 import network.orion.core.resources.OrionMinimumResourceGovernor
@@ -67,6 +70,7 @@ internal class OrionCortexRuntimeOwner(
     qualifiedPlans: List<OrionInferenceResourcePlan> = emptyList(),
     private val timing: OrionCortexResourceTiming? = null,
     private val coreReady: () -> Boolean = { false },
+    private val resourceFacts: OrionCortexResourceFactBuffer? = null,
 ) : AutoCloseable {
     private val app = context.applicationContext
     private val plans = qualifiedPlans.toList()
@@ -170,13 +174,20 @@ internal class OrionCortexRuntimeOwner(
                 val ownedClient = synchronized(monitor) {
                     if (closed) null else client ?: OrionCortexClient(app, clock,
                         resources = { id, context, workerThreads, tokens -> synchronized(resourceMonitor) {
-                            observation = if (coreReady() && discoverInventory() != null) byId[id]?.let { trusted ->
-                                observer?.observe(trusted, workerThreads, context, tokens)?.observation
+                            val snapshot = if (coreReady() && discoverInventory() != null) byId[id]?.let { trusted ->
+                                observer?.observe(trusted, workerThreads, context, tokens)
                             } else null
-                            checkNotNull(governor).evaluate()
+                            observation = snapshot?.observation
+                            val decision = checkNotNull(governor).evaluate()
+                            resourceFacts.recordGovernorFact(snapshot, decision)
                         } },
-                        restart = { checkNotNull(restart).evaluate(if (coreReady() && discoverInventory() != null)
-                            observer?.observe(null, 1, 32, 1)?.aiExitHistory else null) },
+                        restart = {
+                            val guard = checkNotNull(restart)
+                            val snapshot = if (coreReady() && discoverInventory() != null)
+                                observer?.observe(null, 1, 32, 1) else null
+                            val decision = guard.evaluate(snapshot?.aiExitHistory)
+                            resourceFacts.recordRestartFact(snapshot, decision)
+                        },
                         requestHistory = requestHistory).also { client = it }
                 } ?: return@withContext unavailable(OrionCortexUnavailable.CLOSED)
                 OrionCortexRunResult.Completed(ownedClient.runInference(checkNotNull(selected), it, request,
