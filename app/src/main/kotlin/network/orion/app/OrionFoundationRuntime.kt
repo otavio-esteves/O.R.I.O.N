@@ -200,6 +200,10 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     private var retentionMaintenance: OrionCoreRetentionMaintenance? = null
     private val cortexOwnershipLock = Any()
     private var cortexOwner: network.orion.app.ai.OrionCortexRuntimeOwner? = null
+    private val cortexCycleObserver: network.orion.app.ai.OrionCortexCycleObserver? =
+        if (!BuildConfig.ORION_CORTEX_SINGLE_ATTEMPT) null else try {
+            network.orion.app.ai.OrionCortexCycleObserver(1)
+        } catch (_: Throwable) { null }
 
     /** Optional on-demand port. No approved production profile ships with this candidate. */
     internal suspend fun cortexRuntime(): network.orion.app.ai.OrionCortexRuntimeOwner? = withContext(Dispatchers.IO) {
@@ -209,7 +213,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             cortexOwner ?: network.orion.app.ai.OrionCortexRuntimeOwner(app,
                 network.orion.data.repository.models.OrionModelImportCoordinator.open(app, db, clock,
                     maximumModelBytes = 4L * 1024 * 1024 * 1024, reserveBytes = 512L * 1024 * 1024),
-                db, clock, coreReady = { taskStartupBarrier.isOpen() && health.value.core.readiness.isStartupBarrierOpen })
+                db, clock, coreReady = { taskStartupBarrier.isOpen() && health.value.core.readiness.isStartupBarrierOpen },
+                cycleObservations = cortexCycleObserver)
                 .also { cortexOwner = it }
         }
     }
