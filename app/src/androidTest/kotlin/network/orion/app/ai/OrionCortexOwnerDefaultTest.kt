@@ -25,6 +25,48 @@ import org.junit.runner.RunWith
 /** No usable model or resource calibration: proves gates precede storage and binding. */
 @RunWith(AndroidJUnit4::class)
 class OrionCortexOwnerDefaultTest {
+    @Test fun observedNoProfileNeverRetainsCallerIdentityContentOrCreatesAnAttempt() = fixture { context, db, importer, bindings ->
+        val clock = AndroidOrionClock(context.contentResolver)
+        val observations = OrionCortexCycleObserver()
+        val owner = OrionCortexRuntimeOwner(context, importer, db, clock,
+            coreReady = { error("Early plans gate must remain lazy") }, cycleObservations = observations)
+        val token = checkNotNull(owner.beginCycleObservation())
+        val input = OrionInferenceRequest("SECRET_CALLER_ID", 1, "SECRET_MODEL", "SECRET_PROMPT", "SECRET_CONTEXT", 8, 0.0,
+            OrionInferencePriority.INTERACTIVE, clock.monotonicNow().deadlineAfter(10_000), "SECRET_LABEL")
+        try { runBlocking {
+            val result = owner.runObserved(token, "SECRET_MODEL", input, 128, 1) { error("Unexpected output") }
+            val receipt = checkNotNull(owner.readCycleObservation(token))
+            assertSame(result, receipt.originalResult)
+            assertEquals(OrionCortexRunResult.Unavailable(OrionCortexUnavailable.NO_QUALIFIED_PROFILE), result)
+            assertEquals(OrionCycleState.NO_ATTEMPT, receipt.state)
+            assertNull(receipt.trustedModelSha256); assertNull(receipt.nativeMetrics); assertNull(receipt.stream)
+            assertNull(receipt.unload); assertTrue(receipt.resources.isEmpty())
+            assertFalse(receipt.toString().contains("SECRET")); assertFalse(token.toString().contains("SECRET"))
+            assertFalse(receipt.actualTurnEntered == true); assertFalse(receipt.inferenceAccepted == true)
+            assertTrue(owner.releaseCycleObservation(token))
+        } } finally { owner.close() }
+        assertEquals(0, bindings.get())
+    }
+
+    @Test fun observedOriginalCoreErrorKeepsIdentityAndDoesNotBecomeFailedCycle() = fixture { context, db, importer, bindings ->
+        val clock = AndroidOrionClock(context.contentResolver)
+        val observations = OrionCortexCycleObserver()
+        val original = AssertionError("Original Core predicate failure")
+        val plan = OrionInferenceResourcePlan(InferenceModelProfile(HASH, 100), "OBSERVATION_GATE_FIXTURE", 1, 128, 8, 0,
+            10_000, 20_000, 100, 20, 2)
+        val owner = OrionCortexRuntimeOwner(context, importer, db, clock, listOf(plan), OrionCortexResourceTiming(1000, 1000),
+            coreReady = { throw original }, cycleObservations = observations)
+        val token = checkNotNull(owner.beginCycleObservation())
+        try { runBlocking {
+            val seen = try { owner.runObserved(token, HASH, request(clock), 128, 1) { }; null } catch (failure: Throwable) { failure }
+            assertSame(original, seen)
+            val receipt = checkNotNull(owner.readCycleObservation(token))
+            assertEquals(OrionCycleThrown.OTHER, receipt.thrown); assertNull(receipt.originalResult)
+            assertNull(receipt.nativeMetrics); assertNull(receipt.stream); assertTrue(receipt.resources.isEmpty())
+        } } finally { owner.close() }
+        assertEquals(0, bindings.get())
+    }
+
     @Test fun earlyRefusalsAndReadOnlyQueryNeverFabricateResourceEvaluations() = fixture { context, db, importer, bindings ->
         val clock = AndroidOrionClock(context.contentResolver)
         val facts = OrionCortexResourceFactBuffer()

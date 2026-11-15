@@ -71,6 +71,7 @@ internal class OrionCortexRuntimeOwner(
     private val timing: OrionCortexResourceTiming? = null,
     private val coreReady: () -> Boolean = { false },
     private val resourceFacts: OrionCortexResourceFactBuffer? = null,
+    private val cycleObservations: OrionCortexCycleObserver? = null,
 ) : AutoCloseable {
     private val app = context.applicationContext
     private val plans = qualifiedPlans.toList()
@@ -87,6 +88,7 @@ internal class OrionCortexRuntimeOwner(
     private var unregisteredAfter: String? = null
     private var unregisteredClean = false
     private val requestHistory = OrionInferenceRequestLedger()
+    private val cycleScope = cycleObservations.isolatedCycle { Any() }
     fun newRequestId(): String { check(!closed); return requestHistory.newRequestId() }
     private val governor = timing?.takeIf { plans.isNotEmpty() }?.let {
         OrionMinimumResourceGovernor(clock, { observation }, plans, it.maximumObservationAgeMillis, it.memoryExitCooldownMillis)
@@ -112,9 +114,38 @@ internal class OrionCortexRuntimeOwner(
     internal fun preResourceReadiness(): OrionCortexPreResourceReadiness = evaluateCortexPreResourceReadiness(
         { closed }, { plans.isNotEmpty() }, { timing != null }, coreReady)
 
+    fun beginCycleObservation(): OrionCortexCycleToken? = cycleScope?.let { scope ->
+        cycleObservations.isolatedCycle { it.begin(scope) }
+    }
+
+    /** The token is technical observation ownership, never request/profile/admission authority. */
+    suspend fun runObserved(token: OrionCortexCycleToken?, modelId: String, request: OrionInferenceRequest,
+        contextTokens: Int, threads: Int, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionCortexRunResult {
+        val capture = cycleScope?.let { scope -> cycleObservations.isolatedCycle(token) { it.claim(scope, token) } }
+        return try {
+            val result = runOwned(modelId, request, contextTokens, threads, onChunks, capture)
+            cycleObservations.isolatedCycle(capture) { it.returned(capture, result) }
+            result
+        } catch (failure: Throwable) {
+            cycleObservations.isolatedCycle(capture) { it.threw(capture, when (failure) {
+                is CancellationException -> OrionCycleThrown.CANCELLED
+                is InterruptedException -> OrionCycleThrown.INTERRUPTED
+                else -> OrionCycleThrown.OTHER
+            }) }
+            throw failure
+        }
+    }
+
     suspend fun run(modelId: String, request: OrionInferenceRequest, contextTokens: Int, threads: Int,
-        onChunks: (List<OrionInferenceChunk>) -> Unit): OrionCortexRunResult = withContext(Dispatchers.IO) {
-        fun unavailable(reason: OrionCortexUnavailable) = OrionCortexRunResult.Unavailable(reason)
+        onChunks: (List<OrionInferenceChunk>) -> Unit): OrionCortexRunResult =
+        runOwned(modelId, request, contextTokens, threads, onChunks, null)
+
+    private suspend fun runOwned(modelId: String, request: OrionInferenceRequest, contextTokens: Int, threads: Int,
+        onChunks: (List<OrionInferenceChunk>) -> Unit, cycle: OrionCortexCycleToken?): OrionCortexRunResult = withContext(Dispatchers.IO) {
+        fun unavailable(reason: OrionCortexUnavailable): OrionCortexRunResult.Unavailable {
+            cycleObservations.isolatedCycle(cycle) { it.noAttempt(cycle) }
+            return OrionCortexRunResult.Unavailable(reason)
+        }
         preResourceReadiness().unavailable?.let { return@withContext unavailable(it) }
         val plan = byId[modelId]
         if (request.modelId != modelId || plan == null) return@withContext unavailable(OrionCortexUnavailable.PROFILE_MISMATCH)
@@ -132,6 +163,7 @@ internal class OrionCortexRuntimeOwner(
         }
         try {
             requestHistory.existingResult(request.requestId, fingerprint)?.let {
+                cycleObservations.isolatedCycle(cycle) { observer -> observer.retained(cycle) }
                 return@withContext OrionCortexRunResult.Completed(it)
             }
             checkRequest()
@@ -165,6 +197,7 @@ internal class OrionCortexRuntimeOwner(
             val selected = database.models().find(modelId)
             if (!profileMatchesReadyModel(plan, selected, contextTokens, threads, request.maxTokens))
                 return@withContext unavailable(OrionCortexUnavailable.PROFILE_MISMATCH)
+            cycleObservations.isolatedCycle(cycle) { it.trustedModel(cycle, plan.model.modelId) }
             val descriptor = importer.openReadOnly(modelId, ::checkRequest)
                 ?: return@withContext unavailable(OrionCortexUnavailable.MODEL_UNAVAILABLE)
             descriptor.use {
@@ -174,32 +207,75 @@ internal class OrionCortexRuntimeOwner(
                 val ownedClient = synchronized(monitor) {
                     if (closed) null else client ?: OrionCortexClient(app, clock,
                         resources = { id, context, workerThreads, tokens -> synchronized(resourceMonitor) {
+                            val cycleClient = client
+                            val cycleCallback = cycleObservations.isolatedCycle {
+                                cycleClient?.cycleCallbackScope(OrionCycleCallback.RESOURCE)?.takeIf { it.token.owner === cycleScope }
+                            }
                             val snapshot = if (coreReady() && discoverInventory() != null) byId[id]?.let { trusted ->
                                 observer?.observe(trusted, workerThreads, context, tokens)
                             } else null
                             observation = snapshot?.observation
                             val decision = checkNotNull(governor).evaluate()
+                            if (cycleCallback != null) cycleObservations.isolatedCycle(cycleCallback.token) {
+                                it.governor(cycleCallback, cycleClient?.cycleEndpoint(cycleCallback), snapshot, decision)
+                            }
                             resourceFacts.recordGovernorFact(snapshot, decision)
                         } },
                         restart = {
+                            val cycleClient = client
+                            val cycleCallback = cycleObservations.isolatedCycle {
+                                cycleClient?.cycleCallbackScope(OrionCycleCallback.RESTART)?.takeIf { it.token.owner === cycleScope }
+                            }
                             val guard = checkNotNull(restart)
                             val snapshot = if (coreReady() && discoverInventory() != null)
                                 observer?.observe(null, 1, 32, 1) else null
                             val decision = guard.evaluate(snapshot?.aiExitHistory)
+                            if (cycleCallback != null) cycleObservations.isolatedCycle(cycleCallback.token) {
+                                it.restart(cycleCallback, cycleClient?.cycleEndpoint(cycleCallback), snapshot, decision)
+                            }
                             resourceFacts.recordRestartFact(snapshot, decision)
                         },
-                        requestHistory = requestHistory).also { client = it }
+                        requestHistory = requestHistory, cycleObservations = cycleObservations).also { client = it }
                 } ?: return@withContext unavailable(OrionCortexUnavailable.CLOSED)
                 OrionCortexRunResult.Completed(ownedClient.runInference(checkNotNull(selected), it, request,
-                    contextTokens, threads, onChunks))
+                    contextTokens, threads, cycle, onChunks))
             }
         } catch (stopped: PreparationStopped) {
-            OrionCortexRunResult.Completed(requestHistory.runOnce(request.requestId, fingerprint) { stopped.status })
+            val invocation = cycleObservations.isolatedCycle(cycle) { if (cycle == null) null else OrionCortexCycleInvocation() }
+            val status = requestHistory.runOnce(request.requestId, fingerprint) {
+                invocation?.logicalOwnerEntered = true
+                cycleObservations.isolatedCycle(cycle) { it.logicalOwner(cycle, request.requestId) }
+                stopped.status
+            }
+            cycleObservations.isolatedCycle(cycle) { it.clientResult(cycle, invocation?.logicalOwnerEntered?.not()) }
+            OrionCortexRunResult.Completed(status)
         } catch (cancelled: CancellationException) { throw cancelled }
           catch (_: network.orion.ai.api.OrionRetiredRequestException) { unavailable(OrionCortexUnavailable.REQUEST_RETIRED) }
           catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); throw interrupted }
           catch (_: Exception) { unavailable(OrionCortexUnavailable.MODEL_UNAVAILABLE) }
     }
+
+    /** Explicit manual phase after run. No port creation, bind, clock or resource refresh. */
+    fun readCycleObservation(token: OrionCortexCycleToken): OrionCortexCycleReceipt? {
+        val scope = cycleScope ?: return null
+        val read = cycleObservations.isolatedCycle(token) { it.prepareRead(scope, token) } ?: return null
+        if (!read.mayQuery) return cycleObservations.isolatedCycle(token) { it.completeRead(read, null, false) }
+        val selected = synchronized(monitor) { if (closed) null else client }
+        val currentBefore = cycleObservations.isolatedCycle(token) {
+            selected?.cycleEndpointCurrent(token, read.clientScope, read.endpoint)
+        } == true
+        val metrics = if (!currentBefore || read.logicalId == null) null else try {
+            selected?.generationMetrics(read.logicalId)
+        } catch (_: Throwable) { null }
+        val currentAfter = synchronized(monitor) { !closed && client === selected } && cycleObservations.isolatedCycle(token) {
+            selected?.cycleEndpointCurrent(token, read.clientScope, read.endpoint)
+        } == true
+        return cycleObservations.isolatedCycle(token) { it.completeRead(read, metrics, currentBefore && currentAfter) }
+    }
+
+    fun releaseCycleObservation(token: OrionCortexCycleToken): Boolean = cycleScope?.let { scope ->
+        cycleObservations.isolatedCycle(token) { it.release(scope, token) }
+    } == true
 
     private class PreparationStopped(val status: OrionInferenceStatus) : RuntimeException("Cortex preparation stopped.")
 
