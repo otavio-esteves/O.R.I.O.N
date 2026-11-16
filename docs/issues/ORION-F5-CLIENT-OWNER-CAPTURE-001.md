@@ -114,3 +114,31 @@ by this author. Root will capture an actual emulator RED before applying the
 separate minimal invalidation-order fix and GREEN. The suite now supplies ten new
 Client methods plus the Owner negative (eleven Android methods), still synthetic/
 mechanical only; no outcome or physical/gate claim is made by this test commit.
+
+
+LOST-CONNECTION REVIEW REGRESSION (source only, 2026-11-16): Root reported a real
+emulator RED for the preceding turn-entry assertion, then applied d70fa12 moving
+only the old frame invalidation before the original turn publication. Root's
+subsequent Docker40702 invocation passed in 5m3: 316 JVM cases in 39 suites
+(75 ai/api + 241 app), zero failures/errors/skips, with APK assembly, lint and
+module checks. Those are root-reported scoped results, not author execution.
+
+A further independent review found the same publication window in lostConnection:
+after its original expected-connection guard succeeds, updateUnloadOwner can block
+before invalidating the previous frame. This test-only commit adds one Android
+regression using the existing fixture buffer and private unload-owner lock. A
+single owned worker calls Binding.disconnect and must be BLOCKED with both
+lostConnection and updateUnloadOwner on its stack; the cached prior receipt must
+already be unavailable/invalidated. finally releases the guard, awaits the
+original disconnect/unbind cleanup and closes the owned dispatcher/fixture even
+on failure. No production hook, callback, PID validation or Client change is added.
+The existing known-PID mismatch guard already rejects replacement PID and is
+unchanged. The separate close write-order correction remains root-owned and
+will be checked by source order without adding a production test seam.
+
+This new regression has NOT been compiled/executed by the author. Client retains
+the turn-entry fix and still has the reviewed lostConnection/close ordering for
+root's whole-class RED2 run; only afterward will root apply the minimal production
+fix and run GREEN. The new Client suite has eleven methods plus the Owner negative
+(twelve Android methods total). No new runtime PASS, physical result or gate
+approval is claimed by this test-only commit. Author ran git diff --check only.

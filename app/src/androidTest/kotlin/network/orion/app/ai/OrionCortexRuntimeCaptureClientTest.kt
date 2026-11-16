@@ -411,4 +411,54 @@ class OrionCortexRuntimeCaptureClientTest {
         }
     }
 
+
+    @Test fun lostConnectionInvalidatesCachedCaptureBeforeBlockingOriginalUnloadOwnerPublication() = runBlocking {
+        Fixture(observeUnload = true).use { f ->
+            val request = f.request(); val capture = f.capture(request)
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, f.run(capture, request).terminal)
+            val cached = checkNotNull(f.owner.readRuntimeCapture(capture))
+            assertFalse(cached.invalidated); assertTrue(cached.identityKnown)
+            assertSame(cached, f.owner.readRuntimeCapture(capture))
+            val unloadOwner = checkNotNull(f.client.javaClass.getDeclaredField("unloadObservationOwner")
+                .apply { isAccessible = true }.get(f.client))
+            val guard = unloadOwner.javaClass.getDeclaredField("lock").apply { isAccessible = true }.get(unloadOwner)
+            val thread = java.util.concurrent.atomic.AtomicReference<Thread?>()
+            val dispatcher = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
+                Thread(task, "orion_capture_lost_fence_probe").also { thread.set(it) }
+            }.asCoroutineDispatcher()
+            var disconnected: Deferred<Unit>? = null
+            try {
+                synchronized(guard) {
+                    disconnected = async(dispatcher) { f.context.disconnect() }
+                    // Bounded test scheduling only: this does not measure a runtime event or physical latency.
+                    val stopAt = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
+                    var blockedInOriginalLostConnection = false
+                    while (System.nanoTime() < stopAt) {
+                        val worker = thread.get()
+                        if (worker != null && worker.state == Thread.State.BLOCKED) {
+                            val stack = worker.stackTrace
+                            if (stack.any { it.className == OrionCortexClient::class.java.name && it.methodName == "lostConnection" } &&
+                                stack.any { it.className == OrionCortexClient::class.java.name && it.methodName == "updateUnloadOwner" }) {
+                                blockedInOriginalLostConnection = true
+                                break
+                            }
+                        }
+                        Thread.sleep(2)
+                    }
+                    assertTrue("Disconnect must block in lostConnection's existing unload-owner update", blockedInOriginalLostConnection)
+                    val previous = f.owner.readRuntimeCapture(capture)
+                    assertTrue("A lost connection must invalidate its cached capture before original publication can block",
+                        previous == null || previous.invalidated)
+                }
+            } finally {
+                // Release the existing guard on RED as well, then finish original disconnect/unbind cleanup.
+                try {
+                    withContext(NonCancellable) {
+                        disconnected?.let { pending -> withTimeout(5000) { pending.await() } }
+                    }
+                } finally { dispatcher.close() }
+            }
+        }
+    }
+
 }
