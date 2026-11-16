@@ -1,8 +1,9 @@
 # ORION-F5-RUNTIME-EVENT-SOURCE-001 — unwired capture foundation
 
 Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/144.
-Base: 3ff3d5a0bd1fafb5a6699181f0eba829f211e42b. Contract: RuntimeCaptureContract141,
-reviewed revision efb26f1. This unit supplies no genuine event hooks or producer.
+Integration base: main `bd537187e93255d03e6c47972a4314239753df5b`.
+Contract: [RuntimeCaptureContract141](../qualification/F5-RuntimeCaptureContract.md),
+integrated by PR #145; split-byte source #140 is integrated by PR #143. This unit supplies no genuine event hooks or producer.
 
 OBJECTIVE: Add a final observation-only native elapsed clock and a pure bounded
 MAIN event recorder for later real source hooks. Binding uses only original
@@ -82,7 +83,15 @@ validation implying runtime, non-disappearing wrapper/validation observations an
 true flags for LOADED/INFERENCING or post-successful-load rows, including unload.
 Positive seven-phase fixtures now carry consistent synthetic native flags.
 
-VALIDATION: Ten core/time and thirteen app JVM tests supplied, all synthetic. Author
-executed git diff --check only; no compiler/Gradle/Docker/ADB/CI/push. Compilation,
-centralized tests and independent review remain pending. Original files and suites
-are untouched. No architecture/ADR waiver or physical/performance/gate claim.
+VALIDATION: Canonical Docker Android validation passed in 17m 10s:
+`:core:time:testDebugUnitTest :ai:api:testDebugUnitTest :app:testDebugUnitTest
+:app:compileDebugAndroidTestKotlin verifyModuleBoundaries testModuleBoundaries
+:core:time:lintDebug :ai:api:lintDebug :app:lintDebug --max-workers=2`.
+The selected reports contain 309 JVM tests in 40 suites (22 core/time, 58 ai/api,
+229 app), with zero failures/errors/skips; 23 tests are new (10 clock, 13 recorder).
+Android tests were compiled only, not executed. Independent review found and
+resolved clock invalidation and native memory-flag consistency bugs; the final
+source was re-reviewed. Rebase preserved all five tested source/test hashes.
+Required exact-head PR CI remains pending. No physical, native-model, API37,
+24-hour or source-authentication evidence is supplied. Original production files
+and suites remain untouched. No architecture/ADR waiver is claimed.
