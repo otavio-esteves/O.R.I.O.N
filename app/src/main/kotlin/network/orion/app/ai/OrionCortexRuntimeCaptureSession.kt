@@ -10,7 +10,7 @@ import network.orion.core.time.*
 
 internal enum class OrionRuntimeSessionGap { SOURCE_UNAVAILABLE, IDENTITY_UNAVAILABLE, IDENTITY_CHANGED,
     ACTIVATION_UNAVAILABLE, REUSED, RETAINED_OR_JOINED, CLOCK_UNAVAILABLE, CAPACITY, CONTENDED,
-    RECORDING_FAILURE, LOAD_TERMINAL_UNAVAILABLE, UNLOAD_UNCONFIRMED }
+    RECORDING_FAILURE, LOAD_TERMINAL_UNAVAILABLE, UNLOAD_UNCONFIRMED, SAMPLING_UNAVAILABLE }
 
 /** Published only while the original Client path already owns its monitor. No callbacks or queries. */
 internal class OrionRuntimeConnectionStamp(val service: Any, val connection: Any, val binder: Any, val epoch: Long)
@@ -28,7 +28,8 @@ internal class OrionRuntimeSessionReceipt(val originalOwnerEntered: Boolean?, va
     val loadDispatchObserved: Boolean, val loadReplyAccepted: Boolean?,
     val pendingUnassociatedMarkers: List<OrionRuntimeOperationMarker>, val facts: OrionRuntimeCaptureSnapshot?,
     val lifecycle: OrionRuntimeLifecycleImportSummary?, val gaps: Set<OrionRuntimeSessionGap>,
-    val droppedAtLeast: Long, val recordingFailuresAtLeast: Long, val lossAccountingComplete: Boolean) {
+    val droppedAtLeast: Long, val recordingFailuresAtLeast: Long, val lossAccountingComplete: Boolean,
+    val memorySampling: OrionRuntimeMemorySamplingReport? = null) {
     val runtimeEvidenceV1Complete = false
     val sourceAuthenticated = false
     val physicalVerified = false
@@ -42,7 +43,9 @@ internal class OrionRuntimeSessionReceipt(val originalOwnerEntered: Boolean?, va
 
 /** One call's final optional source. It never retains request/model entities, content, paths or raw errors. */
 internal class OrionCortexRuntimeCaptureSession private constructor(private val owner: Any, private val mainPid: Int,
-    private val observationClock: OrionObservationEventClock?, val lifecycleSource: OrionInferenceLifecycleEventSource) {
+    private val observationClock: OrionObservationEventClock?, val lifecycleSource: OrionInferenceLifecycleEventSource,
+    private val samplingConfiguration: OrionRuntimeSamplingConfiguration? = null,
+    private val memoryProbe: OrionRuntimeMainMemoryProbe? = null, private val workerPrepared: Boolean = false) {
     private val lock = ReentrantLock()
     private val token = Any()
     private val claimed = AtomicBoolean()
@@ -76,6 +79,7 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
     private var loadTerminal = false
     private var unloadIssued = false
     private var unloadConfirmed = false
+    @Volatile private var memorySampler: OrionRuntimeMemorySampler? = null
 
     private fun count(counter: AtomicLong) {
         val before = counter.get()
@@ -108,7 +112,8 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
             }
             model = OrionRuntimeModelReference(sha256, size)
             logicalId = OrionRuntimeTechnicalId(id)
-            preparation = deadline.start; deadlineElapsed = deadline.expiresElapsedRealtimeMillis; this.maximumAge = maximumAge
+            preparation = deadline.start; deadlineElapsed = deadline.expiresElapsedRealtimeMillis
+            this.maximumAge = samplingConfiguration?.maximumSampleAgeMillis ?: maximumAge
         }
     }
 
@@ -129,6 +134,10 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
             if (!activated) { gap(OrionRuntimeSessionGap.ACTIVATION_UNAVAILABLE, true); return@access }
             start = observationClock?.observe()
             if (start == null) gap(OrionRuntimeSessionGap.CLOCK_UNAVAILABLE, true)
+            val config = samplingConfiguration; val probe = memoryProbe; val observed = start; val clock = observationClock
+            if (config != null && probe != null && observed != null && clock != null && workerPrepared)
+                memorySampler = OrionRuntimeMemorySampler(this, config, clock, probe, observed, mainPid)
+            else if (config != null) gap(OrionRuntimeSessionGap.SAMPLING_UNAVAILABLE)
         }
     }
 
@@ -159,18 +168,58 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
                     gap(OrionRuntimeSessionGap.IDENTITY_CHANGED, true)
                 return@access
             }
-            val selected = OrionRuntimeCaptureFence(owner, token, current.client, window.connection.connection, window.connection.binder,
-                window.connection.epoch, current.turn, mainPid, pid, boot.bootCount, checkNotNull(model), checkNotNull(logicalId))
-            if (!selected.known()) { gap(OrionRuntimeSessionGap.IDENTITY_UNAVAILABLE, true); return@access }
-            val destination = OrionRuntimeEventRecorder(selected, deadlineElapsed, maximumAge, lifecycleSource)
-            if (!destination.sessionStarted(selected, OrionRuntimeEventTime.fromObservation(checkNotNull(start)))) {
-                gap(OrionRuntimeSessionGap.SOURCE_UNAVAILABLE, true); return@access
-            }
-            fence = selected; pinnedConnection = window.connection; recorder = destination
-            for (marker in pending) if (!destination.trueOperation(selected, marker)) gap(OrionRuntimeSessionGap.SOURCE_UNAVAILABLE, true)
-            pending.clear()
+            associate(current, window.connection, pid, boot.bootCount)
         }
     }
+
+    private fun associate(current: OrionRuntimeCaptureFrame, connection: OrionRuntimeConnectionStamp, pid: Int, boot: Int) {
+        val selected = OrionRuntimeCaptureFence(owner, token, current.client, connection.connection, connection.binder,
+            connection.epoch, current.turn, mainPid, pid, boot, checkNotNull(model), checkNotNull(logicalId))
+        if (!selected.known()) { gap(OrionRuntimeSessionGap.IDENTITY_UNAVAILABLE, true); return }
+        val destination = OrionRuntimeEventRecorder(selected, deadlineElapsed, maximumAge, lifecycleSource)
+        if (!destination.sessionStarted(selected, OrionRuntimeEventTime.fromObservation(checkNotNull(start)))) {
+            gap(OrionRuntimeSessionGap.SOURCE_UNAVAILABLE, true); return
+        }
+        fence = selected; pinnedConnection = connection; recorder = destination
+        for (marker in pending) if (!destination.trueOperation(selected, marker)) gap(OrionRuntimeSessionGap.SOURCE_UNAVAILABLE, true)
+        pending.clear()
+    }
+
+    fun endpointPublished(selected: OrionRuntimeCaptureFrame) {
+        if (frame === selected && selected.valid && selected.connection != null) memorySampler?.hintCurrent()
+    }
+    fun terminalHint() { memorySampler?.terminalHint() }
+    fun loadPreparing(selected: OrionRuntimeCaptureFrame, service: Any, originalStart: MonotonicInstant) {
+        if (memorySampler == null) return
+        access {
+            if (current(selected, service) && originalStart.bootSessionId == preparation?.bootSessionId)
+                memorySampler?.boundary(OrionRuntimeMarkerKind.LOAD_LOCAL_REQUEST_START,
+                    OrionRuntimeEventTime(originalStart.bootSessionId?.bootCount, originalStart.elapsedRealtimeMillis))
+        }
+    }
+    fun samplingModelMatches(id: String): Boolean = model?.sha256 == id
+    fun samplingIdentityRejected() { gap(OrionRuntimeSessionGap.IDENTITY_CHANGED, true) }
+    fun samplingEndpoint(): OrionRuntimeDiagnosticEndpoint? {
+        val selected = frame ?: return null
+        if (invalidated.get() || readClaimed.get() || !selected.valid) return null
+        return (selected.client as? OrionCortexClient)?.runtimeDiagnosticEndpoint(selected)
+    }
+    /** PID comes only from the same private endpoint's real diagnostic health receipt. Never writes Core pin. */
+    fun samplingIdentity(endpoint: OrionRuntimeDiagnosticEndpoint, pid: Int, boot: Int): Boolean = access {
+        val selected = frame
+        if (invalidated.get() || readClaimed.get()) return@access false
+        if (selected !== endpoint.frame || selected == null || !endpoint.current() || pid <= 0 || pid == mainPid ||
+            boot != preparation?.bootSessionId?.bootCount || selected.pid != null && selected.pid != pid) {
+            samplingIdentityRejected(); return@access false
+        }
+        val known = fence
+        if (known == null) associate(selected, endpoint.stamp, pid, boot)
+        else if (known.aiPid != pid || known.bootCount != boot || pinnedConnection !== endpoint.stamp) {
+            gap(OrionRuntimeSessionGap.IDENTITY_CHANGED, true); return@access false
+        }
+        if (!endpoint.current()) { samplingIdentityRejected(); return@access false }
+        fence != null && !invalidated.get()
+    } ?: false
 
     private fun current(selected: OrionRuntimeCaptureFrame, service: Any): Boolean {
         if (invalidated.get() || readClaimed.get()) return false
@@ -190,6 +239,8 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
         }
         else if (pending.size < OrionRuntimeEventRecorder.MAX_MARKERS) pending.add(marker)
         else gap(OrionRuntimeSessionGap.CAPACITY, true)
+        memorySampler?.boundary(marker.kind, marker.at,
+            marker.status?.terminal == OrionInferenceTerminal.SUCCEEDED && marker.loadedModelConfirmed == true)
     }
 
     /** Original local load-start value is retained only after the original call/reply proves issuance. */
@@ -225,6 +276,7 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
         }
     }
     fun inferenceDispatch(selected: OrionRuntimeCaptureFrame, service: Any, id: String, inputBytes: Long) {
+        memorySampler?.terminalHint(false) // A terminal already won before this dispatch cannot create an inference window.
         access {
             if (!current(selected, service)) return@access
             val at = moment() ?: return@access
@@ -233,6 +285,7 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
         }
     }
     fun unloadDispatch(selected: OrionRuntimeCaptureFrame, service: Any) {
+        terminalHint()
         access {
             if (!current(selected, service)) return@access
             val at = moment() ?: return@access
@@ -273,6 +326,7 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
         }
         if (!readClaimed.compareAndSet(false, true)) return null
         return access {
+            var finalizedSampling: OrionRuntimeMemorySamplingReport? = null
             if (!ownerEntered) gap(if (retainedKnown) OrionRuntimeSessionGap.RETAINED_OR_JOINED else OrionRuntimeSessionGap.SOURCE_UNAVAILABLE)
             var summary: OrionRuntimeLifecycleImportSummary? = null
             val destination = recorder; val association = fence; val originalStart = start
@@ -283,11 +337,16 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
             val end = if (activated && association != null && stillCurrent && !invalidated.get()) moment() else null
             if (destination != null && association != null && ownerEntered && originalStart != null) {
                 summary = destination.importOwnedLifecycle(association, lifecycleSource, originalStart, end)
+                // Manual close never waits for a diagnostic RPC. Late results are fenced and omitted.
+                memorySampler?.terminalHint(false)
+                val sampling = memorySampler?.seal(end, destination, association)
+                finalizedSampling = sampling
                 if (end != null) destination.sessionCompleted(association, OrionRuntimeEventTime.fromObservation(end))
                 if (summary?.invalidated == true || summary?.snapshotContended == true) gap(OrionRuntimeSessionGap.SOURCE_UNAVAILABLE, true)
                 if (invalidated.get() || observationClock?.snapshot()?.invalidated != false)
                     destination.markCaptureUnavailable()
             }
+            if (finalizedSampling == null) finalizedSampling = memorySampler?.seal(end, destination, association)
             if (destination == null && ownerEntered) summary = lifecycleSource.snapshot()?.let { OrionRuntimeLifecycleImportSummary(it) }
             if (loadDispatched && !loadTerminal) gap(OrionRuntimeSessionGap.LOAD_TERMINAL_UNAVAILABLE)
             if (unloadIssued && !unloadConfirmed) gap(OrionRuntimeSessionGap.UNLOAD_UNCONFIRMED)
@@ -307,14 +366,16 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
                 if (turnObserved) true else if (invalidated.get()) null else false,
                 association != null, invalidated.get(), runFinished && !didThrow,
                 didThrow, loadDispatched, if (loadIssued) true else null, Collections.unmodifiableList(ArrayList(pending)), facts, summary,
-                Collections.unmodifiableSet(reasons), dropped.get(), failures.get(), accounting.get()).also { cached = it }
+                Collections.unmodifiableSet(reasons), dropped.get(), failures.get(), accounting.get(), finalizedSampling).also { cached = it }
         }
     }
 
     companion object {
-        fun create(owner: Any, mainPid: Int): OrionCortexRuntimeCaptureSession? = try {
+        fun create(owner: Any, mainPid: Int, sampling: OrionRuntimeSamplingConfiguration? = null,
+            probe: OrionRuntimeMainMemoryProbe? = null): OrionCortexRuntimeCaptureSession? = try {
             val clock = OrionObservationEventClock.createInactive()
-            OrionCortexRuntimeCaptureSession(owner, mainPid, clock, OrionInferenceLifecycleEventSource(clock))
+            val worker = sampling != null && probe != null && OrionRuntimeMemorySamplingWorker.prepare()
+            OrionCortexRuntimeCaptureSession(owner, mainPid, clock, OrionInferenceLifecycleEventSource(clock), sampling, probe, worker)
         } catch (_: Throwable) { null }
     }
 }

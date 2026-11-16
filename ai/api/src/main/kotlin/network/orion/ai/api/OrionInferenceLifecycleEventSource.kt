@@ -21,6 +21,10 @@ class OrionLifecycleTerminalEvent internal constructor(val at: OrionObservationM
 /** Detached numeric metadata only. Never a chunk, content, original update or downstream List. */
 class OrionLifecycleOrderedEvent internal constructor(val at: OrionObservationMoment, val metadata: OrionLifecycleChunkMetadata)
 
+/** Constant-size read only. No clock, status transition, chunk copy or source mutation. */
+class OrionLifecycleTerminalView internal constructor(val active: Boolean, val invalidated: Boolean,
+    val transitionClaimed: Boolean, val firstTerminal: OrionLifecycleTerminalEvent?, val unavailable: Boolean)
+
 class OrionLifecycleEventSnapshot internal constructor(val claimed: Boolean, val activationAttempted: Boolean,
     val active: Boolean, val invalidated: Boolean, val firstTerminal: OrionLifecycleTerminalEvent?,
     val firstTerminalRecordUnavailable: Boolean, val orderedEvents: List<OrionLifecycleOrderedEvent>,
@@ -209,7 +213,15 @@ class OrionInferenceLifecycleEventSource(private val observationClock: OrionObse
         }
     }
 
-    /** Separate manual immutable copy; no hook calls this or drains the source. */
+    /** Constant-size passive view. No clock/status/list copy, mutation or source drain. */
+    fun terminalView(): OrionLifecycleTerminalView? {
+        if (!lock.tryLock()) return null
+        return try { OrionLifecycleTerminalView(active, invalidated.get(), terminalClaimed.get(), terminal, terminalUnavailable.get()) }
+        catch (_: Throwable) { null }
+        finally { lock.unlock() }
+    }
+
+    /** Full bounded copy belongs only to manual finalization, never sampler polling. */
     fun snapshot(): OrionLifecycleEventSnapshot? = isolated {
         val acquired = lock.tryLock()
         if (!acquired) lost(OrionLifecycleEventGap.CONTENDED)

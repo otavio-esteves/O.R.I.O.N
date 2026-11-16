@@ -46,6 +46,10 @@ class OrionCortexRuntimeCaptureClientTest {
     private class Endpoint(private val mainPackage: String) : IOrionCortex.Stub() {
         private val ids = OrionIssuedRequestHistory<Unit> { true }
         val trace = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val diagnosticTrace = java.util.Collections.synchronizedList(mutableListOf<String>())
+        private fun readTrace(name: String) {
+            if (Thread.currentThread().name == "orion_runtime_memory_sampler") diagnosticTrace.add(name) else trace.add(name)
+        }
         var loadState = "SUCCEEDED"
         var loadedStatus = "LOADED"
         var strictUnload = true
@@ -72,7 +76,7 @@ class OrionCortexRuntimeCaptureClientTest {
             trace.add("requestStatus"); putString("requestId", requestId); putString("state", loadState)
         }
         override fun getStatus() = OrionCortexWire.reply(if (modelId == null) "UNLOADED" else if (loadingReplies-- > 0) "LOADING" else loadedStatus).apply {
-            trace.add("status")
+            readTrace("status")
             modelId?.let { putString("modelId", it) }
             if (modelId == null && !strictUnload) putString("requestId", "allowed-extra-unload-field")
         }
@@ -89,7 +93,7 @@ class OrionCortexRuntimeCaptureClientTest {
         override fun cancelInference(requestId: String) { trace.add("cancel") }
         override fun unloadModel() { trace.add("unload"); unloads.incrementAndGet(); modelId = null }
         override fun healthCheck() = OrionCortexWire.reply("OK").apply {
-            trace.add("health"); health.incrementAndGet(); putString("processName", "$mainPackage:ai"); putInt("pid", pid)
+            readTrace("health"); health.incrementAndGet(); putString("processName", "$mainPackage:ai"); putInt("pid", pid)
             putInt("bootCount", 1); putLong("sampledElapsed", 1000); putLong("totalPssBytes", 100)
             putBoolean("nativeIncluded", true); putBoolean("nativeRuntimeLoaded", false); putBoolean("nativeValidationCompleted", false)
         }
@@ -163,8 +167,8 @@ class OrionCortexRuntimeCaptureClientTest {
         }
         fun request(deadline: MonotonicDeadline = clock.mark.deadlineAfter(30_000)) = OrionInferenceRequest(
             client.newRequestId(), 1, hash, "SECRET_PROMPT_NOT_RETAINED", "", 8, 0.0, OrionInferencePriority.INTERACTIVE, deadline, "fixture")
-        fun capture(request: OrionInferenceRequest, unavailableClock: Boolean = false): OrionCortexRuntimeCaptureSession {
-            val capture = checkNotNull(owner.beginRuntimeCapture())
+        fun capture(request: OrionInferenceRequest, unavailableClock: Boolean = false, sampling: Boolean = false): OrionCortexRuntimeCaptureSession {
+            val capture = checkNotNull(owner.beginRuntimeCapture(if (sampling) OrionRuntimeSamplingConfiguration(10) else null))
             val method = OrionObservationEventClock.Companion::class.java.declaredMethods.single {
                 it.name.startsWith("finiteForTests") && it.parameterTypes.size == 1 && it.parameterTypes[0] == List::class.java
             }.apply { isAccessible = true }
@@ -217,6 +221,29 @@ class OrionCortexRuntimeCaptureClientTest {
         assertEquals(run(false), run(true))
     }
 
+    @Test fun optionalSamplerPreservesFunctionalReadsRpcOrderCallbackListAndTerminal() = runBlocking {
+        suspend fun run(sampling: Boolean): Pair<List<String>, Int> = Fixture().use { f ->
+            val request = f.request(); val capture = f.capture(request, sampling = sampling)
+            var delivered: List<OrionInferenceChunk>? = null
+            val original = f.run(capture, request) { delivered = it }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, original.terminal)
+            assertEquals("SECRET_OUTPUT_NOT_RETAINED", checkNotNull(delivered).single().textDelta)
+            val calls = f.context.endpoint.trace.toList(); val reads = f.clock.reads.get()
+            // Test-only drain, after original return. Production manual close never waits for this lane.
+            withTimeout(5000) { while (OrionRuntimeMemorySamplingWorker.outstanding()) delay(1) }
+            val receipt = checkNotNull(f.owner.readRuntimeCapture(capture))
+            receipt.facts?.firstTerminal?.let { assertSame(original, it.status) }
+            assertEquals(calls, f.context.endpoint.trace); assertEquals(reads, f.clock.reads.get())
+            if (sampling) {
+                val report = checkNotNull(receipt.memorySampling)
+                assertTrue(report.diagnosticHealthCalls <= 7); assertTrue(report.diagnosticStateCalls <= 7)
+                assertFalse(report.runtimeEvidenceV1Complete); assertFalse(report.productionInferenceApproved)
+            } else assertNull(receipt.memorySampling)
+            calls to reads
+        }
+        assertEquals(run(false), run(true))
+    }
+
     @Test fun sourceDoesNotDependOnOldMetricsCorrelationAndMissingWitnessStaysUnresolved() = runBlocking {
         for (provide in listOf(true, false)) Fixture(provide).use { f ->
             f.client.javaClass.getDeclaredField("metricsCorrelation").apply { isAccessible = true }.set(f.client, null)
@@ -258,6 +285,18 @@ class OrionCortexRuntimeCaptureClientTest {
             assertEquals(1, receipt.facts?.chunks?.size)
             assertEquals(1, f.context.endpoint.unloads.get())
         }
+    }
+
+    @Test fun optionalSamplerCannotReplaceOriginalCallbackErrorOrCancellation() = runBlocking {
+        for (original in listOf<Throwable>(AssertionError("original sampled callback"), CancellationException("original sampled cancellation")))
+            Fixture().use { f ->
+                val request = f.request(); val capture = f.capture(request, sampling = true)
+                assertSame(original, try { f.run(capture, request) { throw original }; null } catch (seen: Throwable) { seen })
+                withTimeout(5000) { while (OrionRuntimeMemorySamplingWorker.outstanding()) delay(1) }
+                val receipt = checkNotNull(f.owner.readRuntimeCapture(capture))
+                assertTrue(receipt.threw); assertEquals(1, f.context.endpoint.unloads.get())
+                receipt.facts?.firstTerminal?.let { assertEquals(OrionInferenceTerminal.SUCCEEDED, it.status.terminal) }
+            }
     }
 
     @Test fun queuedExpiryOwnsNoNativeTurnAndDoesNotUnloadAnotherCapture() = runBlocking<Unit> {
