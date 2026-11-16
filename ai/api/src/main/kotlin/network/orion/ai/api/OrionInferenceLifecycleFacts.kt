@@ -127,7 +127,8 @@ class OrionInferenceLifecycleFactBuffer(private val capacity: Int = 32) {
 }
 
 /** One accept call, scalars only. Read only after an original guard successfully returns its total. */
-internal class OrionLifecycleByteParts(private val owner: OrionInferenceLifecycleFactBuffer) {
+internal class OrionLifecycleByteParts(private val owner: OrionInferenceLifecycleFactBuffer?,
+    private val eventSource: OrionInferenceLifecycleEventSource? = null) {
     var packedParts: Long = -1L
         private set
 
@@ -141,7 +142,7 @@ internal class OrionLifecycleByteParts(private val owner: OrionInferenceLifecycl
             check(text >= 0 && tool >= 0 && originalTotal in 0..OrionInferenceLifecycle.MAX_CHUNK_CONTENT_BYTES &&
                 text.toLong() + tool == originalTotal.toLong())
             packedParts = (text.toLong() shl 32) or tool.toLong()
-        } catch (_: Throwable) { packedParts = -1L; owner.failed() }
+        } catch (_: Throwable) { packedParts = -1L; owner?.failed(); eventSource?.recordingFailed() }
     }
 }
 
