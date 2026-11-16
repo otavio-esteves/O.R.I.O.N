@@ -106,29 +106,24 @@ its original closed invocation/loss fields. Reports are closed ASCII at most
 
 ## Validation, recovery and limits
 
-Focused controls were written before implementation. Root's canonical Docker
-validation on historical source `4c898a44f89aefe614d93fb09860ef9835b9237c` passed
-26 focused tests in 0.162s and the full 488-case HOST selection in 20.877s. These
-overlapping invocations are not added together; fixtures remain synthetic.
+Root canonical Docker validation passed on source `486ad234c2909060c48599e6849501c02fa7995f`:
+28 focused synthetic controls in 0.324s, then the complete HOST harness with
+490 cases in 29.341s, zero failures. The earlier source `4c898a4` passed its
+26 focused controls and 488-case integrated invocation; these overlap and are
+not added. Root review identified the missing exact wire-Float representability
+check; two added controls prove rejection without rounding and exact preservation.
 
-Subsequent review found that reusing v1's generic Double range accepted numbers
-that encoder153 could not emit from an original Float. Two new focused controls
-and the source-only binary32 check address that contract gap. Their Docker
-validation is **PENDING**; the earlier passing invocation does not cover this
-change. The author performed only syntax parsing and source/diff/link review,
-with no Python suite, Docker, Gradle, ADB, device execution or CI. Root must rerun
-the focused and full HOST checks in canonical Docker:
+Commands were `docker compose -p orion run --rm host-harness-check python3 -B
+scripts/android/test_f5_runtime_source_assembler_harness.py` and
+`docker compose -p orion run --rm host-harness-check`. These are CONTAINER/HOST
+synthetic consistency controls, not Android, model, hardware or real24h evidence.
+This validation addendum changes only this note; tested Python files are unchanged.
+Exact-head required remote PR CI remains pending before merge.
 
-```sh
-python3 -B scripts/android/test_f5_runtime_source_assembler_harness.py
-```
-
-The existing HOST harness and unchanged v1 suites remain required integration
-checks. Exact-head required CI must pass before merge. Synthetic consistent
-fixtures can pass the parser and remain entirely fabricated; equality and parser
-success do not establish source/build/device/model provenance or profile approval.
-No new evidence is persisted by this component. Process death discards its local
-objects, with no side effect, resume, retry or cleanup/recovery permission.
+Synthetic consistent fixtures remain fabricated; equality and parser success do
+not establish source/build/device/model provenance or profile approval. No new
+evidence is persisted by the component. Process death discards its local objects,
+with no side effect, resume, retry or cleanup/recovery permission.
 
 OUT OF SCOPE: Acquisition/program/driver/framing/publication, actual Android
 composition, calibrated parameters/model/template/profile, admission, native or
