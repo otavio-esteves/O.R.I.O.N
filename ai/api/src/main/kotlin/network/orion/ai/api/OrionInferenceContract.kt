@@ -68,12 +68,16 @@ class OrionInferenceChunk(
         isFinal == other.isFinal && finishReason == other.finishReason && errorCode == other.errorCode
 
     /** Bound character count before allocating a UTF-8 copy; this is not encoded Parcel size. */
-    internal fun boundedContentBytes(limit: Int): Int? {
+    internal fun boundedContentBytes(limit: Int, byteParts: OrionLifecycleByteParts? = null): Int? {
         val chars = (textDelta?.length?.toLong() ?: 0L) + (toolDelta?.length?.toLong() ?: 0L)
-        if (chars > limit) return null
-        val bytes = (textDelta?.toByteArray(Charsets.UTF_8)?.size ?: 0) +
-            (toolDelta?.toByteArray(Charsets.UTF_8)?.size ?: 0)
-        return bytes.takeIf { it <= limit }
+        if (chars > limit) { byteParts?.unavailable(); return null }
+        // The original two encodings and their sum, in the original order and outside diagnostic catches.
+        val textBytes = textDelta?.toByteArray(Charsets.UTF_8)?.size ?: 0
+        val toolBytes = toolDelta?.toByteArray(Charsets.UTF_8)?.size ?: 0
+        val bytes = textBytes + toolBytes
+        val result = bytes.takeIf { it <= limit }
+        byteParts?.record(textBytes, toolBytes, result)
+        return result
     }
 
     override fun toString() = "OrionInferenceChunk(schemaVersion=$schemaVersion, sequence=$sequence, isFinal=$isFinal, content=REDACTED)"

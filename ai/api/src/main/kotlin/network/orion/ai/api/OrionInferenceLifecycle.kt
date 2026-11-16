@@ -79,15 +79,18 @@ class OrionInferenceLifecycle(
 
     @Synchronized fun accept(chunk: OrionInferenceChunk): OrionInferenceUpdate {
         fun update(receipt: OrionInferenceReceipt, chunks: List<OrionInferenceChunk> = emptyList(),
-            sample: OrionLifecycleDeadlineSample?, bytes: Int = -1, releases: OrionLifecycleReleasedMetadata? = null): OrionInferenceUpdate {
+            sample: OrionLifecycleDeadlineSample?, bytes: Int = -1, releases: OrionLifecycleReleasedMetadata? = null,
+            byteParts: Long = -1L): OrionInferenceUpdate {
             val result = OrionInferenceUpdate(receipt, chunks, current)
             // No original update/list is retained or replaced. Diagnostic publication follows construction.
-            observations?.update(receipt, result.status, sample, chunk.sequence, chunk.isFinal, chunk.finishReason, chunk.errorCode, bytes, releases)
+            observations?.update(receipt, result.status, sample, chunk.sequence, chunk.isFinal, chunk.finishReason, chunk.errorCode,
+                bytes, releases, byteParts)
             return result
         }
-        fun fail(reason: OrionInferenceFailure, sample: OrionLifecycleDeadlineSample?, bytes: Int = -1): OrionInferenceUpdate {
+        fun fail(reason: OrionInferenceFailure, sample: OrionLifecycleDeadlineSample?, bytes: Int = -1,
+            byteParts: Long = -1L): OrionInferenceUpdate {
             finish(OrionInferenceTerminal.FAILED, reason, OP_ACCEPT, ORIGIN_REJECTED_CHUNK, sample)
-            return update(OrionInferenceReceipt.FAILED, sample = sample, bytes = bytes)
+            return update(OrionInferenceReceipt.FAILED, sample = sample, bytes = bytes, byteParts = byteParts)
         }
         val sample = checkDeadline(OP_ACCEPT)
         if (current.terminal != null) return update(OrionInferenceReceipt.IGNORED_TERMINAL, sample = sample)
@@ -96,42 +99,47 @@ class OrionInferenceLifecycle(
         if (chunk.sequence < nextSequence) return update(OrionInferenceReceipt.DUPLICATE, sample = sample)
         // Subtract nonnegative ordered operands; Long.MAX_VALUE cannot overflow this comparison.
         if (chunk.sequence - nextSequence > MAX_REORDER_GAP) return fail(OrionInferenceFailure.REORDER_LIMIT, sample)
-        val bytes = chunk.boundedContentBytes(MAX_CHUNK_CONTENT_BYTES)
+        val observedBytes = observations?.byteParts()
+        val bytes = chunk.boundedContentBytes(MAX_CHUNK_CONTENT_BYTES, observedBytes)
             ?: return fail(OrionInferenceFailure.CHUNK_TOO_LARGE, sample)
+        val submittedByteParts = observedBytes?.packedParts ?: -1L
         pending[chunk.sequence]?.let { previous ->
-            return if (previous.samePayload(chunk)) update(OrionInferenceReceipt.DUPLICATE, sample = sample, bytes = bytes)
-            else fail(OrionInferenceFailure.CONFLICTING_CHUNK, sample, bytes)
+            return if (previous.samePayload(chunk)) update(OrionInferenceReceipt.DUPLICATE, sample = sample, bytes = bytes,
+                byteParts = submittedByteParts)
+            else fail(OrionInferenceFailure.CONFLICTING_CHUNK, sample, bytes, submittedByteParts)
         }
         if (chunk.sequence != nextSequence) {
             if (pending.size >= MAX_REORDER_CHUNKS || bytes > MAX_REORDER_CONTENT_BYTES - pendingBytes)
-                return fail(OrionInferenceFailure.REORDER_LIMIT, sample, bytes)
+                return fail(OrionInferenceFailure.REORDER_LIMIT, sample, bytes, submittedByteParts)
             pending[chunk.sequence] = chunk
             pendingBytes += bytes
-            return update(OrionInferenceReceipt.BUFFERED, sample = sample, bytes = bytes)
+            return update(OrionInferenceReceipt.BUFFERED, sample = sample, bytes = bytes, byteParts = submittedByteParts)
         }
         val delivered = mutableListOf<OrionInferenceChunk>()
         val releasedMetadata = observations?.releases()
         var next: OrionInferenceChunk? = chunk
         var nextBytes = bytes
+        var nextByteParts = submittedByteParts
         while (next != null) {
             delivered.add(next)
-            releasedMetadata?.released(next.sequence, next.isFinal, next.finishReason, next.errorCode, nextBytes)
+            releasedMetadata?.released(next.sequence, next.isFinal, next.finishReason, next.errorCode, nextBytes, nextByteParts)
             current = current.copy(stage = OrionInferenceStage.DECODING)
             if (next.isFinal) {
                 finish(checkNotNull(next.finishReason), next.errorCode, OP_ACCEPT, ORIGIN_FINAL_CHUNK_TRANSITION, sample)
                 break
             }
-            if (nextSequence == Long.MAX_VALUE) return fail(OrionInferenceFailure.REORDER_LIMIT, sample, bytes)
+            if (nextSequence == Long.MAX_VALUE) return fail(OrionInferenceFailure.REORDER_LIMIT, sample, bytes, submittedByteParts)
             nextSequence++
             next = pending.remove(nextSequence)
             if (next != null) {
                 // Exactly the original revalidation, reused for both accounting and optional metadata.
-                val removedBytes = checkNotNull(next.boundedContentBytes(MAX_CHUNK_CONTENT_BYTES))
+                val removedBytes = checkNotNull(next.boundedContentBytes(MAX_CHUNK_CONTENT_BYTES, observedBytes))
                 pendingBytes -= removedBytes
                 nextBytes = removedBytes
+                nextByteParts = observedBytes?.packedParts ?: -1L
             }
         }
-        return update(OrionInferenceReceipt.ACCEPTED, delivered, sample, bytes, releasedMetadata)
+        return update(OrionInferenceReceipt.ACCEPTED, delivered, sample, bytes, releasedMetadata, submittedByteParts)
     }
 
     private fun checkDeadline(operation: Int): OrionLifecycleDeadlineSample? {
