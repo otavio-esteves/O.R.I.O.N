@@ -39,6 +39,9 @@ internal class OrionRuntimeEventRecorder(private val expected: OrionRuntimeCaptu
     private var lastChunkElapsed = -1L
     private var nextSequence = 0L
     private var finalChunkRetained = false
+    private var runtimeSeen = false
+    private var validationSeen = false
+    private var successfulLoadObserved = false
 
     private fun count(counter: AtomicLong) {
         val before = counter.get()
@@ -107,7 +110,11 @@ internal class OrionRuntimeEventRecorder(private val expected: OrionRuntimeCaptu
             lost(OrionRuntimeCaptureGap.PROCESS_DIED); return@record false
         }
         if (markers.size == MAX_MARKERS) { lost(OrionRuntimeCaptureGap.CAPACITY); return@record false }
-        markers.add(marker); lastEventElapsed = checkNotNull(marker.at.elapsedMillis); true
+        markers.add(marker)
+        if (marker.kind == OrionRuntimeMarkerKind.LOAD_TRUE_TERMINAL && marker.status?.terminal == OrionInferenceTerminal.SUCCEEDED)
+            successfulLoadObserved = true
+        lastEventElapsed = checkNotNull(marker.at.elapsedMillis)
+        true
     }
 
     /** Caller invokes only for the original first successful transition; the reserved claim is never repaired. */
@@ -198,8 +205,14 @@ internal class OrionRuntimeEventRecorder(private val expected: OrionRuntimeCaptu
             row.mainPid == expected.mainPid && row.aiPid == expected.aiPid &&
             main != null && ai != null && main > 0 && ai > 0 && main <= Long.MAX_VALUE - ai && sum == main + ai &&
             total != null && sum != null && sum <= total && row.mainNativeIncluded == true && row.aiNativeIncluded == true &&
-            row.nativeRuntimeLoaded != null && row.nativeValidationCompleted != null && maxAge != null && maxAge > 0 &&
-            ordered[4] - ordered[2] < maxAge && allowedState(row.window.phase, row.serviceState) &&
+            row.nativeRuntimeLoaded != null && row.nativeValidationCompleted != null &&
+            (row.nativeValidationCompleted != true || row.nativeRuntimeLoaded == true) &&
+            (!runtimeSeen || row.nativeRuntimeLoaded == true) && (!validationSeen || row.nativeValidationCompleted == true) &&
+            ((row.serviceState != OrionRuntimeServiceState.LOADED && row.serviceState != OrionRuntimeServiceState.INFERENCING &&
+                !(successfulLoadObserved && row.window.phase.ordinal >= OrionRuntimeMemoryPhase.AFTER_LOAD.ordinal)) ||
+                row.nativeRuntimeLoaded == true && row.nativeValidationCompleted == true) &&
+            maxAge != null && maxAge > 0 && ordered[1] == ordered[2] &&
+            ordered[4] - ordered[1] < maxAge && allowedState(row.window.phase, row.serviceState) &&
             (previous == null || row.window.phase.ordinal >= previous.window.phase.ordinal &&
                 ordered[1] >= checkNotNull(previous.completed.elapsedMillis))
         if (!valid) { lost(OrionRuntimeCaptureGap.MEMORY_INVALID); return@record false }
@@ -209,7 +222,10 @@ internal class OrionRuntimeEventRecorder(private val expected: OrionRuntimeCaptu
             lost(OrionRuntimeCaptureGap.PROCESS_DIED); return@record false
         }
         if (memory.size == MAX_MEMORY_ROWS) { lost(OrionRuntimeCaptureGap.CAPACITY); return@record false }
-        memory.add(row); true
+        memory.add(row)
+        runtimeSeen = runtimeSeen || row.nativeRuntimeLoaded == true
+        validationSeen = validationSeen || row.nativeValidationCompleted == true
+        true
     }
 
     private fun allowedState(phase: OrionRuntimeMemoryPhase, state: OrionRuntimeServiceState): Boolean = when (phase) {

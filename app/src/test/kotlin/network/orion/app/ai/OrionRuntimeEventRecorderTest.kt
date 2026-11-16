@@ -35,10 +35,11 @@ class OrionRuntimeEventRecorderTest {
         state: OrionRuntimeServiceState = OrionRuntimeServiceState.UNLOADED, boot: Int? = 3,
         main: Long? = 100, ai: Long? = 200, sum: Long? = 300, mainPid: Int? = 100, aiPid: Int? = 101,
         complete: Long = time, windowEnd: Long = complete, included: Boolean? = true,
-        nativeLoaded: Boolean? = false) = OrionRuntimeMemoryRow(
+        nativeLoaded: Boolean? = false, validationCompleted: Boolean? = nativeLoaded,
+        mainAt: Long = time, aiAt: Long = time) = OrionRuntimeMemoryRow(
         OrionRuntimePhaseWindow(phase, at(time, boot), at(windowEnd, boot)), at(time, boot), at(complete, boot),
-        at(time, boot), at(time, boot), mainPid, aiPid, main, ai, sum, 1000, included, included, state, nativeLoaded,
-        false, OrionRuntimeMemorySource.SELF_DEBUG_MEMORY_INFO_PSS)
+        at(mainAt, boot), at(aiAt, boot), mainPid, aiPid, main, ai, sum, 1000, included, included, state, nativeLoaded,
+        validationCompleted, OrionRuntimeMemorySource.SELF_DEBUG_MEMORY_INFO_PSS)
 
     @Test fun `foundation is inactive unwired and retains no fabricated event or authority`() {
         val f = Fixture(); val initial = snapshot(f.recorder)
@@ -170,18 +171,21 @@ class OrionRuntimeEventRecorderTest {
     @Test fun `memory windows validate actual order age pids flags state sum and process death without clipping`() {
         val wrongRows = listOf(row(main = null), row(ai = 0), row(main = Long.MAX_VALUE, ai = 1, sum = Long.MAX_VALUE),
             row(sum = 299), row(mainPid = 102), row(aiPid = null), row(included = null), row(nativeLoaded = null),
-            row(complete = 12, windowEnd = 12), row(complete = 1, windowEnd = 2), row(state = OrionRuntimeServiceState.UNKNOWN))
+            row(complete = 12, windowEnd = 12), row(complete = 1, windowEnd = 2), row(state = OrionRuntimeServiceState.UNKNOWN),
+            row(mainAt = 3, aiAt = 3, complete = 4, windowEnd = 4), row(nativeLoaded = false, validationCompleted = true),
+            row(phase = OrionRuntimeMemoryPhase.AFTER_LOAD, state = OrionRuntimeServiceState.LOADED),
+            row(phase = OrionRuntimeMemoryPhase.DURING_INFERENCE, state = OrionRuntimeServiceState.INFERENCING))
         for (bad in wrongRows) { val f = Fixture(); started(f); assertFalse(f.recorder.memoryRow(f.selected, bad)); assertTrue(snapshot(f.recorder).memory.isEmpty()) }
         val f = Fixture(); started(f)
         val states = listOf(OrionRuntimeServiceState.UNLOADED, OrionRuntimeServiceState.LOADING, OrionRuntimeServiceState.LOADED,
             OrionRuntimeServiceState.INFERENCING, OrionRuntimeServiceState.LOADED, OrionRuntimeServiceState.UNLOADING, OrionRuntimeServiceState.UNLOADED)
         for ((index, phase) in OrionRuntimeMemoryPhase.entries.withIndex())
-            assertTrue(f.recorder.memoryRow(f.selected, row(2L + index, phase, states[index])))
+            assertTrue(f.recorder.memoryRow(f.selected, row(2L + index, phase, states[index], nativeLoaded = index >= 2)))
         assertEquals(7, snapshot(f.recorder).memory.size)
         assertFalse(f.recorder.memoryRow(f.selected, row(20))) // Phase cannot move backward.
         val dead = Fixture(); started(dead)
         assertTrue(dead.recorder.trueFirstTerminal(dead.selected, at(3), status(OrionInferenceTerminal.PROCESS_DIED), OrionLifecycleTerminalOrigin.PROCESS_DEATH))
-        assertFalse(dead.recorder.memoryRow(dead.selected, row(4, OrionRuntimeMemoryPhase.AFTER_TERMINAL, OrionRuntimeServiceState.LOADED)))
+        assertFalse(dead.recorder.memoryRow(dead.selected, row(4, OrionRuntimeMemoryPhase.AFTER_TERMINAL, OrionRuntimeServiceState.LOADED, nativeLoaded = true)))
         assertFalse(dead.recorder.trueOperation(dead.selected, OrionRuntimeOperationMarker(OrionRuntimeMarkerKind.UNLOAD_TRUE_DISPATCH, at(4))))
     }
 
@@ -266,6 +270,23 @@ class OrionRuntimeEventRecorderTest {
         assertTrue(candidates.any { it.first === selected.status && it.second == selected.origin })
         assertFalse(f.recorder.trueFirstTerminal(f.selected, at(3), status(), OrionLifecycleTerminalOrigin.FINAL_CHUNK_TRANSITION))
         assertSame(selected, snapshot(f.recorder).firstTerminal)
+    }
+
+
+    @Test fun `same native wrapper and validation flags cannot disappear after observation or successful load`() {
+        val f = Fixture(); started(f)
+        assertTrue(f.recorder.memoryRow(f.selected, row(nativeLoaded = true)))
+        assertFalse(f.recorder.memoryRow(f.selected, row(3, nativeLoaded = false)))
+        assertFalse(f.recorder.memoryRow(f.selected, row(3, nativeLoaded = true, validationCompleted = false)))
+        assertEquals(1, snapshot(f.recorder).memory.size)
+        assertTrue(OrionRuntimeCaptureGap.MEMORY_INVALID in snapshot(f.recorder).gaps)
+        val loaded = Fixture(); started(loaded)
+        assertTrue(loaded.recorder.trueOperation(loaded.selected, OrionRuntimeOperationMarker(OrionRuntimeMarkerKind.LOAD_TRUE_TERMINAL,
+            at(2), OrionRuntimeTechnicalId("load"), status(), loadedModelConfirmed = true)))
+        assertFalse(loaded.recorder.memoryRow(loaded.selected, row(3, OrionRuntimeMemoryPhase.DURING_UNLOAD, OrionRuntimeServiceState.UNLOADED)))
+        assertFalse(loaded.recorder.memoryRow(loaded.selected, row(3, OrionRuntimeMemoryPhase.AFTER_UNLOAD, OrionRuntimeServiceState.UNLOADED)))
+        assertTrue(loaded.recorder.memoryRow(loaded.selected,
+            row(3, OrionRuntimeMemoryPhase.AFTER_UNLOAD, OrionRuntimeServiceState.UNLOADED, nativeLoaded = true)))
     }
 
 }

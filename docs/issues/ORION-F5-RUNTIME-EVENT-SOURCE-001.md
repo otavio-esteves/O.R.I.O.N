@@ -71,7 +71,18 @@ no schema, persistence/migration, component, process or IPC change. Source creat
 and manual snapshot/hash failure are unavailable telemetry, not domain failure.
 Future hook/sampler/export/Android composition must pass their own boundary screen.
 
-VALIDATION: Nine core/time and twelve app JVM tests supplied, all synthetic. Author
+READ-ONLY REVIEW FOLLOW-UP: An in-flight counter read now rechecks invalidation
+after acquisition and immediately before publication/high-water advancement. The
+last check is its linearization point, not an impossible return-order guarantee
+across overlapping threads; invalidated manual snapshots remain unusable for
+export. A deterministic finite-source reflection test covers rebind/confirmation/
+snapshot invalidation during that read without adding any production callback.
+Memory rows require collection start equal to MAIN sample, strict source age,
+validation implying runtime, non-disappearing wrapper/validation observations and
+true flags for LOADED/INFERENCING or post-successful-load rows, including unload.
+Positive seven-phase fixtures now carry consistent synthetic native flags.
+
+VALIDATION: Ten core/time and thirteen app JVM tests supplied, all synthetic. Author
 executed git diff --check only; no compiler/Gradle/Docker/ADB/CI/push. Compilation,
 centralized tests and independent review remain pending. Original files and suites
 are untouched. No architecture/ADR waiver or physical/performance/gate claim.

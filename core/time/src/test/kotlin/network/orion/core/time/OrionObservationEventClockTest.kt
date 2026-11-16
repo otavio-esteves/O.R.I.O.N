@@ -124,4 +124,39 @@ class OrionObservationEventClockTest {
         assertFalse(state(overflow).lossAccountingComplete)
     }
 
+
+    @Test fun `invalidation during an in flight counter read prevents publication or high water advance`() {
+        repeat(3) { scenario ->
+            val clock = OrionObservationEventClock.finiteForTests(listOf(120))
+            assertTrue(bind(clock))
+            val entered = java.util.concurrent.CountDownLatch(1)
+            val release = java.util.concurrent.CountDownLatch(1)
+            val counter = clock.javaClass.getDeclaredField("counter").apply { isAccessible = true }.get(clock)
+            val values = counter.javaClass.getDeclaredField("values").apply { isAccessible = true }
+            // Reflection changes the private finite test source only. Production exposes no provider/callback seam.
+            values.set(counter, object : java.util.AbstractList<Long?>() {
+                override val size = 1
+                override fun get(index: Int): Long? {
+                    entered.countDown(); check(release.await(3, TimeUnit.SECONDS)); return 120L
+                }
+            })
+            val worker = Executors.newSingleThreadExecutor()
+            val pending = worker.submit(Callable { clock.observe() })
+            try {
+                assertTrue(entered.await(3, TimeUnit.SECONDS))
+                when (scenario) {
+                    0 -> assertFalse(bind(clock))
+                    1 -> assertFalse(clock.confirmOriginalWitness(MonotonicInstant(BootSessionId(3), 130), MonotonicDeadlineStatus.ACTIVE))
+                    else -> assertTrue(checkNotNull(clock.snapshot()).invalidated)
+                }
+                release.countDown()
+                assertNull(pending.get(3, TimeUnit.SECONDS))
+            } finally { release.countDown(); worker.shutdownNow() }
+            assertTrue(state(clock).invalidated); assertEquals(0L, state(clock).recordingFailuresAtLeast)
+            assertEquals(1L, state(clock).counterReadsAtLeast); assertNull(clock.observe())
+            val last = clock.javaClass.getDeclaredField("lastElapsed").apply { isAccessible = true }.getLong(clock)
+            assertEquals(110L, last)
+        }
+    }
+
 }

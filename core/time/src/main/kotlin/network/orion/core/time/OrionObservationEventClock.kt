@@ -106,11 +106,17 @@ class OrionObservationEventClock private constructor(private val counter: Counte
             if (invalidated.get()) return null
             count(reads)
             val now = counter.read()
+            if (invalidated.get()) return null // Invalidation may have won while the native read was in flight.
             when {
                 now == null -> { invalidate(OrionObservationClockGap.COUNTER_UNAVAILABLE); null }
                 now < 0 -> { invalidate(OrionObservationClockGap.INVALID_COUNTER); null }
                 now < lastElapsed || now < lastOriginalElapsed -> { invalidate(OrionObservationClockGap.COUNTER_REGRESSED); null }
-                else -> OrionObservationMoment(checkNotNull(boot), now, scope).also { lastElapsed = now }
+                else -> {
+                    val value = OrionObservationMoment(checkNotNull(boot), now, scope)
+                    // Final check is the observation's linearization point, not a return-order promise
+                    // for overlapping threads. An invalidated manual snapshot still forbids export.
+                    if (invalidated.get()) null else { lastElapsed = now; value }
+                }
             }
         } catch (_: Throwable) { failed(); null }
         finally { lock.unlock() }
