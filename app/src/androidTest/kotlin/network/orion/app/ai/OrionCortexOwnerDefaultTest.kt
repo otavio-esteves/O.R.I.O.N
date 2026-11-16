@@ -25,6 +25,28 @@ import org.junit.runner.RunWith
 /** No usable model or resource calibration: proves gates precede storage and binding. */
 @RunWith(AndroidJUnit4::class)
 class OrionCortexOwnerDefaultTest {
+    @Test fun runtimeCaptureDoesNotActivateOrReadAnyClockPastTheEmptyProfileGate() = fixture { context, db, importer, bindings ->
+        val reads = AtomicInteger()
+        val clock = object : network.orion.core.time.OrionClock {
+            override fun monotonicNow() = network.orion.core.time.MonotonicInstant(network.orion.core.time.BootSessionId(1), 1000)
+                .also { reads.incrementAndGet() }
+            override fun wallNow() = java.time.Instant.EPOCH
+        }
+        val owner = OrionCortexRuntimeOwner(context, importer, db, clock, coreReady = { error("Early profile gate must remain lazy") })
+        val capture = checkNotNull(owner.beginRuntimeCapture())
+        val request = OrionInferenceRequest("private-request", 1, "private-model", "SECRET_PROMPT", "SECRET_CONTEXT", 8, 0.0,
+            OrionInferencePriority.INTERACTIVE, network.orion.core.time.MonotonicInstant(network.orion.core.time.BootSessionId(1), 1000).deadlineAfter(1000), "private-label")
+        try { runBlocking {
+            val original = owner.runCaptured(capture, request.modelId, request, 128, 1) { error("Unexpected output") }
+            assertEquals(OrionCortexRunResult.Unavailable(OrionCortexUnavailable.NO_QUALIFIED_PROFILE), original)
+            val receipt = checkNotNull(owner.readRuntimeCapture(capture))
+            assertFalse(receipt.identityKnown); assertNull(receipt.facts); assertNull(receipt.lifecycle)
+            assertEquals(false, receipt.originalOwnerEntered); assertTrue(receipt.actualTurnEntered != true)
+            assertEquals(0, reads.get()); assertEquals(0, bindings.get())
+            assertFalse(receipt.runtimeEvidenceV1Complete); assertFalse(receipt.productionInferenceApproved)
+        } } finally { owner.close() }
+    }
+
     @Test fun observedNoProfileNeverRetainsCallerIdentityContentOrCreatesAnAttempt() = fixture { context, db, importer, bindings ->
         val clock = AndroidOrionClock(context.contentResolver)
         val observations = OrionCortexCycleObserver()

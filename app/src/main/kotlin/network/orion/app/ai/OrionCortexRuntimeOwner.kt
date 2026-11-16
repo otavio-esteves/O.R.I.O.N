@@ -101,9 +101,16 @@ internal class OrionCortexRuntimeOwner(
     private val observer = timing?.let { limits -> OrionAndroidResourceObserver(app, clock,
         auxiliaryMemory = {
             val inventory = discoverInventory() ?: return@OrionAndroidResourceObserver null
-            val receipt = client?.currentMemoryTelemetry() ?: return@OrionAndroidResourceObserver null
-            // currentMemoryTelemetry already authenticates this connection's process name and PID.
-            telemetry?.read(receipt, receipt.getInt("pid"), inventory, true)
+            val selectedClient = client ?: return@OrionAndroidResourceObserver null
+            val captureWindow = selectedClient.runtimeHealthWindow()
+            val receipt = selectedClient.currentMemoryTelemetry() ?: return@OrionAndroidResourceObserver null
+            // Reuse exactly the original parse/validation/Clock read; capture consumes only its typed result.
+            telemetry?.let { adapter ->
+                val originalPid = receipt.getInt("pid")
+                val evidence = adapter.read(receipt, originalPid, inventory, true)
+                selectedClient.runtimeMemoryValidated(captureWindow, originalPid, evidence?.sampledAt)
+                evidence
+            }
         }, maximumMemoryAgeMillis = limits.maximumObservationAgeMillis) }
 
     init {
@@ -167,12 +174,31 @@ internal class OrionCortexRuntimeOwner(
         }
     }
 
+    /** Explicit internal preparation only; no factory activation, workload choice or admission. */
+    internal fun beginRuntimeCapture(): OrionCortexRuntimeCaptureSession? = try {
+        if (closed) null else OrionCortexRuntimeCaptureSession.create(this, android.os.Process.myPid())
+    } catch (_: Throwable) { null }
+
+    /** Same original path and original callback; normal run/runObserved remain capture-absent. */
+    internal suspend fun runCaptured(capture: OrionCortexRuntimeCaptureSession?, modelId: String, request: OrionInferenceRequest,
+        contextTokens: Int, threads: Int, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionCortexRunResult {
+        val selected = capture?.takeIf { it.claim(this) }
+        return try {
+            val original = runOwned(modelId, request, contextTokens, threads, onChunks, null, selected)
+            selected?.runReturned(false)
+            original
+        } catch (failure: Throwable) { selected?.runReturned(true); throw failure }
+    }
+
+    internal fun readRuntimeCapture(capture: OrionCortexRuntimeCaptureSession): OrionRuntimeSessionReceipt? = capture.readAfterRun(this)
+
     suspend fun run(modelId: String, request: OrionInferenceRequest, contextTokens: Int, threads: Int,
         onChunks: (List<OrionInferenceChunk>) -> Unit): OrionCortexRunResult =
         runOwned(modelId, request, contextTokens, threads, onChunks, null)
 
     private suspend fun runOwned(modelId: String, request: OrionInferenceRequest, contextTokens: Int, threads: Int,
-        onChunks: (List<OrionInferenceChunk>) -> Unit, cycle: OrionCortexCycleToken?): OrionCortexRunResult = withContext(Dispatchers.IO) {
+        onChunks: (List<OrionInferenceChunk>) -> Unit, cycle: OrionCortexCycleToken?,
+        runtimeCapture: OrionCortexRuntimeCaptureSession? = null): OrionCortexRunResult = withContext(Dispatchers.IO) {
         fun unavailable(reason: OrionCortexUnavailable): OrionCortexRunResult.Unavailable {
             cycleObservations.isolatedCycle(cycle) { it.noAttempt(cycle) }
             return OrionCortexRunResult.Unavailable(reason)
@@ -194,6 +220,7 @@ internal class OrionCortexRuntimeOwner(
         }
         try {
             requestHistory.existingResult(request.requestId, fingerprint)?.let {
+                runtimeCapture?.retainedResult()
                 cycleObservations.isolatedCycle(cycle) { observer -> observer.retained(cycle) }
                 return@withContext OrionCortexRunResult.Completed(it)
             }
@@ -268,8 +295,10 @@ internal class OrionCortexRuntimeOwner(
                         },
                         requestHistory = requestHistory, cycleObservations = cycleObservations).also { client = it }
                 } ?: return@withContext unavailable(OrionCortexUnavailable.CLOSED)
+                if (runtimeCapture != null && selected != null) runtimeCapture.selected(this@OrionCortexRuntimeOwner,
+                    selected.sha256, selected.sizeBytes, request.requestId, request.deadline, timing?.maximumObservationAgeMillis)
                 OrionCortexRunResult.Completed(ownedClient.runInference(checkNotNull(selected), it, request,
-                    contextTokens, threads, cycle, onChunks))
+                    contextTokens, threads, cycle, runtimeCapture, onChunks))
             }
         } catch (stopped: PreparationStopped) {
             val invocation = cycleObservations.isolatedCycle(cycle) { if (cycle == null) null else OrionCortexCycleInvocation() }

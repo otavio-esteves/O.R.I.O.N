@@ -19,6 +19,7 @@ internal class OrionRuntimeTechnicalId(private val raw: String) {
         }
     }
     fun sameValue(other: OrionRuntimeTechnicalId): Boolean = raw == other.raw
+    fun matchesRaw(value: String): Boolean = raw == value
     /** Separate manual encoder seam only. Bounded strict UTF-8 identity, never content or a fingerprint. */
     fun sha256ForManualExport(): String? {
         var bytes: ByteArray? = null
@@ -72,7 +73,7 @@ internal data class OrionRuntimeEventTime(val bootCount: Int?, val elapsedMillis
 }
 
 internal enum class OrionRuntimeMarkerKind {
-    LOAD_TRUE_DISPATCH, LOAD_TRUE_TERMINAL, INFERENCE_TRUE_DISPATCH, UNLOAD_TRUE_DISPATCH, UNLOAD_TRUE_CLEANUP,
+    LOAD_LOCAL_REQUEST_START, LOAD_TRUE_DISPATCH, LOAD_TRUE_TERMINAL, INFERENCE_TRUE_DISPATCH, UNLOAD_TRUE_DISPATCH, UNLOAD_TRUE_CLEANUP,
     DELIVERY_ENTRY, DELIVERY_RETURN,
 }
 internal enum class OrionRuntimeCleanupResult { UNLOADED, FAILED }
@@ -82,6 +83,7 @@ internal class OrionRuntimeOperationMarker(val kind: OrionRuntimeMarkerKind, val
     private val issuedId: OrionRuntimeTechnicalId? = null, val status: OrionInferenceStatus? = null,
     val inputBytes: Long? = null, val cleanup: OrionRuntimeCleanupResult? = null, val loadedModelConfirmed: Boolean? = null) {
     fun hasIssuedId(): Boolean = issuedId != null
+    fun sameIssuedId(other: OrionRuntimeOperationMarker): Boolean = issuedId != null && other.issuedId != null && issuedId.sameValue(other.issuedId)
     fun issuedIdSha256ForManualExport(): String? = issuedId?.sha256ForManualExport()
     override fun toString() = "OrionRuntimeOperationMarker(kind=$kind)"
 }
@@ -122,7 +124,8 @@ internal class OrionRuntimeCaptureSnapshot(val association: OrionRuntimeCaptureA
     val firstTerminal: OrionRuntimeFirstTerminal?, val firstTerminalUnavailable: Boolean,
     val memory: List<OrionRuntimeMemoryRow>, val gaps: Set<OrionRuntimeCaptureGap>,
     val invalidated: Boolean, val chunkSequenceIntact: Boolean, val droppedAtLeast: Long,
-    val recordingFailuresAtLeast: Long, val lossAccountingComplete: Boolean, val snapshotContended: Boolean) {
+    val recordingFailuresAtLeast: Long, val lossAccountingComplete: Boolean, val snapshotContended: Boolean,
+    val lifecycleImport: OrionRuntimeLifecycleImportSummary? = null) {
     val wired = false
     val sourceAuthenticated = false
     val runtimeEvidenceV1Complete = false
@@ -133,4 +136,20 @@ internal class OrionRuntimeCaptureSnapshot(val association: OrionRuntimeCaptureA
     val fullSoakGateClosed = false
     val f6Authorized = false
     override fun toString() = "OrionRuntimeCaptureSnapshot(wired=false, invalidated=$invalidated)"
+}
+
+/** Detached manual source integrity only; no duplicate chunk array, request, content or raw error. */
+internal class OrionRuntimeLifecycleImportSummary(source: network.orion.ai.api.OrionLifecycleEventSnapshot) {
+    val claimed = source.claimed
+    val active = source.active
+    val invalidated = source.invalidated
+    val firstTerminalUnavailable = source.firstTerminalRecordUnavailable
+    val orderedEventCount = source.orderedEvents.size
+    val pendingUpdatesAtLeast = source.pendingUpdatesAtLeast
+    val gaps = source.gaps
+    val droppedAtLeast = source.droppedAtLeast
+    val recordingFailuresAtLeast = source.recordingFailuresAtLeast
+    val lossAccountingComplete = source.lossAccountingComplete
+    val chunkSequenceIntact = source.chunkSequenceIntact
+    val snapshotContended = source.snapshotContended
 }
