@@ -5,6 +5,8 @@ import java.util.EnumSet
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
+import network.orion.core.time.OrionObservationMoment
+import network.orion.ai.api.OrionInferenceLifecycleEventSource
 import network.orion.ai.api.OrionInferenceLifecycle
 import network.orion.ai.api.OrionInferenceStage
 import network.orion.ai.api.OrionInferenceFailure
@@ -19,7 +21,8 @@ import network.orion.ai.api.OrionLifecycleTerminalOrigin
  * Constructor values describe one association, never admission/configuration or source authentication.
  */
 internal class OrionRuntimeEventRecorder(private val expected: OrionRuntimeCaptureFence,
-    private val originalDeadlineElapsed: Long?, private val maximumSampleAgeMillis: Long?) {
+    private val originalDeadlineElapsed: Long?, private val maximumSampleAgeMillis: Long?,
+    private val expectedLifecycleSource: OrionInferenceLifecycleEventSource? = null) {
     private val lock = ReentrantLock()
     private val markers = ArrayList<OrionRuntimeOperationMarker>(MAX_MARKERS)
     private val chunks = ArrayList<OrionRuntimeOrderedChunk>(MAX_CHUNKS)
@@ -27,6 +30,8 @@ internal class OrionRuntimeEventRecorder(private val expected: OrionRuntimeCaptu
     private val invalidated = AtomicBoolean()
     private val chunkLoss = AtomicBoolean()
     private val terminalClaimed = AtomicBoolean()
+    private val importClaimed = AtomicBoolean()
+    private var lifecycleImport: OrionRuntimeLifecycleImportSummary? = null
     private val terminalUnavailable = AtomicBoolean()
     private val gaps = AtomicLong(1L shl OrionRuntimeCaptureGap.UNWIRED_SOURCE.ordinal)
     private val dropped = AtomicLong()
@@ -96,9 +101,14 @@ internal class OrionRuntimeEventRecorder(private val expected: OrionRuntimeCaptu
 
     /** Supplied true dispatch/terminal/cleanup point, never a deadline/poll sample relabeled here. */
     fun trueOperation(current: OrionRuntimeCaptureFence, marker: OrionRuntimeOperationMarker): Boolean = record {
-        if (!event(current, marker.at)) return@record false
+        val historicalLocalStart = marker.kind == OrionRuntimeMarkerKind.LOAD_LOCAL_REQUEST_START
+        if (!event(current, marker.at, if (historicalLocalStart) started?.elapsedMillis ?: -1L else lastEventElapsed)) return@record false
         val valid = when (marker.kind) {
             OrionRuntimeMarkerKind.LOAD_TRUE_DISPATCH -> marker.hasIssuedId()
+            OrionRuntimeMarkerKind.LOAD_LOCAL_REQUEST_START -> marker.hasIssuedId() && markers.any {
+                it.kind == OrionRuntimeMarkerKind.LOAD_TRUE_DISPATCH && it.sameIssuedId(marker) &&
+                    checkNotNull(it.at.elapsedMillis) >= checkNotNull(marker.at.elapsedMillis)
+            }
             OrionRuntimeMarkerKind.LOAD_TRUE_TERMINAL -> marker.hasIssuedId() && marker.status != null && marker.status.terminal != null &&
                 (marker.status.terminal != OrionInferenceTerminal.SUCCEEDED || marker.loadedModelConfirmed == true)
             OrionRuntimeMarkerKind.INFERENCE_TRUE_DISPATCH -> marker.hasIssuedId() && marker.inputBytes != null && marker.inputBytes > 0
@@ -113,7 +123,8 @@ internal class OrionRuntimeEventRecorder(private val expected: OrionRuntimeCaptu
         markers.add(marker)
         if (marker.kind == OrionRuntimeMarkerKind.LOAD_TRUE_TERMINAL && marker.status?.terminal == OrionInferenceTerminal.SUCCEEDED)
             successfulLoadObserved = true
-        lastEventElapsed = checkNotNull(marker.at.elapsedMillis)
+        val point = checkNotNull(marker.at.elapsedMillis)
+        if (point > lastEventElapsed) lastEventElapsed = point
         true
     }
 
@@ -244,6 +255,78 @@ internal class OrionRuntimeEventRecorder(private val expected: OrionRuntimeCaptu
         completed = at; lastEventElapsed = checkNotNull(at.elapsedMillis); true
     }
 
+    /**
+     * One manual historical import from the source bound to this recorder's actual session.
+     * Publication order is deliberately independent from operation/event high-water. No resampling.
+     */
+    fun importOwnedLifecycle(current: OrionRuntimeCaptureFence, source: OrionInferenceLifecycleEventSource,
+        observedStart: OrionObservationMoment, observedEnd: OrionObservationMoment?): OrionRuntimeLifecycleImportSummary? {
+        if (!importClaimed.compareAndSet(false, true)) return lifecycleImport
+        if (!lock.tryLock()) { lost(OrionRuntimeCaptureGap.CONTENDED, chunk = true); terminalUnavailable.set(true); return null }
+        return try {
+            if (source !== expectedLifecycleSource || !expected.matches(current) || started == null) {
+                lost(OrionRuntimeCaptureGap.IDENTITY_CHANGED, invalidate = true, chunk = true); return null
+            }
+            val original = source.snapshot() ?: run {
+                lost(OrionRuntimeCaptureGap.TERMINAL_UNAVAILABLE, chunk = true); terminalUnavailable.set(true); return null
+            }
+            val summary = OrionRuntimeLifecycleImportSummary(original)
+            lifecycleImport = summary
+            if (!original.claimed || !original.activationAttempted || !original.active || original.invalidated || original.snapshotContended)
+                lost(OrionRuntimeCaptureGap.TERMINAL_UNAVAILABLE, chunk = true)
+            if (!original.chunkSequenceIntact || original.pendingUpdatesAtLeast > 0 || original.droppedAtLeast > 0 ||
+                original.recordingFailuresAtLeast > 0 || !original.lossAccountingComplete) chunkLoss.set(true)
+            fun historical(at: OrionObservationMoment): Boolean = observedStart.sameObservationAs(at) &&
+                at.observationalBootCount == expected.bootCount && at.elapsedRealtimeMillis >= checkNotNull(started?.elapsedMillis) &&
+                (observedEnd == null || observedStart.sameObservationAs(observedEnd) && at.elapsedRealtimeMillis <= observedEnd.elapsedRealtimeMillis)
+            val terminal = original.firstTerminal
+            if (!terminalClaimed.compareAndSet(false, true)) {
+                lost(OrionRuntimeCaptureGap.TERMINAL_MISMATCH, chunk = true); return summary
+            }
+            val terminalAt = terminal?.at
+            if (original.firstTerminalRecordUnavailable || terminal == null || terminalAt == null ||
+                !historical(terminalAt) || !validTerminal(terminal.status, terminal.origin)) {
+                terminalUnavailable.set(true); gap(OrionRuntimeCaptureGap.TERMINAL_UNAVAILABLE)
+            } else firstTerminal = OrionRuntimeFirstTerminal(OrionRuntimeEventTime.fromObservation(terminalAt), terminal.status, terminal.origin)
+            var expectedSequence = 0L
+            var last = checkNotNull(started?.elapsedMillis)
+            for (entry in original.orderedEvents) {
+                val metadata = entry.metadata
+                val point = entry.at
+                if (chunks.size >= MAX_CHUNKS) { lost(OrionRuntimeCaptureGap.CAPACITY, chunk = true); break }
+                if (!historical(point) || point.elapsedRealtimeMillis < last || originalDeadlineElapsed == null ||
+                    point.elapsedRealtimeMillis >= originalDeadlineElapsed ||
+                    terminalAt != null && point.elapsedRealtimeMillis > terminalAt.elapsedRealtimeMillis) {
+                    lost(OrionRuntimeCaptureGap.CLOCK_DISCONTINUOUS, invalidate = true, chunk = true); continue
+                }
+                if (metadata.sequence !in 0L until MAX_CHUNKS.toLong()) {
+                    lost(OrionRuntimeCaptureGap.CHUNK_SEQUENCE, chunk = true); continue
+                }
+                if (metadata.sequence != expectedSequence || finalChunkRetained) lost(OrionRuntimeCaptureGap.CHUNK_SEQUENCE, chunk = true)
+                expectedSequence = metadata.sequence + 1
+                if (metadata.isFinal && (terminal == null || original.firstTerminalRecordUnavailable || entry.at !== terminal.at ||
+                    terminal.origin != OrionLifecycleTerminalOrigin.FINAL_CHUNK_TRANSITION || metadata.finishReason != terminal.status.terminal ||
+                    metadata.failure != terminal.status.failure)) {
+                    lost(OrionRuntimeCaptureGap.TERMINAL_MISMATCH, chunk = true); continue
+                }
+                if (metadata.validatedTextDeltaUtf8Bytes == null || metadata.validatedToolDeltaUtf8Bytes == null || metadata.validatedTotalContentUtf8Bytes == null) {
+                    gap(OrionRuntimeCaptureGap.CHUNK_METADATA_UNAVAILABLE); chunkLoss.set(true)
+                }
+                chunks.add(OrionRuntimeOrderedChunk(OrionRuntimeEventTime.fromObservation(point), metadata))
+                last = point.elapsedRealtimeMillis; finalChunkRetained = metadata.isFinal
+            }
+            nextSequence = expectedSequence; lastChunkElapsed = last
+            if (firstTerminal?.status?.terminal == OrionInferenceTerminal.PROCESS_DIED && markers.any {
+                it.kind == OrionRuntimeMarkerKind.UNLOAD_TRUE_DISPATCH || it.kind == OrionRuntimeMarkerKind.UNLOAD_TRUE_CLEANUP
+            }) lost(OrionRuntimeCaptureGap.PROCESS_DIED)
+            summary
+        } catch (_: Throwable) { failed(); terminalUnavailable.set(true); null }
+        finally { lock.unlock() }
+    }
+
+    /** Manual aggregate invalidity cannot erase genuine retained historical facts. */
+    fun markCaptureUnavailable() { lost(OrionRuntimeCaptureGap.IDENTITY_CHANGED, invalidate = true) }
+
     /** Separate manual copy only; never called implicitly by a functional return or cleanup. */
     fun snapshot(): OrionRuntimeCaptureSnapshot? {
         val acquired = lock.tryLock()
@@ -258,7 +341,8 @@ internal class OrionRuntimeEventRecorder(private val expected: OrionRuntimeCaptu
                 if (acquired) Collections.unmodifiableList(ArrayList(chunks)) else emptyList(),
                 if (acquired) firstTerminal else null, terminalUnavailable.get(),
                 if (acquired) Collections.unmodifiableList(ArrayList(memory)) else emptyList(), Collections.unmodifiableSet(reasons),
-                invalidated.get(), !chunkLoss.get(), dropped.get(), failures.get(), accounting.get(), !acquired)
+                invalidated.get(), !chunkLoss.get(), dropped.get(), failures.get(), accounting.get(), !acquired,
+                if (acquired) lifecycleImport else null)
         } catch (_: Throwable) { failed(); null }
         finally { if (acquired) lock.unlock() }
     }
