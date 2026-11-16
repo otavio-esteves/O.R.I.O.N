@@ -56,6 +56,24 @@ class OrionInferenceLifecycleEventSourceTest {
         assertEquals(1, clock.reads.size)
     }
 
+    @Test fun `scalar terminal view does not read clock copy chunks or mutate accounting`() {
+        val clock = Clock(); val time = eventClock(); val source = OrionInferenceLifecycleEventSource(time)
+        val lifecycle = OrionInferenceLifecycle(request(), clock, events = source)
+        lifecycle.activateEventCapture(); val original = lifecycle.cancel()
+        val reads = clock.reads.toList(); val counters = checkNotNull(time.snapshot()).counterReadsAtLeast
+        val first = checkNotNull(source.terminalView())
+        assertSame(original, first.firstTerminal?.status)
+        repeat(4097) { assertSame(first.firstTerminal, source.terminalView()?.firstTerminal) }
+        assertEquals(reads, clock.reads); assertEquals(counters, checkNotNull(time.snapshot()).counterReadsAtLeast)
+        val lock = source.javaClass.getDeclaredField("lock").apply { isAccessible = true }.get(source) as ReentrantLock
+        val before = state(source).droppedAtLeast
+        val executor = Executors.newSingleThreadExecutor()
+        lock.lock()
+        try { assertNull(executor.submit(Callable { source.terminalView() }).get(5, TimeUnit.SECONDS)) }
+        finally { lock.unlock(); executor.shutdownNow() }
+        assertEquals(before, state(source).droppedAtLeast)
+    }
+
     @Test fun `terminal before activation is unavailable and never recaptured or retimestamped`() {
         for (schema in listOf(1, 2)) {
             val clock = Clock(); val time = eventClock(); val source = OrionInferenceLifecycleEventSource(time)

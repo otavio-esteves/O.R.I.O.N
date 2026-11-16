@@ -175,8 +175,9 @@ internal class OrionCortexRuntimeOwner(
     }
 
     /** Explicit internal preparation only; no factory activation, workload choice or admission. */
-    internal fun beginRuntimeCapture(): OrionCortexRuntimeCaptureSession? = try {
-        if (closed) null else OrionCortexRuntimeCaptureSession.create(this, android.os.Process.myPid())
+    internal fun beginRuntimeCapture(sampling: OrionRuntimeSamplingConfiguration? = null): OrionCortexRuntimeCaptureSession? = try {
+        if (closed) null else OrionCortexRuntimeCaptureSession.create(this, android.os.Process.myPid(), sampling,
+            if (sampling == null) null else OrionRuntimeMainMemoryProbe(app))
     } catch (_: Throwable) { null }
 
     /** Same original path and original callback; normal run/runObserved remain capture-absent. */

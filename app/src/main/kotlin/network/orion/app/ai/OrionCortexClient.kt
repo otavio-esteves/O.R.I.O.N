@@ -132,6 +132,7 @@ internal class OrionCortexClient(
             if (before == null || before.service !== service || before.connection !== owner || before.binder !== binder || before.epoch != runtimeConnectionEpoch)
                 frame.connection = OrionRuntimeConnectionStamp(service, owner, binder, runtimeConnectionEpoch)
             frame.pid = pinnedAiPid
+            frame.capture.endpointPublished(frame)
         } catch (_: Throwable) { frame.valid = false }
     }
 
@@ -148,6 +149,18 @@ internal class OrionCortexClient(
         if (runtimeFrame !== window.frame) { window.frame.valid = false; return }
         window.frame.capture.originalMemoryWitness(window, pid, at)
     }
+
+    /** Published scalar fence only; never locks/binds/queries or changes the functional PID pin. */
+    internal fun runtimeDiagnosticCurrent(frame: OrionRuntimeCaptureFrame, stamp: OrionRuntimeConnectionStamp): Boolean =
+        !closed && runtimeFrame === frame && frame.valid && frame.connection === stamp && remote === stamp.service &&
+            connection === stamp.connection && runtimeBinder === stamp.binder && runtimeConnectionEpoch == stamp.epoch &&
+            runtimeTurnGeneration == frame.turn
+
+    internal fun runtimeDiagnosticEndpoint(frame: OrionRuntimeCaptureFrame): OrionRuntimeDiagnosticEndpoint? { return try {
+        val stamp = frame.connection ?: return null
+        if (!runtimeDiagnosticCurrent(frame, stamp)) null else
+            OrionRuntimeDiagnosticEndpoint(this, frame, stamp, app.packageName, android.os.Process.myPid())
+    } catch (_: Throwable) { null } }
 
     fun newRequestId(): String { check(!closed); return requestHistory.newRequestId() }
 
@@ -286,6 +299,7 @@ internal class OrionCortexClient(
         approved(model.modelId, contextTokens, threads, 1, cycle = cycle)
         val started = clock.monotonicNow()
         val deadline = started.deadlineAfter(durationMillis)
+        runtimeFrame?.let { it.capture.loadPreparing(it, service, started) }
         val specification = Bundle().apply {
             putInt("schemaVersion", 1); putString("requestId", id); putString("modelId", model.modelId)
             putString("sha256", model.sha256); putLong("sizeBytes", model.sizeBytes)
@@ -410,12 +424,13 @@ internal class OrionCortexClient(
                         OrionCortexWire.long(chunk, "sequence"), OrionCortexWire.optionalText(chunk, "delta"), isFinal = final,
                         finishReason = if (final) OrionInferenceTerminal.valueOf(OrionCortexWire.text(chunk, "finishReason")) else null,
                     ))
+                    runtimeFrame?.capture?.terminalHint()
                     if (update.chunks.isNotEmpty()) {
                         cycleObservations.isolatedCycle(cycle) { it.streamAttempt(cycle, update.chunks.size) }
                         onChunks(update.chunks)
                         cycleObservations.isolatedCycle(cycle) { it.streamReturned(cycle) }
                     }
-                } catch (_: IllegalArgumentException) { lifecycle.failTransport() }
+                } catch (_: IllegalArgumentException) { lifecycle.failTransport(); runtimeFrame?.capture?.terminalHint() }
             }
             if (lifecycle.status().terminal != OrionInferenceTerminal.SUCCEEDED)
                 runCatching { service.cancelInference(transportId) }
@@ -433,7 +448,8 @@ internal class OrionCortexClient(
     }
 
     fun cancel() = synchronized(monitor) {
-        active?.cancel(); activeId?.let { id -> runCatching { remote?.cancelInference(id) } }; Unit
+        active?.cancel(); runtimeFrame?.capture?.terminalHint()
+        activeId?.let { id -> runCatching { remote?.cancelInference(id) } }; Unit
     }
 
     private fun enterCycleCallback(token: OrionCortexCycleToken?, callback: Int,
