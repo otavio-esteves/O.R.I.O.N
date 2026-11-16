@@ -94,12 +94,49 @@ return/terminal and exception behavior; explicit optional diagnostic calls are
 accounted separately. The full source snapshot remains manual only; sampler
 terminal checks use a constant-size read-only view.
 
-No tests, Docker, Gradle, ADB, device execution or CI were run by this implementing
-agent; root centralizes validation. `git diff --check` is the local whitespace
-check. Root must run focused JVM/Android compilation/tests and architecture/lint
-checks before publication. Existing CoreFoundation/factory/defaults, governor,
-service/AIDL/wire, core/time, profiles and plans are unchanged. No durable state or
-migration is introduced; process death loses this optional in-memory capture and
-never resumes or repeats Core work. Source authentication, physical verification,
-profile approval, production inference, full F5/soak gates and F6 authorization
-remain false. Metadata freezes/renderer and physical qualification remain separate.
+Root's canonical validation passed on frozen source
+`c83ad7dc834bd2c05aa92032f3cc981e07bb501d`, tree
+`cb7bf1eb5ff68450354e2d005bf1223ef2918a17`. All nine changed Kotlin source/test
+hashes matched before and after execution. This later note changes documentation
+only; the tested implementation remains unchanged.
+
+Docker completed in 11m 44s with exit code 0: 1893 actionable tasks, 924 executed,
+735 from cache and 234 up-to-date. The invocation was:
+
+```sh
+./gradlew :ai:api:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug \
+  :app:assembleDebugAndroidTest verifyModuleBoundaries testModuleBoundaries \
+  :ai:api:lintDebug :app:lintDebug --max-workers=2
+```
+
+The XML inventory contains 321 JVM cases in 40 suites: 76 ai/api and 245 app,
+with zero failures, errors or skips. This includes five new cases (one ai/api,
+four app) and overlaps earlier package invocations; counts are not added across
+runs. Module-boundary verification/tests and lint passed. ai/api reported no lint
+issues; app reported 15 warnings and no errors. Every warning is outside the nine
+changed source/test files; no suppression or source change was used to pass.
+XML, HTML and SARIF reports are retained.
+
+Actual framework execution used one dedicated owned API35/default/x86_64 emulator
+with 4096-byte pages, after Docker finished. One instrumentation invocation
+recorded 89 unique START and 89 unique OK statuses, with no failure, ignore,
+assumption or skip; runner duration was 15.93s and ADB exited 0. The selection
+includes 13 new controls and overlaps #148's 76 cases; it is not an additional
+unique total. Clock, endpoint and workload fixtures remain synthetic, including
+the timing used with the real MAIN self-PSS/total-RAM probe. Local/copied and
+installed/pulled app/test APK SHA-256 matched their frozen bindings. Root verified
+the owned emulator identity and stopped it after collection; no physical target
+or unrelated device was used. These are ANDROID_EMULATOR mechanics, not physical,
+native-model, calibration, API37/MemoryLimiter or 24-hour evidence.
+
+The original validation summary, raw framework statuses/logs, installed bindings,
+JUnit and lint reports are retained separately for durable evidence packaging.
+Required exact-head remote PR CI remains pending; local checks do not substitute
+for integration approval. No build, Gradle or ADB execution was repeated for this
+documentary update. Existing CoreFoundation/factory/defaults, governor,
+service/AIDL/wire, core/time, profiles and plans remain unchanged. No durable state
+or migration is introduced; process death loses this optional in-memory capture
+and never resumes or repeats Core work. Source authentication, physical
+verification, profile approval, production inference, full F5/soak gates and F6
+authorization remain false. Metadata freezes/renderer and physical qualification
+remain separate.
