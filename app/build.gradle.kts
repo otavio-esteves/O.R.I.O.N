@@ -32,8 +32,12 @@ val cortexRuntimeCaptureFlag = providers.gradleProperty("orionCortexRuntimeCaptu
 check(cortexRuntimeCaptureFlag in setOf("true", "false")) { "orionCortexRuntimeCapture must be true or false." }
 val cortexRuntimeCaptureEnabled = cortexRuntimeCaptureFlag == "true"
 check(!cortexRuntimeCaptureEnabled || qualificationEnabled) { "Runtime capture requires the separate qualification identity." }
+val cortexInstrumentedWorkloadFlag = providers.gradleProperty("orionCortexInstrumentedWorkload").orElse("false").get()
+check(cortexInstrumentedWorkloadFlag in setOf("true", "false")) { "orionCortexInstrumentedWorkload must be true or false." }
+val cortexInstrumentedWorkloadEnabled = cortexInstrumentedWorkloadFlag == "true"
+check(!cortexInstrumentedWorkloadEnabled || qualificationEnabled) { "Instrumented workload requires the separate qualification identity." }
 check(listOf(physicalBaselineEnabled, cortexReadinessEnabled, exitEvidenceCaptureEnabled, cortexSingleAttemptEnabled,
-    cortexRuntimeCaptureEnabled).count { it } <= 1) {
+    cortexRuntimeCaptureEnabled, cortexInstrumentedWorkloadEnabled).count { it } <= 1) {
     "Qualification measurement modes are mutually exclusive."
 }
 
@@ -47,6 +51,7 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
         testInstrumentationRunner = when {
+            cortexInstrumentedWorkloadEnabled -> "network.orion.app.compatibility.OrionCortexInstrumentedWorkloadInstrumentation"
             cortexRuntimeCaptureEnabled -> "network.orion.app.compatibility.OrionCortexRuntimeCaptureInstrumentation"
             cortexSingleAttemptEnabled -> "network.orion.app.compatibility.OrionCortexSingleAttemptInstrumentation"
             exitEvidenceCaptureEnabled -> "network.orion.app.compatibility.OrionExitEvidenceCaptureInstrumentation"
@@ -61,6 +66,7 @@ android {
         // A normal APK never gains this observer, even with qualification properties supplied.
         buildConfigField("boolean", "ORION_CORTEX_SINGLE_ATTEMPT", "false")
         buildConfigField("boolean", "ORION_CORTEX_RUNTIME_CAPTURE", "false")
+        buildConfigField("boolean", "ORION_CORTEX_INSTRUMENTED_WORKLOAD", "false")
     }
 
     buildTypes {
@@ -78,6 +84,7 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             buildConfigField("boolean", "ORION_CORTEX_SINGLE_ATTEMPT", cortexSingleAttemptEnabled.toString())
             buildConfigField("boolean", "ORION_CORTEX_RUNTIME_CAPTURE", cortexRuntimeCaptureEnabled.toString())
+            buildConfigField("boolean", "ORION_CORTEX_INSTRUMENTED_WORKLOAD", cortexInstrumentedWorkloadEnabled.toString())
         }
     }
 
@@ -118,6 +125,13 @@ android {
         sourceSets.getByName("androidTest").java.directories.clear()
         sourceSets.getByName("androidTest").kotlin.directories.clear()
         sourceSets.getByName("androidTest").java.directories.add("src/cortexRuntimeCaptureAndroidTest/java")
+    }
+    if (cortexInstrumentedWorkloadEnabled) {
+        sourceSets.getByName("qualificationRelease").kotlin.directories.add("src/cortexInstrumentedWorkloadTarget/kotlin")
+        buildTypes.getByName("qualificationRelease").proguardFiles("src/cortexInstrumentedWorkloadTarget/proguard-rules.pro")
+        sourceSets.getByName("androidTest").java.directories.clear()
+        sourceSets.getByName("androidTest").kotlin.directories.clear()
+        sourceSets.getByName("androidTest").java.directories.add("src/cortexInstrumentedWorkloadAndroidTest/java")
     }
     if (cortexSingleAttemptEnabled) {
         sourceSets.getByName("qualificationRelease").kotlin.directories.add("src/cortexSingleAttemptTarget/kotlin")

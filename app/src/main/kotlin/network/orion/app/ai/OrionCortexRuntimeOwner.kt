@@ -129,6 +129,22 @@ internal class OrionCortexRuntimeOwner(
     internal suspend fun selectRuntimeCaptureTemplate(): OrionCortexAttemptConfiguration = selectAttemptTemplate(false)
     internal fun runtimeCaptureObservationConfiguration(): OrionRuntimeCaptureObservationConfiguration? = runtimeCaptureObservation
 
+    internal fun instrumentedConfigurationBinding(template: OrionCortexAttemptTemplate): OrionInstrumentedConfigurationBinding? =
+        if (closed || template !== singleAttemptTemplate) null else
+            deriveInstrumentedConfigurationBinding(plans, timing, template, runtimeCaptureObservation)
+
+    /** Existing endpoint only. No resources/guard evaluation or changes to functional ownership. */
+    internal fun instrumentedMemoryObservation(): OrionRuntimeAiMemoryReading? {
+        val selected = synchronized(monitor) { if (closed) null else client } ?: return null
+        val value = selected.instrumentedMemoryObservation()
+        return synchronized(monitor) { if (!closed && client === selected) value else null }
+    }
+
+    internal fun instrumentedScalarIdle(): Boolean {
+        val selected = synchronized(monitor) { if (closed) return false else client }
+        return selected?.instrumentedScalarIdle() ?: !OrionRuntimeMemorySamplingWorker.outstanding()
+    }
+
     private suspend fun selectAttemptTemplate(requireCycleObserver: Boolean): OrionCortexAttemptConfiguration = withContext(Dispatchers.IO) {
         fun refuse(reason: OrionCortexAttemptRefusal) = OrionCortexAttemptConfiguration.Refused(reason)
         preResourceReadiness().unavailable?.let { return@withContext refuse(singleAttemptRefusal(it)) }

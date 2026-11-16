@@ -219,6 +219,15 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         }
     }
 
+    /** Explicit qualification-only aggregate query; ordinary graphs expose no new business surface. */
+    internal fun instrumentedWorkloadQueues(): network.orion.app.ai.OrionInstrumentedQueueCounts? {
+        if (!BuildConfig.ORION_CORTEX_INSTRUMENTED_WORKLOAD || !taskStartupBarrier.isOpen() ||
+            !health.value.core.readiness.isStartupBarrierOpen || android.app.Application.getProcessName() != app.packageName) return null
+        val selected = database ?: return null
+        val value = network.orion.app.ai.readInstrumentedWorkloadQueues(selected)
+        return if (database === selected && taskStartupBarrier.isOpen() && health.value.core.readiness.isStartupBarrierOpen) value else null
+    }
+
     private var preferences: OrionPreferencesStore? = null
     private var startupJob: Job? = null
     @Volatile var databaseFormatVersion: Int? = null
