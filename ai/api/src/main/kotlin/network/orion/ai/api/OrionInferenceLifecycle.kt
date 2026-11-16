@@ -30,8 +30,10 @@ class OrionInferenceLifecycle(
     private val request: OrionInferenceRequest,
     private val clock: MonotonicClock,
     facts: OrionInferenceLifecycleFactBuffer? = null,
+    events: OrionInferenceLifecycleEventSource? = null,
 ) {
     private val observations = try { facts?.claim() } catch (_: Throwable) { null }
+    private val eventSource = try { events?.claim(request.deadline.start) } catch (_: Throwable) { null }
     private var current = OrionInferenceStatus(OrionInferenceStage.CREATED, null, null)
     private var nextSequence = 0L
     private val pending = TreeMap<Long, OrionInferenceChunk>()
@@ -44,6 +46,9 @@ class OrionInferenceLifecycle(
     }
 
     @Synchronized fun status(): OrionInferenceStatus { checkDeadline(OP_STATUS); return current }
+
+    /** Future real runOnce owner only. No functional clock read, auto-activation or admission authority. */
+    @Synchronized fun activateEventCapture(): Boolean = eventSource?.activate(current.terminal != null) ?: false
 
     @Synchronized fun markLoading(): Boolean {
         checkDeadline(OP_MARK_LOADING)
@@ -80,11 +85,12 @@ class OrionInferenceLifecycle(
     @Synchronized fun accept(chunk: OrionInferenceChunk): OrionInferenceUpdate {
         fun update(receipt: OrionInferenceReceipt, chunks: List<OrionInferenceChunk> = emptyList(),
             sample: OrionLifecycleDeadlineSample?, bytes: Int = -1, releases: OrionLifecycleReleasedMetadata? = null,
-            byteParts: Long = -1L): OrionInferenceUpdate {
+            byteParts: Long = -1L, eventStage: OrionLifecycleEventStage? = null): OrionInferenceUpdate {
             val result = OrionInferenceUpdate(receipt, chunks, current)
             // No original update/list is retained or replaced. Diagnostic publication follows construction.
             observations?.update(receipt, result.status, sample, chunk.sequence, chunk.isFinal, chunk.finishReason, chunk.errorCode,
                 bytes, releases, byteParts)
+            eventSource?.publish(eventStage, result)
             return result
         }
         fun fail(reason: OrionInferenceFailure, sample: OrionLifecycleDeadlineSample?, bytes: Int = -1,
@@ -99,7 +105,7 @@ class OrionInferenceLifecycle(
         if (chunk.sequence < nextSequence) return update(OrionInferenceReceipt.DUPLICATE, sample = sample)
         // Subtract nonnegative ordered operands; Long.MAX_VALUE cannot overflow this comparison.
         if (chunk.sequence - nextSequence > MAX_REORDER_GAP) return fail(OrionInferenceFailure.REORDER_LIMIT, sample)
-        val observedBytes = observations?.byteParts()
+        val observedBytes = if (eventSource == null) observations?.byteParts() else eventSource.byteParts(observations)
         val bytes = chunk.boundedContentBytes(MAX_CHUNK_CONTENT_BYTES, observedBytes)
             ?: return fail(OrionInferenceFailure.CHUNK_TOO_LARGE, sample)
         val submittedByteParts = observedBytes?.packedParts ?: -1L
@@ -117,6 +123,7 @@ class OrionInferenceLifecycle(
         }
         val delivered = mutableListOf<OrionInferenceChunk>()
         val releasedMetadata = observations?.releases()
+        val eventStage = eventSource?.beginAccept()
         var next: OrionInferenceChunk? = chunk
         var nextBytes = bytes
         var nextByteParts = submittedByteParts
@@ -126,8 +133,10 @@ class OrionInferenceLifecycle(
             current = current.copy(stage = OrionInferenceStage.DECODING)
             if (next.isFinal) {
                 finish(checkNotNull(next.finishReason), next.errorCode, OP_ACCEPT, ORIGIN_FINAL_CHUNK_TRANSITION, sample)
+                eventStage?.ordered(next.sequence, next.isFinal, next.finishReason, next.errorCode, nextBytes, nextByteParts)
                 break
             }
+            eventStage?.ordered(next.sequence, next.isFinal, next.finishReason, next.errorCode, nextBytes, nextByteParts)
             if (nextSequence == Long.MAX_VALUE) return fail(OrionInferenceFailure.REORDER_LIMIT, sample, bytes, submittedByteParts)
             nextSequence++
             next = pending.remove(nextSequence)
@@ -139,7 +148,7 @@ class OrionInferenceLifecycle(
                 nextByteParts = observedBytes?.packedParts ?: -1L
             }
         }
-        return update(OrionInferenceReceipt.ACCEPTED, delivered, sample, bytes, releasedMetadata, submittedByteParts)
+        return update(OrionInferenceReceipt.ACCEPTED, delivered, sample, bytes, releasedMetadata, submittedByteParts, eventStage)
     }
 
     private fun checkDeadline(operation: Int): OrionLifecycleDeadlineSample? {
@@ -148,6 +157,7 @@ class OrionInferenceLifecycle(
         val at = clock.monotonicNow() // Original call outside any diagnostic catch.
         val classification = deadline.statusAt(at) // Original classification, once and in the same order.
         val sample = observations?.deadline(operation, at, classification)
+        eventSource?.originalWitness(at, classification)
         when (classification) {
             MonotonicDeadlineStatus.ACTIVE -> Unit
             MonotonicDeadlineStatus.EXPIRED -> finish(OrionInferenceTerminal.TIMED_OUT, operation = operation,
@@ -162,6 +172,7 @@ class OrionInferenceLifecycle(
         operation: Int, origin: Int, sample: OrionLifecycleDeadlineSample? = null) {
         if (current.terminal != null) return
         current = OrionInferenceStatus(OrionInferenceStage.TERMINAL, terminal, failure)
+        eventSource?.firstTerminal(operation, origin, current)
         pending.clear()
         pendingBytes = 0
         observations?.firstTerminal(operation, origin, current, sample)
