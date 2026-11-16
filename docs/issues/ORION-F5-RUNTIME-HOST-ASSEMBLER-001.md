@@ -64,6 +64,15 @@ identity, including model size. Only the other four identity fields and six
 platform session fields come from HOST; MAIN PID/boot/candidate/events/bytes/rows
 are never supplied, inferred, clamped or repaired by HOST.
 
+The SOURCE temperature is the actual original wire Float, as required by #141's
+candidate source map. Encoder153 serializes `wireTemperature.toDouble().toString()`.
+SOURCE validation therefore requires an exact IEEE binary32 pack/unpack roundtrip
+in 0..2, without replacing or rounding the submitted value. For example, `0.1`
+is rejected while the actual widened Float `0.10000000149011612` is retained.
+Exactly representable JSON integers 0/1/2 keep their original integer type; signed
+zero and representable subnormal Floats also remain unchanged. The unchanged v1
+validator still accepts its existing broader finite-number representation.
+
 Each factored SOURCE chunk must omit `requestIdSha256`. Assembly inserts exactly
 its already-validated common `inference.requestIdSha256`; sequence, received time,
 byte counts, terminal and null fields are copied unchanged. The complete assembled
@@ -97,9 +106,18 @@ its original closed invocation/loss fields. Reports are closed ASCII at most
 
 ## Validation, recovery and limits
 
-Focused controls were written before implementation. The author performed only
-syntax parsing and source/diff/link review; no Python suite, Docker, Gradle, ADB,
-device execution or CI was run here. Root must run, in canonical Docker:
+Focused controls were written before implementation. Root's canonical Docker
+validation on historical source `4c898a44f89aefe614d93fb09860ef9835b9237c` passed
+26 focused tests in 0.162s and the full 488-case HOST selection in 20.877s. These
+overlapping invocations are not added together; fixtures remain synthetic.
+
+Subsequent review found that reusing v1's generic Double range accepted numbers
+that encoder153 could not emit from an original Float. Two new focused controls
+and the source-only binary32 check address that contract gap. Their Docker
+validation is **PENDING**; the earlier passing invocation does not cover this
+change. The author performed only syntax parsing and source/diff/link review,
+with no Python suite, Docker, Gradle, ADB, device execution or CI. Root must rerun
+the focused and full HOST checks in canonical Docker:
 
 ```sh
 python3 -B scripts/android/test_f5_runtime_source_assembler_harness.py

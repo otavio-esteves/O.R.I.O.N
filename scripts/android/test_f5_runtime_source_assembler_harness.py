@@ -104,6 +104,23 @@ class RuntimeSourceAssemblerTest(unittest.TestCase):
         self.source["inference"]["chunks"][0]["toolDeltaBytes"] = None
         self.reject()
 
+    def test_temperature_rejects_double_values_not_exact_original_wire_floats(self):
+        for value in (0.1, 0.2, 1.0000000000000002, 2**-150):
+            self.source["candidate"]["temperature"] = value
+            with self.subTest(value=value), self.assertRaises(assembler.Rejected) as caught:
+                self.assemble()
+            self.assertEqual("WIRE_TEMPERATURE_INVALID", str(caught.exception))
+
+    def test_exact_wire_temperature_and_integer_json_are_preserved_without_rounding(self):
+        for value in (0, 1, 2, 0.0, -0.0, 0.10000000149011612, 0.20000000298023224, 2**-149):
+            self.source["candidate"]["temperature"] = value
+            with self.subTest(value=value):
+                output = json.loads(self.assemble().runtime_json)["candidate"]["temperature"]
+                self.assertEqual(value, output)
+                self.assertIs(type(value), type(output))
+                if value == -0.0 and type(value) is float:
+                    self.assertEqual(json.dumps(value), json.dumps(output))
+
     def test_no_load_refusal_requires_actual_false_owner_and_no_source(self):
         self.status.update(recordState="NO_LOAD_REFUSAL", captureIntegrity="UNAVAILABLE",
                            failureCode="NO_QUALIFIED_PROFILE", ownerCallInvoked=False)

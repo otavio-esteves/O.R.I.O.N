@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Pure closed SOURCE/status assembly. No acquisition, persistence, transport or authority."""
 import json
+import struct
 from typing import NamedTuple
 
 import f5_runtime_evidence_protocol as v1
@@ -116,6 +117,13 @@ def _document(source, expected, host):
     v1.require(scope["bootCount"] == host["bootCount"] and
                host["startedElapsed"] <= scope["startedElapsed"] <= scope["completedElapsed"] <= host["completedElapsed"],
                "MAIN_HOST_WINDOW_MISMATCH")
+    candidate = source["candidate"]
+    v1.fields(candidate, {"contextTokens", "threads", "maxTokens", "temperature"}, "CANDIDATE_FIELDS_INVALID")
+    temperature = candidate["temperature"]
+    # SOURCE153 widens the actual original wire Float to Double. Check representability only;
+    # copying the submitted candidate below must never round or replace that original value.
+    v1.require(type(temperature) in (int, float) and 0 <= temperature <= 2, "WIRE_TEMPERATURE_INVALID")
+    v1.require(struct.unpack("!f", struct.pack("!f", temperature))[0] == temperature, "WIRE_TEMPERATURE_INVALID")
     # MAIN values are never filled from HOST or repaired. Only the proven common chunk hash is repeated.
     infer = source["inference"]
     if infer is not None:
