@@ -216,11 +216,11 @@ def _serial(method):
                 return self._report("UNKNOWN" if self._uncertain else "HALTED", self._failure)
             try:
                 return method(self, *args)
-            except (KeyboardInterrupt, SystemExit):
-                self._halt("INTERRUPTED", unknown=self._pending is not None)
-                raise
             except Exception:
                 return self._halt("CONTROL_UNAVAILABLE", unknown=self._pending is not None)
+            except BaseException:
+                self._halt("INTERRUPTED", unknown=self._pending is not None)
+                raise
         finally:
             self._lock.release()
     return guarded
@@ -259,12 +259,14 @@ class HeavySoakController:
             self._store = J.JournalStore(directory, create=True)
             ack = self._store.initialize(plan)
             self._ack(ack, initial=True)
-        except Exception:
+        except BaseException as failure:
             if self._store is not None:
                 try:
                     self._store.close()
-                except Exception:
+                except BaseException:
                     pass
+            if not isinstance(failure, Exception):
+                raise
             raise ControllerError() from None
 
     @property

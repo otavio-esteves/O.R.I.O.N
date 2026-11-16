@@ -98,8 +98,10 @@ outcome. A genuine local guard/typed refusal records REFUSED without invoking wo
 
 Failed/uncertain result publication also halts UNKNOWN. The committed file may
 contain either only the intent or the actual result when its ACK was lost; neither
-case enables replay. KeyboardInterrupt/SystemExit halt the live controller and
-propagate the original object. Abrupt process exit loses ephemeral control state;
+case enables replay. All non-Exception interruptions, including KeyboardInterrupt, SystemExit and
+GeneratorExit, halt the live controller and propagate the original object.
+Construction also closes an already-acquired store before propagating such an
+interruption; retained files are not deleted or adopted. Abrupt process exit loses ephemeral control state;
 the new-only constructor prevents adopting the retained journal. Halting/closing
 does not invent a device timestamp or append an assumed terminal/interruption.
 Failed cleanup is retained and halts; this component supplies no cleanup retry.
@@ -157,8 +159,10 @@ These fixtures establish no Android execution, actual terminal provenance,
 physical measurements, calibrated limits, autonomy or real elapsed 24 hours.
 
 Central validation on HOST through `docker compose run --rm host-harness-check`
-passed all 460 tests (426 existing and 34 controller cases), with no failures,
-on the reviewed controller source. This used the canonical isolated Docker HOST
+passed all 462 tests (426 existing and 36 controller cases), with no failures,
+on the reviewed controller source. Two regression tests first reproduced four
+failures for post-ACK GeneratorExit and constructor interruptions; all passed
+after the ownership fix. This used the canonical isolated Docker HOST
 harness environment; it is not Android or physical evidence. Required PR CI
 remains pending until its exact head is green. The focused command is:
 

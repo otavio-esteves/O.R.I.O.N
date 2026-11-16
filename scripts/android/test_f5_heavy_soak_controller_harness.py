@@ -474,6 +474,49 @@ class HeavyControllerTest(unittest.TestCase):
         self.assertEqual("UNKNOWN", self.attempt(11)["status"])
         self.assertEqual("WORK_INTENT", self.entries()[-1]["kind"])
 
+    def test_base_exception_after_ack_halts_all_later_ports_and_preserves_unknown(self):
+        self.start()
+        failure = GeneratorExit("PRIVATE_SECRET_SENTINEL")
+        self.producer.failure = failure
+        with self.assertRaises(GeneratorExit) as raised:
+            self.attempt()
+        self.assertIs(failure, raised.exception)
+        retained = (self.directory / STORE.STATE).read_bytes()
+        with mock.patch.object(self.producer, "stamp") as stamp, \
+                mock.patch.object(self.producer, "observe") as observe, \
+                mock.patch.object(self.producer, "invoke") as invoke, \
+                mock.patch.object(self.admission, "acquire") as acquire, \
+                mock.patch.object(STORE.JournalStore, "append") as append:
+            for result in (self.controller.observe(), self.attempt(11), self.controller.cleanup(FIXTURE_ID)):
+                self.assertEqual("UNKNOWN", result["status"])
+                self.assertNotIn("PRIVATE_SECRET_SENTINEL", json.dumps(result))
+            for port in (stamp, observe, invoke, acquire, append):
+                port.assert_not_called()
+        self.assertEqual(retained, (self.directory / STORE.STATE).read_bytes())
+        self.assertEqual("WORK_INTENT", self.entries()[-1]["kind"])
+
+    def test_constructor_interrupt_after_store_creation_closes_before_original_propagation(self):
+        original = STORE.JournalStore.initialize
+        for index, failure in enumerate((KeyboardInterrupt(), SystemExit(), GeneratorExit())):
+            with self.subTest(failure=type(failure).__name__):
+                stores = []
+                def interrupted(store, selected):
+                    original(store, selected)
+                    stores.append(store)
+                    raise failure
+                target = Path(self.temporary.name) / f"interrupted-{index}"
+                with mock.patch.object(STORE.JournalStore, "initialize", new=interrupted):
+                    with self.assertRaises(type(failure)) as raised:
+                        C.HeavySoakController(target, self.selected, configuration=self.configuration,
+                                              admission=self.admission, producer=self.producer)
+                self.assertIs(failure, raised.exception)
+                self.assertEqual(1, len(stores))
+                self.assertFalse(stores[0].locked)
+                self.assertIsNone(stores[0].fd)
+                self.assertEqual([], stores[0].chain)
+                self.assertEqual([], json.loads((target / STORE.STATE).read_bytes())["journal"]["entries"])
+        self.assertEqual([], self.producer.effects)
+
     def test_observation_is_typed_bounded_and_cannot_persist_sensitive_fields(self):
         self.start()
         self.assertEqual("RECORDED", self.controller.observe()["status"])
