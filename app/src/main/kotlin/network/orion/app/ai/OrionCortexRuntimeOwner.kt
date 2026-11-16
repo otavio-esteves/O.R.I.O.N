@@ -193,6 +193,11 @@ internal class OrionCortexRuntimeOwner(
 
     internal fun readRuntimeCapture(capture: OrionCortexRuntimeCaptureSession): OrionRuntimeSessionReceipt? = capture.readAfterRun(this)
 
+    /** Explicit manual export, after readRuntimeCapture sealed the separate sampling window. */
+    internal fun freezeRuntimeCapture(capture: OrionCortexRuntimeCaptureSession,
+        context: OrionRuntimeQualifiedContext): OrionRuntimeExportSnapshot? =
+        if (context.matches(app.packageName, app.applicationInfo.uid)) capture.freezeForExport(this, context) else null
+
     suspend fun run(modelId: String, request: OrionInferenceRequest, contextTokens: Int, threads: Int,
         onChunks: (List<OrionInferenceChunk>) -> Unit): OrionCortexRunResult =
         runOwned(modelId, request, contextTokens, threads, onChunks, null)
@@ -226,7 +231,8 @@ internal class OrionCortexRuntimeOwner(
                 return@withContext OrionCortexRunResult.Completed(it)
             }
             checkRequest()
-            if (discoverInventory() == null) return@withContext unavailable(OrionCortexUnavailable.PROCESS_INVENTORY_UNAVAILABLE)
+            val originalInventory = discoverInventory()
+                ?: return@withContext unavailable(OrionCortexUnavailable.PROCESS_INVENTORY_UNAVAILABLE)
             checkRequest()
             val beforeRecovery = database.models().find(modelId)
             // One registry row per request: no scan or hash work joins mandatory Core startup.
@@ -297,7 +303,8 @@ internal class OrionCortexRuntimeOwner(
                         requestHistory = requestHistory, cycleObservations = cycleObservations).also { client = it }
                 } ?: return@withContext unavailable(OrionCortexUnavailable.CLOSED)
                 if (runtimeCapture != null && selected != null) runtimeCapture.selected(this@OrionCortexRuntimeOwner,
-                    selected.sha256, selected.sizeBytes, request.requestId, request.deadline, timing?.maximumObservationAgeMillis)
+                    selected.sha256, selected.sizeBytes, request.requestId, request.deadline, timing?.maximumObservationAgeMillis,
+                    contextTokens, threads, request.maxTokens, originalInventory)
                 OrionCortexRunResult.Completed(ownedClient.runInference(checkNotNull(selected), it, request,
                     contextTokens, threads, cycle, runtimeCapture, onChunks))
             }

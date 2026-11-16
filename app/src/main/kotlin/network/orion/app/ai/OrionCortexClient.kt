@@ -395,7 +395,9 @@ internal class OrionCortexClient(
             val specification = Bundle().apply {
                 putInt("schemaVersion", 1); putString("requestId", transportId); putString("modelId", model.modelId)
                 putLong("inputSize", input.size.toLong().also { originalInputBytes = it }); putInt("maxTokens", request.maxTokens)
-                putFloat("temperature", request.temperature.toFloat())
+                putFloat("temperature", request.temperature.toFloat().also { value ->
+                    runtimeFrame?.let { it.capture.wireTemperature(it, service, value) }
+                })
                 putInt("bootCount", checkNotNull(start.bootSessionId).bootCount)
                 putLong("startedElapsed", start.elapsedRealtimeMillis)
                 putLong("durationMillis", request.deadline.expiresElapsedRealtimeMillis - start.elapsedRealtimeMillis)

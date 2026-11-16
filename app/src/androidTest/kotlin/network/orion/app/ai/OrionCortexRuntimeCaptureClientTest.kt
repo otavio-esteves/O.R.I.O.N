@@ -58,6 +58,7 @@ class OrionCortexRuntimeCaptureClientTest {
         val health = AtomicInteger(); val discoveries = AtomicInteger(); val queries = AtomicInteger()
         val started = CompletableDeferred<Unit>()
         var automatic = true
+        var wireTemperature: Float? = null
         var queryAction: (() -> Unit)? = null
         var modelId: String? = null
         private var inference = ""
@@ -81,6 +82,7 @@ class OrionCortexRuntimeCaptureClientTest {
             if (modelId == null && !strictUnload) putString("requestId", "allowed-extra-unload-field")
         }
         override fun startInference(input: SharedMemory?, specification: Bundle, callback: IOrionInferenceCallback): Bundle {
+            wireTemperature = specification.getFloat("temperature")
             trace.add("infer"); infers.incrementAndGet(); inference = specification.getString("requestId")!!; this.callback = callback
             started.complete(Unit)
             if (automatic) complete()
@@ -165,8 +167,8 @@ class OrionCortexRuntimeCaptureClientTest {
             // manual reader. No production constructor/port/plan or reflection path is added.
             owner.javaClass.getDeclaredField("client").apply { isAccessible = true }.set(owner, client)
         }
-        fun request(deadline: MonotonicDeadline = clock.mark.deadlineAfter(30_000)) = OrionInferenceRequest(
-            client.newRequestId(), 1, hash, "SECRET_PROMPT_NOT_RETAINED", "", 8, 0.0, OrionInferencePriority.INTERACTIVE, deadline, "fixture")
+        fun request(deadline: MonotonicDeadline = clock.mark.deadlineAfter(30_000), temperature: Double = 0.0) = OrionInferenceRequest(
+            client.newRequestId(), 1, hash, "SECRET_PROMPT_NOT_RETAINED", "", 8, temperature, OrionInferencePriority.INTERACTIVE, deadline, "fixture")
         fun capture(request: OrionInferenceRequest, unavailableClock: Boolean = false, sampling: Boolean = false): OrionCortexRuntimeCaptureSession {
             val capture = checkNotNull(owner.beginRuntimeCapture(if (sampling) OrionRuntimeSamplingConfiguration(10) else null))
             val method = OrionObservationEventClock.Companion::class.java.declaredMethods.single {
@@ -193,6 +195,28 @@ class OrionCortexRuntimeCaptureClientTest {
         override fun close() { owner.close(); app.deleteDatabase(dbName); root.deleteRecursively() }
     }
 
+
+    @Test fun captureCopiesExactOriginalWireFloatWithoutChangingFunctionalReadsRpcOrCallbackList() = runBlocking {
+        suspend fun run(enabled: Boolean): Pair<List<String>, Int> = Fixture().use { f ->
+            val request = f.request(temperature = 0.1)
+            val capture = if (enabled) f.capture(request) else null
+            var delivered: List<OrionInferenceChunk>? = null
+            val original = f.run(capture, request) { delivered = it }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, original.terminal)
+            assertEquals("SECRET_OUTPUT_NOT_RETAINED", checkNotNull(delivered).single().textDelta)
+            val calls = f.context.endpoint.trace.toList(); val reads = f.clock.reads.get()
+            assertEquals(0.1f, f.context.endpoint.wireTemperature)
+            if (capture != null) {
+                val actual = capture.javaClass.getDeclaredField("originalWireTemperature").apply { isAccessible = true }.get(capture) as Float
+                assertEquals(f.context.endpoint.wireTemperature, actual)
+                assertNotEquals(request.temperature, actual.toDouble())
+                f.owner.readRuntimeCapture(capture)
+                assertEquals(calls, f.context.endpoint.trace); assertEquals(reads, f.clock.reads.get())
+            }
+            calls to reads
+        }
+        assertEquals(run(false), run(true))
+    }
 
     @Test fun capturePreservesOriginalClockRpcSequenceAndCallbackListWithoutOldCollectors() = runBlocking {
         suspend fun run(enabled: Boolean): Pair<List<String>, Int> = Fixture().use { f ->

@@ -359,6 +359,11 @@ The source capsule carries exactly schemaVersion=1, kind=ORION_MAIN_RUNTIME_CAPT
 maximumSampleAgeMillis and processInventory, all from MAIN sources. Other sections
 are exactly the source-derived v1 sections mapped above. HOST adds
 only the separately verified identity/platform fields, not missing event data.
+For the SOURCE capsule only, chunks factor their common logical identity at
+`inference.requestIdSha256`; each chunk retains explicit sequence, receivedElapsed,
+textDeltaBytes, toolDeltaBytes, isFinal, finishReason and errorCode. The assembler
+repeats exactly that proven common hash when expanding unchanged v1 chunk fields.
+No times or sequence values are reconstructed or compressed.
 Unknown capsule fields/types/keys are rejected. The capsule contains hashes of
 actual IDs, never raw IDs, content, paths, raw errors or content hashes.
 
