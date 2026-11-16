@@ -149,6 +149,194 @@
   },
   "generatedAtUtc": "2026-11-15T21:47:30.907685+00:00",
   "integrityModel": "The archive SHA-256 covers all members, including manifest.json. manifest.json covers each payload except itself and manifest.sha256. This is an integrity record, not a signed provenance attestation.",
+  "jvmReportInventoryCorrection": {
+    "appliesTo": "environments.CONTAINER.currentJvmXml",
+    "archivePreservation": {
+      "archiveSha256": "5c193f87fd735dcc7387ddea8eea25cc3770749ae63e0e60752a84fc7d17c7eb",
+      "archiveUnchanged": true,
+      "artifactMetadataUnchanged": true,
+      "boundary": "This correction is an external index addendum. The immutable archive and its internal evidence.json retain the historical raw 990/124 collection. No original payload, manifest entry or count is rewritten.",
+      "manifestSha256": "732bf899b676a8489040cb4f7b8a387c799f09fd9d4e26d2b6742891a2ea5880",
+      "originalIndexSha256": "f8469dd182bbe259ee05806c50b1792dac957b4ae4945fea33924784f3585777",
+      "payloadManifestUnchanged": true,
+      "rawReportsLogsAndCountsUnchanged": true
+    },
+    "authoritativeForActiveModuleCounts": true,
+    "comparisonSourceRecords": [
+      {
+        "filename": "orion-stale-jvm-reports-20261115.json",
+        "sha256": "0930eb3baaf4dd1c860f3924cfdaf51b150df3ade23b4f16892cea50257d4feb"
+      },
+      {
+        "filename": "orion-jvm-report-set-comparison-20261115.json",
+        "sha256": "1b6969e13597612b92d63e5485c6508f35b35b08e62d259ee28c943c4b0fc8bb"
+      }
+    ],
+    "correctedActiveModuleCollection": {
+      "errors": 0,
+      "failures": 0,
+      "newExecutionClaimed": false,
+      "result": "PASS_ACTIVE_MODULE_RESULTS",
+      "skipped": 0,
+      "suites": 121,
+      "tests": 937
+    },
+    "equations": {
+      "suites": "124 - 3 = 121",
+      "tests": "990 - 53 = 937"
+    },
+    "excludedLegacyCollection": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "suites": 3,
+      "tests": 53
+    },
+    "excludedLegacyReports": [
+      {
+        "archivePath": "jvm/ai/cortex/build/test-results/testDebugUnitTest/TEST-network.orion.ai.cortex.OrionCortexRuntimeTest.xml",
+        "errors": 0,
+        "failures": 0,
+        "module": "ai/cortex",
+        "name": "network.orion.ai.cortex.OrionCortexRuntimeTest",
+        "path": "ai/cortex/build/test-results/testDebugUnitTest/TEST-network.orion.ai.cortex.OrionCortexRuntimeTest.xml",
+        "sha256": "a5e4a374162491373a131fcc77f480be1440db05f298b92f2f36ece188e2304f",
+        "skipped": 0,
+        "tests": 30,
+        "timestamp": "2026-11-14T14:07:34.448Z"
+      },
+      {
+        "archivePath": "jvm/data/modelregistry/build/test-results/testDebugUnitTest/TEST-network.orion.data.modelregistry.OrionGgufValidatorTest.xml",
+        "errors": 0,
+        "failures": 0,
+        "module": "data/modelregistry",
+        "name": "network.orion.data.modelregistry.OrionGgufValidatorTest",
+        "path": "data/modelregistry/build/test-results/testDebugUnitTest/TEST-network.orion.data.modelregistry.OrionGgufValidatorTest.xml",
+        "sha256": "4d1a2ff90ae62f51de1c8b0cae576c4601fa2961435674b9e932fb1711bab6b8",
+        "skipped": 0,
+        "tests": 9,
+        "timestamp": "2026-11-08T21:46:42.778Z"
+      },
+      {
+        "archivePath": "jvm/data/modelregistry/build/test-results/testDebugUnitTest/TEST-network.orion.data.modelregistry.OrionModelRegistryTest.xml",
+        "errors": 0,
+        "failures": 0,
+        "module": "data/modelregistry",
+        "name": "network.orion.data.modelregistry.OrionModelRegistryTest",
+        "path": "data/modelregistry/build/test-results/testDebugUnitTest/TEST-network.orion.data.modelregistry.OrionModelRegistryTest.xml",
+        "sha256": "321a0ff60c3290c050a7c36c871914d886bf469c0bd95cdfe8ad86288057b6fe",
+        "skipped": 0,
+        "tests": 14,
+        "timestamp": "2026-11-08T21:46:58.738Z"
+      }
+    ],
+    "inventory": {
+      "excludedModulePaths": [
+        "ai/cortex",
+        "data/modelregistry"
+      ],
+      "method": "Git-tracked module build.gradle.kts paths at the audited sourceParentCommit, compared with each archived XML path prefix before /build/test-results/.",
+      "sameInventoryAtDocumentationBase": true,
+      "sourceCommit": "b311773aa7a841c973cbd0ef8f3dd4fc2358ca78",
+      "trackedModulePaths": [
+        "ai/api",
+        "ai/llama",
+        "ai/service",
+        "app",
+        "core/actions",
+        "core/commands",
+        "core/common",
+        "core/events",
+        "core/exitinfo",
+        "core/health",
+        "core/ingress",
+        "core/ipc",
+        "core/model",
+        "core/observability",
+        "core/orchestrator",
+        "core/policy",
+        "core/queries",
+        "core/recovery",
+        "core/resources",
+        "core/security",
+        "core/skills/metadata",
+        "core/time",
+        "data/actions",
+        "data/database",
+        "data/datastore",
+        "data/events",
+        "data/memory",
+        "data/reminders",
+        "data/repository",
+        "data/tasks",
+        "data/timers",
+        "feature/activity",
+        "feature/device",
+        "feature/diagnostics",
+        "feature/home",
+        "feature/memories",
+        "feature/notifications",
+        "feature/reminders",
+        "feature/settings",
+        "feature/tasks",
+        "feature/timers",
+        "scheduler",
+        "skills/api",
+        "skills/device",
+        "skills/memory",
+        "skills/notifications",
+        "skills/reminders",
+        "skills/tasks",
+        "skills/timers",
+        "voice/api",
+        "voice/ipc"
+      ]
+    },
+    "limits": [
+      "An inventory correction is not a new test execution, proof of fresh execution, CI approval or physical qualification.",
+      "Cached/up-to-date task scope and the original non-passing attempts remain as originally recorded.",
+      "No hardware, profile, RuntimeEvidence v1, F4/F5/soak or F6 gate is approved by this addendum."
+    ],
+    "rawArchivedCollection": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "suites": 124,
+      "tests": 990
+    },
+    "reason": "The original filesystem-wide XML collection included legacy reports from module paths without Git-tracked build.gradle.kts files in the audited source. Their error-free XML status does not make them active-module evidence.",
+    "recordedAtUtc": "2026-11-15T23:14:52.019763+00:00",
+    "reviewDate": "2026-11-15",
+    "schemaVersion": 1,
+    "separateLaterFullCheckComparison": {
+      "activeSuites": 122,
+      "activeTests": 952,
+      "addedSuites": 1,
+      "addedTests": 15,
+      "candidate": "F / issue132 integrated lifecycle-facts full check",
+      "comparisonMeaning": "937 active audit B cases plus the 15-case lifecycle-facts suite equals 952 active F cases. This is a separate later full-check result, not a replacement for the valid earlier F scoped 264-case snapshot and not 264 additional cases.",
+      "newOnlyReports": {
+        "ai/api/build/test-results/testDebugUnitTest/TEST-network.orion.ai.api.OrionInferenceLifecycleFactsTest.xml": {
+          "errors": "0",
+          "failures": "0",
+          "hostname": "99607207a5ed",
+          "name": "network.orion.ai.api.OrionInferenceLifecycleFactsTest",
+          "skipped": "0",
+          "tests": "15",
+          "time": "0.692",
+          "timestamp": "2026-11-15T22:16:03.598Z"
+        }
+      },
+      "oldOnlyReports": {},
+      "physicalOrPhaseApproval": false
+    },
+    "verificationProcedure": [
+      "Verify the original archive SHA-256 and its manifest.json SHA-256 against artifact metadata.",
+      "Read only archived jvm/*/build/test-results/testDebugUnitTest/TEST-*.xml members and verify their existing payloadManifest SHA-256 values.",
+      "Count a report as active only when its module path appears in the Git-tracked build.gradle.kts module inventory at sourceParentCommit.",
+      "Retain all three legacy XMLs and their raw totals in the original archive; exclude them only from active-module verification."
+    ]
+  },
   "limits": [
     "No physical-device runtime or hardware evidence is included.",
     "Emulator success does not close Galaxy S21 qualification, soak, F5 or F6 gates.",
