@@ -24,7 +24,7 @@ capture #141 and physical qualification are outside this package.
 ## Finite API and explicit dependencies
 
 `HeavySoakController(new_directory, plan, configuration=..., admission=...,
-producer=..., clock=...)` creates and holds exactly one new JournalStore context.
+producer=...)` creates and holds exactly one new JournalStore context.
 It accepts only a successful exact `INITIALIZED_DURABLE` ACK. An existing
 directory, including an interrupted journal, is refused. There is no open,
 inspect, adopt, resume, replacement-plan or rebinding API. The plan becomes a
@@ -59,6 +59,14 @@ composition dependencies. Missing ports/configuration refuse all work; a JSON
 plan cannot install or enable them. There is no execution CLI, arbitrary callable
 or shell/ADB/subprocess command path, loop around #130, automatic scheduler,
 model import, workload template or operational parameter default.
+
+The trusted port methods can block, including binding, observation, admission and
+effect invocation. This finite component checks fences before calls and after
+they return; it supplies no hard effect-duration bound and cannot prove that a
+blocked transport has terminated. Operational adapters must define and enforce
+their own bounded transport/native contracts. A local timeout or interrupted
+wait cannot be translated into an actual Core terminal or release proof, and
+does not authorize a replacement invocation while the original may remain active.
 
 ## Durable boundary and uncertainty
 
@@ -100,11 +108,21 @@ Failed cleanup is retained and halts; this component supplies no cleanup retry.
 
 JournalStore alone assigns its v1 `PYTHON_TIME_MONOTONIC_NS` timestamps. The
 controller does not read private store snapshots or rewrite those timestamps.
-HostClock uses Linux CLOCK_BOOTTIME for duration, observation gaps and resource
-cooldown. Tests explicitly use a synthetic injected HostClock with a pinned boot;
-its metadata remains synthetic. Unknown HOST boot/session, rollback, device boot
-change or device elapsed rollback halts. No previous-boot elapsed subtraction or
-cross-session accumulation is allowed.
+The public constructor has no clock override. `begin` obtains its clock solely
+from `HostClock.linux()`, and every timing checkpoint requires
+`clockSource=CLOCK_BOOTTIME`, `evidence=HOST_CLOCK_ONLY`, a valid pinned HOST boot
+digest and session. Missing/unavailable/synthetic clocks or factory failure halt
+before reading the producer's first device stamp or preparing/invoking anything.
+BOOTTIME governs duration, observation gaps and resource cooldown. Unknown HOST
+boot/session, rollback, device boot change or device elapsed rollback halts. No
+previous-boot elapsed subtraction or cross-session accumulation is allowed.
+
+Tests explicitly mock the platform factory with synthetic counters and fixture
+metadata to exercise the unchanged production guards; there is no test bypass in
+the controller. That impersonation does not qualify a real clock, elapsed
+duration or hardware. Separate regressions reject actual SYNTHETIC_INJECTED,
+unavailable/wrong-evidence metadata and factory failure before any effect.
+All fixture reports remain UNVERIFIED_INPUT/NOT_QUALIFIED.
 
 The controller brackets each BOOTTIME read with MONOTONIC reads. A BOOTTIME
 advance exceeding that outer MONOTONIC interval detects suspend/discontinuity and

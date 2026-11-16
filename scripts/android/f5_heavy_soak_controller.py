@@ -232,7 +232,7 @@ class HeavySoakController:
     No production dependencies are installed by default. The type contracts permit
     synthetic fixtures; they do not authenticate an adapter or qualify a profile.
     """
-    def __init__(self, directory, plan, *, configuration=None, admission=None, producer=None, clock=None):
+    def __init__(self, directory, plan, *, configuration=None, admission=None, producer=None):
         self._pid = os.getpid()
         self._lock = threading.Lock()
         self._closed = self._halted = self._uncertain = False
@@ -241,7 +241,7 @@ class HeavySoakController:
         self._started = False
         self._binding = None
         self._configuration, self._admission, self._producer = configuration, admission, producer
-        self._clock = clock
+        self._clock = None
         self._store = None
         self._entries = 0
         self._state_sha = None
@@ -335,7 +335,7 @@ class HeavySoakController:
         after = time.monotonic_ns()
         self._require(type(before) is int and type(after) is int and 0 <= before <= after <= P.MAX_INT)
         meta = self._clock.metadata
-        self._require(meta["clockSource"] in ("CLOCK_BOOTTIME", "SYNTHETIC_INJECTED"))
+        self._require(meta["clockSource"] == "CLOCK_BOOTTIME" and meta["evidence"] == "HOST_CLOCK_ONLY")
         P.identifier(meta["sessionId"]); P.digest(meta["bootIdentitySha256"])
         if self._host_session is None:
             self._host_session, self._host_boot = meta["sessionId"], meta["bootIdentitySha256"]
@@ -382,11 +382,11 @@ class HeavySoakController:
         self._binding = self._configuration.bind(self._specification)
         self._require(type(self._binding) is Binding and self._binding.specification == self._specification)
         P.integer(self._binding.boot_count, 0, 2**31 - 1)
-        self._clock = HostClock.linux() if self._clock is None else self._clock
-        self._require(isinstance(self._clock, HostClock))
+        self._clock = HostClock.linux()
+        self._require(type(self._clock) is HostClock)
+        self._start, _ = self._time()
         stamp = self._producer.stamp(self._binding)
         self._validate_stamp(stamp)
-        self._start, _ = self._time()
         self._last_observation = self._start
         self._require(self._configuration.revalidate(self._binding, self._specification, stamp) is Check.VALID)
         self._append("RUN_BEGIN", {}, stamp)

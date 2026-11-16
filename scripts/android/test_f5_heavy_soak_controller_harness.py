@@ -31,6 +31,17 @@ class Time:
             self.mono += millis * 1_000_000
 
 
+def mock_platform_clock(source, *, boot_known=True):
+    """Factory-mock fixture only: metadata impersonation never attests a real clock.
+
+    Production has no injectable clock parameter and rejects the same source's
+    actual SYNTHETIC_INJECTED/UNVERIFIED_INPUT metadata. Reports stay NOT_QUALIFIED.
+    """
+    clock = HostClock(lambda: source.ns, (lambda: source.boot) if boot_known else None)
+    clock.metadata.update(clockSource="CLOCK_BOOTTIME", evidence="HOST_CLOCK_ONLY")
+    return clock
+
+
 class Permit(C.LivePermit):
     pass
 
@@ -103,7 +114,9 @@ class HeavyControllerTest(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.directory = Path(self.temporary.name) / "run"
         self.time = Time()
-        self.clock = HostClock(lambda: self.time.ns, lambda: self.time.boot)
+        self.factory_patch = mock.patch.object(C.HostClock, "linux", side_effect=lambda: mock_platform_clock(self.time))
+        self.factory_patch.start()
+        self.addCleanup(self.factory_patch.stop)
         self.patch = mock.patch.object(C.time, "monotonic_ns", side_effect=lambda: self.time.mono)
         self.patch.start()
         self.addCleanup(self.patch.stop)
@@ -115,8 +128,7 @@ class HeavyControllerTest(unittest.TestCase):
         self.addCleanup(self.controller.close)
 
     def make(self, **changes):
-        values = dict(configuration=self.configuration, admission=self.admission,
-                      producer=self.producer, clock=self.clock)
+        values = dict(configuration=self.configuration, admission=self.admission, producer=self.producer)
         values.update(changes)
         return C.HeavySoakController(self.directory, self.selected, **values)
 
@@ -181,7 +193,7 @@ class HeavyControllerTest(unittest.TestCase):
                 target = Path(directory) / "run"
                 producer = Producer(self.time, target)
                 with C.HeavySoakController(target, plan(), configuration=self.configuration,
-                        admission=self.admission, producer=producer, clock=self.clock) as controller:
+                        admission=self.admission, producer=producer) as controller:
                     controller.begin(); controller.prepare_fixture(FIXTURE_ID)
                     def malformed(store, event, expected):
                         ack = original(store, event, expected); ack.update(mutation); return ack
@@ -210,7 +222,7 @@ class HeavyControllerTest(unittest.TestCase):
             with self.subTest(directory_failure=directory_failure), tempfile.TemporaryDirectory() as directory:
                 target = Path(directory) / "run"; producer = Producer(self.time, target)
                 with C.HeavySoakController(target, plan(), configuration=self.configuration,
-                        admission=self.admission, producer=producer, clock=self.clock) as controller:
+                        admission=self.admission, producer=producer) as controller:
                     controller.begin(); controller.prepare_fixture(FIXTURE_ID)
                     original = STORE.os.fsync
                     def fail(descriptor):
@@ -255,7 +267,7 @@ class HeavyControllerTest(unittest.TestCase):
             with self.subTest(terminal=terminal), tempfile.TemporaryDirectory() as directory:
                 target = Path(directory) / "run"; producer = Producer(self.time, target)
                 with C.HeavySoakController(target, plan(), configuration=self.configuration,
-                        admission=self.admission, producer=producer, clock=self.clock) as controller:
+                        admission=self.admission, producer=producer) as controller:
                     controller.begin(); controller.prepare_fixture(FIXTURE_ID)
                     producer.failure = TimeoutError("PRIVATE_SECRET_SENTINEL") if terminal is None else None
                     producer.outcome = terminal
@@ -311,8 +323,7 @@ class HeavyControllerTest(unittest.TestCase):
             with self.subTest(duration=duration, suspend=suspend), tempfile.TemporaryDirectory() as directory:
                 target = Path(directory) / "run"; producer = Producer(self.time, target)
                 with C.HeavySoakController(target, plan(), configuration=self.configuration,
-                        admission=self.admission, producer=producer,
-                        clock=HostClock(lambda: self.time.ns, lambda: self.time.boot)) as controller:
+                        admission=self.admission, producer=producer) as controller:
                     controller.begin(); controller.prepare_fixture(FIXTURE_ID)
                     producer.after_intent = lambda: self.time.advance(duration, suspend=suspend)
                     self.assertEqual("UNKNOWN", controller.attempt(str(uuid.uuid4()), FIXTURE_ID)["status"])
@@ -332,7 +343,7 @@ class HeavyControllerTest(unittest.TestCase):
         selected = plan(); selected["limits"]["maximumAttempts"] = 4
         producer = Producer(self.time, target)
         with C.HeavySoakController(target, selected, configuration=self.configuration,
-                admission=self.admission, producer=producer, clock=self.clock) as controller:
+                admission=self.admission, producer=producer) as controller:
             controller.begin(); controller.prepare_fixture(FIXTURE_ID)
             producer.outcome = C.Outcome.RESOURCE_EXIT
             self.assertEqual("RECORDED", controller.attempt(str(uuid.UUID(int=10)), FIXTURE_ID)["status"])
@@ -379,9 +390,9 @@ class HeavyControllerTest(unittest.TestCase):
             with self.subTest(fault=fault), tempfile.TemporaryDirectory() as directory:
                 target = Path(directory) / "run"
                 source = Time(); producer = Producer(source, target)
-                clock = HostClock(lambda: source.ns, lambda: source.boot)
-                with C.HeavySoakController(target, plan(), configuration=self.configuration,
-                        admission=self.admission, producer=producer, clock=clock) as controller:
+                with mock.patch.object(C.HostClock, "linux", return_value=mock_platform_clock(source)), \
+                        C.HeavySoakController(target, plan(), configuration=self.configuration,
+                        admission=self.admission, producer=producer) as controller:
                     controller.begin(); controller.prepare_fixture(FIXTURE_ID)
                     if fault == "boot":
                         source.boot = str(uuid.UUID(int=901))
@@ -401,11 +412,57 @@ class HeavyControllerTest(unittest.TestCase):
     def test_unknown_host_boot_refuses_before_run_begin_without_zero_stamp(self):
         self.controller.close()
         target = Path(self.temporary.name) / "unknown-clock"
-        with C.HeavySoakController(target, plan(), configuration=self.configuration,
-                admission=self.admission, producer=Producer(self.time, target),
-                clock=HostClock(lambda: self.time.ns)) as controller:
+        with mock.patch.object(C.HostClock, "linux", return_value=mock_platform_clock(self.time, boot_known=False)), \
+                C.HeavySoakController(target, plan(), configuration=self.configuration,
+                admission=self.admission, producer=Producer(self.time, target)) as controller:
             self.assertEqual("HALTED", controller.begin()["status"])
         self.assertEqual([], json.loads((target / STORE.STATE).read_bytes())["journal"]["entries"])
+
+    def test_public_constructor_has_no_clock_override(self):
+        target = Path(self.temporary.name) / "override"
+        with self.assertRaises(TypeError):
+            C.HeavySoakController(target, plan(), clock=HostClock(lambda: self.time.ns))
+        self.assertFalse(target.exists())
+
+    def test_synthetic_unavailable_or_wrong_evidence_clock_is_rejected_before_producer(self):
+        for metadata in ({"clockSource": "SYNTHETIC_INJECTED", "evidence": "UNVERIFIED_INPUT"},
+                         {"clockSource": "UNAVAILABLE", "evidence": "UNAVAILABLE"},
+                         {"clockSource": "CLOCK_BOOTTIME", "evidence": "UNVERIFIED_INPUT"},
+                         {"clockSource": "CLOCK_BOOTTIME", "evidence": "HOST_CLOCK_ONLY", "sessionId": "invalid"}):
+            with self.subTest(metadata=metadata), tempfile.TemporaryDirectory() as directory:
+                target = Path(directory) / "run"; producer = Producer(self.time, target)
+                clock = HostClock(lambda: self.time.ns, lambda: self.time.boot)
+                clock.metadata.update(metadata)
+                with mock.patch.object(C.HostClock, "linux", return_value=clock) as factory, \
+                        mock.patch.object(producer, "stamp", wraps=producer.stamp) as stamp, \
+                        C.HeavySoakController(target, plan(), configuration=self.configuration,
+                        admission=self.admission, producer=producer) as controller:
+                    value = controller.begin()
+                    self.assertEqual("HALTED", value["status"])
+                    self.assertEqual("HALTED", controller.prepare_fixture(FIXTURE_ID)["status"])
+                    self.assertEqual("HALTED", controller.attempt(str(uuid.uuid4()), FIXTURE_ID)["status"])
+                    factory.assert_called_once_with()
+                    stamp.assert_not_called()
+                    self.assertEqual([], producer.effects)
+                    for flag in C.FALSE_FLAGS:
+                        self.assertIs(False, value[flag])
+                self.assertEqual([], json.loads((target / STORE.STATE).read_bytes())["journal"]["entries"])
+
+    def test_platform_clock_factory_failure_refuses_before_producer(self):
+        for failure in (OSError("PRIVATE_SECRET_SENTINEL"), RuntimeError("clock unavailable")):
+            with self.subTest(failure=type(failure)), tempfile.TemporaryDirectory() as directory:
+                target = Path(directory) / "run"; producer = Producer(self.time, target)
+                with mock.patch.object(C.HostClock, "linux", side_effect=failure), \
+                        mock.patch.object(producer, "stamp", wraps=producer.stamp) as stamp, \
+                        C.HeavySoakController(target, plan(), configuration=self.configuration,
+                        admission=self.admission, producer=producer) as controller:
+                    value = controller.begin()
+                    self.assertEqual("HALTED", value["status"])
+                    self.assertEqual("HALTED", controller.prepare_fixture(FIXTURE_ID)["status"])
+                    stamp.assert_not_called()
+                    self.assertEqual([], producer.effects)
+                    self.assertNotIn("PRIVATE_SECRET_SENTINEL", json.dumps(value))
+                self.assertEqual([], json.loads((target / STORE.STATE).read_bytes())["journal"]["entries"])
 
     def test_interrupt_during_effect_preserves_pending_and_original_exception(self):
         self.start()
@@ -474,9 +531,9 @@ class HeavyControllerTest(unittest.TestCase):
         target = Path(self.temporary.name) / "crash"
         def child():
             local_time = Time(); producer = Producer(local_time, target)
-            with C.HeavySoakController(target, plan(), configuration=Configuration(),
-                    admission=Admission(), producer=producer,
-                    clock=HostClock(lambda: local_time.ns, lambda: local_time.boot)) as controller:
+            with mock.patch.object(C.HostClock, "linux", return_value=mock_platform_clock(local_time)), \
+                    C.HeavySoakController(target, plan(), configuration=Configuration(),
+                    admission=Admission(), producer=producer) as controller:
                 controller.begin(); controller.prepare_fixture(FIXTURE_ID)
                 producer.after_intent = lambda: os._exit(73)
                 controller.attempt(str(uuid.UUID(int=10)), FIXTURE_ID)
