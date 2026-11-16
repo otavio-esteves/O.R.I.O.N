@@ -99,6 +99,21 @@ class OrionCortexRuntimeCaptureSessionTest {
         assertSame(receipt.facts, sealed.receipt.facts) // No second snapshot/import or mutation of the historical receipt.
     }
 
+    @Test fun `manual watchdog samples only dedicated bound clock after return without retimestamping source`() {
+        val f = fixture(); f.identity(); f.lifecycle.accept(chunk())
+        assertNull(f.capture.manualExportMoment(f.owner))
+        val receipt = f.finish(); val completed = receipt.facts?.completed
+        val functional = f.clock.reads.toList(); val before = checkNotNull(f.time.snapshot()).counterReadsAtLeast
+        assertNotNull(f.capture.manualExportMoment(f.owner))
+        assertEquals(before + 1, checkNotNull(f.time.snapshot()).counterReadsAtLeast)
+        assertEquals(functional, f.clock.reads); assertSame(completed, receipt.facts?.completed)
+        assertNull(f.capture.manualExportMoment(Any()))
+        assertEquals(before + 1, checkNotNull(f.time.snapshot()).counterReadsAtLeast)
+        f.frame.valid = false
+        assertNull(f.capture.manualExportMoment(f.owner))
+        assertEquals(before + 1, checkNotNull(f.time.snapshot()).counterReadsAtLeast)
+    }
+
     @Test fun `unconfigured session cannot mint a source seal from a manual receipt`() {
         val f = fixture(); f.identity(); f.lifecycle.accept(chunk()); f.finish()
         assertNull(f.capture.freezeForExport(f.owner, exportContext()))

@@ -4,13 +4,14 @@ import network.orion.ai.api.OrionInferenceStage
 import network.orion.ai.api.OrionInferenceTerminal
 import network.orion.ai.api.OrionLifecycleTerminalOrigin
 
-internal enum class OrionRuntimeExportFailure { CONFIGURATION_UNAVAILABLE, SOURCE_UNAVAILABLE, IDENTITY_UNAVAILABLE,
+internal enum class OrionRuntimeExportFailure { NO_QUALIFIED_PROFILE, INTERRUPTED, CONFIGURATION_UNAVAILABLE, SOURCE_UNAVAILABLE, IDENTITY_UNAVAILABLE,
     IDENTITY_CHANGED, CLOCK_UNAVAILABLE, CLOCK_DISCONTINUOUS, LOAD_TERMINAL_UNAVAILABLE, INFERENCE_EVENT_UNAVAILABLE,
     UNLOAD_UNCONFIRMED, PHASE_MISSED, CAPTURE_LOSS, CAPTURE_LIMIT, EXPORT_TOO_LARGE, FRAMING_INVALID, TRANSPORT_UNAVAILABLE }
 
 /** Component output only. A source here is not proof of a safe enclosing framework transaction. */
 internal class OrionRuntimeEncodedCapsule internal constructor(val source: String?, val status: String,
-    val failure: OrionRuntimeExportFailure?) {
+    val failure: OrionRuntimeExportFailure?, internal val diagnosticReceipt: OrionRuntimeSessionReceipt? = null,
+    internal val programWitness: OrionRuntimeProgramWitness? = null) {
     override fun toString() = "OrionRuntimeEncodedCapsule(sourceAvailable=${source != null}, qualified=false)"
 }
 
@@ -59,38 +60,46 @@ internal object OrionRuntimeCapsuleEncoder {
         val infer: OrionRuntimeOperationMarker?, val transportHash: String?,
         val unloadStart: OrionRuntimeOperationMarker?, val unloadEnd: OrionRuntimeOperationMarker?, val incomplete: Boolean)
 
-    fun encode(snapshot: OrionRuntimeExportSnapshot?): OrionRuntimeEncodedCapsule {
-        if (snapshot == null) return unavailable(sourceFailure)
+    fun encode(snapshot: OrionRuntimeExportSnapshot?, witness: OrionRuntimeProgramWitness? = null): OrionRuntimeEncodedCapsule {
+        if (snapshot == null) return unavailable(sourceFailure, witness = witness)
+        if (witness != null && (witness.ownerCallInvoked != true || witness.noLoadRefusal))
+            return unavailable(sourceFailure, snapshot.receipt, witness)
         return try {
             val projection = validate(snapshot)
             val text = render(projection)
             val limitation = if (projection.unloadStart == null && projection.facts.markers.any {
                 it.kind == OrionRuntimeMarkerKind.UNLOAD_TRUE_DISPATCH }) OrionRuntimeExportFailure.UNLOAD_UNCONFIRMED
                 else if (projection.incomplete) OrionRuntimeExportFailure.PHASE_MISSED else null
-            OrionRuntimeEncodedCapsule(text, status(true, projection.incomplete, limitation, snapshot.receipt), limitation)
-        } catch (_: OrionRuntimeAsciiWriter.TooLarge) { unavailable(OrionRuntimeExportFailure.EXPORT_TOO_LARGE, snapshot.receipt) }
-          catch (failure: Rejected) { unavailable(failure.code, snapshot.receipt) }
-          catch (_: Throwable) { unavailable(sourceFailure, snapshot.receipt) }
+            OrionRuntimeEncodedCapsule(text, status(true, projection.incomplete, limitation, snapshot.receipt, witness), limitation, snapshot.receipt, witness)
+        } catch (_: OrionRuntimeAsciiWriter.TooLarge) { unavailable(OrionRuntimeExportFailure.EXPORT_TOO_LARGE, snapshot.receipt, witness) }
+          catch (failure: Rejected) { unavailable(failure.code, snapshot.receipt, witness) }
+          catch (_: Throwable) { unavailable(sourceFailure, snapshot.receipt, witness) }
     }
 
-    fun unavailable(code: OrionRuntimeExportFailure, receipt: OrionRuntimeSessionReceipt? = null): OrionRuntimeEncodedCapsule =
-        OrionRuntimeEncodedCapsule(null, status(false, true, code, receipt), code)
+    fun unavailable(code: OrionRuntimeExportFailure, receipt: OrionRuntimeSessionReceipt? = null,
+        witness: OrionRuntimeProgramWitness? = null): OrionRuntimeEncodedCapsule =
+        OrionRuntimeEncodedCapsule(null, status(false, true, code, receipt, witness), code, receipt, witness)
+
+    fun programRefusal(witness: OrionRuntimeProgramWitness): OrionRuntimeEncodedCapsule {
+        val failure = witness.failure ?: OrionRuntimeExportFailure.SOURCE_UNAVAILABLE
+        return OrionRuntimeEncodedCapsule(null, status(false, true, failure, null, witness), failure, null, witness)
+    }
 
     private fun status(available: Boolean, incomplete: Boolean, failure: OrionRuntimeExportFailure?,
-        receipt: OrionRuntimeSessionReceipt?): String {
+        receipt: OrionRuntimeSessionReceipt?, witness: OrionRuntimeProgramWitness?): String {
         val facts = receipt?.facts; val sampling = receipt?.memorySampling; val lifecycle = receipt?.lifecycle
         // Sources can report the same lost fact. Maximum is a conservative lower bound, never a sum of duplicates.
         val dropped = maxOf(receipt?.droppedAtLeast ?: 0, facts?.droppedAtLeast ?: 0,
             sampling?.droppedAtLeast ?: 0, lifecycle?.droppedAtLeast ?: 0)
         val failures = maxOf(receipt?.recordingFailuresAtLeast ?: 0, facts?.recordingFailuresAtLeast ?: 0,
             sampling?.recordingFailuresAtLeast ?: 0, lifecycle?.recordingFailuresAtLeast ?: 0)
-        val completeAccounting = dropped == 0L && failures == 0L && receipt?.lossAccountingComplete == true &&
+        val completeAccounting = available && dropped == 0L && failures == 0L && receipt?.lossAccountingComplete == true &&
             facts?.lossAccountingComplete == true && sampling?.lossAccountingComplete == true && lifecycle?.lossAccountingComplete == true
         val out = OrionRuntimeAsciiWriter(MAX_STATUS_BYTES)
         out.raw("{").key("schemaVersion").number(1).raw(",").key("kind").quoted("ORION_RUNTIME_CAPTURE_STATUS")
-            .raw(",").key("qualification").quoted("NOT_QUALIFIED").raw(",").key("recordState").quoted(if (available) "V1_SOURCE" else "NO_V1_RECORD")
+            .raw(",").key("qualification").quoted("NOT_QUALIFIED").raw(",").key("recordState").quoted(if (available) "V1_SOURCE" else if (witness?.noLoadRefusal == true && witness.ownerCallInvoked == false) "NO_LOAD_REFUSAL" else "NO_V1_RECORD")
             .raw(",").key("captureIntegrity").quoted(if (!available) "UNAVAILABLE" else if (incomplete) "INCOMPLETE" else "COMPLETE")
-            .raw(",").key("failureCode").quoted(failure?.name).raw(",").key("ownerCallInvoked").raw("null")
+            .raw(",").key("failureCode").quoted(failure?.name).raw(",").key("ownerCallInvoked").raw(witness?.ownerCallInvoked?.let { if (it) "true" else "false" } ?: "null")
             .raw(",").key("droppedAtLeast").number(dropped.coerceAtLeast(0)).raw(",").key("recordingFailuresAtLeast").number(failures.coerceAtLeast(0))
             .raw(",").key("lossAccountingComplete").bool(completeAccounting)
         for (key in listOf("sourceAuthenticated", "physicalVerified", "profileApproved", "productionInferenceApproved",

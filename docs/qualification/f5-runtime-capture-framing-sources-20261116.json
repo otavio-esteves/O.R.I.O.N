@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "purpose": "SOFTWARE_LAYOUT_SOURCE_REVIEW_ONLY",
+  "nativeMeasurementExecuted": false,
+  "physicalQualified": false,
+  "profiles": [
+    {
+      "api": "31",
+      "branch": "android12-release",
+      "activityManagerSourceSha256": "f2f3e2c328f18bdf054938b70d3b3f4aa0427001a72320f6ff2726d3b15ea607",
+      "watcherSourceSha256": "e624e8c75c94e4e467d6ecfa9f706e3fcf3e58810c0bb98d04adac7f67a477ac",
+      "finishDeclaration": "void finishInstrumentation(in IApplicationThread target, int resultCode, in Bundle results);",
+      "watcherDeclaration": "void instrumentationFinished(in ComponentName name, int resultCode, in Bundle results);",
+      "sourcePin": "SHA256_FILE_CONTENT",
+      "activityManagerSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/android12-release/core/java/android/app/IActivityManager.aidl",
+      "watcherSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/android12-release/core/java/android/app/IInstrumentationWatcher.aidl"
+    },
+    {
+      "api": "32",
+      "branch": "android12L-release",
+      "commit": "8fbdc326cfd7bb7f2b617f31802c733f56014491",
+      "files": [
+        {
+          "url": "https://android.googlesource.com/platform/frameworks/base/+/8fbdc326cfd7bb7f2b617f31802c733f56014491/core/java/android/app/IActivityManager.aidl",
+          "sha256": "42f2de5a65efc4cfb87a473ba6ecdccfc315ad66e2a8164560ceb0c132b7f28e"
+        },
+        {
+          "url": "https://android.googlesource.com/platform/frameworks/base/+/8fbdc326cfd7bb7f2b617f31802c733f56014491/core/java/android/app/IInstrumentationWatcher.aidl",
+          "sha256": "e624e8c75c94e4e467d6ecfa9f706e3fcf3e58810c0bb98d04adac7f67a477ac"
+        }
+      ]
+    },
+    {
+      "api": "33",
+      "branch": "android13-release",
+      "activityManagerSourceSha256": "554c0cdbf3ba0eb253ed043a64cf7788a77e7bd59cfecef9a27c0a83e5f597af",
+      "watcherSourceSha256": "e624e8c75c94e4e467d6ecfa9f706e3fcf3e58810c0bb98d04adac7f67a477ac",
+      "finishDeclaration": "void finishInstrumentation(in IApplicationThread target, int resultCode, in Bundle results);",
+      "watcherDeclaration": "void instrumentationFinished(in ComponentName name, int resultCode, in Bundle results);",
+      "sourcePin": "SHA256_FILE_CONTENT",
+      "activityManagerSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/android13-release/core/java/android/app/IActivityManager.aidl",
+      "watcherSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/android13-release/core/java/android/app/IInstrumentationWatcher.aidl"
+    },
+    {
+      "api": "34",
+      "branch": "android14-release",
+      "activityManagerSourceSha256": "941d026389111427b9a8de9a42d17ccec6f98948bd65f0a8332596327789a9c0",
+      "watcherSourceSha256": "e624e8c75c94e4e467d6ecfa9f706e3fcf3e58810c0bb98d04adac7f67a477ac",
+      "finishDeclaration": "void finishInstrumentation(in IApplicationThread target, int resultCode, in Bundle results);",
+      "watcherDeclaration": "void instrumentationFinished(in ComponentName name, int resultCode, in Bundle results);",
+      "sourcePin": "SHA256_FILE_CONTENT",
+      "activityManagerSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/android14-release/core/java/android/app/IActivityManager.aidl",
+      "watcherSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/android14-release/core/java/android/app/IInstrumentationWatcher.aidl"
+    },
+    {
+      "api": "35",
+      "branch": "android15-release",
+      "activityManagerSourceSha256": "a7d7f71d601e917025814f9571cec7b28afc0a5cc9f27ec99dbbfb16fa223966",
+      "watcherSourceSha256": "e624e8c75c94e4e467d6ecfa9f706e3fcf3e58810c0bb98d04adac7f67a477ac",
+      "finishDeclaration": "void finishInstrumentation(in IApplicationThread target, int resultCode, in Bundle results);",
+      "watcherDeclaration": "void instrumentationFinished(in ComponentName name, int resultCode, in Bundle results);",
+      "sourcePin": "SHA256_FILE_CONTENT",
+      "activityManagerSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/android15-release/core/java/android/app/IActivityManager.aidl",
+      "watcherSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/android15-release/core/java/android/app/IInstrumentationWatcher.aidl"
+    },
+    {
+      "api": "36",
+      "branch": "android16-release",
+      "activityManagerSourceSha256": "458945b089157964f6cce63c00fdfcaeb8bb04ce18d06c515e2a53628cab52a1",
+      "watcherSourceSha256": "e624e8c75c94e4e467d6ecfa9f706e3fcf3e58810c0bb98d04adac7f67a477ac",
+      "finishDeclaration": "void finishInstrumentation(in IApplicationThread target, int resultCode, in Bundle results);",
+      "watcherDeclaration": "void instrumentationFinished(in ComponentName name, int resultCode, in Bundle results);",
+      "sourcePin": "SHA256_FILE_CONTENT",
+      "activityManagerSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/android16-release/core/java/android/app/IActivityManager.aidl",
+      "watcherSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/android16-release/core/java/android/app/IInstrumentationWatcher.aidl"
+    },
+    {
+      "api": "36.1",
+      "branch": "android16-qpr2-release",
+      "commit": "45034f0663f960d9ee5fb0a101a4732b71f6e2f4",
+      "files": [
+        {
+          "url": "https://android.googlesource.com/platform/frameworks/base/+/45034f0663f960d9ee5fb0a101a4732b71f6e2f4/core/java/android/app/IActivityManager.aidl",
+          "sha256": "d5d9a39945cbdaa4cee5cb4b79e92c686404ce934c34e56fe85b92a56afbfa56"
+        },
+        {
+          "url": "https://android.googlesource.com/platform/frameworks/base/+/45034f0663f960d9ee5fb0a101a4732b71f6e2f4/core/java/android/app/IInstrumentationWatcher.aidl",
+          "sha256": "e624e8c75c94e4e467d6ecfa9f706e3fcf3e58810c0bb98d04adac7f67a477ac"
+        }
+      ]
+    },
+    {
+      "api": "37",
+      "branch": "android17-release",
+      "activityManagerSourceSha256": "70c9e645e21a0c782763db8785e021dd3713dd926afc6abe380a1bbe00390d86",
+      "watcherSourceSha256": "e624e8c75c94e4e467d6ecfa9f706e3fcf3e58810c0bb98d04adac7f67a477ac",
+      "finishDeclaration": "void finishInstrumentation(in IApplicationThread target, int resultCode, in Bundle results);",
+      "watcherDeclaration": "void instrumentationFinished(in ComponentName name, int resultCode, in Bundle results);",
+      "commit": "94b4c163b7dfe5ce3607f7bb8456f9573f7de57d",
+      "sourcePin": "SHA256_FILE_CONTENT",
+      "activityManagerSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/IActivityManager.aidl",
+      "watcherSourceUrl": "https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/IInstrumentationWatcher.aidl"
+    }
+  ],
+  "references": [
+    {
+      "repository": "platform/frameworks/base",
+      "commit": "94b4c163b7dfe5ce3607f7bb8456f9573f7de57d",
+      "url": "https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/Instrumentation.java"
+    },
+    {
+      "repository": "platform/frameworks/base",
+      "commit": "94b4c163b7dfe5ce3607f7bb8456f9573f7de57d",
+      "url": "https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/ActivityThread.java"
+    },
+    {
+      "repository": "platform/frameworks/base",
+      "commit": "94b4c163b7dfe5ce3607f7bb8456f9573f7de57d",
+      "url": "https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/ActivityManagerService.java"
+    },
+    {
+      "repository": "platform/frameworks/native",
+      "commit": "ae266dcb706d083868578cfedce381ef44488a07",
+      "url": "https://android.googlesource.com/platform/frameworks/native/+/ae266dcb706d083868578cfedce381ef44488a07/libs/binder/Parcel.cpp"
+    },
+    {
+      "repository": "platform/system/tools/aidl",
+      "commit": "9a94664f74536bf28010207fd1804b04c6435e2c",
+      "url": "https://android.googlesource.com/platform/system/tools/aidl/+/9a94664f74536bf28010207fd1804b04c6435e2c/generate_java_binder.cpp"
+    },
+    {
+      "repository": "kernel/common",
+      "commit": "aa17a35b2c5f5a8854139d7858eb143ddfcc5c16",
+      "url": "https://android.googlesource.com/kernel/common/+/aa17a35b2c5f5a8854139d7858eb143ddfcc5c16/include/uapi/linux/android/binder.h"
+    }
+  ],
+  "framingScope": "Each outbound application inline Parcel plus fixed Binder command/transaction metadata and object-offset table; kernel allocator/security storage is not declared measured."
+}

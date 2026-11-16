@@ -42,6 +42,10 @@ class FoundationRuntimeTest {
 
     @Test fun normalArtifactDoesNotContainSingleAttemptReflectionEntry() {
         assertEquals("network.orion", app.packageName)
+        assertFalse(BuildConfig.ORION_CORTEX_RUNTIME_CAPTURE)
+        assertThrows(ClassNotFoundException::class.java) {
+            Class.forName("network.orion.app.ai.OrionCortexRuntimeCaptureBridge", false, app.classLoader)
+        }
         assertThrows(ClassNotFoundException::class.java) {
             Class.forName("network.orion.app.ai.OrionCortexSingleAttemptBridge", false, app.classLoader)
         }

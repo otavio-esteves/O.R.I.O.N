@@ -28,7 +28,12 @@ val cortexSingleAttemptFlag = providers.gradleProperty("orionCortexSingleAttempt
 check(cortexSingleAttemptFlag in setOf("true", "false")) { "orionCortexSingleAttempt must be true or false." }
 val cortexSingleAttemptEnabled = cortexSingleAttemptFlag == "true"
 check(!cortexSingleAttemptEnabled || qualificationEnabled) { "Single attempt requires the separate qualification identity." }
-check(listOf(physicalBaselineEnabled, cortexReadinessEnabled, exitEvidenceCaptureEnabled, cortexSingleAttemptEnabled).count { it } <= 1) {
+val cortexRuntimeCaptureFlag = providers.gradleProperty("orionCortexRuntimeCapture").orElse("false").get()
+check(cortexRuntimeCaptureFlag in setOf("true", "false")) { "orionCortexRuntimeCapture must be true or false." }
+val cortexRuntimeCaptureEnabled = cortexRuntimeCaptureFlag == "true"
+check(!cortexRuntimeCaptureEnabled || qualificationEnabled) { "Runtime capture requires the separate qualification identity." }
+check(listOf(physicalBaselineEnabled, cortexReadinessEnabled, exitEvidenceCaptureEnabled, cortexSingleAttemptEnabled,
+    cortexRuntimeCaptureEnabled).count { it } <= 1) {
     "Qualification measurement modes are mutually exclusive."
 }
 
@@ -42,6 +47,7 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
         testInstrumentationRunner = when {
+            cortexRuntimeCaptureEnabled -> "network.orion.app.compatibility.OrionCortexRuntimeCaptureInstrumentation"
             cortexSingleAttemptEnabled -> "network.orion.app.compatibility.OrionCortexSingleAttemptInstrumentation"
             exitEvidenceCaptureEnabled -> "network.orion.app.compatibility.OrionExitEvidenceCaptureInstrumentation"
             cortexReadinessEnabled -> "network.orion.app.compatibility.OrionCortexReadinessInstrumentation"
@@ -54,6 +60,7 @@ android {
         resValue("string", "orion_native_qualification_status", nativeQualificationStatus)
         // A normal APK never gains this observer, even with qualification properties supplied.
         buildConfigField("boolean", "ORION_CORTEX_SINGLE_ATTEMPT", "false")
+        buildConfigField("boolean", "ORION_CORTEX_RUNTIME_CAPTURE", "false")
     }
 
     buildTypes {
@@ -70,6 +77,7 @@ android {
             ndk.abiFilters += setOf("arm64-v8a", "x86_64")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             buildConfigField("boolean", "ORION_CORTEX_SINGLE_ATTEMPT", cortexSingleAttemptEnabled.toString())
+            buildConfigField("boolean", "ORION_CORTEX_RUNTIME_CAPTURE", cortexRuntimeCaptureEnabled.toString())
         }
     }
 
@@ -103,6 +111,13 @@ android {
         buildTypes.getByName("qualificationRelease").proguardFiles("src/exitEvidenceCaptureTarget/proguard-rules.pro")
         sourceSets.getByName("androidTest").java.directories.clear()
         sourceSets.getByName("androidTest").java.directories.add("src/exitEvidenceCaptureAndroidTest/java")
+    }
+    if (cortexRuntimeCaptureEnabled) {
+        sourceSets.getByName("qualificationRelease").kotlin.directories.add("src/cortexRuntimeCaptureTarget/kotlin")
+        buildTypes.getByName("qualificationRelease").proguardFiles("src/cortexRuntimeCaptureTarget/proguard-rules.pro")
+        sourceSets.getByName("androidTest").java.directories.clear()
+        sourceSets.getByName("androidTest").kotlin.directories.clear()
+        sourceSets.getByName("androidTest").java.directories.add("src/cortexRuntimeCaptureAndroidTest/java")
     }
     if (cortexSingleAttemptEnabled) {
         sourceSets.getByName("qualificationRelease").kotlin.directories.add("src/cortexSingleAttemptTarget/kotlin")

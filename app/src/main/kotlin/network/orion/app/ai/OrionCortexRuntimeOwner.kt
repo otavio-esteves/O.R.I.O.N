@@ -73,6 +73,7 @@ internal class OrionCortexRuntimeOwner(
     private val resourceFacts: OrionCortexResourceFactBuffer? = null,
     private val cycleObservations: OrionCortexCycleObserver? = null,
     private val singleAttemptTemplate: OrionCortexAttemptTemplate? = null,
+    private val runtimeCaptureObservation: OrionRuntimeCaptureObservationConfiguration? = null,
 ) : AutoCloseable {
     private val app = context.applicationContext
     private val plans = qualifiedPlans.toList()
@@ -123,10 +124,17 @@ internal class OrionCortexRuntimeOwner(
         { closed }, { plans.isNotEmpty() }, { timing != null }, coreReady)
 
     /** Candidature only. Early refusals precede even the one selected registry lookup. */
-    internal suspend fun selectSingleAttemptTemplate(): OrionCortexAttemptConfiguration = withContext(Dispatchers.IO) {
+    internal suspend fun selectSingleAttemptTemplate(): OrionCortexAttemptConfiguration = selectAttemptTemplate(true)
+
+    internal suspend fun selectRuntimeCaptureTemplate(): OrionCortexAttemptConfiguration = selectAttemptTemplate(false)
+    internal fun runtimeCaptureObservationConfiguration(): OrionRuntimeCaptureObservationConfiguration? = runtimeCaptureObservation
+
+    private suspend fun selectAttemptTemplate(requireCycleObserver: Boolean): OrionCortexAttemptConfiguration = withContext(Dispatchers.IO) {
         fun refuse(reason: OrionCortexAttemptRefusal) = OrionCortexAttemptConfiguration.Refused(reason)
         preResourceReadiness().unavailable?.let { return@withContext refuse(singleAttemptRefusal(it)) }
-        if (cycleScope == null) return@withContext refuse(OrionCortexAttemptRefusal.OBSERVER_UNAVAILABLE)
+        if (requireCycleObserver && cycleScope == null) return@withContext refuse(OrionCortexAttemptRefusal.OBSERVER_UNAVAILABLE)
+        if (!requireCycleObserver && runtimeCaptureObservation == null)
+            return@withContext refuse(OrionCortexAttemptRefusal.RESOURCE_CONFIGURATION_UNAVAILABLE)
         val template = singleAttemptTemplate ?: return@withContext refuse(OrionCortexAttemptRefusal.TEMPLATE_UNAVAILABLE)
         if (!template.isValid()) return@withContext refuse(OrionCortexAttemptRefusal.TEMPLATE_INVALID)
         val plan = byId[template.modelId] ?: return@withContext refuse(OrionCortexAttemptRefusal.PROFILE_MISMATCH)
@@ -158,13 +166,21 @@ internal class OrionCortexRuntimeOwner(
 
     /** The token is technical observation ownership, never request/profile/admission authority. */
     suspend fun runObserved(token: OrionCortexCycleToken?, modelId: String, request: OrionInferenceRequest,
-        contextTokens: Int, threads: Int, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionCortexRunResult {
+        contextTokens: Int, threads: Int, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionCortexRunResult =
+        runObserved(token, modelId, request, contextTokens, threads, null, onChunks)
+
+    internal suspend fun runObserved(token: OrionCortexCycleToken?, modelId: String, request: OrionInferenceRequest,
+        contextTokens: Int, threads: Int, runtimeCapture: OrionCortexRuntimeCaptureSession?,
+        onChunks: (List<OrionInferenceChunk>) -> Unit): OrionCortexRunResult {
+        val selected = runtimeCapture?.takeIf { it.claim(this) }
         val capture = cycleScope?.let { scope -> cycleObservations.isolatedCycle(token) { it.claim(scope, token) } }
         return try {
-            val result = runOwned(modelId, request, contextTokens, threads, onChunks, capture)
+            val result = runOwned(modelId, request, contextTokens, threads, onChunks, capture, selected)
+            selected?.runReturned(false)
             cycleObservations.isolatedCycle(capture) { it.returned(capture, result) }
             result
         } catch (failure: Throwable) {
+            selected?.runReturned(true)
             cycleObservations.isolatedCycle(capture) { it.threw(capture, when (failure) {
                 is CancellationException -> OrionCycleThrown.CANCELLED
                 is InterruptedException -> OrionCycleThrown.INTERRUPTED
@@ -192,6 +208,9 @@ internal class OrionCortexRuntimeOwner(
     }
 
     internal fun readRuntimeCapture(capture: OrionCortexRuntimeCaptureSession): OrionRuntimeSessionReceipt? = capture.readAfterRun(this)
+
+    internal fun runtimeCaptureManualMoment(capture: OrionCortexRuntimeCaptureSession): network.orion.core.time.OrionObservationMoment? =
+        capture.manualExportMoment(this)
 
     /** Explicit manual export, after readRuntimeCapture sealed the separate sampling window. */
     internal fun freezeRuntimeCapture(capture: OrionCortexRuntimeCaptureSession,
