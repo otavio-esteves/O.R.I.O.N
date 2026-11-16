@@ -93,3 +93,24 @@ counts of original Client synchronized(monitor), functional monotonicNow, load/i
 unload/getStatus and direct onChunks calls are unchanged; this is source inspection,
 not runtime proof. Compilation/JVM/Android/lint/CI and final independent review are
 pending root-controlled execution. No Gradle/Docker/ADB/CI/push by this author.
+
+
+TURN-FENCE REVIEW REGRESSION (source only, 2026-11-16): Independent review found
+that the previous runtime frame remains valid while the next admitted turn can
+block inside the original updateUnloadOwner call. Manual reads do not take the
+Client monitor, so a cached previous receipt could still be accepted during that
+window. This follow-up adds only an Android regression and an opt-in test-fixture
+buffer, using the existing unload observation owner's private lock through test-only
+reflection. After one completed/cached capture, a second original run on a dedicated
+single-thread dispatcher must reach Thread.BLOCKED with updateUnloadOwner on its
+stack; the old manual receipt must then be unavailable/invalidated. The existing
+lock is released and that second run/cleanup finishes in finally, even on assertion
+failure. No production callback, factory seam or Client fix is added here.
+
+Root interrupted the previous Docker invocation before accepting validation;
+its retained log is `/tmp/orion-client-owner-capture-validation-before-fence-fix-20261116.log`
+(exit143 reported by root). The new regression has NOT been compiled or executed
+by this author. Root will capture an actual emulator RED before applying the
+separate minimal invalidation-order fix and GREEN. The suite now supplies ten new
+Client methods plus the Owner negative (eleven Android methods), still synthetic/
+mechanical only; no outcome or physical/gate claim is made by this test commit.

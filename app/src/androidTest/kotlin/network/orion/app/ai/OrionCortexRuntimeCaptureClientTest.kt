@@ -120,7 +120,7 @@ class OrionCortexRuntimeCaptureClientTest {
         fun disconnect() = connection.onServiceDisconnected(ComponentName(packageName, "network.orion.ai.service.OrionCortexService"))
     }
 
-    private class Fixture(private val provideWitness: Boolean = true) : AutoCloseable {
+    private class Fixture(private val provideWitness: Boolean = true, observeUnload: Boolean = false) : AutoCloseable {
         private val app = InstrumentationRegistry.getInstrumentation().targetContext
         private val id = UUID.randomUUID().toString()
         private val root = File(app.noBackupFilesDir, "orion_cycle_control_$id").apply { check(mkdirs()) }
@@ -155,7 +155,8 @@ class OrionCortexRuntimeCaptureClientTest {
                     if (provideWitness) client.runtimeMemoryValidated(window, pid, evidence?.sampledAt)
                 }
                 governor.evaluate()
-            }, restart = { guard.evaluate(snapshot.aiExitHistory) })
+            }, restart = { guard.evaluate(snapshot.aiExitHistory) },
+                unloadObservations = if (observeUnload) OrionCortexUnloadObservationBuffer() else null)
             // Only this mechanical test installs an existing scripted client into the real
             // manual reader. No production constructor/port/plan or reflection path is added.
             owner.javaClass.getDeclaredField("client").apply { isAccessible = true }.set(owner, client)
@@ -356,6 +357,58 @@ class OrionCortexRuntimeCaptureClientTest {
             calls to reads
         }
         assertEquals(run(false), run(true))
+    }
+
+
+    @Test fun newTurnInvalidatesCachedCaptureBeforeBlockingOriginalUnloadOwnerPublication() = runBlocking {
+        Fixture(observeUnload = true).use { f ->
+            val firstRequest = f.request(); val firstCapture = f.capture(firstRequest)
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, f.run(firstCapture, firstRequest).terminal)
+            val cached = checkNotNull(f.owner.readRuntimeCapture(firstCapture))
+            assertFalse(cached.invalidated); assertTrue(cached.identityKnown)
+            assertSame(cached, f.owner.readRuntimeCapture(firstCapture))
+            val unloadOwner = checkNotNull(f.client.javaClass.getDeclaredField("unloadObservationOwner")
+                .apply { isAccessible = true }.get(f.client))
+            val guard = unloadOwner.javaClass.getDeclaredField("lock").apply { isAccessible = true }.get(unloadOwner)
+            val thread = java.util.concurrent.atomic.AtomicReference<Thread?>()
+            val dispatcher = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
+                Thread(task, "orion_capture_turn_fence_probe").also { thread.set(it) }
+            }.asCoroutineDispatcher()
+            val secondRequest = f.request()
+            var second: Deferred<OrionInferenceStatus>? = null
+            try {
+                synchronized(guard) {
+                    second = async(dispatcher) { f.run(null, secondRequest) }
+                    // This is a bounded test-only scheduling probe, not a runtime/source timing measurement.
+                    val stopAt = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
+                    var blockedAtOriginalPublication = false
+                    while (System.nanoTime() < stopAt) {
+                        val worker = thread.get()
+                        if (worker != null && worker.state == Thread.State.BLOCKED && worker.stackTrace.any {
+                            it.className == OrionCortexClient::class.java.name && it.methodName == "updateUnloadOwner"
+                        }) {
+                            blockedAtOriginalPublication = true
+                            break
+                        }
+                        Thread.sleep(2)
+                    }
+                    assertTrue("Second turn must block in the existing unload-owner update", blockedAtOriginalPublication)
+                    val previous = f.owner.readRuntimeCapture(firstCapture)
+                    assertTrue("A new admitted turn must invalidate the previous cached capture before original publication can block",
+                        previous == null || previous.invalidated)
+                }
+            } finally {
+                // synchronized releases the existing guard even on the expected RED assertion.
+                // Let the original second run/cleanup finish before closing this owned dispatcher/fixture.
+                try {
+                    withContext(NonCancellable) {
+                        second?.let { pending ->
+                            assertEquals(OrionInferenceTerminal.SUCCEEDED, withTimeout(5000) { pending.await() }.terminal)
+                        }
+                    }
+                } finally { dispatcher.close() }
+            }
+        }
     }
 
 }
