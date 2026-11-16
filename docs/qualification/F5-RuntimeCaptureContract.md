@@ -2,7 +2,7 @@
 
 [Work package](../issues/ORION-F5-RUNTIME-CAPTURE-CONTRACT-001.md),
 [#141](https://github.com/otavio-esteves/O.R.I.O.N/issues/141).
-Reviewed main: `aeddbc357b2ac23b3b8aaa98e835eae047aa0661`, on 2026-11-16.
+Reviewed main: `83fec5f4cd483d14e05774cfb31a3b0078aa6d6c`, on 2026-11-16.
 This specifies future implementation. It supplies no producer, executable mode,
 new admission configuration, run, calibrated profile or qualification result.
 
@@ -13,7 +13,8 @@ then a pure HOST assembler for the unchanged
 [RuntimeEvidence v1](F5-RuntimeEvidenceProtocol.md). The producer must collect
 every field from the sources below; it cannot turn format125 into v1 by renaming
 fields. Split bytes from [#140](https://github.com/otavio-esteves/O.R.I.O.N/issues/140)
-are one dependency. New dispatch/terminal/cleanup checkpoints, a dedicated
+are integrated by [PR #143](https://github.com/otavio-esteves/O.R.I.O.N/pull/143).
+New dispatch/terminal/cleanup checkpoints, a dedicated
 observation clock and a fenced memory sampler are other required sources.
 
 Keep the original Core barrier, registry/READY/file checks, request ledger and
@@ -53,8 +54,8 @@ contract defines them. Its existing Cortex operations/envelopes stay unchanged.
 | --- | --- | --- |
 | [Owner](../../app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeOwner.kt) | Actual trusted plan/READY/file association and existing client/runOnce ownership | Copy a bounded technical identity only after those original checks; never infer READY from a HOST file hash |
 | [Client](../../app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt) | Issued load/inference IDs, load's original local start, actual calls/replies, current endpoint/epoch/PID | Explicit typed dispatch/terminal/cleanup markers; current `specification.startedElapsed` for inference is the older request deadline start, not dispatch |
-| [Lifecycle facts #132](../../ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycleFacts.kt) | Associated original deadline samples, first-terminal origin, ordered-release metadata and loss | No exact event clock, text/tool split or complete v1 events; never rename `associatedOriginalDeadlineSample` as event time |
-| [Byte guard](../../ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceContract.kt) / #140 | Two original UTF-8 encodings; total guard, proposed passive split-byte source | Reuse actual successful text/tool byte results for the exact ordered chunk; no reencoding, rescanning content or division of a total |
+| [Lifecycle facts #132/#140](../../ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycleFacts.kt) | Associated original deadline samples, first-terminal origin, ordered-release metadata, optional validated byte parts and loss | No exact event clock or complete v1 events; never rename `associatedOriginalDeadlineSample` as event time |
+| [Byte guard](../../ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceContract.kt) / #140 | Two original UTF-8 encodings, total guard and integrated passive split-byte source | Reuse actual successful text/tool byte results for the exact ordered chunk; no reencoding, rescanning content or division of a total |
 | [Resource observer](../../app/src/main/kotlin/network/orion/app/resources/OrionAndroidResourceObserver.kt) | MAIN self-PSS, private AI telemetry and original resource-policy observations | These are not seven phase-complete rows: preserve real collection boundaries, service state and endpoint identity |
 | [Memory adapter](../../app/src/main/kotlin/network/orion/app/resources/OrionCortexMemoryTelemetry.kt) | Strict same-boot/PID/inventory/freshness validation | A qualification sampler must retain raw typed timing/flags and exact windows; not just aggregate totals |
 | [Partial projector](F5-CyclePartialProjection.md) | Bounded deliberately stripped JSON | Exactly unchanged; omitted IDs/times cannot be recovered from its output |
@@ -220,7 +221,7 @@ identity; emulator ADB-root staging is not a physical provisioning procedure.
 | `inference.chunks` | Only successfully constructed original ordered-acceptance updates for this inference; no buffered, duplicate, wrong-request, late or rejected input as accepted delivery |
 | `chunks[].requestIdSha256`, `sequence` | Hash of the same actual logical request and original ordered zero-based sequence |
 | `chunks[].receivedElapsed` | Canonical actual MAIN ordered-acceptance event, not #132 sample, raw queue arrival or consumer-entry time |
-| `chunks[].textDeltaBytes`, `toolDeltaBytes` | Exact two successful validation results from #140 for that chunk/release, including known zero. Missing bookkeeping is unknown, not zero; sum still obeys the original guard |
+| `chunks[].textDeltaBytes`, `toolDeltaBytes` | Integrated #140 `validatedTextDeltaUtf8Bytes`/`validatedToolDeltaUtf8Bytes` for that exact chunk/release, including known zero and matching `validatedTotalContentUtf8Bytes`. Both parts are unavailable together on missing bookkeeping; never substitute zero or reencode |
 | `chunks[].isFinal`, `finishReason`, `errorCode` | Actual validated chunk metadata and winning terminal association; nonfinal reasons/errors absent, final equals terminal |
 | `unload.startedElapsed`, `completedElapsed` | Actual request-issuance and confirmed asynchronous-completion observation markers above |
 | `unload.result` | UNLOADED only from the valid original reply/current identity; FAILED only when an actual observed cleanup failure has valid bounds. Otherwise `unload=null` with explicit capture limitation |
@@ -432,6 +433,20 @@ The pinned [RunningInstrumentation OOM-adjuster test](https://android.googlesour
 expects foreground-service process state/foreground adjustment. These are scoped
 platform source facts, not physical/API37 runtime qualification.
 
+The current [minimum governor](../../core/resources/src/main/kotlin/network/orion/core/resources/OrionMinimumResourceGovernor.kt)
+additionally requires `sample.foreground=true` **and**
+`sample.importance=FOREGROUND`; otherwise it refuses BACKGROUND. The actual
+[Android observer](../../app/src/main/kotlin/network/orion/app/resources/OrionAndroidResourceObserver.kt)
+maps only `RunningAppProcessInfo.IMPORTANCE_FOREGROUND` to FOREGROUND, other known
+states to BACKGROUND and unavailable state to UNKNOWN. Instrumentation or
+foreground-service status does not automatically satisfy that observation.
+A future approved execution procedure must observe real MAIN foreground through
+the permitted UI/platform state or accept the original refusal. This contract
+selects no activity, settings operation or operational value. Never fabricate,
+pin or reinterpret foreground in a capture/controller adapter. Background remains
+a refusal/degradation case under the current minimum policy; actual foreground
+alone does not waive its other gates.
+
 HOST130's fixed command does not request no-restart. Looping it cannot establish
 one uninterrupted existing-owner session. Selecting no-restart or attaching
 instrumentation for 24 hours also does not establish normal background importance,
@@ -441,7 +456,7 @@ of it. No device is available for physical qualification at this review.
 
 ## Implementation sequence and required proof
 
-1. Finish/review #140 split bytes without extra encoding; preserve its exact
+1. Consume integrated #140 split bytes without extra encoding; preserve its exact
    validation/exception/count/List behavior and nullable failure semantics.
 2. Implement the final session/fence/event clock and bounded typed recorder.
    Prove default absence, exact dedicated-clock bounds, unknown/regressed boot,

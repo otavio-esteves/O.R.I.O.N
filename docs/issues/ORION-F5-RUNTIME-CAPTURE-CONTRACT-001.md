@@ -1,10 +1,10 @@
 # ORION-F5-RUNTIME-CAPTURE-CONTRACT-001 — complete bounded runtime capture contract
 
 Tracking: [#141](https://github.com/otavio-esteves/O.R.I.O.N/issues/141).
-Reviewed source: main `aeddbc357b2ac23b3b8aaa98e835eae047aa0661`.
+Reviewed source: main `83fec5f4cd483d14e05774cfb31a3b0078aa6d6c`.
 Date: 2026-11-16. This is an implementation contract, not implemented capture or
-execution/qualification evidence. Split-byte source #140 is a dependency, not
-claimed delivered by this source baseline.
+execution/qualification evidence. Split-byte source #140 is integrated by PR #143
+in this baseline; complete event capture/export remains future implementation.
 
 OBJECTIVE: Specify the complete MAIN/HOST RuntimeEvidence v1 producer and bounded
 export path, including true sources, missing sources, clocks, identity, all seven
@@ -40,7 +40,12 @@ wrapping product callbacks. Finite sampling may miss phases; loss never becomes
 zero or a complete record. Bounded inline export respects actual Parcel size and
 refuses oversize rather than extending formatter125/runner128/recorder130.
 The current factory's plans/timing/template stay empty/null and all real guards
-remain authoritative. The design's ADR screen must precede Android wiring; any
+remain authoritative. The minimum governor requires actual foreground=true and
+importance=FOREGROUND; instrumentation or foreground-service state cannot be
+substituted for the current platform observation. A future reviewed measurement
+procedure needs real foreground or must accept the original BACKGROUND refusal;
+this contract selects no activity/settings change or operating values.
+The design's ADR screen must precede Android wiring; any
 new architectural IPC, authority, process/ownership or persistence strategy is
 ADR REQUIRED before code, rather than implicitly authorized by this document.
 
