@@ -82,63 +82,44 @@ the shared runtime or changes retry/recovery policy. No durable schema/migration
 permissions, manifest, IPC, calibration, factory or operational values change.
 All authentication/physical/profile/inference/F5/soak/F6 flags remain false.
 
-VALIDATION: Twelve JVM methods and ten Android mechanical methods supplied (nine
-in the new scripted Client suite, one existing Owner empty-profile regression).
-Synthetic Client positives use a closed finite test clock through reflection and
-an existing scripted endpoint; the actual test Owner has empty plans/closed DB, so
-these are not real admission/native/physical evidence. The new Owner negative runs
-the real early gate and must remain lazy before storage/Clock/Bind.
-Author executed git diff --check and read-only source checks only. Static occurrence
-counts of original Client synchronized(monitor), functional monotonicNow, load/infer/
-unload/getStatus and direct onChunks calls are unchanged; this is source inspection,
-not runtime proof. Compilation/JVM/Android/lint/CI and final independent review are
-pending root-controlled execution. No Gradle/Docker/ADB/CI/push by this author.
+VALIDATION: Root canonical Docker checks passed in 4m 47s on source
+`c4687b620b692fbef910fdddb9e826ae52e030fd`:
+`:ai:api:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug
+:app:assembleDebugAndroidTest verifyModuleBoundaries testModuleBoundaries
+:ai:api:lintDebug :app:lintDebug --max-workers=2`.
+The selected XML reports contain 316 JVM cases in 39 suites (75 ai/api, 241 app),
+zero failures/errors/skips, including twelve new JVM cases.
 
+Actual Android framework execution passed all 76 mechanical cases, with only
+START/OK statuses and no ignores/assumption failures: 32 Client, 9 OwnerDefault,
+1 queued deadline, 10 cycle, 11 new capture Client and 13 generation-metrics Client.
+Twelve Android cases are new (eleven capture Client, one Owner default). This ran
+on an isolated API35/default/x86_64 emulator with 4096-byte pages, four vCPUs and
+3072 MiB. Built and pulled installed app/test APK SHA256 values matched exactly.
+The fixture clocks and endpoints are synthetic; this is framework/ownership proof,
+not native inference, profile, physical, API37, performance or 24-hour evidence.
+The owned emulator was verified by name/serial and stopped after each run.
 
-TURN-FENCE REVIEW REGRESSION (source only, 2026-11-16): Independent review found
-that the previous runtime frame remains valid while the next admitted turn can
-block inside the original updateUnloadOwner call. Manual reads do not take the
-Client monitor, so a cached previous receipt could still be accepted during that
-window. This follow-up adds only an Android regression and an opt-in test-fixture
-buffer, using the existing unload observation owner's private lock through test-only
-reflection. After one completed/cached capture, a second original run on a dedicated
-single-thread dispatcher must reach Thread.BLOCKED with updateUnloadOwner on its
-stack; the old manual receipt must then be unavailable/invalidated. The existing
-lock is released and that second run/cleanup finishes in finally, even on assertion
-failure. No production callback, factory seam or Client fix is added here.
+Independent review found three capture-publication ordering windows. Minimal fixes
+invalidate the old frame before turn publication, disconnect publication and
+closed-state publication, preserving the relative order of all functional code.
+The known-PID guard is unchanged. Two deterministic regressions use only the
+existing unload-owner lock through test reflection, with bounded worker-state/stack
+checks and cleanup in finally; no production callback/fault seam was added.
+A pre-fix run on source875ec3 executed one test and reproduced its exact turn
+assertion failure. A second run on source7de2331 executed the whole capture class:
+ten passed (including the turn fix), and only the planned disconnect assertion
+failed. Both regressions pass in the final 76-case run. Close write order was
+verified by source review rather than an artificial production test seam.
 
-Root interrupted the previous Docker invocation before accepting validation;
-its retained log is `/tmp/orion-client-owner-capture-validation-before-fence-fix-20261116.log`
-(exit143 reported by root). The new regression has NOT been compiled or executed
-by this author. Root will capture an actual emulator RED before applying the
-separate minimal invalidation-order fix and GREEN. The suite now supplies ten new
-Client methods plus the Owner negative (eleven Android methods), still synthetic/
-mechanical only; no outcome or physical/gate claim is made by this test commit.
+The first provisional build was deliberately interrupted for review (exit143),
+then retained as an intermediate log, never claimed as a successful final build.
+An intermediate turn-only fix also passed its checks; it does not replace the
+final source/runtime proof above. Raw logs, method results, source revisions,
+APK bindings and environment metadata remain separate for RED, RED2 and GREEN.
+Original files are not rewritten to conceal failing controls.
 
-
-LOST-CONNECTION REVIEW REGRESSION (source only, 2026-11-16): Root reported a real
-emulator RED for the preceding turn-entry assertion, then applied d70fa12 moving
-only the old frame invalidation before the original turn publication. Root's
-subsequent Docker40702 invocation passed in 5m3: 316 JVM cases in 39 suites
-(75 ai/api + 241 app), zero failures/errors/skips, with APK assembly, lint and
-module checks. Those are root-reported scoped results, not author execution.
-
-A further independent review found the same publication window in lostConnection:
-after its original expected-connection guard succeeds, updateUnloadOwner can block
-before invalidating the previous frame. This test-only commit adds one Android
-regression using the existing fixture buffer and private unload-owner lock. A
-single owned worker calls Binding.disconnect and must be BLOCKED with both
-lostConnection and updateUnloadOwner on its stack; the cached prior receipt must
-already be unavailable/invalidated. finally releases the guard, awaits the
-original disconnect/unbind cleanup and closes the owned dispatcher/fixture even
-on failure. No production hook, callback, PID validation or Client change is added.
-The existing known-PID mismatch guard already rejects replacement PID and is
-unchanged. The separate close write-order correction remains root-owned and
-will be checked by source order without adding a production test seam.
-
-This new regression has NOT been compiled/executed by the author. Client retains
-the turn-entry fix and still has the reviewed lostConnection/close ordering for
-root's whole-class RED2 run; only afterward will root apply the minimal production
-fix and run GREEN. The new Client suite has eleven methods plus the Owner negative
-(twelve Android methods total). No new runtime PASS, physical result or gate
-approval is claimed by this test-only commit. Author ran git diff --check only.
+Final independent code review found no further blocker in the minimal fixes.
+Required exact-head PR CI must pass before merge. Capture remains optional and
+absent from production composition; no calibrated settings, complete runtime
+exporter/heavy workload or phase-gate approval is supplied.
