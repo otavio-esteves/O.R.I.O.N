@@ -41,7 +41,8 @@ class OrionCortexRuntimeCaptureSessionTest {
             capture.javaClass.getDeclaredField("observationClock").apply { isAccessible = true }.set(capture, time)
             capture.javaClass.getDeclaredField("lifecycleSource").apply { isAccessible = true }.set(capture, source)
             check(capture.claim(owner))
-            capture.selected(owner, request.modelId, 1, request.requestId, request.deadline, 10)
+            capture.selected(owner, request.modelId, 1, request.requestId, request.deadline, 10,
+                128, 1, request.maxTokens, setOf("network.orion.qualification", "network.orion.qualification:ai"))
             check(capture.forClient(client, request.requestId, request.modelId, 1) === capture)
             lifecycle = OrionInferenceLifecycle(request, clock, events = source)
             capture.runOnceEntered(lifecycle)
@@ -63,6 +64,45 @@ class OrionCortexRuntimeCaptureSessionTest {
     private fun fixture(values: List<Long?> = List(256) { 100L }) = Fixture(values, ::finite)
     private fun chunk(sequence: Long = 0, final: Boolean = true) = OrionInferenceChunk("private-logical", 1, sequence,
         "é", "工具", final, if (final) OrionInferenceTerminal.SUCCEEDED else null)
+
+    private fun exportContext(pid: Int = 10): OrionRuntimeQualifiedContext =
+        OrionRuntimeQualifiedContext::class.java.declaredConstructors.single { it.parameterCount == 4 }.apply { isAccessible = true }
+            .newInstance("network.orion.qualification", "network.orion.qualification.test", 10000, pid) as OrionRuntimeQualifiedContext
+
+    @Test fun `export seal requires actual manual return close and current frame without another clock or snapshot`() {
+        val f = fixture(); f.identity(); f.lifecycle.accept(chunk())
+        val config = OrionRuntimeSamplingConfiguration(10)
+        val start = f.capture.javaClass.getDeclaredField("start").apply { isAccessible = true }.get(f.capture) as OrionObservationMoment
+        val sampler = OrionRuntimeMemorySampler(f.capture, config, f.time,
+            OrionRuntimeMainMemoryProbe.finiteForTests(emptyList()), start, 10)
+        f.capture.javaClass.getDeclaredField("samplingConfiguration").apply { isAccessible = true }.set(f.capture, config)
+        f.capture.javaClass.getDeclaredField("memorySampler").apply { isAccessible = true }.set(f.capture, sampler)
+        assertNull(f.capture.freezeForExport(f.owner, exportContext()))
+        f.capture.runReturned(false)
+        assertNull(f.capture.freezeForExport(f.owner, exportContext()))
+        val receipt = checkNotNull(f.capture.readAfterRun(f.owner))
+        val reads = f.clock.reads.toList(); val observationReads = checkNotNull(f.time.snapshot()).counterReadsAtLeast
+        assertFalse(sampler.open())
+        val sealed = checkNotNull(f.capture.freezeForExport(f.owner, exportContext()))
+        assertSame(receipt, sealed.receipt); assertEquals(reads, f.clock.reads)
+        assertSame(sealed, f.capture.freezeForExport(f.owner, exportContext()))
+        assertEquals(128, sealed.scalars.contextTokens); assertEquals(1, sealed.scalars.threads)
+        assertEquals(8, sealed.scalars.maxTokens); assertEquals(1100L, sealed.scalars.deadlineElapsed)
+        assertEquals(listOf("network.orion.qualification", "network.orion.qualification:ai"), sealed.scalars.processInventory)
+        assertEquals(observationReads, checkNotNull(f.time.snapshot()).counterReadsAtLeast)
+        assertNull(sealed.scalars.wireTemperature) // This fixture never reached the original Client wire expression.
+        assertNull(OrionRuntimeCapsuleEncoder.encode(sealed).source)
+        assertNull(f.capture.freezeForExport(Any(), exportContext()))
+        assertNull(f.capture.freezeForExport(f.owner, exportContext(12)))
+        f.frame.valid = false
+        assertNull(f.capture.freezeForExport(f.owner, exportContext()))
+        assertSame(receipt.facts, sealed.receipt.facts) // No second snapshot/import or mutation of the historical receipt.
+    }
+
+    @Test fun `unconfigured session cannot mint a source seal from a manual receipt`() {
+        val f = fixture(); f.identity(); f.lifecycle.accept(chunk()); f.finish()
+        assertNull(f.capture.freezeForExport(f.owner, exportContext()))
+    }
 
     @Test fun `manual import retains historical terminal and chunks before later unload markers without retiming`() {
         val f = fixture(listOf(100, 105, 110, 120, 130, 140, 150, 160))

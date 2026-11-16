@@ -61,6 +61,11 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
     private var preparation: MonotonicInstant? = null
     private var deadlineElapsed: Long? = null
     private var maximumAge: Long? = null
+    private var candidateContext: Int? = null
+    private var candidateThreads: Int? = null
+    private var candidateMaxTokens: Int? = null
+    private var originalInventory: List<String>? = null
+    private var originalWireTemperature: Float? = null
     private var client: Any? = null
     private var start: OrionObservationMoment? = null
     private var fence: OrionRuntimeCaptureFence? = null
@@ -80,6 +85,7 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
     private var unloadIssued = false
     private var unloadConfirmed = false
     @Volatile private var memorySampler: OrionRuntimeMemorySampler? = null
+    private var exported: OrionRuntimeExportSnapshot? = null
 
     private fun count(counter: AtomicLong) {
         val before = counter.get()
@@ -105,7 +111,8 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
     } ?: false
 
     /** Called after the original READY/profile/openReadOnly checks, without retaining their objects. */
-    fun selected(actualOwner: Any, sha256: String, size: Long, id: String, deadline: MonotonicDeadline, maximumAge: Long?) {
+    fun selected(actualOwner: Any, sha256: String, size: Long, id: String, deadline: MonotonicDeadline, maximumAge: Long?,
+        contextTokens: Int? = null, threads: Int? = null, maxTokens: Int? = null, inventory: Set<String>? = null) {
         access {
             if (actualOwner !== owner || !claimed.get() || invalidated.get() || model != null) {
                 gap(OrionRuntimeSessionGap.IDENTITY_CHANGED, true); return@access
@@ -114,6 +121,8 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
             logicalId = OrionRuntimeTechnicalId(id)
             preparation = deadline.start; deadlineElapsed = deadline.expiresElapsedRealtimeMillis
             this.maximumAge = samplingConfiguration?.maximumSampleAgeMillis ?: maximumAge
+            candidateContext = contextTokens; candidateThreads = threads; candidateMaxTokens = maxTokens
+            originalInventory = inventory?.let { Collections.unmodifiableList(ArrayList(it)) }
         }
     }
 
@@ -275,6 +284,14 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
             loadTerminal = true
         }
     }
+    /** Reuses the Float value of the original putFloat expression; no conversion/read of request here. */
+    fun wireTemperature(selected: OrionRuntimeCaptureFrame, service: Any, value: Float) {
+        access {
+            if (!current(selected, service)) return@access
+            if (originalWireTemperature != null) { gap(OrionRuntimeSessionGap.REUSED, true); return@access }
+            originalWireTemperature = value
+        }
+    }
     fun inferenceDispatch(selected: OrionRuntimeCaptureFrame, service: Any, id: String, inputBytes: Long) {
         memorySampler?.terminalHint(false) // A terminal already won before this dispatch cannot create an inference window.
         access {
@@ -368,6 +385,31 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
                 didThrow, loadDispatched, if (loadIssued) true else null, Collections.unmodifiableList(ArrayList(pending)), facts, summary,
                 Collections.unmodifiableSet(reasons), dropped.get(), failures.get(), accounting.get(), finalizedSampling).also { cached = it }
         }
+    }
+
+    private class ExportSnapshot(override val context: OrionRuntimeQualifiedContext,
+        override val scalars: OrionRuntimeExportScalars, override val receipt: OrionRuntimeSessionReceipt) : OrionRuntimeExportSnapshot
+
+    /** No acquisition, snapshot, wait or Clock. Requires the already finalized manual cached receipt.
+     * The private implementation is minted only by this actual session, after sampler.seal/import.
+     */
+    fun freezeForExport(actualOwner: Any, context: OrionRuntimeQualifiedContext): OrionRuntimeExportSnapshot? = access {
+        val value = cached ?: return@access null
+        val selected = frame
+        val association = fence
+        val facts = value.facts ?: return@access null
+        val sampling = value.memorySampling ?: return@access null
+        if (actualOwner !== owner || !runFinished || !readClaimed.get() || !ownerEntered || !turnObserved || !activated ||
+            invalidated.get() || value.invalidated || !value.identityKnown || selected == null || !selected.valid ||
+            selected.connection !== pinnedConnection || association == null || context.mainPid != mainPid ||
+            facts.association?.mainPid != mainPid || memorySampler == null ||
+            samplingConfiguration == null || sampling.maximumSampleAgeMillis != samplingConfiguration.maximumSampleAgeMillis ||
+            value.lifecycle !== facts.lifecycleImport) return@access null
+        exported?.let { return@access it }
+        val copied = OrionRuntimeExportScalars(candidateContext, candidateThreads, candidateMaxTokens,
+            originalWireTemperature, deadlineElapsed, originalInventory)
+        if (!selected.valid || selected.connection !== pinnedConnection || invalidated.get()) return@access null
+        ExportSnapshot(context, copied, value).also { exported = it }
     }
 
     companion object {
