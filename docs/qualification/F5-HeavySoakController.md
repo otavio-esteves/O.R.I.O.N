@@ -156,9 +156,11 @@ window/gap/suspend rejection, immutable/minimized records and sensitive sentinel
 These fixtures establish no Android execution, actual terminal provenance,
 physical measurements, calibrated limits, autonomy or real elapsed 24 hours.
 
-The author has not run these tests, Docker, Gradle or ADB; root centralizes
-validation after handoff. The intended focused command in the canonical HOST
-validation environment is:
+Central validation on HOST through `docker compose run --rm host-harness-check`
+passed all 460 tests (426 existing and 34 controller cases), with no failures,
+on the reviewed controller source. This used the canonical isolated Docker HOST
+harness environment; it is not Android or physical evidence. Required PR CI
+remains pending until its exact head is green. The focused command is:
 
 ```bash
 python3 -B scripts/android/test_f5_heavy_soak_controller_harness.py
