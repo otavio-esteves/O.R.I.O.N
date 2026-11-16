@@ -1,0 +1,1591 @@
+{
+  "schemaVersion": 1,
+  "kind": "ORION_RUNTIME_CAPTURE_SOFTWARE_EVIDENCE",
+  "trackingIssue": "https://github.com/otavio-esteves/O.R.I.O.N/issues/154",
+  "snapshotDate": "2026-11-16",
+  "documentaryBaseMain": "dc130a0e0728e50cc2da99f24d79aa2c4be4668e",
+  "packageResponsibility": "Immutable integrated software evidence and checklist reconciliation only; no new test run or qualification approval.",
+  "archive": {
+    "path": "artifacts/f5-runtime-capture-software-evidence-20261116.tar.gz",
+    "sha256": "158a0e0fb4eb0839b2d50d4b3125ef47007bdc79fb79123f29701874b221954d",
+    "sizeBytes": 422686,
+    "safeRegularRelativeMembers": 227,
+    "payloadManifestPath": "manifest-sha256.json",
+    "payloadManifestSha256": "f8452151ff1e27e515bf9521b72434a85a8d59d76290b95b982c6aa04c38fd12",
+    "manifestedPayloadFiles": 226,
+    "payloadFilesSha256": [
+      {
+        "path": "142-heavy-controller/integration-ci.json",
+        "sha256": "12c2348c80ab7294714cd29b07dfeacc1ff1ffe5e86c122be432d4bbe847523c",
+        "bytes": 642
+      },
+      {
+        "path": "142-heavy-controller/logs/orion-heavy-controller-baseexception-green-20261116.log",
+        "sha256": "c9305652f37b854ddeed2d71ddf9a94e58820fd41729310e7f1f360df697f8e6",
+        "bytes": 740
+      },
+      {
+        "path": "142-heavy-controller/logs/orion-heavy-controller-baseexception-red-20261116.log",
+        "sha256": "371ea31801d3131392b713bdf45afac30f73a371275fab06b6e29eb200622a7c",
+        "bytes": 3806
+      },
+      {
+        "path": "142-heavy-controller/source.patch",
+        "sha256": "854e67d74b7e09f98b5bc9d242efcddf5fbbf405600060b91bd734b6470964df",
+        "bytes": 69463
+      },
+      {
+        "path": "142-heavy-controller/source/docs/qualification/F5-HeavySoakController.md",
+        "sha256": "c610b135f6e985f6c4f65e288aac27451ccdbbab6b0d596a7cf77739f54933a0",
+        "bytes": 11113
+      },
+      {
+        "path": "142-heavy-controller/source/scripts/android/f5_heavy_soak_controller.py",
+        "sha256": "25ce16182c2b6ff4cb33e797c2fbe8916ef3f37b4e67b29fd608765867d5f51c",
+        "bytes": 23868
+      },
+      {
+        "path": "142-heavy-controller/source/scripts/android/test_f5_heavy_soak_controller_harness.py",
+        "sha256": "31562f280cd3b31521424dae124e00ca9c42e37f87ba49b8b3adcb481f67e647",
+        "bytes": 32441
+      },
+      {
+        "path": "144-runtime-event-source/integration-ci.json",
+        "sha256": "f839749ea106213b100f68cfafc8b8e6f85cbee2bb53911bd1a46bbaf9ebd1f2",
+        "bytes": 642
+      },
+      {
+        "path": "144-runtime-event-source/junit/ai/api/TEST-network.orion.ai.api.OrionGenerationMetricsTest.xml",
+        "sha256": "ebf7b61198f73282e20e34c71a31599cdb2d78a3d402fa54bf9e691ca56b9060",
+        "bytes": 1926
+      },
+      {
+        "path": "144-runtime-event-source/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceLifecycleFactsTest.xml",
+        "sha256": "f2d8aa60f0a5febb85d48ef6712443d0c8934cdd33a58a3846d929b67dc05a8d",
+        "bytes": 2929
+      },
+      {
+        "path": "144-runtime-event-source/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceLifecycleTest.xml",
+        "sha256": "a8ffad6925439efd07e77dacfce22b962fe48b2ecd8d05eb4bc9ad02e6d56d73",
+        "bytes": 2681
+      },
+      {
+        "path": "144-runtime-event-source/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceSplitByteFactsTest.xml",
+        "sha256": "d6398fdb1fe8d8e5fbfc45bf0a8afe6f6a81409b0f1e6009a14d331a260e51af",
+        "bytes": 2158
+      },
+      {
+        "path": "144-runtime-event-source/junit/ai/api/TEST-network.orion.ai.api.OrionIssuedRequestHistoryTest.xml",
+        "sha256": "953415160e177f8faf901e081e2cf1c10bd21f342e1f177ed8928ed6103f167b",
+        "bytes": 1436
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.CoreReadyLogEventTest.xml",
+        "sha256": "afc330e3068db2b6ac7b3bfab6f372bd3484ffec7746e77f48fad115e131ab3c",
+        "bytes": 894
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.OrionHealthObservationsTest.xml",
+        "sha256": "17b9db6a2b0e7f35eb5fccad3504e06931520531521a6f994317b0cb63fc5eb1",
+        "bytes": 506
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.OrionIngressMaintenanceTest.xml",
+        "sha256": "1a898b68c6c22f718ad310abcbb64661d366a6fa41f40b921910e99ceaa28a69",
+        "bytes": 944
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.OrionMaintenanceOutcomeTest.xml",
+        "sha256": "571cbf409336c4016e8d74e07bbf2f00f8e333f10d840f103f485e2f59a624f2",
+        "bytes": 1146
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionCortexCycleObservationTest.xml",
+        "sha256": "51aaf320a93bc002f24040417039bedd64b98586e7aa9242213d0183eedeb66a",
+        "bytes": 2424
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionCortexCyclePartialProjectorTest.xml",
+        "sha256": "92854fe668f9ac43303eb0306334dbabee6d97dd5a481af802f421933b11a875",
+        "bytes": 3274
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionCortexMetricsCorrelationTest.xml",
+        "sha256": "5a7e8bf729f518401f418b1df47ee2f14989421fc02e0e26069e335dad5316ac",
+        "bytes": 3018
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionCortexPreResourceReadinessTest.xml",
+        "sha256": "a5fdf2130dbc80400acb5f6e30d778c3bbe8c7ba06059346a11f6b4d792e6db6",
+        "bytes": 990
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionCortexRuntimeOwnerPolicyTest.xml",
+        "sha256": "82f7cec15b7aac7192b690efa0e7089b2fa443fa17e3a6ab87d5188e501dfbc8",
+        "bytes": 1408
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionCortexSingleAttemptTest.xml",
+        "sha256": "1c539cab5c90f5528816177597716f11adb4764103a516c7aa515902020d0157",
+        "bytes": 1421
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionCortexUnloadDiagnosticsTest.xml",
+        "sha256": "78e5592e6c581735f8bb31131f01cb2f98363d326d4725d7f2fac6a9f9eedc7d",
+        "bytes": 1958
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionCortexUnloadObservationTest.xml",
+        "sha256": "cc905ef116d28d649020e6808d15d269bfed9394e496dea0f5b8c57f3c1ec4b6",
+        "bytes": 2071
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionInferenceRequestFingerprintTest.xml",
+        "sha256": "b0fee1fed28113f4762436a5010feae232f7443503ad1ed75e8d2ef654715434",
+        "bytes": 869
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionInferenceRequestLedgerTest.xml",
+        "sha256": "4752123c956cf6e58596809bf6fb65d7dec93b1a82789a4a76a135a135e49f04",
+        "bytes": 1676
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionInferenceTurnstileTest.xml",
+        "sha256": "d7bffe1c227db6827e712293e57405096dedf2db0bae1dd84ae219b29536e078",
+        "bytes": 2391
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.ai.OrionRuntimeEventRecorderTest.xml",
+        "sha256": "3e5c1bea8d0b720752ce2877eb2483f64cf9d8c9c09b0beb40ebffeb5d5de529",
+        "bytes": 2767
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.memories.OrionMemoryAdmissionOwnerTest.xml",
+        "sha256": "851571703c8da0e8403f922454719cc1add558ca630e479f13e8b870ef8660b7",
+        "bytes": 3186
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.memories.OrionMemoryIngressWireTest.xml",
+        "sha256": "b38730718e5a66af48e179e9ac17d40d0aeba759d4d1b549f6b7dbed06ef0483",
+        "bytes": 670
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.notifications.OrionNotificationIngressWireTest.xml",
+        "sha256": "c174eff5049ea3af50da5db6116d1d6b14f74fed3126c481cba06ebc71aac001",
+        "bytes": 1212
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryAdmissionsTest.xml",
+        "sha256": "0cf806c3c9d73e617355178f7d921af2d3755ae4deb2e187a6da1b71013cac7c",
+        "bytes": 706
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryPolicyTest.xml",
+        "sha256": "d8d9a139373d0a391a66f173f34e0b76aad0b4fac8647b3c0fda281c982bd01e",
+        "bytes": 539
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryWireTest.xml",
+        "sha256": "2df71a7a269ba52953e6dc8145a53037b16a6843a6f213236a7cdc39b4781699",
+        "bytes": 690
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderSeriesPlanTest.xml",
+        "sha256": "30e9b7d7b3053fbab1042f732db0ac1a1d480c2a6443d2a72905a8fa2058c1cc",
+        "bytes": 869
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.reminders.OrionReminderDisplayTest.xml",
+        "sha256": "1d9a37df30f459d72c7c875b069f038908d61cfc74a45654706938f554eda3da",
+        "bytes": 493
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.reminders.OrionReminderIngressWireTest.xml",
+        "sha256": "d3eeee168b2c012fa48e903802b45a196b39bb41d13c1331d080af560cbe1590",
+        "bytes": 1122
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.resources.OrionAndroidMemoryPressureTest.xml",
+        "sha256": "822f133e34abc76854c4927c3a28e34ab23bfaa14706983377174e0415324199",
+        "bytes": 957
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.resources.OrionCortexMemoryTelemetryTest.xml",
+        "sha256": "fa0a0bb5759dcd9a484d552b658be9e81700bca2cfa478ada15160bc2b0335bc",
+        "bytes": 1621
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.resources.OrionCortexResourceFactsTest.xml",
+        "sha256": "efbd511c1a8ef764abaa28c6a2de416a22b2a8a1cea7b5cfa2676ac8e3460b51",
+        "bytes": 2487
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.resources.OrionProcessMemoryEvidenceTest.xml",
+        "sha256": "076b43acc82dcadd7bc25063b2ba9a5b65f626a286da78723d97ee1512ca85b3",
+        "bytes": 1926
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.tasks.OrionTaskAdmissionOwnerTest.xml",
+        "sha256": "91bf4f05751363a524c6d4e5bd6f8cc9b60b83259d71d5a5b27138db1697ecfe",
+        "bytes": 3085
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.tasks.OrionTaskIngressWireTest.xml",
+        "sha256": "a25186de90ccb2e59932797e42ba1f1e731c5ad9cce07399fbbbc86de6311d75",
+        "bytes": 1074
+      },
+      {
+        "path": "144-runtime-event-source/junit/app/TEST-network.orion.app.timers.OrionTimerIngressWireTest.xml",
+        "sha256": "5f47edd6c59fe8378cb01908d36a1600185d2ac45b1b95352c54650b4d5a9a60",
+        "bytes": 1088
+      },
+      {
+        "path": "144-runtime-event-source/junit/core/time/TEST-network.orion.core.time.AndroidOrionClockTest.xml",
+        "sha256": "cca27e2049d0a33d69b7993d0b40e63e21704d5f76fc8f4acd55c31a19e6a74b",
+        "bytes": 993
+      },
+      {
+        "path": "144-runtime-event-source/junit/core/time/TEST-network.orion.core.time.OrionClockTest.xml",
+        "sha256": "62a7930d0be43b08121fc8fc15d3072c7ee35bf2adf087285f8262484853e899",
+        "bytes": 1555
+      },
+      {
+        "path": "144-runtime-event-source/junit/core/time/TEST-network.orion.core.time.OrionObservationEventClockTest.xml",
+        "sha256": "790b33c5e50d427a123b3a7bc891b0568e3899d741fd17d1649123fdd7b412a7",
+        "bytes": 2190
+      },
+      {
+        "path": "144-runtime-event-source/logs/orion-runtime-event-source-validation-20261116.log",
+        "sha256": "37a60315f3d0bd4dc578d07d4963a3767a2d78329cee44095af281049ec5046e",
+        "bytes": 115789
+      },
+      {
+        "path": "144-runtime-event-source/source.patch",
+        "sha256": "b1ffbf05358d9cb140fb7344bd98aa91554d312df9c3e992d50c41e635c96ec9",
+        "bytes": 77039
+      },
+      {
+        "path": "144-runtime-event-source/source/app/src/main/kotlin/network/orion/app/ai/OrionRuntimeCaptureTypes.kt",
+        "sha256": "ed9e3cd8177e94e07a8188e5e370e370fcbf1d89acc77a759a7a1fb4aa0f3d3a",
+        "bytes": 8386
+      },
+      {
+        "path": "144-runtime-event-source/source/app/src/main/kotlin/network/orion/app/ai/OrionRuntimeEventRecorder.kt",
+        "sha256": "82881c41d99a89fceda082a24fcbd9e54b84396250f75f6610a68ff3b54243ef",
+        "bytes": 17907
+      },
+      {
+        "path": "144-runtime-event-source/source/app/src/test/kotlin/network/orion/app/ai/OrionRuntimeEventRecorderTest.kt",
+        "sha256": "a617e17d2fb358bb4d348796e3a589f8059fbac55252e7d47ef05139b6f790b1",
+        "bytes": 23157
+      },
+      {
+        "path": "144-runtime-event-source/source/core/time/src/main/kotlin/network/orion/core/time/OrionObservationEventClock.kt",
+        "sha256": "1d76990550820c19a15f9bac568edf10734f14aa45edb08abe61aa11a85df986",
+        "bytes": 7882
+      },
+      {
+        "path": "144-runtime-event-source/source/core/time/src/test/kotlin/network/orion/core/time/OrionObservationEventClockTest.kt",
+        "sha256": "1283bd7382a416b286e51017c3387d1cd6d4acde160e9ae186a1b2551fbadc57",
+        "bytes": 10174
+      },
+      {
+        "path": "144-runtime-event-source/source/docs/issues/ORION-F5-RUNTIME-EVENT-SOURCE-001.md",
+        "sha256": "1e1b0e06f3cf2b3ed2e82bc516d8c9e1bd709de034070558338b21df74bb2df2",
+        "bytes": 6570
+      },
+      {
+        "path": "144-runtime-event-source/validation/orion-runtime-event-source-jvm-summary-20261116.json",
+        "sha256": "11ff8c6f8752485fbddb0a73e4bd58f46676d3a2cb0af400a4e2f2fbcb106fab",
+        "bytes": 323
+      },
+      {
+        "path": "144-runtime-event-source/validation/orion-runtime-event-source-tested-files-20261116.json",
+        "sha256": "a7b360a54028159eefff262e9e3c3bc39189bf717517f32e56e4905765af61c7",
+        "bytes": 745
+      },
+      {
+        "path": "146-lifecycle-event-hooks/integration-ci.json",
+        "sha256": "e76bcf44d17d79b73627e72b39ef2aca2e59e8f000969235572604b71386cfad",
+        "bytes": 642
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/ai/api/TEST-network.orion.ai.api.OrionGenerationMetricsTest.xml",
+        "sha256": "3273b8a39635aee8b9a15ae2353fc0a93d88d60f20f0064cab5f186a772a90c9",
+        "bytes": 1925
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceLifecycleEventSourceTest.xml",
+        "sha256": "35869779c266c1f34366933085f842b0f30badf79a5beb5804d771d6c2501b47",
+        "bytes": 3489
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceLifecycleFactsTest.xml",
+        "sha256": "dd0e653ca2ed3295edf0b22500805f4f32dac2d7571d237663006416dc661b5f",
+        "bytes": 2926
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceLifecycleTest.xml",
+        "sha256": "527b72dd76215c3c7b1bd315209f7ccbfefc7286b97a6ef37199317f149b3a8f",
+        "bytes": 2677
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceSplitByteFactsTest.xml",
+        "sha256": "7f389fdf9eb08701d2cd05ec2ea6e90d2724fa89629548385f162c02daa50720",
+        "bytes": 2157
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/ai/api/TEST-network.orion.ai.api.OrionIssuedRequestHistoryTest.xml",
+        "sha256": "4edf51fa60c25c97cd798bfee0670853c2925d07ce884276d364b175bf0a67e9",
+        "bytes": 1437
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.CoreReadyLogEventTest.xml",
+        "sha256": "7c134f147ced4729ee080842117adce7ff97e8a4cc28b3fabdbc11ed545ed578",
+        "bytes": 892
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.OrionHealthObservationsTest.xml",
+        "sha256": "ae957a5e6c026e236508168b588513e62aca65104c7946ceb9f8d44eae0bdfe2",
+        "bytes": 505
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.OrionIngressMaintenanceTest.xml",
+        "sha256": "719eea402802d252baf37406949e1233a88feecade30b6b3e6d2e6b907e57c26",
+        "bytes": 944
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.OrionMaintenanceOutcomeTest.xml",
+        "sha256": "2a5d3f3a3bcd285059f323ff2ca141aefa584fe1a6978f88dc3b85cc3aa68a36",
+        "bytes": 1142
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionCortexCycleObservationTest.xml",
+        "sha256": "ac728353c1f4b4ca57082c912f64a69d2b34d50c971cfab75b26b9bea97806b2",
+        "bytes": 2429
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionCortexCyclePartialProjectorTest.xml",
+        "sha256": "5f477a03635cba68bb844edcedc02d1038e7c6e85792d295922dd1d5f6fb1e65",
+        "bytes": 3274
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionCortexMetricsCorrelationTest.xml",
+        "sha256": "aad070163ef772c94697a8fe9e5f2425c1ca12c992542fab13746edbe632975f",
+        "bytes": 3019
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionCortexPreResourceReadinessTest.xml",
+        "sha256": "728f9671ce3a8b8dd5de3ec3f7b2684938276423cb9074057b1dc6a9fa3f2eea",
+        "bytes": 990
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionCortexRuntimeOwnerPolicyTest.xml",
+        "sha256": "1f630412f07e1595660543f08cc12e2081f3abe33654f5253ff6738760835b7c",
+        "bytes": 1405
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionCortexSingleAttemptTest.xml",
+        "sha256": "b2a8bd9da0364b3c7b621c8a7334124d0da62b0c19c88cb6aae3148b10b045ef",
+        "bytes": 1419
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionCortexUnloadDiagnosticsTest.xml",
+        "sha256": "53114cf1bfaf745ae6adc96f8ec58f6daa3b9e3e931ce1e8fc3824a29c1e7595",
+        "bytes": 1958
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionCortexUnloadObservationTest.xml",
+        "sha256": "f2610f4dcc5fa7613ad4e02fe85d9c360a6671e6d4b0e4b35cf6809e5c31f42a",
+        "bytes": 2070
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionInferenceRequestFingerprintTest.xml",
+        "sha256": "4b39c470e9c800f2b73d5cdca3679a2453f100322466336ebfc5b369b78753ca",
+        "bytes": 870
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionInferenceRequestLedgerTest.xml",
+        "sha256": "a9adea4359fd620399cd886bc42c6144c6fc9d7c1f4706fd376a4e3bdd0799f4",
+        "bytes": 1674
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionInferenceTurnstileTest.xml",
+        "sha256": "612aba5e816f5340fdbd5c4e9b6f3700247897a329e69a7f49620aa0fd59182f",
+        "bytes": 2391
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.ai.OrionRuntimeEventRecorderTest.xml",
+        "sha256": "a11b779cbaddd2261b7f38eb109f2101e390d053d3bf2ca8a65b7ff23ee50439",
+        "bytes": 2770
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.memories.OrionMemoryAdmissionOwnerTest.xml",
+        "sha256": "e944321bc18c3f661f6a90a62d4537009cdb5e33a4dbababf8f629c011a4daba",
+        "bytes": 3180
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.memories.OrionMemoryIngressWireTest.xml",
+        "sha256": "d07570714cf52e14d18eb8b36b7b726dbaa346d8ccb67ae7973eee7591145c4b",
+        "bytes": 668
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.notifications.OrionNotificationIngressWireTest.xml",
+        "sha256": "012f6ee3cd95bd7a9abe00d013d8fe47a9dd0d9dcef5dc53acc68ce8d8d1d695",
+        "bytes": 1211
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryAdmissionsTest.xml",
+        "sha256": "6c2abe90d13e27f065b8969bf11a5f1c790b1bfa34c9f9749297c4776e70ffca",
+        "bytes": 706
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryPolicyTest.xml",
+        "sha256": "1b4dc7490d6fa527a01c4f9e54b05ba93af272668787ae9102cfade639b7ee6a",
+        "bytes": 539
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryWireTest.xml",
+        "sha256": "6920b2c4ad7c89cc654880d3445be6f122707da6af8fb3654730978bfe7f9184",
+        "bytes": 690
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderSeriesPlanTest.xml",
+        "sha256": "2c39d874d3c6fa37dd0e2edca4808b4a1ff94edd58544934465553d1fccedc63",
+        "bytes": 869
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.reminders.OrionReminderDisplayTest.xml",
+        "sha256": "67d7c9ffa65cf972d22c97e57f605d0cbd5bae48d865916b074c792697d2799f",
+        "bytes": 491
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.reminders.OrionReminderIngressWireTest.xml",
+        "sha256": "a536de7118dbcdbd38b1a6d6f75fd55800c0734d95491371b2d8cf0b563fc1fa",
+        "bytes": 1122
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.resources.OrionAndroidMemoryPressureTest.xml",
+        "sha256": "8c50c943fd73f7e84c671a85a132cddbfc6bdd5988915ac2e7c498610fe21e4e",
+        "bytes": 955
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.resources.OrionCortexMemoryTelemetryTest.xml",
+        "sha256": "f362acf1b5311c1158b87b2deee3a36fa751ed3977164365349991e8b9d1e6bf",
+        "bytes": 1620
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.resources.OrionCortexResourceFactsTest.xml",
+        "sha256": "02fef7512647bcc554841800f39a96fd3fa41ebca60968023d0f94b6d188615f",
+        "bytes": 2491
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.resources.OrionProcessMemoryEvidenceTest.xml",
+        "sha256": "e80aace77489339d5c9db3bc8fbebd515d3ba42c75f8e3c6c1da9e6e953c227a",
+        "bytes": 1926
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.tasks.OrionTaskAdmissionOwnerTest.xml",
+        "sha256": "5dd1dabcef4210d12e168bf7d6276661350755bffff6f056de37ff724c4896f2",
+        "bytes": 3090
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.tasks.OrionTaskIngressWireTest.xml",
+        "sha256": "7319759d3f31c47e48cff085c4bb47d6860f65bbcd7bdd40456540f6053089e8",
+        "bytes": 1076
+      },
+      {
+        "path": "146-lifecycle-event-hooks/junit/app/TEST-network.orion.app.timers.OrionTimerIngressWireTest.xml",
+        "sha256": "5301d90a61833d0691f5f7e8746a11ef5c3de8ec942dea0f7c1e7c5a25a85c2c",
+        "bytes": 1087
+      },
+      {
+        "path": "146-lifecycle-event-hooks/logs/orion-lifecycle-event-hooks-validation-20261116.log",
+        "sha256": "48a248874fa07a0b5cf57707c4717c797f2d9a3ba7e5107881ac62ad47859e16",
+        "bytes": 114809
+      },
+      {
+        "path": "146-lifecycle-event-hooks/source.patch",
+        "sha256": "f65b10af692c5f7a29240f5141fe8a56139cf6dabcd9c6cdb98a5d94a5d0ed3a",
+        "bytes": 52315
+      },
+      {
+        "path": "146-lifecycle-event-hooks/source/ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycle.kt",
+        "sha256": "759d059f0c22c4487b8c5a1278872a172d57956867a92fee836545955194b2f8",
+        "bytes": 10937
+      },
+      {
+        "path": "146-lifecycle-event-hooks/source/ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycleEventSource.kt",
+        "sha256": "b3fa0b8c884e23699e6168a9f907605be7dee212465cf55a0645a3f53daed572",
+        "bytes": 13752
+      },
+      {
+        "path": "146-lifecycle-event-hooks/source/ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycleFacts.kt",
+        "sha256": "ee819508cc5c3feac4edddbf0ceef76c283d367c2fceafb26ae833540d7328cb",
+        "bytes": 9954
+      },
+      {
+        "path": "146-lifecycle-event-hooks/source/ai/api/src/test/kotlin/network/orion/ai/api/OrionInferenceLifecycleEventSourceTest.kt",
+        "sha256": "7b15510afbb20ff48e0912b18888f68b5ce86d3b92e567122fdec722918ce3d5",
+        "bytes": 21784
+      },
+      {
+        "path": "146-lifecycle-event-hooks/source/docs/issues/ORION-F5-LIFECYCLE-EVENT-HOOKS-001.md",
+        "sha256": "07b1443d410d3c849ce52b55f9364abbf5d4ec8154b31bbd6d7e7f4bd1c35d1f",
+        "bytes": 7678
+      },
+      {
+        "path": "146-lifecycle-event-hooks/validation/orion-lifecycle-event-hooks-jvm-summary-20261116.json",
+        "sha256": "14e189b82cb837a692fcc3717971296b21360d17b214f5cc83ce1160c6d0b17c",
+        "bytes": 214
+      },
+      {
+        "path": "146-lifecycle-event-hooks/validation/orion-lifecycle-event-hooks-tested-files-20261116.json",
+        "sha256": "eb160fa60b5dad30f91d8b34efb0a21a2972ca1153245d0eb602c7e4ef9e1a61",
+        "bytes": 610
+      },
+      {
+        "path": "148-client-owner-capture/android/driver/emulator-green.log",
+        "sha256": "db54b703220f246fb488b8bc25fc6e0b0e36585c8f475ed29ecf101bae2ec771",
+        "bytes": 8191
+      },
+      {
+        "path": "148-client-owner-capture/android/driver/emulator-red.log",
+        "sha256": "2219d9492b24218ea3cb82236362bfb437cf98f556813d63f30248e82b932919",
+        "bytes": 8191
+      },
+      {
+        "path": "148-client-owner-capture/android/driver/emulator-red2.log",
+        "sha256": "44e4cbd4600f755863cecd291c96dd9f03a4783d4c53061f7705540895ff5ddb",
+        "bytes": 8191
+      },
+      {
+        "path": "148-client-owner-capture/android/driver/green-driver.log",
+        "sha256": "97dbe6d485f1cdb73724feca69424e82180cd79ed439e8957942fc6ce53e8285",
+        "bytes": 115
+      },
+      {
+        "path": "148-client-owner-capture/android/driver/orion-client-capture-green-driver-20261116.py",
+        "sha256": "335d993d06c6e1079df74d1647abfffc3409eb69ef5fce3d8705bc3942ccdd31",
+        "bytes": 5968
+      },
+      {
+        "path": "148-client-owner-capture/android/driver/orion-client-capture-red-driver-20261116.py",
+        "sha256": "f512e18515ac84d5750391204ad6eaf6ece58aa20e6cb0c388988ca694bcb6d3",
+        "bytes": 5310
+      },
+      {
+        "path": "148-client-owner-capture/android/driver/orion-client-capture-red2-driver-20261116.py",
+        "sha256": "df0552e55529d424e1d25ca3fa6829b04f003db24b8a07dfd20290e7b7015fd9",
+        "bytes": 5257
+      },
+      {
+        "path": "148-client-owner-capture/android/driver/red-driver.log",
+        "sha256": "5aebb1a81f30861032fb4aeb536a7e88cf7a6a94226f58dd352daf786bd508de",
+        "bytes": 110
+      },
+      {
+        "path": "148-client-owner-capture/android/driver/red2-driver.log",
+        "sha256": "cfe257aff2500c6cca008aa10c5093559b45515e6d1cae03fa2c115a316dc3bd",
+        "bytes": 111
+      },
+      {
+        "path": "148-client-owner-capture/android/environment/actual-emulator-environment.json",
+        "sha256": "271432fe5d9663b59b22a2f98b15f399712b300bd28e360513dd5f5f32cc3e3a",
+        "bytes": 357
+      },
+      {
+        "path": "148-client-owner-capture/android/environment/owned-emulator-green.json",
+        "sha256": "1e8f6eeed9e94701e0d859831248306c03a73d189556f44b2a4aabf3e1bd45be",
+        "bytes": 173
+      },
+      {
+        "path": "148-client-owner-capture/android/environment/owned-emulator-red2.json",
+        "sha256": "415712f5e9ec179277fc77203b07117106d82287735480cdde8878d6e2a21d5b",
+        "bytes": 172
+      },
+      {
+        "path": "148-client-owner-capture/android/environment/owned-emulator.json",
+        "sha256": "b943e7701a2d2267b9d2685d3ecbb9d9d9ef4594e79282a45069d8b2818ab379",
+        "bytes": 171
+      },
+      {
+        "path": "148-client-owner-capture/android/environment/planned-avd.json",
+        "sha256": "2aaaaf08054dc747b254c383657287dc0568f0a8e43af5ecdb59c57482d2069b",
+        "bytes": 342
+      },
+      {
+        "path": "148-client-owner-capture/android/environment/used-avd-config.ini",
+        "sha256": "391370e757fbaa868d09b4f0cb3a5c684c83a6b2d546174ebdb63e453555be73",
+        "bytes": 536
+      },
+      {
+        "path": "148-client-owner-capture/android/green/actual-emulator-environment.json",
+        "sha256": "271432fe5d9663b59b22a2f98b15f399712b300bd28e360513dd5f5f32cc3e3a",
+        "bytes": 357
+      },
+      {
+        "path": "148-client-owner-capture/android/green/build-binding.json",
+        "sha256": "b7450cefadcdb94c4b578ebb6961c2f927db53aad85a373f5c40cb605e531945",
+        "bytes": 814
+      },
+      {
+        "path": "148-client-owner-capture/android/green/emulator-stop.log",
+        "sha256": "e2d4238ce853e3f4c1ba7b36adf25ff824d93c36a0b94db50cb96dc047aac6d3",
+        "bytes": 33
+      },
+      {
+        "path": "148-client-owner-capture/android/green/emulator-stopped.json",
+        "sha256": "cb87561e1ebed0e17c147c27b3a5c4b45346486061abffd142bf92c917eaea8a",
+        "bytes": 111
+      },
+      {
+        "path": "148-client-owner-capture/android/green/installed-binding.json",
+        "sha256": "90770d1bf4998a558882bdbc4173feeded0e7638b17ba8a205996e1bf09302f2",
+        "bytes": 608
+      },
+      {
+        "path": "148-client-owner-capture/android/green/method-results.json",
+        "sha256": "605de2cdcd2378ec125503877f8902e7afbe7e8418d7a25b36f8793c75af8742",
+        "bytes": 12784
+      },
+      {
+        "path": "148-client-owner-capture/android/green/network.orion-install.log",
+        "sha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "bytes": 36
+      },
+      {
+        "path": "148-client-owner-capture/android/green/network.orion.test-install.log",
+        "sha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "bytes": 36
+      },
+      {
+        "path": "148-client-owner-capture/android/green/regression-instrumentation.log",
+        "sha256": "7eeca07d73055cc53ace0f649ec419bf2b475fbeba00c5806ce0fcfe3d5ad9b6",
+        "bytes": 54142
+      },
+      {
+        "path": "148-client-owner-capture/android/green/result.json",
+        "sha256": "549377c8652137d08680d7a2fad59ee39727f40f019b4242fdb0affd3d35438d",
+        "bytes": 645
+      },
+      {
+        "path": "148-client-owner-capture/android/red/build-binding.json",
+        "sha256": "0f3a0ae94ce6228e02fdb0f95d90832667387d366c8e1139e7e85ef8737f0d7a",
+        "bytes": 762
+      },
+      {
+        "path": "148-client-owner-capture/android/red/emulator-stop.log",
+        "sha256": "e2d4238ce853e3f4c1ba7b36adf25ff824d93c36a0b94db50cb96dc047aac6d3",
+        "bytes": 33
+      },
+      {
+        "path": "148-client-owner-capture/android/red/emulator-stopped.json",
+        "sha256": "540cd05b641af24d7ed9aa57f9f3fb6393e3fe990dfc357b2029ef19ac278f43",
+        "bytes": 111
+      },
+      {
+        "path": "148-client-owner-capture/android/red/installed-binding.json",
+        "sha256": "77b160e76d6b9544c8f2806cdf7f02baab432c6a7c3cf5a14164cf4a6e2e9bae",
+        "bytes": 604
+      },
+      {
+        "path": "148-client-owner-capture/android/red/network.orion-install.log",
+        "sha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "bytes": 36
+      },
+      {
+        "path": "148-client-owner-capture/android/red/network.orion.test-install.log",
+        "sha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "bytes": 36
+      },
+      {
+        "path": "148-client-owner-capture/android/red/regression-instrumentation.log",
+        "sha256": "67821f803e628956673cf3ab68daa96c7e6e96d109367aef78732cb0551d68d4",
+        "bytes": 4836
+      },
+      {
+        "path": "148-client-owner-capture/android/red/result.json",
+        "sha256": "8738f90d981878a9c4447eee4e155f8e824a3962f9b9be177cf8d3245d344d98",
+        "bytes": 399
+      },
+      {
+        "path": "148-client-owner-capture/android/red2/build-binding.json",
+        "sha256": "fdd64120186fe5857075f82efcb179287233753e44519ee596bb68cb21627a2f",
+        "bytes": 788
+      },
+      {
+        "path": "148-client-owner-capture/android/red2/emulator-stop.log",
+        "sha256": "e2d4238ce853e3f4c1ba7b36adf25ff824d93c36a0b94db50cb96dc047aac6d3",
+        "bytes": 33
+      },
+      {
+        "path": "148-client-owner-capture/android/red2/emulator-stopped.json",
+        "sha256": "47c6d0d52eb3d9c8dec9ca11bbce581b044c7d7d76804765d9707ef3172d4779",
+        "bytes": 111
+      },
+      {
+        "path": "148-client-owner-capture/android/red2/installed-binding.json",
+        "sha256": "00f24a400f72a81943996c438b33769411e71304bdd5d648f5688743bcd2424b",
+        "bytes": 606
+      },
+      {
+        "path": "148-client-owner-capture/android/red2/method-results.json",
+        "sha256": "6f310a998b3c8deef3489bbda87c25ef4fcdd1131fb103eeb27656c917019961",
+        "bytes": 1999
+      },
+      {
+        "path": "148-client-owner-capture/android/red2/network.orion-install.log",
+        "sha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "bytes": 36
+      },
+      {
+        "path": "148-client-owner-capture/android/red2/network.orion.test-install.log",
+        "sha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "bytes": 36
+      },
+      {
+        "path": "148-client-owner-capture/android/red2/regression-instrumentation.log",
+        "sha256": "42c6195f42082224d7b6197d403d13c5c6a396d1a64606f31fb6850d9de9a8c4",
+        "bytes": 12171
+      },
+      {
+        "path": "148-client-owner-capture/android/red2/result.json",
+        "sha256": "cee9aaf8e9b514e45ce1c5c6d55b8295353e9490fe834ddb935dbedf7d042eef",
+        "bytes": 323
+      },
+      {
+        "path": "148-client-owner-capture/integration-ci-final.json",
+        "sha256": "59ede8010a5d9de88ca925bb6c0c0109978573baa84cb6705ae2a2bbe91cc0ff",
+        "bytes": 642
+      },
+      {
+        "path": "148-client-owner-capture/junit/ai/api/TEST-network.orion.ai.api.OrionGenerationMetricsTest.xml",
+        "sha256": "3273b8a39635aee8b9a15ae2353fc0a93d88d60f20f0064cab5f186a772a90c9",
+        "bytes": 1925
+      },
+      {
+        "path": "148-client-owner-capture/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceLifecycleEventSourceTest.xml",
+        "sha256": "35869779c266c1f34366933085f842b0f30badf79a5beb5804d771d6c2501b47",
+        "bytes": 3489
+      },
+      {
+        "path": "148-client-owner-capture/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceLifecycleFactsTest.xml",
+        "sha256": "dd0e653ca2ed3295edf0b22500805f4f32dac2d7571d237663006416dc661b5f",
+        "bytes": 2926
+      },
+      {
+        "path": "148-client-owner-capture/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceLifecycleTest.xml",
+        "sha256": "527b72dd76215c3c7b1bd315209f7ccbfefc7286b97a6ef37199317f149b3a8f",
+        "bytes": 2677
+      },
+      {
+        "path": "148-client-owner-capture/junit/ai/api/TEST-network.orion.ai.api.OrionInferenceSplitByteFactsTest.xml",
+        "sha256": "7f389fdf9eb08701d2cd05ec2ea6e90d2724fa89629548385f162c02daa50720",
+        "bytes": 2157
+      },
+      {
+        "path": "148-client-owner-capture/junit/ai/api/TEST-network.orion.ai.api.OrionIssuedRequestHistoryTest.xml",
+        "sha256": "4edf51fa60c25c97cd798bfee0670853c2925d07ce884276d364b175bf0a67e9",
+        "bytes": 1437
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.CoreReadyLogEventTest.xml",
+        "sha256": "2715b13679f7c530c442819d5e110bd07011403e5916fc1178a831ee1df3e372",
+        "bytes": 894
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.OrionHealthObservationsTest.xml",
+        "sha256": "3846e7533bcb49c2ccaaa875e15f411d70ab4c69ba3000585d0d8f53bd297c8f",
+        "bytes": 505
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.OrionIngressMaintenanceTest.xml",
+        "sha256": "ab0a080e0bd7c242b093c0fb8bf64740397612f6ec9608f6aed91b9ef124a388",
+        "bytes": 945
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.OrionMaintenanceOutcomeTest.xml",
+        "sha256": "5f6e6df7baeb894ad76a03b3de7242550b9fd9ceb298c691776748c458eca0f9",
+        "bytes": 1148
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionCortexCycleObservationTest.xml",
+        "sha256": "556980beb96d374118f29d7b1d40c6312fcf658e5aab4f35d386b6f8612ff349",
+        "bytes": 2431
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionCortexCyclePartialProjectorTest.xml",
+        "sha256": "8f2b7eda291bb415a99d2a8be8d3bb45d29b7046bb301ad85b680343353db512",
+        "bytes": 3274
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionCortexMetricsCorrelationTest.xml",
+        "sha256": "c3508ae92a90fa6293ecb2a3c2ac60b1f02954fa6e889032c33b9432aa1c2468",
+        "bytes": 3015
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionCortexPreResourceReadinessTest.xml",
+        "sha256": "ce7133487ec841c33f3629767ae6013d32ad34fe3cbd5e45b127ae3337c37f47",
+        "bytes": 990
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionCortexRuntimeCaptureSessionTest.xml",
+        "sha256": "11c1d7cdcda3e6b2871469d145fc4a9ad9993dd20107cb5e102dda19fbdd66ed",
+        "bytes": 2697
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionCortexRuntimeOwnerPolicyTest.xml",
+        "sha256": "b7dbc891f76fda945558ecdb670be1eb9cf57a480f9f95406e1b6f343b839c2d",
+        "bytes": 1406
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionCortexSingleAttemptTest.xml",
+        "sha256": "eea6eb2fd5804cd8e8dfa32169c3802c76d9efa5db82d2c2a5c6fde6c7947acf",
+        "bytes": 1420
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionCortexUnloadDiagnosticsTest.xml",
+        "sha256": "f085cdbf1394cef68c67ab03ee7936a595572b8e4d9002c224384c4bca8c1005",
+        "bytes": 1956
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionCortexUnloadObservationTest.xml",
+        "sha256": "938d18776614d761e2928b6386addd01eeb69c9ed0d8ed3d27fd8be8be28b2d1",
+        "bytes": 2071
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionInferenceRequestFingerprintTest.xml",
+        "sha256": "afa68688119106b1c45e30e29683da99369f36e57990277cf9a29a237e18fdb0",
+        "bytes": 870
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionInferenceRequestLedgerTest.xml",
+        "sha256": "63377d4c7820bfefd556c79715964fb2baf44bc9fae4a0eef9f85e0fda71753b",
+        "bytes": 1674
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionInferenceTurnstileTest.xml",
+        "sha256": "0dbb9c6055eb70a78e0932280ff8083ab3b20ad24aa789f7af91878ed64f9450",
+        "bytes": 2392
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.ai.OrionRuntimeEventRecorderTest.xml",
+        "sha256": "158421fae498518ac10778d86c68be34a95e6fa81d27e936939acc78de81d872",
+        "bytes": 2762
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.memories.OrionMemoryAdmissionOwnerTest.xml",
+        "sha256": "7f7ce42f9fa660cd7a0d9c50ec51f635344872d0fe0d3dd27e33ca4cd4830d19",
+        "bytes": 3186
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.memories.OrionMemoryIngressWireTest.xml",
+        "sha256": "7874ea68f97c8c067bfcdf1c8c3f74688746be5acea49f920fccbc5d78a73007",
+        "bytes": 670
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.notifications.OrionNotificationIngressWireTest.xml",
+        "sha256": "2193141d407bc6148fdd3f7985140fa6b41fe1f227a4aa9bd9d5115128409841",
+        "bytes": 1212
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryAdmissionsTest.xml",
+        "sha256": "be1f5343c491be25a96041e75c4e5c0bee3251cc14c4edd6a697da5b61ee870e",
+        "bytes": 706
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryPolicyTest.xml",
+        "sha256": "43f4916121093557d878f75f604653620ca62848e26c957716436545e682db1d",
+        "bytes": 539
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderDeliveryWireTest.xml",
+        "sha256": "d62198ceeae337096dc6f5e1402c92a47b78cb513b7f9e3d0eed66eae70f3c7e",
+        "bytes": 690
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.reminderdelivery.OrionReminderSeriesPlanTest.xml",
+        "sha256": "bf842f12959fbc41a48f8b8a4987ffa20f0939b191267c06718b688d16fbf080",
+        "bytes": 869
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.reminders.OrionReminderDisplayTest.xml",
+        "sha256": "e5c5c9d26b1bab812667a807b135dd905bd645ca36433a99cd8e89d867968914",
+        "bytes": 492
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.reminders.OrionReminderIngressWireTest.xml",
+        "sha256": "3d74a9959de4f51726615728da59fa5f6150373ec8dc47b1e1c5884811ea4c47",
+        "bytes": 1124
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.resources.OrionAndroidMemoryPressureTest.xml",
+        "sha256": "d05869b98942d0aaa6248edad826af81ced219d5a7cbb6bbc6b32e9098bf5ace",
+        "bytes": 955
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.resources.OrionCortexMemoryTelemetryTest.xml",
+        "sha256": "b6fa726a2ec42746f1778896ac641e9c628cedd8d0ce107a5abb571952bdc7c5",
+        "bytes": 1621
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.resources.OrionCortexResourceFactsTest.xml",
+        "sha256": "d29a493bb6ef0bec990ca2047e4fa96729d6e3166faf5c5e266b1eff8dbba927",
+        "bytes": 2490
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.resources.OrionProcessMemoryEvidenceTest.xml",
+        "sha256": "54b6eb43f09bad96ab172862e75d275533187f427a2dc3fed9088c870e1e44b3",
+        "bytes": 1920
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.tasks.OrionTaskAdmissionOwnerTest.xml",
+        "sha256": "cf93413d8dc94a0ddb8e50ad9a3ff67683d9b96ce7fe8889022424d813e9ac1b",
+        "bytes": 3085
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.tasks.OrionTaskIngressWireTest.xml",
+        "sha256": "cc563d31c68dfff6f8581295b185b47df2fbe00a2f3250160c9a9e23a562e99a",
+        "bytes": 1074
+      },
+      {
+        "path": "148-client-owner-capture/junit/app/TEST-network.orion.app.timers.OrionTimerIngressWireTest.xml",
+        "sha256": "c57dff56694d81a6473488f8192faab7ce838131dd48988ca3a6111426c19cb2",
+        "bytes": 1086
+      },
+      {
+        "path": "148-client-owner-capture/postvalidation-candidate-note/docs/issues/ORION-F5-CLIENT-OWNER-CAPTURE-001.md",
+        "sha256": "dfc306605e3ff5cc2b7bfc84d7e7911780f37911d36b5d76260d7779cdea971f",
+        "bytes": 8508
+      },
+      {
+        "path": "148-client-owner-capture/source-red.patch",
+        "sha256": "92b885fce726d4c457177fc8d9d99546a2262d05bba248554f8034a13382d378",
+        "bytes": 113551
+      },
+      {
+        "path": "148-client-owner-capture/source-red/app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexOwnerDefaultTest.kt",
+        "sha256": "890a344d577a1851aa98921e2df1e5cf68d158518cbda2521bfd9598ca68bad2",
+        "bytes": 15106
+      },
+      {
+        "path": "148-client-owner-capture/source-red/app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureClientTest.kt",
+        "sha256": "2d90df9bcdfe1fe1d1db1ec6d859d865dd1f4af712795fb2a2fee0a6c2c74d5e",
+        "bytes": 27083
+      },
+      {
+        "path": "148-client-owner-capture/source-red/app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt",
+        "sha256": "fdacd2cb0810f369b47e338f044f3a64c2a69ba118b12aebed65bd0624d8b4f8",
+        "bytes": 50193
+      },
+      {
+        "path": "148-client-owner-capture/source-red/app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureSession.kt",
+        "sha256": "25337d9b0df0c8e3d2361ec5905fe0d03257450988818eec95321fc781469cb9",
+        "bytes": 19495
+      },
+      {
+        "path": "148-client-owner-capture/source-red/app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeOwner.kt",
+        "sha256": "7c3f4d803311b886959bd521929f333a39afe5977cb443603693be512bbf78d8",
+        "bytes": 23728
+      },
+      {
+        "path": "148-client-owner-capture/source-red/app/src/main/kotlin/network/orion/app/ai/OrionRuntimeCaptureTypes.kt",
+        "sha256": "c1f4e0de5d2774d982c25dd4941cc8b03679a3becc9df9079b49cbd6984f6802",
+        "bytes": 9511
+      },
+      {
+        "path": "148-client-owner-capture/source-red/app/src/main/kotlin/network/orion/app/ai/OrionRuntimeEventRecorder.kt",
+        "sha256": "2daf0fa793225cbadc87e193a7dc7adc08ae20574430fc0339fb30d834be3d13",
+        "bytes": 24361
+      },
+      {
+        "path": "148-client-owner-capture/source-red/app/src/test/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureSessionTest.kt",
+        "sha256": "4ab1e5fe2618fabcc4d26d5100f6aaca8cb26793f46acca783184e617c6209f6",
+        "bytes": 15626
+      },
+      {
+        "path": "148-client-owner-capture/source-red/docs/issues/ORION-F5-CLIENT-OWNER-CAPTURE-001.md",
+        "sha256": "6858cf938234ac9ef39f9ee67c778e61978029372d0693c4705a1e7fca0df999",
+        "bytes": 8076
+      },
+      {
+        "path": "148-client-owner-capture/source-red2.patch",
+        "sha256": "0cfca0347787cb37d20d74ea6e9a2b55ffdf79d1ea36bcc32119b00258710a28",
+        "bytes": 118815
+      },
+      {
+        "path": "148-client-owner-capture/source-red2/app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexOwnerDefaultTest.kt",
+        "sha256": "890a344d577a1851aa98921e2df1e5cf68d158518cbda2521bfd9598ca68bad2",
+        "bytes": 15106
+      },
+      {
+        "path": "148-client-owner-capture/source-red2/app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureClientTest.kt",
+        "sha256": "a723b2ca96c36c72d61a62f663a5451dcfe22c5876d5f332563e82c8103d8843",
+        "bytes": 30240
+      },
+      {
+        "path": "148-client-owner-capture/source-red2/app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt",
+        "sha256": "c691c7aa297eb1044b758892184aef19ed691ea4c2911abcc9ce331cb58350d9",
+        "bytes": 50216
+      },
+      {
+        "path": "148-client-owner-capture/source-red2/app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureSession.kt",
+        "sha256": "25337d9b0df0c8e3d2361ec5905fe0d03257450988818eec95321fc781469cb9",
+        "bytes": 19495
+      },
+      {
+        "path": "148-client-owner-capture/source-red2/app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeOwner.kt",
+        "sha256": "7c3f4d803311b886959bd521929f333a39afe5977cb443603693be512bbf78d8",
+        "bytes": 23728
+      },
+      {
+        "path": "148-client-owner-capture/source-red2/app/src/main/kotlin/network/orion/app/ai/OrionRuntimeCaptureTypes.kt",
+        "sha256": "c1f4e0de5d2774d982c25dd4941cc8b03679a3becc9df9079b49cbd6984f6802",
+        "bytes": 9511
+      },
+      {
+        "path": "148-client-owner-capture/source-red2/app/src/main/kotlin/network/orion/app/ai/OrionRuntimeEventRecorder.kt",
+        "sha256": "2daf0fa793225cbadc87e193a7dc7adc08ae20574430fc0339fb30d834be3d13",
+        "bytes": 24361
+      },
+      {
+        "path": "148-client-owner-capture/source-red2/app/src/test/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureSessionTest.kt",
+        "sha256": "4ab1e5fe2618fabcc4d26d5100f6aaca8cb26793f46acca783184e617c6209f6",
+        "bytes": 15626
+      },
+      {
+        "path": "148-client-owner-capture/source-red2/docs/issues/ORION-F5-CLIENT-OWNER-CAPTURE-001.md",
+        "sha256": "a44e20de43cb7c33aa64ce32d28650d9c98842d46bdea0bb7fdaa673cf409b18",
+        "bytes": 9977
+      },
+      {
+        "path": "148-client-owner-capture/source-tested-c4687b6.patch",
+        "sha256": "ec0b7a22a8d0b4b3b4b2c8ba87710141a8f980886cfd5199c3341e87acde196e",
+        "bytes": 118871
+      },
+      {
+        "path": "148-client-owner-capture/source-tested-c4687b6/app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexOwnerDefaultTest.kt",
+        "sha256": "890a344d577a1851aa98921e2df1e5cf68d158518cbda2521bfd9598ca68bad2",
+        "bytes": 15106
+      },
+      {
+        "path": "148-client-owner-capture/source-tested-c4687b6/app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureClientTest.kt",
+        "sha256": "a723b2ca96c36c72d61a62f663a5451dcfe22c5876d5f332563e82c8103d8843",
+        "bytes": 30240
+      },
+      {
+        "path": "148-client-owner-capture/source-tested-c4687b6/app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt",
+        "sha256": "bfc1f84a3b2dbcdab5164d13be3e0698f62742a17621dd2aad93a5882cf7ff8b",
+        "bytes": 50216
+      },
+      {
+        "path": "148-client-owner-capture/source-tested-c4687b6/app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureSession.kt",
+        "sha256": "25337d9b0df0c8e3d2361ec5905fe0d03257450988818eec95321fc781469cb9",
+        "bytes": 19495
+      },
+      {
+        "path": "148-client-owner-capture/source-tested-c4687b6/app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeOwner.kt",
+        "sha256": "7c3f4d803311b886959bd521929f333a39afe5977cb443603693be512bbf78d8",
+        "bytes": 23728
+      },
+      {
+        "path": "148-client-owner-capture/source-tested-c4687b6/app/src/main/kotlin/network/orion/app/ai/OrionRuntimeCaptureTypes.kt",
+        "sha256": "c1f4e0de5d2774d982c25dd4941cc8b03679a3becc9df9079b49cbd6984f6802",
+        "bytes": 9511
+      },
+      {
+        "path": "148-client-owner-capture/source-tested-c4687b6/app/src/main/kotlin/network/orion/app/ai/OrionRuntimeEventRecorder.kt",
+        "sha256": "2daf0fa793225cbadc87e193a7dc7adc08ae20574430fc0339fb30d834be3d13",
+        "bytes": 24361
+      },
+      {
+        "path": "148-client-owner-capture/source-tested-c4687b6/app/src/test/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureSessionTest.kt",
+        "sha256": "4ab1e5fe2618fabcc4d26d5100f6aaca8cb26793f46acca783184e617c6209f6",
+        "bytes": 15626
+      },
+      {
+        "path": "148-client-owner-capture/source-tested-c4687b6/docs/issues/ORION-F5-CLIENT-OWNER-CAPTURE-001.md",
+        "sha256": "a44e20de43cb7c33aa64ce32d28650d9c98842d46bdea0bb7fdaa673cf409b18",
+        "bytes": 9977
+      },
+      {
+        "path": "148-client-owner-capture/validation/orion-client-owner-capture-final-jvm-20261116.json",
+        "sha256": "0494bca2b0b63fa5a8e6193762d4584525d74394aaea9799f8bda7908ebf1c22",
+        "bytes": 214
+      },
+      {
+        "path": "148-client-owner-capture/validation/orion-client-owner-capture-final-tested-files-20261116.json",
+        "sha256": "04e8d22ddba187f7bce941d4bfd8f2d1a7e8e77f78e90e9ddf8993e2e41838bf",
+        "bytes": 1180
+      },
+      {
+        "path": "148-client-owner-capture/validation/orion-client-owner-capture-final-validation-20261116.log",
+        "sha256": "ff12ec9644822ae9d2941b99e461b3867000255767a99b1cf0550a7a6ba97239",
+        "bytes": 128310
+      },
+      {
+        "path": "final-payload-summary.json",
+        "sha256": "7577296ed1947239d775d6e7b61e75916f26e85a58a602e115eb02bba0a349b0",
+        "bytes": 1685
+      },
+      {
+        "path": "history/manifest-before148.json",
+        "sha256": "6176d5fa777ab4d68edbb9a20b58ff972ad52fb698cbf2fa9ea7876beb54a702",
+        "bytes": 40558
+      },
+      {
+        "path": "history/staging-index-before148.json",
+        "sha256": "ef96e2547724b68b55bd53f9f103ff3e318eb188627a136de6be207a8ad09a5b",
+        "bytes": 9165
+      },
+      {
+        "path": "staging-index.json",
+        "sha256": "49df7c1dfa1f5acaf6e5a410425abd5f77a2b651571348c8dac0ef9d91a99818",
+        "bytes": 14200
+      }
+    ]
+  },
+  "historicalSnapshotPolicy": "Raw work-package notes and staging-index.json retain historical PENDING/staging text unchanged; this final summary, integration-ci-final.json and the external index state current integration. They do not turn historical failed invocations into passing invocations.",
+  "units": [
+    {
+      "unit": "142-heavy-controller",
+      "root": "/tmp/orion-heavy-controller-20261116",
+      "sourceRevisionAtCopy": "3eda9021ca5a4f231dbe4007180226c5c46e131f",
+      "sourceTree": "4cc3e6418df55ef77138f83d37d8e337adab8d39",
+      "patchParent": "bd537187e93255d03e6c47972a4314239753df5b",
+      "sourceAndTestSha256": {
+        "scripts/android/f5_heavy_soak_controller.py": "25ce16182c2b6ff4cb33e797c2fbe8916ef3f37b4e67b29fd608765867d5f51c",
+        "scripts/android/test_f5_heavy_soak_controller_harness.py": "31562f280cd3b31521424dae124e00ca9c42e37f87ba49b8b3adcb481f67e647"
+      },
+      "xmlSummary": {},
+      "ci": {
+        "headRefOid": "3eda9021ca5a4f231dbe4007180226c5c46e131f",
+        "mergeCommit": {
+          "oid": "bb4bfe3903a382f35e55acb176a0cc35d402a787"
+        },
+        "number": 147,
+        "state": "MERGED",
+        "statusCheckRollup": [
+          {
+            "__typename": "CheckRun",
+            "completedAt": "2026-11-16T02:50:52Z",
+            "conclusion": "SUCCESS",
+            "detailsUrl": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/43791626025/job/133051128950",
+            "name": "docker-build-and-check",
+            "startedAt": "2026-11-16T02:21:06Z",
+            "status": "COMPLETED",
+            "workflowName": "CI"
+          }
+        ],
+        "url": "https://github.com/otavio-esteves/O.R.I.O.N/pull/147"
+      },
+      "validationEnvironment": "CONTAINER",
+      "androidRuntimeExecuted": false,
+      "clockFixtures": "SYNTHETIC; not physical/native timing evidence",
+      "sourceSnapshotNotes": "Work-package notes are copied verbatim; their historical CI PENDING text is superseded only by the separate integration-ci record, not edited in place.",
+      "historicalValidatedSource": "2d3109c9c9ba4cc27dccd3f8eecc8ac9680bbb71",
+      "historicalSourceEqualsCapturedRelevantFiles": true,
+      "hostGreen": {
+        "tests": 462,
+        "failures": 0,
+        "seconds": 27.991,
+        "includesExisting426": true
+      },
+      "hostRed": {
+        "tests": 462,
+        "failures": 4,
+        "seconds": 23.44,
+        "status": "EXPECTED_REGRESSIONS_REPRODUCED; remains failing invocation"
+      }
+    },
+    {
+      "unit": "144-runtime-event-source",
+      "root": "/tmp/orion-runtime-event-source-20261116",
+      "sourceRevisionAtCopy": "4931dc896ac4549a834ad17709780769c28bc870",
+      "sourceTree": "daa4682278bc0b29cda05f1dd37e36bb2afae8d0",
+      "patchParent": "bb4bfe3903a382f35e55acb176a0cc35d402a787",
+      "sourceAndTestSha256": {
+        "core/time/src/main/kotlin/network/orion/core/time/OrionObservationEventClock.kt": "1d76990550820c19a15f9bac568edf10734f14aa45edb08abe61aa11a85df986",
+        "core/time/src/test/kotlin/network/orion/core/time/OrionObservationEventClockTest.kt": "1283bd7382a416b286e51017c3387d1cd6d4acde160e9ae186a1b2551fbadc57",
+        "app/src/main/kotlin/network/orion/app/ai/OrionRuntimeEventRecorder.kt": "82881c41d99a89fceda082a24fcbd9e54b84396250f75f6610a68ff3b54243ef",
+        "app/src/main/kotlin/network/orion/app/ai/OrionRuntimeCaptureTypes.kt": "ed9e3cd8177e94e07a8188e5e370e370fcbf1d89acc77a759a7a1fb4aa0f3d3a",
+        "app/src/test/kotlin/network/orion/app/ai/OrionRuntimeEventRecorderTest.kt": "a617e17d2fb358bb4d348796e3a589f8059fbac55252e7d47ef05139b6f790b1"
+      },
+      "xmlSummary": {
+        "core/time": {
+          "suites": 3,
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "ai/api": {
+          "suites": 5,
+          "tests": 58,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "app": {
+          "suites": 32,
+          "tests": 229,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "ci": {
+        "headRefOid": "4931dc896ac4549a834ad17709780769c28bc870",
+        "mergeCommit": {
+          "oid": "b53d2fbfa0a6ceb7c413071f83083c903c9c1ebc"
+        },
+        "number": 149,
+        "state": "MERGED",
+        "statusCheckRollup": [
+          {
+            "__typename": "CheckRun",
+            "completedAt": "2026-11-16T03:31:00Z",
+            "conclusion": "SUCCESS",
+            "detailsUrl": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/43794950176/job/133061523783",
+            "name": "docker-build-and-check",
+            "startedAt": "2026-11-16T02:54:30Z",
+            "status": "COMPLETED",
+            "workflowName": "CI"
+          }
+        ],
+        "url": "https://github.com/otavio-esteves/O.R.I.O.N/pull/149"
+      },
+      "validationEnvironment": "CONTAINER",
+      "androidRuntimeExecuted": false,
+      "clockFixtures": "SYNTHETIC; not physical/native timing evidence",
+      "sourceSnapshotNotes": "Work-package notes are copied verbatim; their historical CI PENDING text is superseded only by the separate integration-ci record, not edited in place.",
+      "historicalValidationBoundByOriginalTestedSha256Manifest": true
+    },
+    {
+      "unit": "146-lifecycle-event-hooks",
+      "root": "/tmp/orion-lifecycle-event-hooks-20261116",
+      "sourceRevisionAtCopy": "52dea25b8d54d3594ef216dd440cef7dbcf7014d",
+      "sourceTree": "08214beccd20af9d245a633922bcf12db3f3432b",
+      "patchParent": "b53d2fbfa0a6ceb7c413071f83083c903c9c1ebc",
+      "sourceAndTestSha256": {
+        "ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycle.kt": "759d059f0c22c4487b8c5a1278872a172d57956867a92fee836545955194b2f8",
+        "ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycleFacts.kt": "ee819508cc5c3feac4edddbf0ceef76c283d367c2fceafb26ae833540d7328cb",
+        "ai/api/src/main/kotlin/network/orion/ai/api/OrionInferenceLifecycleEventSource.kt": "b3fa0b8c884e23699e6168a9f907605be7dee212465cf55a0645a3f53daed572",
+        "ai/api/src/test/kotlin/network/orion/ai/api/OrionInferenceLifecycleEventSourceTest.kt": "7b15510afbb20ff48e0912b18888f68b5ce86d3b92e567122fdec722918ce3d5"
+      },
+      "xmlSummary": {
+        "ai/api": {
+          "suites": 6,
+          "tests": 75,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "app": {
+          "suites": 32,
+          "tests": 229,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "ci": {
+        "headRefOid": "52dea25b8d54d3594ef216dd440cef7dbcf7014d",
+        "mergeCommit": {
+          "oid": "3983731d1725729f0e41091351e6e0d526de6874"
+        },
+        "number": 150,
+        "state": "MERGED",
+        "statusCheckRollup": [
+          {
+            "__typename": "CheckRun",
+            "completedAt": "2026-11-16T03:59:40Z",
+            "conclusion": "SUCCESS",
+            "detailsUrl": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/43798859089/job/133073898884",
+            "name": "docker-build-and-check",
+            "startedAt": "2026-11-16T03:33:11Z",
+            "status": "COMPLETED",
+            "workflowName": "CI"
+          }
+        ],
+        "url": "https://github.com/otavio-esteves/O.R.I.O.N/pull/150"
+      },
+      "validationEnvironment": "CONTAINER",
+      "androidRuntimeExecuted": false,
+      "clockFixtures": "SYNTHETIC; not physical/native timing evidence",
+      "sourceSnapshotNotes": "Work-package notes are copied verbatim; their historical CI PENDING text is superseded only by the separate integration-ci record, not edited in place.",
+      "historicalValidationBoundByOriginalTestedSha256Manifest": true
+    },
+    {
+      "unit": "148-client-owner-capture",
+      "historicalTestedSource": "c4687b620b692fbef910fdddb9e826ae52e030fd",
+      "historicalTestedSourceTree": "39cd7d9da2631d8b23aa3aec163e721ae95fba07",
+      "patchParent": "52dea25b8d54d3594ef216dd440cef7dbcf7014d",
+      "sourceAndTestSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexOwnerDefaultTest.kt": "890a344d577a1851aa98921e2df1e5cf68d158518cbda2521bfd9598ca68bad2",
+        "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureClientTest.kt": "a723b2ca96c36c72d61a62f663a5451dcfe22c5876d5f332563e82c8103d8843",
+        "app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt": "bfc1f84a3b2dbcdab5164d13be3e0698f62742a17621dd2aad93a5882cf7ff8b",
+        "app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureSession.kt": "25337d9b0df0c8e3d2361ec5905fe0d03257450988818eec95321fc781469cb9",
+        "app/src/main/kotlin/network/orion/app/ai/OrionCortexRuntimeOwner.kt": "7c3f4d803311b886959bd521929f333a39afe5977cb443603693be512bbf78d8",
+        "app/src/main/kotlin/network/orion/app/ai/OrionRuntimeCaptureTypes.kt": "c1f4e0de5d2774d982c25dd4941cc8b03679a3becc9df9079b49cbd6984f6802",
+        "app/src/main/kotlin/network/orion/app/ai/OrionRuntimeEventRecorder.kt": "2daf0fa793225cbadc87e193a7dc7adc08ae20574430fc0339fb30d834be3d13",
+        "app/src/test/kotlin/network/orion/app/ai/OrionCortexRuntimeCaptureSessionTest.kt": "4ab1e5fe2618fabcc4d26d5100f6aaca8cb26793f46acca783184e617c6209f6"
+      },
+      "rebasedCandidateAtCopy": "45488c816353626b38e0ea38a73783782e9a8a73",
+      "rebasedCandidateSourceEightFilesMatchTested": true,
+      "rebasedCandidateNoteSeparated": true,
+      "integrationPr": 152,
+      "integrationStatus": "MERGED_REQUIRED_EXACT_HEAD_CI_SUCCESS",
+      "jvm": {
+        "environment": "CONTAINER",
+        "summary": {
+          "ai/api": {
+            "suites": 6,
+            "tests": 75,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "app": {
+            "suites": 33,
+            "tests": 241,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        "tests": 316,
+        "suites": 39,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "newSessionCases": 12,
+        "duration": "4m47s",
+        "tasks": {
+          "total": 1893,
+          "executed": 22,
+          "fromCache": 0,
+          "upToDate": 1871
+        },
+        "configurationCache": "REUSED",
+        "checks": [
+          "ai/api+app JVM",
+          "assembleDebug",
+          "test APK packaging",
+          "module checks",
+          "ai/api+app lintDebug"
+        ]
+      },
+      "android": {
+        "rounds": [
+          {
+            "round": "red",
+            "environment": "ANDROID_EMULATOR",
+            "sourceCommit": "875ec3ca8a683c7ceea53aa5b0ce7266312d2e2d",
+            "sourceTree": "d46411aa50c9ac341e24cd1aeb2d0a3c5282291d",
+            "starts": 1,
+            "passed": 0,
+            "failed": 1,
+            "ignored": 0,
+            "assumptions": 0,
+            "status": "EXPECTED_REGRESSION_REPRODUCED_REMAINS_FAILING_INVOCATION",
+            "apkBindingsCheckedFromMetadataOnly": true,
+            "apkBinaryReadOrCopied": false
+          },
+          {
+            "round": "red2",
+            "environment": "ANDROID_EMULATOR",
+            "sourceCommit": "7de2331a8f154e1ca822604713be52d6040cd165",
+            "sourceTree": "8689b9d4ef530b1584399df0252be9c07f301260",
+            "starts": 11,
+            "passed": 10,
+            "failed": 1,
+            "ignored": 0,
+            "assumptions": 0,
+            "status": "EXPECTED_REGRESSION_REPRODUCED_REMAINS_FAILING_INVOCATION",
+            "apkBindingsCheckedFromMetadataOnly": true,
+            "apkBinaryReadOrCopied": false
+          },
+          {
+            "round": "green",
+            "environment": "ANDROID_EMULATOR",
+            "sourceCommit": "c4687b620b692fbef910fdddb9e826ae52e030fd",
+            "sourceTree": "39cd7d9da2631d8b23aa3aec163e721ae95fba07",
+            "starts": 76,
+            "passed": 76,
+            "failed": 0,
+            "ignored": 0,
+            "assumptions": 0,
+            "status": "PASS_MECHANICAL_ONLY",
+            "apkBindingsCheckedFromMetadataOnly": true,
+            "apkBinaryReadOrCopied": false
+          }
+        ],
+        "greenMechanicalCounts": {
+          "existing": 64,
+          "new": 12,
+          "total": 76
+        },
+        "roundsOverlapDoNotSum": true,
+        "api": 35,
+        "abi": "x86_64",
+        "pageSizeBytes": 4096,
+        "vcpus": 4,
+        "ramMiB": 3072,
+        "originalEndpointAndClockFixtures": "SYNTHETIC",
+        "physicalEvidence": false,
+        "ownedEmulatorsStopped": true,
+        "greenStoppedPid": 471693
+      },
+      "limitations": "Mechanical finite fixture tests only; capture partial and production composition absent. No native model/profile/performance/API37/physical/MemoryLimiter/autonomy/24h/F4/F5/F6 approval.",
+      "integrationCi": {
+        "headRefOid": "45488c816353626b38e0ea38a73783782e9a8a73",
+        "mergeCommit": {
+          "oid": "dc130a0e0728e50cc2da99f24d79aa2c4be4668e"
+        },
+        "number": 152,
+        "state": "MERGED",
+        "statusCheckRollup": [
+          {
+            "__typename": "CheckRun",
+            "completedAt": "2026-11-16T04:58:09Z",
+            "conclusion": "SUCCESS",
+            "detailsUrl": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/43804706512/job/133092689370",
+            "name": "docker-build-and-check",
+            "startedAt": "2026-11-16T04:32:22Z",
+            "status": "COMPLETED",
+            "workflowName": "CI"
+          }
+        ],
+        "url": "https://github.com/otavio-esteves/O.R.I.O.N/pull/152"
+      },
+      "integrationMain": "dc130a0e0728e50cc2da99f24d79aa2c4be4668e",
+      "localHistoricalSourceSeparateFromIntegration": true
+    }
+  ],
+  "counting": {
+    "additive": false,
+    "jvmInvocations": [
+      {
+        "issue": 144,
+        "tests": 309,
+        "suites": 40
+      },
+      {
+        "issue": 146,
+        "tests": 304,
+        "suites": 38
+      },
+      {
+        "issue": 148,
+        "tests": 316,
+        "suites": 39
+      }
+    ],
+    "jvmInvocationsOverlap": true,
+    "host": {
+      "issue": 142,
+      "green": 462,
+      "includesExisting426": true,
+      "red": {
+        "tests": 462,
+        "failures": 4,
+        "expectedRegression": true,
+        "remainsFailingInvocation": true
+      }
+    },
+    "android148": {
+      "red": {
+        "tests": 1,
+        "passed": 0,
+        "failed": 1,
+        "expectedRegression": true,
+        "remainsFailingInvocation": true
+      },
+      "red2": {
+        "tests": 11,
+        "passed": 10,
+        "failed": 1,
+        "expectedRegression": true,
+        "remainsFailingInvocation": true
+      },
+      "green": {
+        "actualStarted": 76,
+        "actualPassed": 76,
+        "failed": 0,
+        "ignored": 0,
+        "assumptions": 0,
+        "existing": 64,
+        "new": 12
+      },
+      "roundsOverlap": true
+    },
+    "doNotSumAcrossInvocationsOrWithHistoricalPackages": true
+  },
+  "environments": {
+    "buildJvmHostHarness": "CONTAINER; HOST harness validates HOST-side software using synthetic typed ports/clock fixtures, not Android hardware.",
+    "android": "ANDROID_EMULATOR API35/x86_64/4096-byte pages,4vCPU3072MiB; actual framework instrumentation, synthetic source clocks and controlled endpoints.",
+    "physicalEvidence": false
+  },
+  "sourceBindings": {
+    "historicalLocal148": "c4687b620b692fbef910fdddb9e826ae52e030fd",
+    "pr152Head": "45488c816353626b38e0ea38a73783782e9a8a73",
+    "mergedMain": "dc130a0e0728e50cc2da99f24d79aa2c4be4668e",
+    "eightTestedFilesIdentical": true,
+    "apkBinaryIncluded": false,
+    "localAndInstalledApkHashesRetainedInBindings": true,
+    "apkPathsInJsonAreHistoricalMetadataNotArchiveMembers": true
+  },
+  "remainingSoftware": {
+    "deliveredIssues": [
+      140,
+      141,
+      142,
+      144,
+      146,
+      148
+    ],
+    "integratedPrs": [
+      143,
+      145,
+      147,
+      149,
+      150,
+      152
+    ],
+    "sampler151": "IN_PROGRESS_NOT_INCLUDED",
+    "encoder153": "IN_PROGRESS_NOT_INCLUDED",
+    "fullRuntimeEvidenceV1Producer": "INCOMPLETE",
+    "mainHostProducerAssemblyAndIntegration": "INCOMPLETE",
+    "fullHeavyWorkExecutorAndAdapters": "INCOMPLETE"
+  },
+  "qualification": {
+    "sourceAuthenticated": false,
+    "physicalVerified": false,
+    "nativeModelQualified": false,
+    "api37Qualified": false,
+    "memoryLimiterQualified": false,
+    "performanceQualified": false,
+    "profileApproved": false,
+    "productionInferenceApproved": false,
+    "runtimeEvidenceV1Complete": false,
+    "heavyExecutorComplete": false,
+    "actual24HoursVerified": false,
+    "F4GateClosed": false,
+    "fullF5GateClosed": false,
+    "fullSoakGateClosed": false,
+    "F6Authorized": false
+  },
+  "validation": {
+    "newFunctionalChecksExecutedForThisDocumentaryPackage": false,
+    "allOriginal224HashesVerified": true,
+    "allArchiveManifestHashesVerified": true,
+    "currentMainEight148SourceHashesVerified": true,
+    "jvmXmlSummariesVerifiedPerInvocation": true,
+    "androidStatusAndMethodCountsVerified": true,
+    "noSymlinksTraversalOrBinaries": true,
+    "priorFrozenArtifactsChanged": false,
+    "thisDocumentaryPrRequiredCi": "PENDING_BEFORE_PUBLICATION"
+  }
+}

@@ -1,9 +1,12 @@
 # F5 remaining qualification — current operational checklist
 
 Work package: [ORION-F5-QUAL-PLAN-001](../issues/ORION-F5-QUAL-PLAN-001.md).
-Review renewed on 2026-11-15 against main
-`96d0ce9d6239761b48c594a3f22a87c00a8c39b6`, including integrated PRs #134, #136, #137
-and #138. Reviewed lifecycle source:
+Review renewed on 2026-11-16 against main
+`dc130a0e0728e50cc2da99f24d79aa2c4be4668e`, including integrated PRs #143, #145,
+#147, #149, #150 and #152 after the earlier #134/#136/#137/#138 closeout.
+The [software evidence package #154](../issues/ORION-F5-RUNTIME-CAPTURE-SOFTWARE-EVIDENCE-001.md)
+separates historical local validation from exact-head integration CI.
+Historical lifecycle-facts source:
 `89924f8ba0768c2ec4a5a7ee4891ac7a6e65d3b4`,
 [PR #138](https://github.com/otavio-esteves/O.R.I.O.N/pull/138).
 Lifecycle integration status: **INTEGRATED via PR #138; required remote CI SUCCESS; issue #132 CLOSED**.
@@ -73,6 +76,21 @@ snapshot. These local CONTAINER and ANDROID_EMULATOR results do not establish
 remote CI approval. Their snapshot CI fields remain PENDING; current lifecycle
 integration status is stated above.
 
+The [20261116 capture software index](f5-runtime-capture-software-evidence-20261116.json)
+binds the integrated controller, observation foundation, genuine Lifecycle events
+and Client/Owner checkpoints. Their Docker JVM invocations are **309/40**, **304/38**
+and **316/39** cases/suites; these overlap and are not added. The controller's
+**462 HOST cases include 426 existing cases**. Its four expected RED failures remain
+a failed invocation. For #148, actual API35/x86_64/4KiB framework execution records
+**76 START/OK cases, zero skips/assumptions**, including 64 existing and 12 new
+controls. Source clocks and endpoints are synthetic. The earlier one-case RED and
+11-case RED2 (10 pass, one expected failure) remain separate from GREEN. The two
+capture-fence regressions were reproduced and fixed. Exact-head CI for PRs
+#147/#149/#150/#152 passed before merge; the installed-APK evidence remains bound
+to historical local source `c4687b620b692fbef910fdddb9e826ae52e030fd`, whose eight
+tested files match PR #152 head `45488c816353626b38e0ea38a73783782e9a8a73`.
+This is software evidence, with no native-model, physical, API37 or 24-hour approval.
+
 ## Remaining gate matrix
 
 | Workstream / owner boundary | Evidence available | Evidence required before closure |
@@ -83,7 +101,7 @@ integration status is stated above.
 | Native/API compatibility | Docker ELF/ABI/APK/AAB/16KiB checks, scoped API35/API37 x86_64 R8 probes, an API35 x86_64 real-model minified optional-metrics probe with synthetic admission, historical earlier physical loads | Complete the declared physical/native/API cells using current artifact identities; production admission and physical arm64/16KiB qualification cannot be inferred from the scoped emulator probes or debug loading |
 | Core stability (#64) | Functional F4 exit and short, artifact-bound workloads | Complete approved 24-hour Core workload, including tasks/reminders/heartbeat, reboot/unlock, actual process death, continuous backlog/UNKNOWN observations, retention and growth review |
 | Post-Cortex stability (#89) | 33-cycle regression; no 24-hour approval | At least 24 real elapsed hours plus memory stress, with actual heavy work and crash/ANR/resource-exit/recovery/queue/reminder/thermal/battery/storage review |
-| Complete MAIN/HOST runtime and heavy-work producers | Integrated bounded partial sources, R8 entry and one-shot HOST capture; lifecycle facts have the review status above | Complete the source-bound RuntimeEvidence v1 producer and reviewed heavy-work/memory-stress executor, preserving identity, timing, missing phases, loss, interruption, owned cleanup and existing admission boundaries |
+| Complete MAIN/HOST runtime and heavy-work producers | Integrated split bytes #140, capture contract #141, finite HOST controller #142, observation foundation #144, genuine Lifecycle events #146 and Client/Owner checkpoints #148; sampler #151 and encoder #153 remain IN_PROGRESS | Complete and review the source-bound RuntimeEvidence v1 MAIN/HOST assembly and heavy-work/memory-stress executor/adapters, preserving genuine timing, missing phases, loss, identity, interruption, owned cleanup and existing admission boundaries |
 | Final F5 decision | Software checklist and explicit remaining gates | Review every §11.11 criterion, #64 prerequisite and #89 evidence against the frozen candidate; only then decide CORTEX_RUNTIME_READY and F6 entry |
 
 The user reconfirmed on 2026-11-15 that no physical devices are available,
@@ -192,7 +210,7 @@ duration/interval and a new evidence directory. They retain sampling gaps. They
 do not generate a Cortex load, prove continuous heartbeat autonomy by themselves,
 or qualify undisturbed idle/battery behavior while ADB is polling.
 
-## Software preparation status — 2026-11-15
+## Software preparation status — 2026-11-16
 
 This inventory separates integrated software from local validation. It does not
 close F5 or imply that all preparation is implemented and only hardware remains.
@@ -223,6 +241,13 @@ Counts below retain their individual execution scopes; they are not additive.
 | PR #136 / issue #133 — replay and Unicode audit | Integrated reminder replay proof independent of prunable domain events, strict inference Unicode/fingerprint validation and scoped audit evidence. [Index with active-module correction](audit-20261115-evidence.json); its archived raw reports remain unchanged. |
 | PR #137 / issue #130 — one-shot HOST capture | Integrated; issue #130 is closed. One already-installed runner invocation, source/local/installed APK hash checks and HOST/device windows, with UNKNOWN on interruption or timeout and no retry. This is partial capture integrity, not source authentication or proof of selected READY model identity. [Procedure](F5-SingleAttemptHostCapture.md). |
 | PR #138 / issue #132 — passive lifecycle facts | Optional bounded facts reuse original deadline samples and validated byte totals; first terminal, buffered admission, ordered release and downstream delivery remain distinct. No extra clock/RPC/content-byte validation, exact event timestamp or complete RuntimeEvidence v1 is supplied. Integration status is stated above. [Work package](../issues/ORION-F5-MAIN-LIFECYCLE-FACTS-001.md), [scoped local evidence](f5-lifecycle-facts-evidence-20261115.json), [full-check complement](f5-lifecycle-full-check-20261115.json). |
+| PR #143 / issue #140 — original split bytes | Integrated passive reuse of the original validated text/tool UTF-8 counts, including pending release and known zero; no additional encoding or token claim. [Work package](../issues/ORION-F5-SPLIT-BYTE-FACTS-001.md). |
+| PR #145 / issue #141 — capture contract | Integrated complete implementable field/source, time, fence, memory and bounded-export contract; it does not itself implement or authenticate a producer. [Contract](F5-RuntimeCaptureContract.md). |
+| PR #147 / issue #142 — finite heavy controller | Integrated durable intent ACK before typed effects, real HOST BOOTTIME guards, interruption/UNKNOWN fencing and no replay. The 462-case HOST invocation uses synthetic ports; production adapters and full heavy executor remain absent. [Technical note](F5-HeavySoakController.md). |
+| PR #149 / issue #144 — observation foundation | Integrated inactive final observation clock and bounded recorder; native-flag consistency checks, sticky clock failure and immutable manual snapshots. The 309/40 JVM invocation is scoped software evidence. [Work package](../issues/ORION-F5-RUNTIME-EVENT-SOURCE-001.md). |
+| PR #150 / issue #146 — genuine Lifecycle events | Integrated opt-in exact first-terminal/ordered-acceptance checkpoints using the separate observation clock, original split bytes and publication after original update construction; independent reserved terminal and explicit loss. The 304/38 JVM invocation overlaps #144/#148. [Work package](../issues/ORION-F5-LIFECYCLE-EVENT-HOOKS-001.md). |
+| PR #152 / issue #148 — Client/Owner checkpoints | Integrated explicit internal capture association, real runOnce ownership, endpoint/turn/PID/boot/model fences, genuine dispatch/cleanup points and separate manual historical import. Default capture remains absent; 316/39 JVM and 76 Android controls are mechanical evidence. [Work package](../issues/ORION-F5-CLIENT-OWNER-CAPTURE-001.md), [software index](f5-runtime-capture-software-evidence-20261116.json). |
+| Issues #151 / #153 — sampler and encoder | IN_PROGRESS at this review baseline; neither candidate is integrated or included in this evidence package. Seven-phase acquisition, bounded rendering and their eventual composition require their own checks/CI; they do not supply workload, profile or physical approval. [Sampler issue](https://github.com/otavio-esteves/O.R.I.O.N/issues/151), [encoder issue](https://github.com/otavio-esteves/O.R.I.O.N/issues/153). |
 
 Readiness observes only the real owner's early predicates. It never issues a
 request, evaluates resource/restart policy or grants admission, even if trusted
@@ -246,21 +271,20 @@ physical provenance. Neither JSON consistency nor CLI inputs approve a profile.
 The following software/protocol dependencies still need bounded implementation
 or reviewed decisions before a complete heavy qualification run:
 
-- A complete source-bound MAIN/HOST RuntimeEvidence v1 producer assembled from
-  the available partial sources. Existing owner/resource/native/unload facts and
-  ORION_MAIN_CYCLE_PARTIAL do not supply complete lifecycle timing, accepted-stream
-  metadata, seven-phase fresh memory coverage or independently bound installed
-  source/model/device provenance. The partial projector deliberately omits
-  identifiers and timestamps; successful projection cannot repair those gaps.
-- The lifecycle source under review retains the MonotonicInstant already returned
-  by an original deadline check and its existing classification. It is an
-  associated original deadline sample, not exact callback arrival, validation,
-  transition, native or export time. Existing validated byte totals describe
-  buffered/ordered updates, not downstream delivery or tokens. Loss and missing
-  samples remain explicit; formatter125 is unchanged. The integrated #130 HOST
-  tool captures one minimized program result. Neither source authenticates its
-  producer or selected READY model, completes seven-phase memory/lifecycle
-  evidence, or provides an automatic execution loop.
+- Complete and review the source-bound MAIN/HOST RuntimeEvidence v1 producer
+  assembled from the integrated checkpoints and remaining sampler/encoder work
+  (#151/#153). Genuine event time and split-byte acquisition now have delivered
+  sources; complete seven-phase fresh memory, qualified delivery association,
+  bounded export/HOST assembly and independently bound installed source/model/
+  device provenance are still incomplete. ORION_MAIN_CYCLE_PARTIAL remains a
+  separate partial projection and cannot repair missing source facts.
+- Keep the distinct sources explicit: #132 retains original deadline samples;
+  #140 retains original split bytes; #146 records dedicated first-terminal and
+  ordered-acceptance moments; #148 associates genuine Client/Owner call/reply
+  points with the actual runOnce. None is downstream delivery time, native
+  compute/token timing or source authentication. The #130 HOST tool still
+  captures one minimized program result. It does not assemble a complete v1
+  receipt or provide an automatic execution loop. Formatter125 is unchanged.
 - Native token counters and API-wall measurements are implemented under accepted
   ADR-0003. Their integration does not provide synchronized backend phase compute,
   throughput, authenticated TTFT, calibrated budgets or approved production
@@ -275,8 +299,10 @@ or reviewed decisions before a complete heavy qualification run:
   procedure. Passive facts and offline consistency checks do not stimulate or
   prove the physical limiter's behavior.
 - An executable post-Cortex workload/stress/observation program for the actual
-  24-hour window. The offline heavy-soak validator, durable journal and one-shot
-  HOST capture are not heavy-work executors.
+  24-hour window. The integrated finite #142 controller requires reviewed live
+  configuration/admission/producer adapters and supplies no Android workload or
+  CLI loop. The offline validator, durable journal and one-shot #130 capture do
+  not complete that executor or authorize repeated attempts.
 
 The accepted optional IPC, retained cycle, partial projection and one-use driver
 do not approve an integrated MAIN/HOST heavy receipt or performance/profile
@@ -308,10 +334,10 @@ declares CORTEX_RUNTIME_READY, enables production inference or opens F6.
    qualification criteria, per-device allocation and the complete run schedule.
    Keep hardware-dependent profile approval after measurement and review.
 
-This planning package executes no device command and closes no gate. No new
-runtime defect was established by the source-only review of the current AIDL
-client; the old client's unload/status hypotheses must not be reported as current
-main failures without a current-source reproduction.
+This documentary update executes no device command and closes no gate. The #148
+capture-fence races have their own actual RED/GREEN mechanical evidence and fixed
+source. The old client's separate unload/status hypotheses must not be reported
+as current main failures without a current-source reproduction.
 
 ## Read-only preflight and blocked execution plan
 
