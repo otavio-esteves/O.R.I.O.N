@@ -112,3 +112,12 @@ consumer, rendering/HOST/controller/Android composition, operational values,
 models/templates/profiles, calibration, physical/API/MemoryLimiter/24-hour
 execution and F4/F5/soak/F6 closure. Missing hardware blocks those later evidence
 claims, not implementation of these passive mechanisms.
+
+VALIDATION: Root canonical Docker Android validation passed in 7m 17s:
+`:ai:api:testDebugUnitTest :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin
+verifyModuleBoundaries testModuleBoundaries :ai:api:lintDebug :app:lintDebug
+--max-workers=2`. The selected reports contain 304 JVM tests in 38 suites
+(75 ai/api, 229 app), zero failures/errors/skips, including 17 new event-source
+cases. Android tests were compiled only. Independent final source review found
+no further blocker. No physical, native-model, API37, performance or 24-hour
+execution is supplied; required exact-head PR CI remains pending.
