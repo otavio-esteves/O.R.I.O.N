@@ -227,9 +227,10 @@ internal class OrionCortexClient(
             try {
                 session.withTurn(request.priority, request.deadline) {
                     val invocationFrame = synchronized(monitor) {
-                        check(!closed); updateUnloadOwner(executionStarted = true); active = lifecycle
-                        activeCycle = cycle; lastCycle = cycle
+                        check(!closed)
                         runtimeFrame?.valid = false
+                        updateUnloadOwner(executionStarted = true); active = lifecycle
+                        activeCycle = cycle; lastCycle = cycle
                         if (runtimeTurnGeneration == Long.MAX_VALUE) runtimeFenceExhausted = true else runtimeTurnGeneration++
                         val frame = capture?.turnEntered(this@OrionCortexClient, if (runtimeFenceExhausted) null else runtimeTurnGeneration)
                         runtimeFrame = frame
