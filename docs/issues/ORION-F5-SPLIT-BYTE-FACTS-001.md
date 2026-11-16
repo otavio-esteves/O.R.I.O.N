@@ -58,3 +58,12 @@ VALIDATION: Ten focused JVM regressions supplied; original lifecycle regression
 suites unchanged. Author executed git diff --check only. Compilation and all
 Docker/Gradle/Android/CI validation remain pending root-controlled execution.
 No native, performance, hardware, physical/API, soak or gate claim is supplied.
+
+CENTRALIZED VALIDATION (2026-11-16 UTC, source 5fd8124): canonical Docker passed
+ai/api JVM 58 (including 10 new cases) and app JVM 216, 36 XML suites with zero
+failures/errors/skips; app compileDebugAndroidTestKotlin, module verification/tests
+and ai/api/app lintDebug also passed in 11m45. Cache reuse is explicit in the log.
+No APK/runtime/physical inference or full RuntimeEvidence v1 is claimed by this
+scoped run. Required remote CI remains pending before integration. Root read-only
+review found no blocker in the guard/metadata propagation; formatter125, wire and
+profile/factory boundaries are unchanged.
