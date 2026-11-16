@@ -19,9 +19,19 @@ data class OrionLifecycleDeadlineSample(val operation: OrionLifecycleOperation, 
 data class OrionLifecycleFirstTerminal(val operation: OrionLifecycleOperation, val origin: OrionLifecycleTerminalOrigin,
     val status: OrionInferenceStatus, val associatedOriginalDeadlineSample: OrionLifecycleDeadlineSample?)
 
-/** Exact total content bytes only when already validated; no text/tool split, content, IDs or hashes. */
+/** Validated original total and optional matching parts; null parts are unavailable, never guessed zeros. */
 data class OrionLifecycleChunkMetadata(val sequence: Long, val isFinal: Boolean, val finishReason: OrionInferenceTerminal?,
-    val failure: OrionInferenceFailure?, val validatedTotalContentUtf8Bytes: Int?)
+    val failure: OrionInferenceFailure?, val validatedTotalContentUtf8Bytes: Int?,
+    val validatedTextDeltaUtf8Bytes: Int? = null, val validatedToolDeltaUtf8Bytes: Int? = null) {
+    init {
+        require((validatedTextDeltaUtf8Bytes == null) == (validatedToolDeltaUtf8Bytes == null))
+        if (validatedTextDeltaUtf8Bytes != null && validatedToolDeltaUtf8Bytes != null) {
+            require(validatedTextDeltaUtf8Bytes >= 0 && validatedToolDeltaUtf8Bytes >= 0 &&
+                validatedTotalContentUtf8Bytes != null &&
+                validatedTextDeltaUtf8Bytes.toLong() + validatedToolDeltaUtf8Bytes == validatedTotalContentUtf8Bytes.toLong())
+        }
+    }
+}
 
 /** A constructed original update, never a downstream onChunks/delivery/native observation. */
 data class OrionLifecycleUpdateFact(val receipt: OrionInferenceReceipt, val status: OrionInferenceStatus,
@@ -75,15 +85,16 @@ class OrionInferenceLifecycleFactBuffer(private val capacity: Int = 32) {
     }
 
     internal fun releases(): OrionLifecycleReleasedMetadata? = isolate { OrionLifecycleReleasedMetadata(this) }
+    internal fun byteParts(): OrionLifecycleByteParts? = isolate { OrionLifecycleByteParts(this) }
 
     internal fun update(receipt: OrionInferenceReceipt, status: OrionInferenceStatus, sample: OrionLifecycleDeadlineSample?,
         sequence: Long, isFinal: Boolean, finish: OrionInferenceTerminal?, failure: OrionInferenceFailure?, bytes: Int,
-        releases: OrionLifecycleReleasedMetadata?) {
+        releases: OrionLifecycleReleasedMetadata?, byteParts: Long = -1L) {
         isolate {
             if (!lock.tryLock()) { count(dropped); return@isolate }
             try {
                 if (updates.size >= capacity) { count(dropped); return@isolate }
-                val input = chunk(sequence, isFinal, finish, failure, bytes)
+                val input = chunk(sequence, isFinal, finish, failure, bytes, byteParts)
                 val released = if (receipt == OrionInferenceReceipt.ACCEPTED) releases?.handoff() else emptyList()
                 updates.addLast(OrionLifecycleUpdateFact(receipt, status, sample, input,
                     if (receipt == OrionInferenceReceipt.BUFFERED) input else null,
@@ -104,20 +115,45 @@ class OrionInferenceLifecycleFactBuffer(private val capacity: Int = 32) {
         terminalUnavailable, dropped.get(), failures.get(), accounting.get(), busy)
 
     internal fun chunk(sequence: Long, isFinal: Boolean, finish: OrionInferenceTerminal?, failure: OrionInferenceFailure?,
-        bytes: Int): OrionLifecycleChunkMetadata {
+        bytes: Int, byteParts: Long = -1L): OrionLifecycleChunkMetadata {
         require(sequence >= 0 && bytes in -1..OrionInferenceLifecycle.MAX_CHUNK_CONTENT_BYTES)
-        return OrionLifecycleChunkMetadata(sequence, isFinal, finish, failure, bytes.takeIf { it >= 0 })
+        val text = (byteParts ushr 32).toInt()
+        val tool = byteParts.toInt()
+        val available = byteParts >= 0 && text >= 0 && tool >= 0 && text.toLong() + tool == bytes.toLong()
+        if (byteParts != -1L && !available) failed()
+        return OrionLifecycleChunkMetadata(sequence, isFinal, finish, failure, bytes.takeIf { it >= 0 },
+            if (available) text else null, if (available) tool else null)
+    }
+}
+
+/** One accept call, scalars only. Read only after an original guard successfully returns its total. */
+internal class OrionLifecycleByteParts(private val owner: OrionInferenceLifecycleFactBuffer) {
+    var packedParts: Long = -1L
+        private set
+
+    fun unavailable() { packedParts = -1L }
+
+    /** No encoding, callback or clock. Failure invalidates both parts and never escapes to the guard. */
+    fun record(text: Int, tool: Int, originalTotal: Int?) {
+        try {
+            packedParts = -1L
+            if (originalTotal == null) return
+            check(text >= 0 && tool >= 0 && originalTotal in 0..OrionInferenceLifecycle.MAX_CHUNK_CONTENT_BYTES &&
+                text.toLong() + tool == originalTotal.toLong())
+            packedParts = (text.toLong() shl 32) or tool.toLong()
+        } catch (_: Throwable) { packedParts = -1L; owner.failed() }
     }
 }
 
 /** Call-local bounded scalar bookkeeping only; it never stores a chunk or its content. */
 internal class OrionLifecycleReleasedMetadata(private val owner: OrionInferenceLifecycleFactBuffer) {
     private var values: MutableList<OrionLifecycleChunkMetadata>? = ArrayList(9)
-    fun released(sequence: Long, isFinal: Boolean, finish: OrionInferenceTerminal?, failure: OrionInferenceFailure?, bytes: Int) {
+    fun released(sequence: Long, isFinal: Boolean, finish: OrionInferenceTerminal?, failure: OrionInferenceFailure?, bytes: Int,
+        byteParts: Long = -1L) {
         val items = values ?: return
         try {
             check(items.size < 9)
-            items.add(owner.chunk(sequence, isFinal, finish, failure, bytes))
+            items.add(owner.chunk(sequence, isFinal, finish, failure, bytes, byteParts))
         } catch (_: Throwable) { values = null; owner.failed() }
     }
     fun handoff(): List<OrionLifecycleChunkMetadata>? {
