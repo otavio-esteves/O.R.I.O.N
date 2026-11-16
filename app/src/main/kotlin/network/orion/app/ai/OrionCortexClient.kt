@@ -757,9 +757,9 @@ internal class OrionCortexClient(
     private fun lostConnection(expected: ServiceConnection? = null) {
         synchronized(monitor) {
             if (expected != null && connection !== expected) return
+            runtimeFrame?.valid = false
             cycleEndpointSnapshot = null
             updateUnloadOwner(endpointChanged = true)
-            runtimeFrame?.valid = false
             loaded = null; active?.processDied()
         }
         releaseConnection(expected)
@@ -783,7 +783,7 @@ internal class OrionCortexClient(
     }
 
     override fun close() {
-        synchronized(monitor) { cycleEndpointSnapshot = null; closed = true; runtimeFrame?.valid = false; updateUnloadOwner(); cancel() }
+        synchronized(monitor) { runtimeFrame?.valid = false; cycleEndpointSnapshot = null; closed = true; updateUnloadOwner(); cancel() }
         session.close()
         releaseConnection()
     }
