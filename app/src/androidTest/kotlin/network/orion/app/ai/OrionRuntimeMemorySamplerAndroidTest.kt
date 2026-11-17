@@ -130,6 +130,24 @@ class OrionRuntimeMemorySamplerAndroidTest {
         suspend fun await(phase: OrionRuntimeMemoryPhase) = withTimeout(5000) {
             while (ticket(phase)?.done != true) delay(1)
         }
+        private suspend fun awaitIdleWorker() = withTimeout(5000) {
+            while (OrionRuntimeMemorySamplingWorker.outstanding()) delay(1)
+        }
+        suspend fun enqueue(phase: OrionRuntimeMemoryPhase, trigger: () -> Unit) {
+            // Positive fixture scheduling only: done does not mean the global worker has parked.
+            // Hold its reentrant queue lock on the hook thread so the one offer cannot contend;
+            // the worker starts collection only after the original hook has returned.
+            awaitIdleWorker()
+            val lock = OrionRuntimeMemorySamplingWorker.javaClass.getDeclaredField("lock").apply { isAccessible = true }
+                .get(OrionRuntimeMemorySamplingWorker) as java.util.concurrent.locks.ReentrantLock
+            lock.lock()
+            try {
+                assertFalse("Previous fixture work must finish before a positive phase", OrionRuntimeMemorySamplingWorker.outstanding())
+                trigger()
+                val offered = checkNotNull(ticket(phase))
+                assertFalse("The positive phase must enqueue its single attempt", offered.done)
+            } finally { lock.unlock() }
+        }
         fun finish(): OrionRuntimeSessionReceipt {
             frame.ended = true; capture.runReturned(false)
             return checkNotNull(capture.readAfterRun(owner))
@@ -141,6 +159,9 @@ class OrionRuntimeMemorySamplerAndroidTest {
             // Test owns only the synthetic connection; avoid creating fake unbind business effects.
             test.field(client, "remote", null); test.field(client, "connection", null); test.field(client, "runtimeFrame", null)
             client.close()
+            // Release the synthetic reply first, then drain outside all queue/source locks.
+            // The bounded-queue test uses finish() separately and releases its blocker before close.
+            runBlocking { awaitIdleWorker() }
         }
     }
 
@@ -150,7 +171,7 @@ class OrionRuntimeMemorySamplerAndroidTest {
             suspend fun phase(value: OrionRuntimeMemoryPhase, trigger: () -> Unit) {
                 // The finite test endpoint alone pauses its diagnostic reply until the genuine hook returns.
                 f.endpoint.entered = CountDownLatch(1); f.endpoint.release = CountDownLatch(1)
-                trigger(); assertTrue(f.endpoint.entered!!.await(5, TimeUnit.SECONDS))
+                f.enqueue(value, trigger); assertTrue(f.endpoint.entered!!.await(5, TimeUnit.SECONDS))
                 f.endpoint.release!!.countDown(); f.await(value)
             }
             phase(OrionRuntimeMemoryPhase.BEFORE_LOAD) { f.offer() }
@@ -206,7 +227,9 @@ class OrionRuntimeMemorySamplerAndroidTest {
 
     @Test fun actualBootDisagreementStaysUnavailableAfterReceiptCorrectionWithoutChangingCoreConnection() = runBlocking {
         Fixture(this@OrionRuntimeMemorySamplerAndroidTest).use { f ->
-            f.endpoint.boot = 4; f.offer(); f.await(OrionRuntimeMemoryPhase.BEFORE_LOAD)
+            f.endpoint.boot = 4
+            f.enqueue(OrionRuntimeMemoryPhase.BEFORE_LOAD) { f.offer() }
+            f.await(OrionRuntimeMemoryPhase.BEFORE_LOAD)
             f.endpoint.boot = 3; f.endpoint.state = "LOADING"
             f.capture.loadPreparing(f.frame, f.endpoint, MonotonicInstant(BootSessionId(3), 100))
             f.offer()
@@ -232,7 +255,8 @@ class OrionRuntimeMemorySamplerAndroidTest {
                 7 -> f.endpoint.nativeIncluded = false
                 8 -> f.endpoint.statusFailure = android.os.RemoteException("PRIVATE_ERROR")
             }
-            f.offer(); f.await(OrionRuntimeMemoryPhase.BEFORE_LOAD); repeat(20) { f.offer() }
+            f.enqueue(OrionRuntimeMemoryPhase.BEFORE_LOAD) { f.offer() }
+            f.await(OrionRuntimeMemoryPhase.BEFORE_LOAD); repeat(20) { f.offer() }
             assertEquals(1, f.endpoint.health.get()); assertTrue(f.endpoint.states.get() <= 1)
             assertTrue(f.stillConnected()); assertNull(f.corePin()); assertEquals(0, f.endpoint.mutations.get())
             assertNull(f.source.terminalView()?.firstTerminal); assertEquals(1, f.clock.reads.get())
@@ -244,7 +268,8 @@ class OrionRuntimeMemorySamplerAndroidTest {
     @Test fun equalMillisecondPhaseCrossingAndEndpointReplacementNeverRetainRows() = runBlocking {
         for (replace in listOf(false, true)) Fixture(this@OrionRuntimeMemorySamplerAndroidTest).use { f ->
             f.endpoint.entered = CountDownLatch(1); f.endpoint.release = CountDownLatch(1)
-            f.offer(); assertTrue(f.endpoint.entered!!.await(5, TimeUnit.SECONDS))
+            f.enqueue(OrionRuntimeMemoryPhase.BEFORE_LOAD) { f.offer() }
+            assertTrue(f.endpoint.entered!!.await(5, TimeUnit.SECONDS))
             if (replace) f.frame.connection = OrionRuntimeConnectionStamp(f.endpoint, f.connection, f.endpoint.asBinder(), 2)
             else f.capture.loadPreparing(f.frame, f.endpoint, MonotonicInstant(BootSessionId(3), 100))
             f.endpoint.release!!.countDown(); f.await(OrionRuntimeMemoryPhase.BEFORE_LOAD)
@@ -259,7 +284,8 @@ class OrionRuntimeMemorySamplerAndroidTest {
         try {
             val blocked = Fixture(this@OrionRuntimeMemorySamplerAndroidTest).also(fixtures::add)
             blocked.endpoint.entered = CountDownLatch(1); blocked.endpoint.release = CountDownLatch(1)
-            blocked.offer(); assertTrue(blocked.endpoint.entered!!.await(5, TimeUnit.SECONDS))
+            blocked.enqueue(OrionRuntimeMemoryPhase.BEFORE_LOAD) { blocked.offer() }
+            assertTrue(blocked.endpoint.entered!!.await(5, TimeUnit.SECONDS))
             val worker = OrionRuntimeMemorySamplingWorker.javaClass.getDeclaredField("thread").apply { isAccessible = true }
                 .get(OrionRuntimeMemorySamplingWorker)
             repeat(9) { fixtures.add(Fixture(this@OrionRuntimeMemorySamplerAndroidTest).also { it.offer() }) }
@@ -281,7 +307,8 @@ class OrionRuntimeMemorySamplerAndroidTest {
     @Test fun ownedTurnServiceBinderPidBootAndSelectedModelAreRecheckedAfterTheHealthReceipt() = runBlocking {
         for (change in 0..5) Fixture(this@OrionRuntimeMemorySamplerAndroidTest).use { f ->
             f.endpoint.entered = CountDownLatch(1); f.endpoint.release = CountDownLatch(1)
-            f.offer(); assertTrue(f.endpoint.entered!!.await(5, TimeUnit.SECONDS))
+            f.enqueue(OrionRuntimeMemoryPhase.BEFORE_LOAD) { f.offer() }
+            assertTrue(f.endpoint.entered!!.await(5, TimeUnit.SECONDS))
             when (change) {
                 0 -> field(f.client, "runtimeTurnGeneration", 2L)
                 1 -> field(f.client, "remote", Endpoint(f.app.packageName))
@@ -301,7 +328,8 @@ class OrionRuntimeMemorySamplerAndroidTest {
 
     @Test fun unavailableMainReadingConsumesItsAttemptWithoutCallingAiOrInventingZero() = runBlocking {
         Fixture(this@OrionRuntimeMemorySamplerAndroidTest, probeReadings = listOf(null)).use { f ->
-            f.offer(); f.await(OrionRuntimeMemoryPhase.BEFORE_LOAD); repeat(10) { f.offer() }
+            f.enqueue(OrionRuntimeMemoryPhase.BEFORE_LOAD) { f.offer() }
+            f.await(OrionRuntimeMemoryPhase.BEFORE_LOAD); repeat(10) { f.offer() }
             val report = checkNotNull(f.finish().memorySampling)
             assertEquals(0, report.retainedRows); assertEquals(0, f.endpoint.health.get()); assertEquals(0, f.endpoint.states.get())
             assertEquals(1, report.attemptedMask); assertEquals(7L, report.droppedAtLeast)
@@ -330,7 +358,8 @@ class OrionRuntimeMemorySamplerAndroidTest {
 
     @Test fun processDeathOrTerminalBeforeDispatchDoesNotCreateInferenceOrPostDeathSamples() = runBlocking {
         for (death in listOf(false, true)) Fixture(this@OrionRuntimeMemorySamplerAndroidTest).use { f ->
-            f.offer(); f.await(OrionRuntimeMemoryPhase.BEFORE_LOAD)
+            f.enqueue(OrionRuntimeMemoryPhase.BEFORE_LOAD) { f.offer() }
+            f.await(OrionRuntimeMemoryPhase.BEFORE_LOAD)
             if (death) f.lifecycle.processDied() else f.lifecycle.failTransport()
             f.capture.terminalHint()
             assertNull(f.ticket(OrionRuntimeMemoryPhase.DURING_INFERENCE))

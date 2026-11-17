@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Source-boundary controls only; neither Gradle variant evaluation nor Android evidence."""
 from pathlib import Path
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,7 +26,11 @@ class SingleAttemptR8SourceContractTest(unittest.TestCase):
         self.assertIn('buildConfigField("boolean", "ORION_CORTEX_SINGLE_ATTEMPT", cortexSingleAttemptEnabled.toString())', qualification)
         self.assertIn('cortexSingleAttemptFlag in setOf("true", "false")', self.build)
         self.assertIn("!cortexSingleAttemptEnabled || qualificationEnabled", self.build)
-        self.assertIn("exitEvidenceCaptureEnabled, cortexSingleAttemptEnabled).count", self.build)
+        exclusive = re.search(r"check\(listOf\(([^)]*)\)\.count\s*\{\s*it\s*\}\s*<=\s*1\)", self.build)
+        self.assertIsNotNone(exclusive)
+        modes = {mode.strip() for mode in exclusive.group(1).split(",")}
+        self.assertTrue({"physicalBaselineEnabled", "cortexReadinessEnabled", "exitEvidenceCaptureEnabled",
+                         "cortexSingleAttemptEnabled", "cortexRuntimeCaptureEnabled"} <= modes)
 
     def test_bridge_keep_runner_and_ci_are_scoped_without_enabling_metrics(self):
         mode = self.build.split("if (cortexSingleAttemptEnabled)", 1)[1].split("\n}", 1)[0]

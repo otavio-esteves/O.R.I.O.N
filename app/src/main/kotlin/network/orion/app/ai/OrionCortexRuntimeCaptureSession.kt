@@ -387,6 +387,17 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
         }
     }
 
+    /** Separate manual watchdog sample only. Uses the already-bound dedicated clock, never original Clock.
+     * Does not change session/event timestamps, rebind, snapshot, query, wait or repair identity.
+     */
+    fun manualExportMoment(actualOwner: Any): OrionObservationMoment? = access {
+        val selected = frame
+        if (actualOwner !== owner || !runFinished || !activated || invalidated.get() || selected == null || !selected.valid ||
+            pinnedConnection != null && selected.connection !== pinnedConnection) return@access null
+        val at = moment() ?: return@access null
+        if (!selected.valid || invalidated.get() || pinnedConnection != null && selected.connection !== pinnedConnection) null else at
+    }
+
     private class ExportSnapshot(override val context: OrionRuntimeQualifiedContext,
         override val scalars: OrionRuntimeExportScalars, override val receipt: OrionRuntimeSessionReceipt) : OrionRuntimeExportSnapshot
 

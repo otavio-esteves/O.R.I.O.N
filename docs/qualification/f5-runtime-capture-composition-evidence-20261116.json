@@ -1,0 +1,334 @@
+{
+  "actualFrameworkAndHost": {
+    "abi": "x86_64",
+    "actualMinifiedQualificationContextObserved": true,
+    "api": 35,
+    "environment": "ANDROID_EMULATOR",
+    "failureCode": "NO_QUALIFIED_PROFILE",
+    "localInstalledApkHashesEqual": true,
+    "modelLoaded": false,
+    "ownedEmulatorStoppedExitCode": 0,
+    "ownerCallInvoked": false,
+    "pageSizeBytes": 4096,
+    "programFrameObservedIsNotCoreTerminal": true,
+    "publicationState": "FINAL_ACK_NOT_PROVEN",
+    "recordState": "NO_LOAD_REFUSAL",
+    "runtimeV1Produced": false
+  },
+  "android": {
+    "failed-7682516": {
+      "failed": 2,
+      "failures": [
+        "sevenPhasesUseOneRealPrivateReceiptPairAndNeverMutateTheCorePin",
+        "ownedTurnServiceBinderPidBootAndSelectedModelAreRecheckedAfterTheHealthReceipt"
+      ],
+      "passed": 103,
+      "skipped": 0,
+      "starts": 105
+    },
+    "green-ecae87e": {
+      "failed": 0,
+      "failures": [],
+      "passed": 105,
+      "skipped": 0,
+      "starts": 105
+    }
+  },
+  "appJvm": {
+    "buildAndLintResult": "BUILD_SUCCESSFUL",
+    "duration": "12m48s",
+    "environment": "CONTAINER",
+    "historicalAppSnapshot": "dd1afcbd8939a37e41a634977bf0a9f864bc32f6",
+    "historicalAppSnapshotTree": "1786cb03d59452038f46425d128d9d6234cf3033",
+    "laterNotesNotPartOfOriginalTestedHash": [
+      "docs/qualification/F5-RuntimeCaptureComposition-WorkPackage.md"
+    ],
+    "moduleBoundariesPassed": true,
+    "nonNoteFrozenEntriesMatchedCurrent": 16,
+    "originalFreezeEntries": 17,
+    "sourceScope": "Only the frozen APP/proof entries are bound to this JVM/lint run; later documentation/HOST/CI changes are not retroactively part of a clean repository snapshot.",
+    "totalSuites": 42,
+    "totalTests": 346,
+    "uncommittedHostAndCiDuringJvmRun": true,
+    "wholeRepositoryCleanBuildClaim": false,
+    "xmlSummary": {
+      "ai/api": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "suites": 6,
+        "tests": 76
+      },
+      "app": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "suites": 36,
+        "tests": 270
+      }
+    }
+  },
+  "archive": {
+    "bytes": 623396,
+    "manifest": "manifest-sha256.json",
+    "manifestSha256": "d0ea67bfea02348050d97ad764526a4a7f0de0b69ee5ea5eede953c6d5128988",
+    "path": "artifacts/f5-runtime-capture-composition-evidence-20261116.tar.gz",
+    "payloadFiles": 172,
+    "sha256": "2c67cbdbbd61f7d48f2b14a5524e8b248968f23b99b276703450c85fbedffa23",
+    "tarRegularMembers": 173
+  },
+  "counting": {
+    "additive": false,
+    "reason": "HOST27/40/42/full532 overlap; JVM346 and Android105 overlap earlier suites and repeated rounds. Failed and successful invocations are separate, never summed."
+  },
+  "finalBuilds": {
+    "buildScope": "Packaging/native verification and actual APK generation; no new full-repository JVM run is claimed.",
+    "configurationCacheReused": true,
+    "environment": "CONTAINER",
+    "normal": {
+      "duration": "4m38s",
+      "executed": 18,
+      "result": "PASS",
+      "tasks": 2635,
+      "upToDate": 2617
+    },
+    "runtimeCaptureR8": {
+      "duration": "1m27s",
+      "executed": 12,
+      "result": "PASS",
+      "tasks": 2762,
+      "upToDate": 2750
+    },
+    "sourceCommit": "ecae87e8f3c0b45f5b552397deee8acd1150ae6c"
+  },
+  "fixtureCorrection": {
+    "assertionsIdentitySevenPhasesAndNegativeCasesPreserved": true,
+    "commits": [
+      "21bc10973dca7801544473f349ae84410ae86120",
+      "ecae87e8f3c0b45f5b552397deee8acd1150ae6c"
+    ],
+    "controlledPositiveEnqueueOnly": true,
+    "noProductionRetryOrOperationalDefault": true,
+    "productionChanged": false,
+    "testMethodsBeforeAndAfter": 11,
+    "timeoutsUnchanged": true
+  },
+  "historicalStagePrecedence": "historical-stage/staging-index-draft.json is an immutable earlier draft; its then-pending build/Android/archive fields are superseded only by the final scopes in this index, never reclassified as past successes.",
+  "historicalStagingManifestSha256": "eb50f42d89c9e37374427e32e7143c0d14c7bbad0cf7bbe168c5c04a25b688c9",
+  "host": {
+    "environment": "CONTAINER",
+    "finalFrozenHarnessHash": "916acfc0409be51bc527b995304df035edfe92f02686052ae8156af13897d701",
+    "finalFrozenRecorderHash": "b1bbf20ebfcf258096cd103a9f66ce0843ae9015522c17bf9e984cc6eb07efab",
+    "fullFailedRun": {
+      "failure": "Obsolete literal source-layout assertion; root reports10focusedcases passed0.033s after correction, followed by separate532PASS full run.",
+      "fullRawDumpTruncatedAndNotIncluded": true,
+      "onlyRetainedSummaryAvailable": true
+    },
+    "invocations": [
+      {
+        "countsAreOverlapping": true,
+        "errors": 0,
+        "failures": 0,
+        "file": "host/logs/orion-f5-runtime-capture-host-focused-20261116.log",
+        "representation": "RAW_DOCKER_TERMINAL_OUTPUT",
+        "seconds": 0.619,
+        "status": "PASS",
+        "tests": 27
+      },
+      {
+        "countsAreOverlapping": true,
+        "errors": 1,
+        "failures": 2,
+        "file": "host/logs/orion-f5-runtime-capture-host-publication-red-20261116.log",
+        "representation": "RAW_SELECTED_REGRESSION_OUTPUT",
+        "seconds": 0.054,
+        "status": "FAILED_INVOCATION_RETAINED_NOT_RECLASSIFIED",
+        "tests": 3
+      },
+      {
+        "countsAreOverlapping": true,
+        "errors": 0,
+        "failures": 0,
+        "file": "host/logs/orion-f5-runtime-capture-host-publisher-green-20261116.log",
+        "representation": "RAW_DOCKER_TERMINAL_OUTPUT",
+        "seconds": 0.832,
+        "status": "PASS",
+        "tests": 40
+      },
+      {
+        "countsAreOverlapping": true,
+        "errors": 3,
+        "failures": 1,
+        "file": "host/logs/orion-f5-runtime-capture-host-review-round2-red-20261116.log",
+        "representation": "RAW_SELECTED_REGRESSION_OUTPUT",
+        "seconds": 0.108,
+        "status": "FAILED_INVOCATION_RETAINED_NOT_RECLASSIFIED",
+        "tests": 2
+      },
+      {
+        "countsAreOverlapping": true,
+        "errors": 0,
+        "failures": 0,
+        "file": "host/logs/orion-f5-runtime-capture-host-review-round2-green-20261116.log",
+        "representation": "TOOL_CAPTURED_TERMINAL_OUTPUT_WITH_SESSION_METADATA",
+        "seconds": 0.867,
+        "status": "PASS",
+        "tests": 42
+      },
+      {
+        "countsAreOverlapping": true,
+        "errors": 0,
+        "failures": 1,
+        "file": "host/logs/orion-f5-runtime-capture-host-full-failed-summary-20261116.txt",
+        "representation": "RETAINED_SUMMARY_EXCERPT_ONLY_FULL_DUMP_WAS_TRUNCATED_NOT_RAW_FULL_LOG",
+        "seconds": 30.447,
+        "status": "FAILED_INVOCATION_RETAINED_NOT_RECLASSIFIED",
+        "tests": 532
+      },
+      {
+        "countsAreOverlapping": true,
+        "errors": 0,
+        "failures": 0,
+        "file": "host/logs/orion-f5-runtime-capture-host-full-green-20261116.log",
+        "representation": "RAW_DOCKER_TERMINAL_OUTPUT",
+        "seconds": 30.241,
+        "status": "PASS",
+        "tests": 532
+      }
+    ],
+    "rawAndroidStdoutOrStderrPersisted": false,
+    "realHostFilesystemAndPipeMechanics": true,
+    "reviewApproval": {
+      "notRuntimeOrHardwareQualification": true,
+      "recorderSha256": "b1bbf20ebfcf258096cd103a9f66ce0843ae9015522c17bf9e984cc6eb07efab",
+      "resolvedFindings": [
+        "exact published-member presence/inode checks",
+        "original BaseException retained across cleanup errors"
+      ],
+      "scope": "Independent static correction review reported by root and recorded in the included HOST note"
+    },
+    "sourceHashes": {
+      "scripts/android/record-f5-runtime-capture.py": "b1bbf20ebfcf258096cd103a9f66ce0843ae9015522c17bf9e984cc6eb07efab",
+      "scripts/android/test_f5_runtime_capture_host_harness.py": "916acfc0409be51bc527b995304df035edfe92f02686052ae8156af13897d701",
+      "scripts/android/test_f5_single_attempt_r8_source_contract_harness.py": "af7228fcff8a8cf03d6dd158c0631477c2f658e3a458ce6419e3dbe0114b12be"
+    },
+    "syntheticAdbAndClockFixtures": true
+  },
+  "limitations": [
+    "Emulator mechanics with synthetic fixtures are not physical/native performance/profile/API37/memory-limiter/24h/soak qualification.",
+    "NO_QUALIFIED_PROFILE proves honest refusal in the actual minified qualification context, not a successful loaded-model SOURCE or complete RuntimeEvidence v1.",
+    "Source hashes and transport framing are not independent source authentication.",
+    "The APP JVM run is only the frozen APP/proof scope; no clean whole-repository JVM snapshot is claimed."
+  ],
+  "privacy": {
+    "actualRawSerialOrUserHomeIncluded": false,
+    "apkModelNativeBinaryKeystoreIncluded": false,
+    "hostHarnessBodyOmittedButGitRefAndHashRetained": true,
+    "r8MappingOmitted": true,
+    "textDerivativesHaveOriginalShaAndExplicitRedactionScope": true
+  },
+  "qualification": {
+    "f6Authorized": false,
+    "fullF5GateClosed": false,
+    "fullSoakGateClosed": false,
+    "physicalNativeApi37LimiterOr24HourEvidence": false,
+    "physicalVerified": false,
+    "productionInferenceApproved": false,
+    "profileApproved": false,
+    "runtimeEvidenceV1Complete": false,
+    "sourceAuthenticated": false
+  },
+  "remoteRequiredCi": {
+    "asOf": "local evidence snapshot; no remote approval or integration asserted",
+    "status": "PENDING"
+  },
+  "retainedFailures": {
+    "androidFirstRun": "105 starts/103 pass/2 fail on source7682516, original logs and installed/source bindings retained.",
+    "capacityBuild": "No space left on device; exit1/8m21s; no APK/runtime; unchanged source.",
+    "hostFullFailed": "532 cases/1 failure; retained summary excerpt only, original large raw dump was truncated.",
+    "postBuildCollector": "Target/test BuildConfig namespace collision in helper; artifact-collection-result.json retains corrected collection summary; both original build exit0 results retained. No raw original collector exception log is available in this package.",
+    "preflightCollector": "Trailing empty NUL ls-files entry before build/runtime; retained summary only."
+  },
+  "schema": "orion-f5-runtime-capture-composition-evidence-v1",
+  "snapshotStatus": "LOCAL_SOFTWARE_VALIDATED_REMOTE_CI_PENDING",
+  "sourceBaseMain": "85cf32786d73743a8d9939f5f1457b82925ac242",
+  "sourceBindings": {
+    "allEightFlagsFalse": true,
+    "allTrackedSourceBindingSha256": "0beec0991bc4065c7307981fe695c56d81c1413e9e1b9e77b8c31447c317422b",
+    "allTrackedSourceFilesVerified": 1020,
+    "android": {
+      "failed-7682516": {
+        "failed": 2,
+        "failures": [
+          "sevenPhasesUseOneRealPrivateReceiptPairAndNeverMutateTheCorePin",
+          "ownedTurnServiceBinderPidBootAndSelectedModelAreRecheckedAfterTheHealthReceipt"
+        ],
+        "passed": 103,
+        "skipped": 0,
+        "starts": 105
+      },
+      "green-ecae87e": {
+        "failed": 0,
+        "failures": [],
+        "passed": 105,
+        "skipped": 0,
+        "starts": 105
+      }
+    },
+    "fixtureTestMethods": [
+      {
+        "commit": "768251624f83bfabbabc85339c23c289170c415b",
+        "sha256": "5ddb239667979a7d5dcc5c48b11d722db54fc7e5f731caf5d345c79956fe68f7",
+        "testMethods": 11
+      },
+      {
+        "commit": "21bc10973dca7801544473f349ae84410ae86120",
+        "sha256": "3e7d6e80fd335d024bd2df1c0b6399d9c12c020086e4a78da4c4bd45acdd17a8",
+        "testMethods": 11
+      },
+      {
+        "commit": "ecae87e8f3c0b45f5b552397deee8acd1150ae6c",
+        "sha256": "1ab0372965284eadb0d1ab2d60cfe4f3eb2a155ef3496975b1c930ebcbc097ed",
+        "testMethods": 11
+      }
+    ],
+    "jvm": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "suites": 42,
+      "tests": 346
+    },
+    "localInstalledAppAndTestHashesEqual": true,
+    "runtimeV1AbsentAsExpected": true,
+    "sourceCommit": "ecae87e8f3c0b45f5b552397deee8acd1150ae6c",
+    "sourceStatus": {
+      "captureIntegrity": "UNAVAILABLE",
+      "droppedAtLeast": 0,
+      "f6Authorized": false,
+      "failureCode": "NO_QUALIFIED_PROFILE",
+      "fullF5GateClosed": false,
+      "fullSoakGateClosed": false,
+      "kind": "ORION_RUNTIME_CAPTURE_STATUS",
+      "lossAccountingComplete": false,
+      "ownerCallInvoked": false,
+      "physicalVerified": false,
+      "productionInferenceApproved": false,
+      "profileApproved": false,
+      "qualification": "NOT_QUALIFIED",
+      "recordState": "NO_LOAD_REFUSAL",
+      "recordingFailuresAtLeast": 0,
+      "runtimeEvidenceV1Complete": false,
+      "schemaVersion": 1,
+      "sourceAuthenticated": false
+    }
+  },
+  "sourceCommit": "ecae87e8f3c0b45f5b552397deee8acd1150ae6c",
+  "sourceTree": "c037b4898ec56dc446c35dfe5804f7c40dcbf35a",
+  "verification": {
+    "allTrackedSourceHashesBeforeDocs": 1020,
+    "manifestAllEntriesReadBack": true,
+    "noNewBuildTestsAdbExecuted": true,
+    "tarSafeRegularRelativeEntriesOnly": true
+  }
+}

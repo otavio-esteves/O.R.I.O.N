@@ -61,6 +61,25 @@ class OrionRuntimeCapsuleParcelGuardTest {
         assertEquals(OrionRuntimeExportFailure.SOURCE_UNAVAILABLE, refusal.failure)
         assertEquals(setOf(OrionRuntimeCapsuleParcelGuard.STATUS_KEY, "stream"), checkNotNull(refusal.bundle).keySet())
     }
+    @Test fun bothOfficialFrameworkEnvelopesFitAtMaximumShapeWithNativeBinderAndTypedPresence() {
+        val bundle = Bundle().apply {
+            putString(OrionRuntimeCapsuleParcelGuard.STATUS_KEY, "s".repeat(1024))
+            putString(OrionRuntimeCapsuleParcelGuard.SOURCE_KEY, "x".repeat(96 * 1024))
+            putString("stream", OrionRuntimeCapsuleParcelGuard.STREAM_SOURCE)
+        }
+        val component = android.content.ComponentName("network.orion.qualification.test", OrionRuntimeInstrumentationContext.RUNNER)
+        val geometry = checkNotNull(OrionRuntimeInstrumentationFraming.measure(bundle, component))
+        assertTrue(geometry.bundleBytes <= 224 * 1024)
+        assertTrue(geometry.finishParcelBytes > geometry.bundleBytes)
+        assertTrue(geometry.watcherParcelBytes > geometry.bundleBytes)
+        assertTrue(geometry.finishOuterBytes in 1..32L * 1024)
+        assertTrue(geometry.watcherOuterBytes in 1..32L * 1024)
+        assertTrue(geometry.finishInlineBytes <= 256 * 1024); assertTrue(geometry.watcherInlineBytes <= 256 * 1024)
+        assertTrue(geometry.withinBudget)
+        val context = OrionRuntimeInstrumentationContext.fromInstrumentation(InstrumentationRegistry.getInstrumentation())
+        assertNull(context) // This normal JUnit runner is not the dedicated qualification program.
+    }
+
     @Test fun localFrameworkContextAcceptsOnlyActualQualificationInstrumentationTarget() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val local = OrionRuntimeQualifiedContext.fromInstrumentation(instrumentation)
