@@ -7,8 +7,15 @@ import uuid
 MAX_BYTES = 2 * 1024 * 1024
 MAX_JOURNAL_BYTES = 20 * 1024 * 1024
 MAX_STORE_BYTES = MAX_JOURNAL_BYTES + 1024
-MAX_EVENT_BYTES = 4096
+MAX_EVENT_BYTES = 20 * 1024
+MAX_CHECKPOINT_BYTES = 16 * 1024
 MAX_HEADER_BYTES = 16384
+MAX_JSON_OBJECTS = 50000
+MAX_JSON_NODES = 500000
+MAX_EVENT_JSON_OBJECTS = 160
+MAX_EVENT_JSON_NODES = 2048
+MAX_HEADER_JSON_OBJECTS = 64
+MAX_HEADER_JSON_NODES = 4096
 MAX_ENTRIES = 4096
 MAX_INT = 2**63 - 1
 FALSE_FLAGS = ('sourceAuthenticated', 'physicalEvidenceVerified', 'real24HourDurationProven',
@@ -90,10 +97,10 @@ def parse(data, maximum=MAX_BYTES):
             if ch == '"': quoted = True
             elif ch in '{[':
                 depth += 1; nodes += 1; objects += int(ch == '{')
-                require(depth <= 12 and objects <= 50000, 'JSON_SHAPE_BOUND_INVALID')
+                require(depth <= 12 and objects <= MAX_JSON_OBJECTS, 'JSON_SHAPE_BOUND_INVALID')
             elif ch in '}]': depth -= 1; require(depth >= 0, 'JSON_INVALID')
             elif ch in ',:': nodes += 1
-            require(nodes <= 500000, 'JSON_SHAPE_BOUND_INVALID')
+            require(nodes <= MAX_JSON_NODES, 'JSON_SHAPE_BOUND_INVALID')
         require(depth == 0 and not quoted, 'JSON_INVALID')
         return json.loads(text, object_pairs_hook=pairs, parse_float=invalid, parse_constant=invalid)
     except Invalid: raise
@@ -136,6 +143,8 @@ def validate_plan(plan):
     budget = 8 + 3 * (len(work) + int(plan['bootstrapOperation'] == 'CORE_ONCE')) + 2 * len(schedule['observationOffsetsMillis'])
     require(budget <= MAX_ENTRIES, 'ENTRY_BUDGET_EXCEEDED')
     require(MAX_HEADER_BYTES + budget*MAX_EVENT_BYTES <= MAX_JOURNAL_BYTES, 'BYTE_BUDGET_EXCEEDED')
+    require(MAX_HEADER_JSON_OBJECTS + budget*MAX_EVENT_JSON_OBJECTS <= MAX_JSON_OBJECTS and
+            MAX_HEADER_JSON_NODES + budget*MAX_EVENT_JSON_NODES <= MAX_JSON_NODES, 'JSON_SHAPE_BUDGET_EXCEEDED')
     return plan
 
 
@@ -209,7 +218,7 @@ def resources(value):
 
 
 def checkpoint(value, operation, run_id, fixture_id, attempt_id=None, *, persisted=False):
-    require(len(encoded(value)) <= MAX_EVENT_BYTES-256, 'CHECKPOINT_BOUND_INVALID')
+    require(len(encoded(value)) <= MAX_CHECKPOINT_BYTES, 'CHECKPOINT_BOUND_INVALID')
     session_key = 'sessionIdSha256' if persisted else 'sessionId'
     fields(value, {'schemaVersion', 'kind', 'operation', 'runId', 'fixtureId', 'attemptId', session_key, 'stamp',
                    'outcome', 'refusal', 'failureCode', 'ownerCallInvoked', 'executionState', 'settlement', 'resources', 'observation', 'resourceExit', 'policyFacts', 'modelSha256',
@@ -226,11 +235,11 @@ def checkpoint(value, operation, run_id, fixture_id, attempt_id=None, *, persist
                'CLEANUP': {'CLEANED','ABSENT','REFUSED','BUSY','UNAVAILABLE','FAILED'}}
     allowed['BOOTSTRAP'] = allowed['WORK']
     require(value['outcome'] in allowed[operation] and value['refusal'] in REFUSALS, 'CHECKPOINT_OUTCOME_INVALID')
-    require(value['executionState'] in {'IDLE', 'ACTIVE', 'UNCERTAIN'})
+    require(value['executionState'] in {'IDLE', 'ACTIVE', 'UNCERTAIN','DEAD_AWAITING_EVIDENCE'})
     require(value['failureCode'] in FAILURES and (value['failureCode'] is None or value['outcome'] == 'FAILED'))
     require(value['ownerCallInvoked'] is None or type(value['ownerCallInvoked']) is bool)
     require(operation in {'WORK','BOOTSTRAP'} or value['ownerCallInvoked'] is not True)
-    require(value['settlement'] in {'ORIGINAL_UNLOAD_CONFIRMED','NO_OWNER_CALL','UNPROVEN'})
+    require(value['settlement'] in {'ORIGINAL_UNLOAD_CONFIRMED','NO_OWNER_CALL','UNPROVEN','ORIGINAL_PROCESS_DEATH_CONFIRMED'})
     if value['settlement'] == 'NO_OWNER_CALL': require(value['ownerCallInvoked'] is False)
     if value['settlement'] == 'ORIGINAL_UNLOAD_CONFIRMED':
         require(value['ownerCallInvoked'] is True and value['executionState'] == 'IDLE' and
@@ -242,8 +251,9 @@ def checkpoint(value, operation, run_id, fixture_id, attempt_id=None, *, persist
     require(value['resources'] is None or value['observation'] is not None)
     for key in ['modelSha256', 'configurationSha256', 'runtimeSourceSha256']: digest(value[key], nullable=True)
     if value['resourceExit'] is not None: incident_identity(value['resourceExit'])
-    # Paired actual-Core policy source is a separately reviewed follow-up, never a HOST revision/approval.
-    require(value['policyFacts'] is None, 'POLICY_SOURCE_SCHEMA_UNAVAILABLE')
+    # Additive #163 sidecar; old null fixtures remain valid and soak execution gates remain unchanged.
+    import f5_runtime_qualification_sidecar as sidecar
+    sidecar.validate(value)
     require(all(value[k] is False for k in FALSE_FLAGS), 'AUTHORITY_CLAIM_FORBIDDEN')
     if value['outcome'] == 'REFUSED': require(value['refusal'] != 'NONE')
     else: require(value['refusal'] == 'NONE')

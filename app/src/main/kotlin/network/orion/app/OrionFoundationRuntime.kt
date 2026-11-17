@@ -205,6 +205,11 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             network.orion.app.ai.OrionCortexCycleObserver(1)
         } catch (_: Throwable) { null }
 
+    private val cortexQualificationResourceFacts: network.orion.app.resources.OrionCortexResourceFactBuffer? =
+        if (!BuildConfig.ORION_CORTEX_INSTRUMENTED_WORKLOAD) null else try {
+            network.orion.app.resources.OrionCortexResourceFactBuffer(64)
+        } catch (_: Throwable) { null }
+
     /** Optional on-demand port. No approved production profile ships with this candidate. */
     internal suspend fun cortexRuntime(): network.orion.app.ai.OrionCortexRuntimeOwner? = withContext(Dispatchers.IO) {
         synchronized(cortexOwnershipLock) {
@@ -214,7 +219,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 network.orion.data.repository.models.OrionModelImportCoordinator.open(app, db, clock,
                     maximumModelBytes = 4L * 1024 * 1024 * 1024, reserveBytes = 512L * 1024 * 1024),
                 db, clock, coreReady = { taskStartupBarrier.isOpen() && health.value.core.readiness.isStartupBarrierOpen },
-                cycleObservations = cortexCycleObserver)
+                cycleObservations = cortexCycleObserver, resourceFacts = cortexQualificationResourceFacts)
                 .also { cortexOwner = it }
         }
     }

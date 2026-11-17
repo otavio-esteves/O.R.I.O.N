@@ -78,6 +78,22 @@ class OrionInstrumentedWorkloadStateTest {
         assertEquals(hash, first.modelSha256); assertTrue(first.configurationSha256.matches(Regex("[0-9a-f]{64}")))
         assertFalse(first.toString().contains(hash)); assertFalse(first.toString().contains("SECRET"))
     }
+    @Test fun diagnosticExitLimitsAndTheirExplicitAbsenceAreBoundIntoTheTechnicalDescriptor() {
+        val timing = OrionCortexResourceTiming(1000, 1000); val observed = OrionRuntimeCaptureObservationConfiguration(10, 1)
+        fun binding(exit: OrionQualificationExitConfiguration?) = checkNotNull(
+            deriveInstrumentedConfigurationBinding(listOf(plan()), timing, template(), observed, exit)).configurationSha256
+        val absent = binding(null)
+        assertEquals(absent, checkNotNull(deriveInstrumentedConfigurationBinding(listOf(plan()), timing, template(), observed)).configurationSha256)
+        val configured = binding(OrionQualificationExitConfiguration(10, 1000, 10000))
+        assertNotEquals(absent, configured)
+        for (changed in listOf(OrionQualificationExitConfiguration(11, 1000, 10000),
+            OrionQualificationExitConfiguration(10, 1001, 10000), OrionQualificationExitConfiguration(10, 1000, 10001)))
+            assertNotEquals(configured, binding(changed))
+        for (values in listOf(Triple(0L, 1L, 1L), Triple(1L, 0L, 1L), Triple(1L, 1L, 0L))) {
+            try { OrionQualificationExitConfiguration(values.first, values.second, values.third); fail("No zero implicit bound") }
+            catch (_: IllegalArgumentException) { }
+        }
+    }
     @Test fun missingConfigurationRemainsUnavailableInsteadOfHashingAnEmptyApproval() {
         val timing = OrionCortexResourceTiming(1000, 1000); val observed = OrionRuntimeCaptureObservationConfiguration(10, 1)
         assertNull(deriveInstrumentedConfigurationBinding(emptyList(), timing, template(), observed))

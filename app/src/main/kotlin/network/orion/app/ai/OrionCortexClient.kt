@@ -171,7 +171,7 @@ internal class OrionCortexClient(
     }
 
     /** Separate idle qualification observation. No acquire/bind, functional pin write or lostConnection. */
-    internal fun instrumentedMemoryObservation(): OrionRuntimeAiMemoryReading? {
+    internal fun instrumentedMemoryObservation(exitSlot: OrionQualificationAiSlot? = null): OrionRuntimeAiMemoryReading? {
         if (!OrionRuntimeMemorySamplingWorker.tryManualDiagnostic()) return null
         try {
             val selected = synchronized(monitor) {
@@ -205,7 +205,12 @@ internal class OrionCortexClient(
             val state = OrionRuntimeServiceState.valueOf(OrionCortexWire.text(status, "status"))
             if (state == OrionRuntimeServiceState.LOADED || state == OrionRuntimeServiceState.INFERENCING)
                 require(runtime && validated && selected.model != null && OrionCortexWire.text(status, "modelId") == selected.model)
-            return if (!current()) null else OrionRuntimeAiMemoryReading(pid, boot, at, pss, native, runtime, validated, state)
+            if (!current()) return null
+            val original = OrionRuntimeAiMemoryReading(pid, boot, at, pss, native, runtime, validated, state)
+            if (exitSlot != null) try {
+                exitSlot.observed(original, OrionQualificationEndpointKey(this, selected.connection, selected.binder, selected.epoch))
+            } catch (_: Throwable) { }
+            return original
         } catch (_: Throwable) { return null }
         finally { OrionRuntimeMemorySamplingWorker.finishManualDiagnostic() }
     }

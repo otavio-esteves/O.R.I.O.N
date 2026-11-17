@@ -7,7 +7,7 @@ import network.orion.ai.api.OrionInferenceFailure
 import network.orion.core.time.MonotonicInstant
 import org.json.JSONObject
 
-internal enum class OrionInstrumentedSettlement { ORIGINAL_UNLOAD_CONFIRMED, NO_OWNER_CALL, UNPROVEN }
+internal enum class OrionInstrumentedSettlement { ORIGINAL_UNLOAD_CONFIRMED, ORIGINAL_PROCESS_DEATH_CONFIRMED, NO_OWNER_CALL, UNPROVEN }
 internal enum class OrionInstrumentedOutcome { OPENED, SUCCEEDED, FAILED, CANCELLED, TIMED_OUT, PROCESS_DIED, REFUSED, CLEANED, ABSENT, BUSY, UNAVAILABLE, OBSERVED }
 internal enum class OrionInstrumentedRefusal { NONE, NO_QUALIFIED_PROFILE, RESOURCE_CONFIGURATION_UNAVAILABLE, CONFIGURATION_UNAVAILABLE,
     CORE_NOT_READY, OWNER_UNAVAILABLE, CLOSED, TEMPLATE_UNAVAILABLE, TEMPLATE_INVALID, MODEL_NOT_READY, PROFILE_MISMATCH,
@@ -19,7 +19,10 @@ internal class OrionInstrumentedCheckpoint(val operation: OrionInstrumentedOpera
     val attemptId: String?, val graphNonce: String, val at: MonotonicInstant, val outcome: OrionInstrumentedOutcome,
     val refusal: OrionInstrumentedRefusal, val failure: OrionInferenceFailure?, val ownerCallInvoked: Boolean?,
     val execution: OrionInstrumentedExecutionState, val settlement: OrionInstrumentedSettlement, val binding: OrionInstrumentedConfigurationBinding?,
-    val observation: OrionInstrumentedResourceObservation? = null) {
+    val observation: OrionInstrumentedResourceObservation? = null,
+    val originalPolicies: network.orion.app.resources.OrionCortexResourceFactBatch? = null,
+    val exitObservation: OrionQualificationExitResult? = observation?.exitObservation,
+    val deathSettlement: OrionQualificationDeathSettlement? = null) {
     init {
         require(OrionInstrumentedWorkloadScope.validId(runId) && OrionInstrumentedWorkloadScope.validId(fixtureId) &&
             OrionInstrumentedWorkloadScope.validId(graphNonce) && (attemptId == null || OrionInstrumentedWorkloadScope.validId(attemptId)))
@@ -40,8 +43,12 @@ internal class OrionInstrumentedCheckpoint(val operation: OrionInstrumentedOpera
         root.put("modelSha256", binding?.modelSha256 ?: JSONObject.NULL)
         root.put("configurationSha256", binding?.configurationSha256 ?: JSONObject.NULL)
         root.put("runtimeSourceSha256", sourceHash ?: JSONObject.NULL)
-        root.put("resourceExit", JSONObject.NULL) // No paired platform incident source exists in this component; never infer a cause from death.
-        root.put("policyFacts", JSONObject.NULL) // Pending actual passive Core-fact source, not a fabricated HOST policy revision.
+        val exit = exitObservation?.incident?.takeIf { it.windowBootCount == at.bootSessionId?.bootCount && it.mainPid == Process.myPid() }
+        root.put("resourceExit", if (exit == null) JSONObject.NULL else JSONObject()
+            .put("pid", exit.record.pid).put("timestampWallMillis", exit.record.timestampWallMillis).put("reason", exit.record.reason)
+            .put("classification", exit.classification).put("windowBootCount", exit.windowBootCount).put("correlation", exit.correlation))
+        val policies = OrionQualificationPolicyObservation.render(originalPolicies, exitObservation, deathSettlement)
+        root.put("policyFacts", if (policies == null) JSONObject.NULL else JSONObject(policies))
         val observed = observation
         if (observed == null) {
             root.put("resources", JSONObject.NULL); root.put("observation", JSONObject.NULL)

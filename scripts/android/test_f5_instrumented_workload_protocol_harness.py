@@ -76,8 +76,10 @@ class ProtocolTest(unittest.TestCase):
         self.assertEqual('BYTE_BUDGET_EXCEEDED',str(caught.exception))
 
     def test_representable_24h_schedule_needs_actual_reported_span_and_keeps_all_claims_false(self):
-        p=plan();p['limits'].update(durationMillis=86400000,maximumObservationGapMillis=60000)
-        p['schedule']['observationOffsetsMillis']=list(range(0,86400001,60000));P.validate_plan(p)
+        # Sparse synthetic schedule represents 24h within the conservative #163 sidecar reservation.
+        # This interval is a grammar fixture, not a production operating value or coverage proof.
+        p=plan();p['limits'].update(durationMillis=86400000,maximumObservationGapMillis=900000)
+        p['schedule']['observationOffsetsMillis']=list(range(0,86400001,900000));P.validate_plan(p)
         meta=dict(schemaVersion=1,clockSource='CLOCK_BOOTTIME',bootIdentitySha256='a'*64,
             sessionId=str(uuid.UUID(int=99)),evidence='HOST_CLOCK_ONLY',qualification='NOT_QUALIFIED')
         entries=[]

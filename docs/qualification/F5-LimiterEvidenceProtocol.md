@@ -7,6 +7,11 @@ that a physical device was used, that policy was applied, or that any model/prof
 or F5/soak gate is approved. All seven approval/verification flags remain false.
 Its exit code zero means only `CONSISTENT_REFUSAL_INPUT`.
 
+The separate [physical acquisition procedure](F5-LimiterAcquisitionProcedure.md)
+defines target-specific stimulus review, paired identity/time collection, actual
+Core policy observations and owned cleanup. It is preparation, not an executed
+incident or permission to fill missing fields in this closed v1 format.
+
 The normative basis is [Architecture §35.1](../../1-orion.md), with
 [OrionProcessExitClassifier](../../core/exitinfo/src/main/kotlin/network/orion/core/exitinfo/OrionProcessExitClassifier.kt),
 [OrionMinimumResourceGovernor](../../core/resources/src/main/kotlin/network/orion/core/resources/OrionMinimumResourceGovernor.kt)

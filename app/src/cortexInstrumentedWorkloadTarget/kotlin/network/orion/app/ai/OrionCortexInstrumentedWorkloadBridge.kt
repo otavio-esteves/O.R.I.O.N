@@ -44,6 +44,8 @@ object OrionCortexInstrumentedWorkloadBridge {
             check(graph.matches(main, owner) && sameRuntime(app, main)) { "CORE_IDENTITY_CHANGED" }
             // A distinct diagnostic clock/phase. No original functional Clock read is added by a checkpoint.
             val diagnosticClock = AndroidOrionClock(app.contentResolver)
+            var policyDrained = false
+            var policyBatch: network.orion.app.resources.OrionCortexResourceFactBatch? = null
             fun reply(outcome: OrionInstrumentedOutcome, refusal: OrionInstrumentedRefusal = OrionInstrumentedRefusal.NONE,
                 ownerCalled: Boolean? = false, execution: OrionInstrumentedExecutionState = selected?.scope?.state() ?: OrionInstrumentedExecutionState.IDLE,
                 binding: OrionInstrumentedConfigurationBinding? = selected?.binding,
@@ -52,8 +54,21 @@ object OrionCortexInstrumentedWorkloadBridge {
                 settlement: OrionInstrumentedSettlement = OrionInstrumentedSettlement.NO_OWNER_CALL): Bundle {
                 val at = diagnosticClock.monotonicNow()
                 check(at.bootSessionId != null) { "CLOCK_UNAVAILABLE" }
+                val currentExit = observed?.exitObservation ?: selected?.exitSource?.latest
+                if (command.operation == OrionInstrumentedOperation.OBSERVE) selected?.observeOriginalProcessDeath(currentExit, at)
+                if (!policyDrained) { policyBatch = owner.drainInstrumentedResourceFacts(); policyDrained = true }
+                val reportedExecution = if (command.operation == OrionInstrumentedOperation.OBSERVE && outcome == OrionInstrumentedOutcome.OBSERVED)
+                    selected?.scope?.observationResultState() ?: execution else execution
+                var reportedSettlement = if (command.operation == OrionInstrumentedOperation.OBSERVE && outcome == OrionInstrumentedOutcome.OBSERVED)
+                    selected?.settlement ?: settlement else settlement
+                val proof = selected?.deathSettlement?.takeIf {
+                    reportedSettlement == OrionInstrumentedSettlement.ORIGINAL_PROCESS_DEATH_CONFIRMED && it.matchesObservation(currentExit, at)
+                }
+                if (reportedSettlement == OrionInstrumentedSettlement.ORIGINAL_PROCESS_DEATH_CONFIRMED && proof == null)
+                    reportedSettlement = OrionInstrumentedSettlement.UNPROVEN
                 val value = OrionInstrumentedCheckpoint(command.operation, command.run, command.fixture, command.attempt,
-                    graph.nonce, at, outcome, refusal, failure, ownerCalled, execution, settlement, binding, observed)
+                    graph.nonce, at, outcome, refusal, failure, ownerCalled, reportedExecution, reportedSettlement, binding, observed,
+                    policyBatch, currentExit, proof)
                 return OrionInstrumentedCheckpointFraming.frame(value, encoded, context) ?: error("WORKLOAD_FRAME_UNAVAILABLE")
             }
             when (command.operation) {
@@ -127,7 +142,8 @@ object OrionCortexInstrumentedWorkloadBridge {
                     if (actual == null || !actual.scope.claim(command.operation, command.run, command.fixture, checkNotNull(command.nonce), null))
                         return@runBlocking reply(OrionInstrumentedOutcome.REFUSED, OrionInstrumentedRefusal.FOREIGN_OWNERSHIP)
                     try {
-                        val observed = readInstrumentedWorkloadResources(app, owner, diagnosticClock, main)
+                        val observed = readInstrumentedWorkloadResources(app, owner, diagnosticClock, main, actual.exitSource,
+                            if (actual.exitSource == null) null else OrionQualificationWallBoundary(diagnosticClock))
                         check(sameRuntime(app, main) && graph.matches(main, owner)) { "CORE_IDENTITY_CHANGED" }
                         reply(OrionInstrumentedOutcome.OBSERVED, execution = OrionInstrumentedExecutionState.IDLE, observed = observed)
                     } finally { actual.scope.finish(OrionInstrumentedOperation.OBSERVE) }

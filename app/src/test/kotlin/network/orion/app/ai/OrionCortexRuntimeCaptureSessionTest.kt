@@ -99,6 +99,28 @@ class OrionCortexRuntimeCaptureSessionTest {
         assertSame(receipt.facts, sealed.receipt.facts) // No second snapshot/import or mutation of the historical receipt.
     }
 
+    @Test fun `historical death equality matches old endpoint pid and boot without reviving invalidated capture`() {
+        val f = fixture(listOf(100, 250, 300)); f.identity()
+        f.clock.at = MonotonicInstant(BootSessionId(3), 250)
+        f.lifecycle.processDied(); f.frame.ended = true; f.frame.valid = false; f.capture.runReturned(false)
+        val endpoint = OrionQualificationEndpointKey(f.client, f.connection, f.binder, 1)
+        fun incident(key: OrionQualificationEndpointKey, pid: Int = 11, boot: Int = 3): OrionQualificationExitIncident {
+            val record = checkNotNull(OrionQualificationExitSanitizer.record(pid, 10000, 10000,
+                "network.orion.qualification:ai", 1000250, 13, "MemoryLimiter:AnonSwap", null))
+            val pair = OrionQualificationTimePair(boot, 300, 1000300, 1000301)
+            return OrionQualificationExitIncident(record, OrionQualificationProcWitness(pid, 10000, 99), key, 10, boot,
+                210, 1000211, OrionQualificationObservationWindow(pair, pair), 1, true)
+        }
+        val reads = f.clock.reads.toList(); val native = checkNotNull(f.time.snapshot()).counterReadsAtLeast
+        assertTrue(f.capture.matchesHistoricalProcessDeath(f.owner, incident(endpoint)))
+        assertFalse(f.capture.matchesHistoricalProcessDeath(f.owner, incident(OrionQualificationEndpointKey(f.client, f.connection, Any(), 1))))
+        assertFalse(f.capture.matchesHistoricalProcessDeath(f.owner, incident(endpoint, pid = 12)))
+        assertFalse(f.capture.matchesHistoricalProcessDeath(f.owner, incident(endpoint, boot = 4)))
+        assertFalse(f.capture.matchesHistoricalProcessDeath(Any(), incident(endpoint)))
+        assertFalse(f.frame.valid); assertNull(f.capture.freezeForExport(f.owner, exportContext()))
+        assertEquals(reads, f.clock.reads); assertEquals(native, checkNotNull(f.time.snapshot()).counterReadsAtLeast)
+    }
+
     @Test fun `manual watchdog samples only dedicated bound clock after return without retimestamping source`() {
         val f = fixture(); f.identity(); f.lifecycle.accept(chunk())
         assertNull(f.capture.manualExportMoment(f.owner))
