@@ -94,8 +94,8 @@ internal data class OrionQualificationExitResult(val incident: OrionQualificatio
 /** Pure single-session correlation state. Caller supplies only already observed typed data; no I/O/Clock/policy. */
 internal class OrionQualificationExitCorrelation(private val packageName: String, private val uid: Int,
     private val mainPid: Int, private val configuration: OrionQualificationExitConfiguration?) {
-    private var offsetLower: Long? = null
-    private var offsetUpper: Long? = null
+    private var offsetLowerExclusive: Long? = null
+    private var offsetUpperExclusive: Long? = null
     private var boot: Int? = null
     private var lastElapsed = -1L
     private var invalidClock = false
@@ -112,16 +112,24 @@ internal class OrionQualificationExitCorrelation(private val packageName: String
     private fun time(pair: OrionQualificationTimePair): OrionQualificationExitGap? {
         val config = configuration ?: return OrionQualificationExitGap.CONFIGURATION_UNAVAILABLE
         if (invalidClock) return OrionQualificationExitGap.CLOCK_DISCONTINUOUS
-        if (pair.bootCount < 0 || pair.elapsedMillis < lastElapsed || pair.wallLowerMillis < 0 || pair.wallUpperMillis < pair.wallLowerMillis ||
+        if (pair.bootCount < 0 || pair.elapsedMillis < 0 || pair.elapsedMillis < lastElapsed || pair.wallLowerMillis < 0 || pair.wallUpperMillis < pair.wallLowerMillis ||
             pair.wallUpperMillis - pair.wallLowerMillis > config.maximumPairSpanMillis) {
             invalidClock = true; return OrionQualificationExitGap.CLOCK_DISCONTINUOUS
         }
         if (boot != null && boot != pair.bootCount) { invalidClock = true; return OrionQualificationExitGap.BOOT_CHANGED }
-        val lower = try { Math.subtractExact(pair.wallLowerMillis, pair.elapsedMillis) } catch (_: ArithmeticException) { invalidClock = true; return OrionQualificationExitGap.CLOCK_UNAVAILABLE }
-        val upper = try { Math.subtractExact(pair.wallUpperMillis, pair.elapsedMillis) } catch (_: ArithmeticException) { invalidClock = true; return OrionQualificationExitGap.CLOCK_UNAVAILABLE }
-        val joinedLower = maxOf(offsetLower ?: lower, lower); val joinedUpper = minOf(offsetUpper ?: upper, upper)
-        if (joinedLower > joinedUpper) { invalidClock = true; return OrionQualificationExitGap.CLOCK_DISCONTINUOUS }
-        offsetLower = joinedLower; offsetUpper = joinedUpper; lastElapsed = pair.elapsedMillis; boot = pair.bootCount
+        // Each nonnegative integer clock read represents [n,n+1) ms, independently quantized.
+        // Since the wall reads bracket the mono read, a constant offset must lie strictly inside
+        // (wallLower - elapsed - 1, wallUpper - elapsed + 1). These are mathematical bounds,
+        // not a calibrated tolerance, changed timestamp or permission to repair a discontinuity.
+        val lower = try { Math.subtractExact(Math.subtractExact(pair.wallLowerMillis, pair.elapsedMillis), 1L) }
+            catch (_: ArithmeticException) { invalidClock = true; return OrionQualificationExitGap.CLOCK_UNAVAILABLE }
+        val upper = try { Math.addExact(Math.subtractExact(pair.wallUpperMillis, pair.elapsedMillis), 1L) }
+            catch (_: ArithmeticException) { invalidClock = true; return OrionQualificationExitGap.CLOCK_UNAVAILABLE }
+        val joinedLower = maxOf(offsetLowerExclusive ?: lower, lower)
+        val joinedUpper = minOf(offsetUpperExclusive ?: upper, upper)
+        // The endpoints are open: touching at one excluded value is not a feasible constant offset.
+        if (joinedLower >= joinedUpper) { invalidClock = true; return OrionQualificationExitGap.CLOCK_DISCONTINUOUS }
+        offsetLowerExclusive = joinedLower; offsetUpperExclusive = joinedUpper; lastElapsed = pair.elapsedMillis; boot = pair.bootCount
         return null
     }
     fun unavailableClock(): OrionQualificationExitGap {
@@ -181,7 +189,10 @@ internal class OrionQualificationExitCorrelation(private val packageName: String
         if (entries == null) return OrionQualificationExitResult(null, OrionQualificationExitGap.HISTORY_UNAVAILABLE)
         val bounded = entries.take(MAX_EXITS + 1)
         if (bounded.size > MAX_EXITS) return OrionQualificationExitResult(null, OrionQualificationExitGap.HISTORY_TRUNCATED)
-        val lastLiveWallUpper = try { Math.addExact(live.aiSampledElapsedMillis, checkNotNull(offsetUpper)) }
+        // Real mono sample < sampledElapsed+1 and real offset < upperExclusive. Their sum is
+        // strictly below this integer bound; requiring exit's wall floor >= bound proves ordering.
+        // This derived causal bound is private metadata, never a rewritten observed timestamp.
+        val lastLiveWallUpper = try { Math.addExact(Math.addExact(live.aiSampledElapsedMillis, checkNotNull(offsetUpperExclusive)), 1L) }
             catch (_: ArithmeticException) { return OrionQualificationExitResult(null, OrionQualificationExitGap.CLOCK_UNAVAILABLE) }
         val matched = bounded.filter { baselineKey(it) !in baseline && it.pid == live.pid && it.realUid == uid && it.packageUid == uid && it.processName == "$packageName:ai" &&
             it.timestampWallMillis in lastLiveWallUpper..observed.completed.wallLowerMillis }

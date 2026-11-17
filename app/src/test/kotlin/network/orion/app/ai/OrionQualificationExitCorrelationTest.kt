@@ -48,6 +48,63 @@ class OrionQualificationExitCorrelationTest {
             observed, OrionQualificationExitHistory(emptyList(), false, null))
         assertEquals(OrionQualificationExitGap.LIVE_UNPAIRED, source.live(receipt))
     }
+    @Test fun bothFractionalPhasesCanAlternateWithoutInventingClockDiscontinuities() {
+        for ((first, second) in listOf(901L to 900L, 900L to 901L)) {
+            val source = source()
+            for (index in 0..2) {
+                val start = 100L + 200L * index; val end = start + 100
+                val observed = OrionQualificationObservationWindow(
+                    OrionQualificationTimePair(3, start, start + first, start + first),
+                    OrionQualificationTimePair(3, end, end + second, end + second))
+                val value = OrionQualificationLiveReceipt(endpoint(), reading(start + 50), OrionQualificationProcWitness(2, 10000, 99),
+                    observed, OrionQualificationExitHistory(emptyList(), false, null))
+                assertEquals(if (index == 0) OrionQualificationExitGap.LIVE_UNPAIRED else null, source.live(value))
+            }
+        }
+    }
+    @Test fun excludedOffsetEndpointsCannotTouchAndRealForwardOrBackwardJumpsStaySticky() {
+        for (changed in listOf(902L, 898L, 1900L, 100L)) {
+            val source = source()
+            val observed = OrionQualificationObservationWindow(OrionQualificationTimePair(3, 100, 1000, 1000),
+                OrionQualificationTimePair(3, 200, 200 + changed, 200 + changed))
+            val value = OrionQualificationLiveReceipt(endpoint(), reading(150), OrionQualificationProcWitness(2, 10000, 99),
+                observed, OrionQualificationExitHistory(emptyList(), false, null))
+            assertEquals(OrionQualificationExitGap.CLOCK_DISCONTINUOUS, source.live(value))
+            assertEquals(OrionQualificationExitGap.CLOCK_DISCONTINUOUS, source.live(live(300, 320, 310)))
+            assertNull(source.pairedPid())
+        }
+    }
+    @Test fun quantizationArithmeticHandlesExtremeOffsetsAndRefusesOverflowWithoutSaturation() {
+        fun receipt(observed: OrionQualificationObservationWindow, sampled: Long) = OrionQualificationLiveReceipt(endpoint(), reading(sampled),
+            OrionQualificationProcWitness(2, 10000, 99), observed, OrionQualificationExitHistory(emptyList(), false, null))
+        // Lower exclusive endpoint reaches Long.MIN_VALUE exactly; representable arithmetic is not falsely rejected.
+        val negative = source()
+        val atMaximum = OrionQualificationTimePair(3, Long.MAX_VALUE, 0, 0)
+        assertEquals(OrionQualificationExitGap.LIVE_UNPAIRED,
+            negative.live(receipt(OrionQualificationObservationWindow(atMaximum, atMaximum), Long.MAX_VALUE)))
+        // Upper exclusive endpoint itself is unrepresentable; no clamp/fallback or later repair.
+        val overflow = source(); val upper = OrionQualificationTimePair(3, 0, Long.MAX_VALUE, Long.MAX_VALUE)
+        assertEquals(OrionQualificationExitGap.CLOCK_UNAVAILABLE, overflow.live(receipt(OrionQualificationObservationWindow(upper, upper), 0)))
+        assertEquals(OrionQualificationExitGap.CLOCK_DISCONTINUOUS, overflow.live(live(100, 120, 110)))
+        // Offset intervals fit, but the separate conservative live-wall causal bound overflows.
+        val causal = source()
+        for (delta in listOf(20L, 10L)) {
+            val pair = OrionQualificationTimePair(3, Long.MAX_VALUE - delta, Long.MAX_VALUE - delta + 10, Long.MAX_VALUE - delta + 10)
+            val result = causal.live(receipt(OrionQualificationObservationWindow(pair, pair), pair.elapsedMillis))
+            assertEquals(if (delta == 20L) OrionQualificationExitGap.LIVE_UNPAIRED else null, result)
+        }
+        val query = OrionQualificationTimePair(3, Long.MAX_VALUE - 10, Long.MAX_VALUE, Long.MAX_VALUE)
+        assertEquals(OrionQualificationExitGap.CLOCK_UNAVAILABLE,
+            causal.history(OrionQualificationObservationWindow(query, query), emptyList(), absent).gap)
+    }
+    @Test fun exitWallFloorMustClearTheConservativeQuantizedLiveBoundWithoutRetimestamping() {
+        val rejected = paired().history(window(300, 320), listOf(exit(wall = 1000212)), absent)
+        assertEquals(OrionQualificationExitGap.NO_MATCH, rejected.gap)
+        val accepted = checkNotNull(paired().history(window(300, 320), listOf(exit(wall = 1000213)), absent).incident)
+        assertEquals(1000213L, accepted.record.timestampWallMillis)
+        assertEquals(210L, accepted.lastLiveSampleElapsedMillis)
+        assertEquals(1000213L, accepted.lastLiveWallUpperMillis)
+    }
     @Test fun firstKillBeforePairingNeverAttributesEvenAnExactLimiterReason() {
         val source = source(); source.live(live(100, 120, 110))
         val result = source.history(window(300, 320), listOf(exit(reason = 117, description = null, dedicated = 117)), absent)
