@@ -1,0 +1,316 @@
+{
+  "androidFinal": {
+    "abi": "x86_64",
+    "actualPairedDeathOrOriginalPolicyDecisionObserved": false,
+    "aggregateExitCode": 0,
+    "api": 35,
+    "environment": "ANDROID_EMULATOR",
+    "failed": 0,
+    "localInstalledBothPairsMatch": true,
+    "modelLoaded": false,
+    "ownedEmulatorStoppedExitCode": 0,
+    "ownerCallInvoked": false,
+    "pageSizeBytes": 4096,
+    "passed": 118,
+    "policySidecar": {
+      "deathSettlement": null,
+      "exitObservationGap": "CONFIGURATION_UNAVAILABLE",
+      "facts": [],
+      "state": "AVAILABLE"
+    },
+    "recordedOutcome": "REFUSED/NO_QUALIFIED_PROFILE",
+    "result": "PASS",
+    "sameMainPidStartTicksBootAndGraphNonceHashAfterEachFinish": true,
+    "seconds": 41.617,
+    "skipped": 0,
+    "starts": 118,
+    "twoActualMinifiedNoRestartOpenCalls": 2
+  },
+  "androidFirstFailedInvocation": {
+    "actualR8ProbeExecuted": false,
+    "adbExitCode": 0,
+    "aggregateDriverExitCode": 1,
+    "classification": "FIXTURE_FAKE_QUALIFICATION_NAMESPACE_REJECTED_BY_REAL_OWNER_MAIN_GUARD",
+    "environment": "ANDROID_EMULATOR",
+    "failed": 1,
+    "failedInvocationRetainedNotReclassified": true,
+    "failure": [
+      {
+        "class": "network.orion.app.ai.OrionCortexOwnerDefaultTest",
+        "code": -2,
+        "test": "exitSourceRequiresExplicitConfigurationAndOptInWithoutFunctionalClockOrNativeBinding"
+      }
+    ],
+    "localInstalledNormalApkHashesMatch": true,
+    "ownedEmulatorStoppedExitCode": 0,
+    "passed": 117,
+    "productionGuardFailureInferred": false,
+    "qualificationApkInstalledInThisRound": false,
+    "skipped": 0,
+    "sourceCommit": "3208ace77fbbf3b58b0b91bc89e6df8a9091c6e6",
+    "starts": 118
+  },
+  "archive": {
+    "bytes": 422429,
+    "manifest": "manifest-sha256.json",
+    "manifestSha256": "febe1f306aeeb3a8f60d4dd27d60f42f399b530b234bf5321fab8340a0e38ce6",
+    "path": "artifacts/f5-exit-policy-manual-evidence-20261116.tar.gz",
+    "payloadFiles": 137,
+    "sha256": "d82667b14df1f78406a7f079ca766aba09b8e44ecefe335856d71039f2d0a7e6",
+    "tarRegularMembers": 138
+  },
+  "builds3208": {
+    "androidTestBuildConfigsSeparatelyRetained": 2,
+    "apksMetadataOnly": 5,
+    "completedNativeCacheCopiedWithIdenticalAiLlamaTreeAndDockerWorkspaceLayout": true,
+    "configurationCacheReused": true,
+    "freshCppRecompilationClaim": false,
+    "normal": {
+      "duration": "8m09s",
+      "executed": 963,
+      "fromCache": 656,
+      "result": "PASS",
+      "tasks": 2635,
+      "upToDate": 1016
+    },
+    "qualificationR8": {
+      "duration": "11m42s",
+      "executed": 73,
+      "fromCache": 45,
+      "result": "PASS",
+      "tasks": 2762,
+      "upToDate": 2644
+    },
+    "sourceCommit": "3208ace77fbbf3b58b0b91bc89e6df8a9091c6e6",
+    "targetBuildConfigs": 3
+  },
+  "claims": {
+    "autonomyProven": false,
+    "f6Authorized": false,
+    "fullF4GateClosed": false,
+    "fullF5GateClosed": false,
+    "fullSoakGateClosed": false,
+    "physicalEvidenceVerified": false,
+    "productionInferenceEnabled": false,
+    "profileQualified": false,
+    "real24HourDurationProven": false,
+    "sourceAuthenticated": false
+  },
+  "counting": {
+    "additive": false,
+    "reason": "Quantization18 belongs to full383. Manual31/32, ACK1, soak54 and full619 overlap. Android failed118 and successful118 are separate rounds and are never added; two OPEN controls are not another118-case run."
+  },
+  "historicalDraftPrecedence": "verification-summary-draft.json is the initial pre-runtime archival snapshot; final verification/index supersede only then-pending fields, without rewriting historical evidence.",
+  "host": {
+    "ackUncertaintyControl": {
+      "result": "PASS",
+      "tests": 1
+    },
+    "environment": "CONTAINER",
+    "focused": {
+      "result": "PASS",
+      "seconds": 5.097,
+      "tests": 32
+    },
+    "full": {
+      "result": "PASS",
+      "seconds": 43.371,
+      "sourceBinding": "historical-manifests/orion-f5-manual-refusal-final-freeze-20261116.json; scripts verified identical to final3d34",
+      "tests": 619
+    },
+    "fullHostRerunOn3d34": false,
+    "realLinuxFsyncAckPublicationControls": true,
+    "syntheticCoreDeviceClockAndExitFixtures": true
+  },
+  "integration160": {
+    "ciCompletedAtUtc": "2026-11-17T02:06:40Z",
+    "ciConclusion": "SUCCESS",
+    "exactHeadCi": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/43995351105",
+    "head": "ad259082e97b55a44c42a347a3d84cca18b37708",
+    "merge": "ee0b5d8b429dcbac2f57f13273f18b416e05d9eb",
+    "mergedAtUtc": "2026-11-17T02:07:49Z",
+    "pr": "https://github.com/otavio-esteves/O.R.I.O.N/pull/166",
+    "provenance": "Root confirmed exact-head remote CI and merge; separate from source163 local validation.",
+    "status": "MERGED"
+  },
+  "integration163Candidate": {
+    "asOf": "local evidence snapshot before candidate documentation/rebase/PR CI",
+    "merged": false,
+    "remoteRequiredCi": "PENDING",
+    "sourceCommit": "2d0b6a275ca8054ce51ca5d52f659e2bcda09e1d",
+    "testedSourceCommit": "3d34e3505e0bf12e26b15020e452c6981ebb5fb9"
+  },
+  "jvm": {
+    "aiApiTests": 76,
+    "appTests": 307,
+    "boundariesAndLintPassed": true,
+    "codePathsEquivalentToFinal": true,
+    "duration": "6m10s",
+    "environment": "CONTAINER",
+    "errors": 0,
+    "failures": 0,
+    "newWholeJvmRunOn3d34": false,
+    "result": "PASS",
+    "scopeCommit": "5cb524638169252549fd7ea46e15b750ff31e1f9",
+    "skipped": 0,
+    "suites": 46,
+    "tests": 383
+  },
+  "limitations": [
+    "Physical API37/MemoryLimiter/native model performance/profile/24h/autonomy/soak/formalF5/F6 remain unqualified.",
+    "Source163 and finite manual procedure are implemented and mechanically validated; actual OPEN has no configured exit bounds, no paired incident and no policy decision rows.",
+    "The configured post-death/model-admitted physical sequence and owned limiter stimulus are not executed here.",
+    "Source hashes are not independent source authentication.",
+    "No new whole JVM/HOST run is claimed for the Android-test-only3d34 correction."
+  ],
+  "manualBeforeHaltRegression": {
+    "greenFocusedTests": 32,
+    "red": {
+      "failures": 1,
+      "file": "logs/orion-f5-manual-core-refusal-before-halt-red-20261116.log",
+      "seconds": 0.146,
+      "selectedTests": 1
+    },
+    "scope": "Known Core refusal ACK before worker-HALT publication stays known terminal; subsequent observation blocked. ACK/transport uncertainty still UNKNOWN."
+  },
+  "package165Integrated": false,
+  "privacy": {
+    "androidBootSerialValuesRedacted": true,
+    "apkModelKeysNativeBinaryDiskImageRawSourceCapsuleRawNonceActualSerialUserHomeIncluded": false,
+    "r8MappingOmitted": true,
+    "rawOpenTranscriptsNeverRetained": true,
+    "sourceCodeBodiesOmitted": true,
+    "textDerivativesCarryOriginalHashesAndExplicitScope": true
+  },
+  "quantization": {
+    "causalUpperBound": "sampledElapsed+offsetUpperExclusive+1, private conservative bound only",
+    "green": {
+      "errors": 0,
+      "failures": 0,
+      "selectedTests": 18
+    },
+    "interval": "OPEN (wallLower-elapsed-1, wallUpper-elapsed+1), strictly nonempty intersection",
+    "noRetimestampOrNewOperationalTolerance": true,
+    "originalCodeBodyOmittedHashAndCommitRetained": true,
+    "red": {
+      "actual": "CLOCK_DISCONTINUOUS",
+      "algorithmSha256": "5456a7dccdccc73836987871be1f596446d54f61bda3d29c82007ad3c937b8c4",
+      "errors": 0,
+      "expected": "LIVE_UNPAIRED",
+      "failures": 1,
+      "scopeCommit": "2dbf33d53a84b44bdf75bfe4072a8875d161e861",
+      "selectedTests": 1
+    }
+  },
+  "rebasedCandidateEquivalence": {
+    "candidateBase": "ee0b5d8b429dcbac2f57f13273f18b416e05d9eb",
+    "candidateCommit": "2d0b6a275ca8054ce51ca5d52f659e2bcda09e1d",
+    "identicalWholeTree": "e93044f4348e38159ede5db4a40bd31a7bdbe1eb",
+    "newExecution": false,
+    "proof": "source-binding/rebased-final-source-equivalence.json",
+    "testedSourceCommit": "3d34e3505e0bf12e26b15020e452c6981ebb5fb9"
+  },
+  "retryBuilds3d34": {
+    "artifactSha256UnchangedFrom3208": {
+      "captureApp": true,
+      "captureTest": true,
+      "normalApp": true,
+      "normalRelease": true,
+      "normalTest": false
+    },
+    "configurationCacheReused": true,
+    "mainJvmAiCoreScriptsUnchanged": true,
+    "normal": {
+      "duration": "2m52s",
+      "executed": 13,
+      "result": "PASS",
+      "tasks": 2635,
+      "upToDate": 2622
+    },
+    "productionChanged": false,
+    "qualificationR8": {
+      "duration": "1m20s",
+      "executed": 12,
+      "result": "PASS",
+      "tasks": 2762,
+      "upToDate": 2750
+    },
+    "sourceCommit": "3d34e3505e0bf12e26b15020e452c6981ebb5fb9",
+    "wholeJvmHostRerunClaim": false
+  },
+  "schema": "orion-f5-exit-policy-manual-evidence-v1",
+  "snapshotStatus": "LOCAL_SOFTWARE_SCOPES_VALIDATED_REMOTE_CANDIDATE_CI_PENDING",
+  "softwareF5Complete": false,
+  "sourceCommit": "3d34e3505e0bf12e26b15020e452c6981ebb5fb9",
+  "sourceScope": {
+    "allTenApprovalFlagsFalse": true,
+    "allTrackedFinalSourceFilesVerifiedBeforeDocs": 1065,
+    "finalAndroid": {
+      "adbExitCode": 0,
+      "aggregateDriverExitCode": 0,
+      "failed": 0,
+      "passed": 118,
+      "seconds": 41.617,
+      "skipped": 0,
+      "starts": 118
+    },
+    "historicalFailedAndroid": {
+      "actualR8ProbeExecuted": false,
+      "adbExitCode": 0,
+      "aggregateDriverExitCode": 1,
+      "classification": "FIXTURE_FAKE_QUALIFICATION_NAMESPACE_REJECTED_BY_REAL_OWNER_MAIN_GUARD",
+      "environment": "ANDROID_EMULATOR",
+      "failed": 1,
+      "failedInvocationRetainedNotReclassified": true,
+      "failure": [
+        {
+          "class": "network.orion.app.ai.OrionCortexOwnerDefaultTest",
+          "code": -2,
+          "test": "exitSourceRequiresExplicitConfigurationAndOptInWithoutFunctionalClockOrNativeBinding"
+        }
+      ],
+      "localInstalledNormalApkHashesMatch": true,
+      "ownedEmulatorStoppedExitCode": 0,
+      "passed": 117,
+      "productionGuardFailureInferred": false,
+      "qualificationApkInstalledInThisRound": false,
+      "skipped": 0,
+      "sourceCommit": "3208ace77fbbf3b58b0b91bc89e6df8a9091c6e6",
+      "starts": 118
+    },
+    "jvmScopeCommit": "5cb524638169252549fd7ea46e15b750ff31e1f9",
+    "jvmTotal": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "suites": 46,
+      "tests": 383
+    },
+    "localInstalledBothApkPairsMatch": true,
+    "mainJvmAiCoreScriptsIdenticalFrom5cbThrough3208To3d34": true,
+    "manualFrozenCodeHashesMatchFinal": {
+      "scripts/android/f5_instrumented_workload_protocol.py": true,
+      "scripts/android/f5_manual_core_procedure.py": true,
+      "scripts/android/f5_manual_core_procedure_adapters.py": true,
+      "scripts/android/f5_manual_core_procedure_journal.py": true,
+      "scripts/android/f5_manual_core_procedure_protocol.py": true,
+      "scripts/android/f5_runtime_qualification_sidecar.py": true,
+      "scripts/android/test_f5_instrumented_workload_protocol_harness.py": true,
+      "scripts/android/test_f5_manual_core_procedure_adapters_harness.py": true,
+      "scripts/android/test_f5_manual_core_procedure_harness.py": true,
+      "scripts/android/test_f5_manual_core_procedure_protocol_harness.py": true
+    },
+    "noModelLoaded": true,
+    "ownedEmulatorStoppedExitCode": 0,
+    "rawNonceAndRawSourceCapsuleIncluded": false,
+    "sameMainPidKernelStartTicksBootAndGraphNonceShaAfterEachFinish": true,
+    "sourceCommit": "3d34e3505e0bf12e26b15020e452c6981ebb5fb9",
+    "twoActualNoRestartOpenCalls": 2
+  },
+  "sourceTree": "e93044f4348e38159ede5db4a40bd31a7bdbe1eb",
+  "verification": {
+    "allPayloadHashesAndSafeRegularTarMembersReadBack": true,
+    "noGradleAdbOrNewFunctionalTestsForDocs": true,
+    "sourceWorktreeUnmodified": true
+  }
+}
