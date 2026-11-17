@@ -8,14 +8,15 @@ internal class OrionInstrumentedConfigurationBinding(val modelSha256: String, va
     override fun toString() = "OrionInstrumentedConfigurationBinding(REDACTED, qualified=false)"
 }
 
-/** Descriptor v1 preserves ordered fallback plans and original scalar request configuration.
+/** Descriptor v2 preserves ordered fallback plans and original scalar request configuration.
  * Source/APK binding, not a content hash, identifies the trusted workload text. No prompt is read here.
  */
 internal fun deriveInstrumentedConfigurationBinding(plans: List<OrionInferenceResourcePlan>, timing: OrionCortexResourceTiming?,
-    template: OrionCortexAttemptTemplate?, observation: OrionRuntimeCaptureObservationConfiguration?): OrionInstrumentedConfigurationBinding? = try {
+    template: OrionCortexAttemptTemplate?, observation: OrionRuntimeCaptureObservationConfiguration?,
+    exitConfiguration: OrionQualificationExitConfiguration? = null): OrionInstrumentedConfigurationBinding? = try {
     if (plans.isEmpty() || plans.size > 64 || timing == null || template == null || observation == null ||
         !validModelHash(template.modelId) || plans.none { it.model.modelId == template.modelId }) null else {
-        val descriptor = StringBuilder("ORION_INSTRUMENTED_RESOURCE_DESCRIPTOR_V1\n")
+        val descriptor = StringBuilder("ORION_INSTRUMENTED_RESOURCE_DESCRIPTOR_V2\n")
         fun text(value: String) {
             require(value.length in 1..128 && value.all { it.code in 33..126 })
             descriptor.append(value.length).append(':').append(value).append('\n')
@@ -32,6 +33,11 @@ internal fun deriveInstrumentedConfigurationBinding(plans: List<OrionInferenceRe
         text(template.modelId); number(template.contextTokens.toLong()); number(template.threads.toLong()); number(template.maxTokens.toLong())
         number(template.requestDurationMillis); number(java.lang.Double.doubleToRawLongBits(template.temperature)); text(template.priority.name)
         number(observation.maximumSampleAgeMillis); number(observation.postReturnWindowMillis)
+        // Diagnostic configuration is part of the technical binding, including each explicitly absent limit.
+        fun exitLimit(name: String, value: Long?) { text(name); if (value == null) text("UNAVAILABLE") else number(value) }
+        exitLimit("exit.maximumPairSpanMillis", exitConfiguration?.maximumPairSpanMillis)
+        exitLimit("exit.maximumLiveGapMillis", exitConfiguration?.maximumLiveGapMillis)
+        exitLimit("exit.maximumExitDelayMillis", exitConfiguration?.maximumExitDelayMillis)
         val digest = MessageDigest.getInstance("SHA-256").digest(descriptor.toString().toByteArray(Charsets.US_ASCII))
         val hash = digest.joinToString("") { byte -> (byte.toInt() and 255).toString(16).padStart(2, '0') }
         OrionInstrumentedConfigurationBinding(template.modelId, hash)

@@ -1,6 +1,7 @@
 package network.orion.app.ai
 
 import network.orion.ai.api.OrionInferenceChunk
+import network.orion.core.time.MonotonicInstant
 
 /** Finite MAIN composition on one existing Owner; this class never grants policy/resource authority. */
 internal class OrionCortexInstrumentedWorkloadProgram(val owner: OrionCortexRuntimeOwner,
@@ -9,6 +10,10 @@ internal class OrionCortexInstrumentedWorkloadProgram(val owner: OrionCortexRunt
     private var candidate: OrionRuntimeCaptureCandidate? = null
     private var refused: OrionRuntimeProgramWitness? = null
     private var finished = false
+    private var originalAttempt: String? = null
+    val exitSource: OrionQualificationExitSource? = owner.newInstrumentedExitSource()
+    var deathSettlement: OrionQualificationDeathSettlement? = null
+        private set
     private var safeToClean = true
     private var manualOperation = OrionInstrumentedOperation.WORK
     var settlement = OrionInstrumentedSettlement.UNPROVEN
@@ -32,6 +37,7 @@ internal class OrionCortexInstrumentedWorkloadProgram(val owner: OrionCortexRunt
         lastClaimSucceeded = false
         if (!scope.claim(operation, run, fixture, nonce, attempt)) return null
         lastClaimSucceeded = true; manualOperation = operation; settlement = OrionInstrumentedSettlement.UNPROVEN
+        originalAttempt = attempt; deathSettlement = null
         finished = false; safeToClean = false; originalResult = null; refused = null; candidate = null
         val actual = OrionCortexRuntimeCaptureProgram(owner)
         program = actual
@@ -75,8 +81,26 @@ internal class OrionCortexInstrumentedWorkloadProgram(val owner: OrionCortexRunt
         val settled = safeToClean && owner.instrumentedScalarIdle() && !OrionRuntimeMemorySamplingWorker.outstanding()
         settlement = if (!settled) OrionInstrumentedSettlement.UNPROVEN else if (noOwnerCall)
             OrionInstrumentedSettlement.NO_OWNER_CALL else OrionInstrumentedSettlement.ORIGINAL_UNLOAD_CONFIRMED
-        scope.finish(manualOperation, uncertain = !settled)
+        val originalDeath = originalProcessDeathAwaitingEvidence(originalResult, current?.ownerCallInvoked, finished)
+        scope.finish(manualOperation, uncertain = !settled && !originalDeath, deathEvidencePending = !settled && originalDeath)
         return scope.state()
+    }
+
+    /** Read-only observation may resolve ONLY the explicit original-process-death phase, never transport UNKNOWN. */
+    fun observeOriginalProcessDeath(result: OrionQualificationExitResult?, at: MonotonicInstant) {
+        if (scope.state() != OrionInstrumentedExecutionState.DEAD_AWAITING_EVIDENCE ||
+            !originalProcessDeathAwaitingEvidence(originalResult, witness()?.ownerCallInvoked, finished)) return
+        val incident = result?.incident ?: return
+        val actual = program ?: return; val selected = candidate ?: return
+        if (!actual.matchesHistoricalProcessDeath(selected, incident) || !owner.instrumentedScalarIdle() ||
+            OrionRuntimeMemorySamplingWorker.outstanding()) return
+        val attempt = originalAttempt ?: return
+        val receipt = OrionQualificationDeathSettlement.observed(attempt, incident, at) ?: return
+        if (!owner.instrumentedScalarIdle() || OrionRuntimeMemorySamplingWorker.outstanding() ||
+            !scope.confirmOriginalProcessDeath()) return
+        deathSettlement = receipt
+        settlement = OrionInstrumentedSettlement.ORIGINAL_PROCESS_DEATH_CONFIRMED
+        safeToClean = true // Technical buffers only. No Owner/client/history/guard/model state is cleared.
     }
 
     fun cleanup(run: String, fixture: String, nonce: String): Boolean {
@@ -85,7 +109,7 @@ internal class OrionCortexInstrumentedWorkloadProgram(val owner: OrionCortexRunt
             scope.finish(OrionInstrumentedOperation.CLEANUP, uncertain = true); return false
         }
         // Only this wrapper's bounded diagnostic references. Shared Owner/Core/history/model remain owned by Core.
-        program = null; candidate = null; refused = null; originalResult = null
+        program = null; candidate = null; refused = null; originalResult = null; originalAttempt = null; deathSettlement = null
         scope.finish(OrionInstrumentedOperation.CLEANUP)
         return true
     }

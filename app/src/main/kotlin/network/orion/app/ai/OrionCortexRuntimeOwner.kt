@@ -74,6 +74,7 @@ internal class OrionCortexRuntimeOwner(
     private val cycleObservations: OrionCortexCycleObserver? = null,
     private val singleAttemptTemplate: OrionCortexAttemptTemplate? = null,
     private val runtimeCaptureObservation: OrionRuntimeCaptureObservationConfiguration? = null,
+    private val qualificationExitConfiguration: OrionQualificationExitConfiguration? = null,
 ) : AutoCloseable {
     private val app = context.applicationContext
     private val plans = qualifiedPlans.toList()
@@ -131,14 +132,26 @@ internal class OrionCortexRuntimeOwner(
 
     internal fun instrumentedConfigurationBinding(template: OrionCortexAttemptTemplate): OrionInstrumentedConfigurationBinding? =
         if (closed || template !== singleAttemptTemplate) null else
-            deriveInstrumentedConfigurationBinding(plans, timing, template, runtimeCaptureObservation)
+            deriveInstrumentedConfigurationBinding(plans, timing, template, runtimeCaptureObservation, qualificationExitConfiguration)
 
     /** Existing endpoint only. No resources/guard evaluation or changes to functional ownership. */
-    internal fun instrumentedMemoryObservation(): OrionRuntimeAiMemoryReading? {
+    internal fun instrumentedMemoryObservation(exitSlot: OrionQualificationAiSlot? = null): OrionRuntimeAiMemoryReading? {
         val selected = synchronized(monitor) { if (closed) null else client } ?: return null
-        val value = selected.instrumentedMemoryObservation()
+        val value = selected.instrumentedMemoryObservation(exitSlot)
         return synchronized(monitor) { if (!closed && client === selected) value else null }
     }
+
+    internal fun drainInstrumentedResourceFacts(): network.orion.app.resources.OrionCortexResourceFactBatch? =
+        if (closed) null else resourceFacts?.drain()
+
+    internal fun newInstrumentedExitSource(): OrionQualificationExitSource? = try {
+        val config = qualificationExitConfiguration
+        if (closed || resourceFacts == null || config == null || app.packageName != "network.orion.qualification") null
+        else OrionQualificationExitSource(app, config)
+    } catch (_: Throwable) { null }
+
+    internal fun matchesHistoricalProcessDeath(capture: OrionCortexRuntimeCaptureSession, incident: OrionQualificationExitIncident): Boolean =
+        capture.matchesHistoricalProcessDeath(this, incident)
 
     internal fun instrumentedScalarIdle(): Boolean {
         val selected = synchronized(monitor) { if (closed) return false else client }

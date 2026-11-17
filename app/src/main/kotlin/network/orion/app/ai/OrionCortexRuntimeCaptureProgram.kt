@@ -141,6 +141,12 @@ internal class OrionCortexRuntimeCaptureProgram(private val owner: OrionCortexRu
         if (failed != null) return failed
         return if (owner.freezeRuntimeCapture(capture, context) !== snapshot) OrionRuntimeExportFailure.IDENTITY_CHANGED else null
     }
+    fun matchesHistoricalProcessDeath(value: OrionRuntimeCaptureCandidate, incident: OrionQualificationExitIncident): Boolean {
+        val selected = owned(value) ?: return false
+        if (!selected.issued || !selected.finished) return false
+        val capture = selected.capture ?: return false
+        return owner.matchesHistoricalProcessDeath(capture, incident)
+    }
     private fun refusal(value: OrionCortexAttemptRefusal): OrionRuntimeExportFailure = when (value) {
         OrionCortexAttemptRefusal.NO_QUALIFIED_PROFILE -> OrionRuntimeExportFailure.NO_QUALIFIED_PROFILE
         OrionCortexAttemptRefusal.RESOURCE_CONFIGURATION_UNAVAILABLE, OrionCortexAttemptRefusal.TEMPLATE_UNAVAILABLE,

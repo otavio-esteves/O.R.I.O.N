@@ -239,6 +239,25 @@ class OrionCortexRuntimeCaptureClientTest {
     }
 
 
+    @Test fun exitIdentityCarrierReusesOneOriginalDiagnosticReceiptWithoutFunctionalClockOrExtraRpc() = runBlocking {
+        Fixture().use { f ->
+            val request = f.request(); val capture = f.capture(request)
+            f.run(capture, request)
+            val beforeReads = f.clock.reads.get()
+            val beforeCalls = f.context.endpoint.trace.size
+            val slot = OrionQualificationAiSlot()
+            val first = checkNotNull(f.client.instrumentedMemoryObservation(slot))
+            assertSame(first, checkNotNull(slot.value).reading)
+            assertEquals(listOf("health", "status"), f.context.endpoint.trace.drop(beforeCalls))
+            assertEquals(beforeReads, f.clock.reads.get())
+            val next = OrionQualificationAiSlot()
+            val second = checkNotNull(f.client.instrumentedMemoryObservation(next))
+            assertNotSame(first, second)
+            assertTrue(checkNotNull(slot.value).endpoint.matches(checkNotNull(next.value).endpoint))
+            assertEquals(beforeReads, f.clock.reads.get())
+        }
+    }
+
     @Test fun captureCopiesExactOriginalWireFloatWithoutChangingFunctionalReadsRpcOrCallbackList() = runBlocking {
         suspend fun run(enabled: Boolean): Pair<List<String>, Int> = Fixture().use { f ->
             val request = f.request(temperature = 0.1)

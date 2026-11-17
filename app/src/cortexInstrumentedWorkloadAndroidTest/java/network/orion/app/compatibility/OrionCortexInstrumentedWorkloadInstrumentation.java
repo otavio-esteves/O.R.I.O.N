@@ -62,8 +62,8 @@ public final class OrionCortexInstrumentedWorkloadInstrumentation extends Instru
         check(Integer.valueOf(2).equals(value.get("schemaVersion")) && "ORION_F5_INSTRUMENTED_CHECKPOINT".equals(value.get("kind")));
         for (String flag : FLAGS) check(Boolean.FALSE.equals(value.get(flag)));
         check(keys("OPEN", "BOOTSTRAP", "WORK", "OBSERVE", "CLEANUP").contains(value.getString("operation")));
-        check(keys("IDLE", "ACTIVE", "UNCERTAIN").contains(value.getString("executionState")));
-        check(keys("ORIGINAL_UNLOAD_CONFIRMED", "NO_OWNER_CALL", "UNPROVEN").contains(value.getString("settlement")));
+        check(keys("IDLE", "ACTIVE", "UNCERTAIN", "DEAD_AWAITING_EVIDENCE").contains(value.getString("executionState")));
+        check(keys("ORIGINAL_UNLOAD_CONFIRMED", "ORIGINAL_PROCESS_DEATH_CONFIRMED", "NO_OWNER_CALL", "UNPROVEN").contains(value.getString("settlement")));
         Object owner = value.get("ownerCallInvoked"); check(owner == JSONObject.NULL || owner instanceof Boolean);
         JSONObject stamp = value.getJSONObject("stamp");
         check(jsonKeys(stamp).equals(keys("bootCount", "deviceElapsedMillis", "deviceElapsedUpperMillis", "mainPid")));

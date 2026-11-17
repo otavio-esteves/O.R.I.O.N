@@ -37,6 +37,8 @@ class FoundationRuntimeTest {
         val owner = checkNotNull(runtime.cortexRuntime())
         assertSame(owner, runtime.cortexRuntime())
         assertNull(owner.beginCycleObservation())
+        assertNull(owner.drainInstrumentedResourceFacts())
+        assertNull(owner.newInstrumentedExitSource())
         // This test owns neither the shared runtime nor its owner, so it must not close them.
     }
 

@@ -25,6 +25,36 @@ import org.junit.runner.RunWith
 /** No usable model or resource calibration: proves gates precede storage and binding. */
 @RunWith(AndroidJUnit4::class)
 class OrionCortexOwnerDefaultTest {
+    @Test fun exitSourceRequiresExplicitConfigurationAndOptInWithoutFunctionalClockOrNativeBinding() = fixture { context, db, importer, bindings ->
+        val reads = AtomicInteger()
+        val clock = object : network.orion.core.time.OrionClock {
+            override fun monotonicNow() = network.orion.core.time.MonotonicInstant(network.orion.core.time.BootSessionId(1), 1000)
+                .also { reads.incrementAndGet() }
+            override fun wallNow() = java.time.Instant.EPOCH.also { reads.incrementAndGet() }
+        }
+        // Construction-only namespace fixture. No query runs and this does not prove an actual qualification process.
+        val qualification = object : ContextWrapper(context) {
+            override fun getApplicationContext(): Context = this
+            override fun getPackageName() = "network.orion.qualification"
+        }
+        val ordinary = object : ContextWrapper(context) {
+            override fun getApplicationContext(): Context = this
+            override fun getPackageName() = "network.orion"
+        }
+        val bounds = OrionQualificationExitConfiguration(10, 1000, 10000)
+        val facts = OrionCortexResourceFactBuffer(64)
+        val noConfiguration = OrionCortexRuntimeOwner(qualification, importer, db, clock, resourceFacts = facts)
+        val noOptIn = OrionCortexRuntimeOwner(qualification, importer, db, clock, qualificationExitConfiguration = bounds)
+        val configured = OrionCortexRuntimeOwner(qualification, importer, db, clock, resourceFacts = facts, qualificationExitConfiguration = bounds)
+        val normal = OrionCortexRuntimeOwner(ordinary, importer, db, clock, resourceFacts = facts, qualificationExitConfiguration = bounds)
+        try {
+            assertNull(noConfiguration.newInstrumentedExitSource()); assertNull(noOptIn.newInstrumentedExitSource())
+            assertNotNull(configured.newInstrumentedExitSource()); assertNull(normal.newInstrumentedExitSource())
+            configured.close(); assertNull(configured.newInstrumentedExitSource())
+            assertEquals(0, reads.get()); assertEquals(0, bindings.get()); assertTrue(facts.drain().facts.isEmpty())
+        } finally { noConfiguration.close(); noOptIn.close(); configured.close(); normal.close() }
+    }
+
     @Test fun runtimeCaptureDoesNotActivateOrReadAnyClockPastTheEmptyProfileGate() = fixture { context, db, importer, bindings ->
         val reads = AtomicInteger()
         val clock = object : network.orion.core.time.OrionClock {

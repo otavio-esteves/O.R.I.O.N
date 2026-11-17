@@ -387,6 +387,18 @@ internal class OrionCortexRuntimeCaptureSession private constructor(private val 
         }
     }
 
+    /** Historical equality only, after the original call returned. Death invalidates new capture, not this immutable association.
+     * This is never a current endpoint/lease or a way to repair a failed capture/export.
+     */
+    fun matchesHistoricalProcessDeath(actualOwner: Any, incident: OrionQualificationExitIncident): Boolean = access {
+        val original = frame ?: return@access false
+        val connection = original.connection ?: return@access false
+        if (actualOwner !== owner || !runFinished || !ownerEntered || !turnObserved || !activated || !original.ended ||
+            original.client !== client || original.pid != incident.record.pid || mainPid != incident.mainPid ||
+            preparation?.bootSessionId?.bootCount != incident.windowBootCount) return@access false
+        incident.matchesEndpoint(OrionQualificationEndpointKey(original.client, connection.connection, connection.binder, connection.epoch))
+    } ?: false
+
     /** Separate manual watchdog sample only. Uses the already-bound dedicated clock, never original Clock.
      * Does not change session/event timestamps, rebind, snapshot, query, wait or repair identity.
      */
