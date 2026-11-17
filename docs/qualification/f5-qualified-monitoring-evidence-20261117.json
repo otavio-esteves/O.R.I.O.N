@@ -1,0 +1,444 @@
+{
+  "archive": {
+    "allMembersVerified": true,
+    "bytes": 17710,
+    "memberManifestSha256": "69a0fd8f39e1fda1af4c70b85df47ccf57d8f93c5f7b0f8ffcd7f82ecfcf312e",
+    "members": 29,
+    "path": "artifacts/f5-qualified-monitoring-evidence-20261117.tar.gz",
+    "safetyScanVerified": true,
+    "sha256": "c65187dc0735d8f4158dd27862eb51bc8d6d9ce5af1760947d437a7bef318da0",
+    "virtualSerialAndHomePathsAbsent": true
+  },
+  "audit": {
+    "mode": "TARGETED_SOURCE_REVIEW_NOT_EXHAUSTIVE_EXECUTION",
+    "newDemonstrableP1": 0,
+    "newDemonstrableP2": 0,
+    "originalJsonSha256": "cf7802465fb9798a6f1ce25f1da20979a34ef929b52224c6f5ccf63496147726",
+    "originalMdSha256": "f92b5c98f25190cdc190774926c2bae5b94b0b37924ae9e8a45fc85bb97e23d1",
+    "originalP2": 1,
+    "resolvedOriginalP2": 1
+  },
+  "ci166": {
+    "collectorBranchPrSearch": {
+      "branch": "fix/f5-qualified-monitoring-20261116",
+      "results": []
+    },
+    "generalSoftwareComplete": false,
+    "pullRequest": {
+      "headRefOid": "ad259082e97b55a44c42a347a3d84cca18b37708",
+      "mergeCommit": {
+        "oid": "ee0b5d8b429dcbac2f57f13273f18b416e05d9eb"
+      },
+      "mergedAt": "2026-11-17T02:07:49Z",
+      "state": "MERGED",
+      "url": "https://github.com/otavio-esteves/O.R.I.O.N/pull/166"
+    },
+    "qualificationApproved": false,
+    "readCompletedAtUtc": "2026-11-17T02:14:51.102162+00:00",
+    "readStartedAtUtc": "2026-11-17T02:14:48.204379+00:00",
+    "run": {
+      "conclusion": "success",
+      "headSha": "ad259082e97b55a44c42a347a3d84cca18b37708",
+      "status": "completed",
+      "updatedAt": "2026-11-17T02:06:40Z",
+      "url": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/43995351105"
+    }
+  },
+  "ci166EarlierSnapshot": {
+    "conclusion": null,
+    "headSha": "ad259082e97b55a44c42a347a3d84cca18b37708",
+    "observedOnUtcDate": "2026-11-17",
+    "qualificationApproved": false,
+    "scope": "EARLIER_PRE_MERGE_OBSERVATION_NOT_CURRENT_STATUS",
+    "status": "in_progress",
+    "updatedAt": "2026-11-17T01:24:37Z",
+    "url": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/43995351105"
+  },
+  "ci167": {
+    "generalSoftwareComplete": false,
+    "pullRequest": {
+      "headRefOid": "d537b7277b4f2dc8ad571416a213373e82477990",
+      "mergeCommit": null,
+      "mergeStateStatus": "BLOCKED",
+      "mergedAt": null,
+      "state": "OPEN",
+      "url": "https://github.com/otavio-esteves/O.R.I.O.N/pull/167"
+    },
+    "qualificationApproved": false,
+    "readCompletedAtUtc": "2026-11-17T02:22:16.933862+00:00",
+    "readStartedAtUtc": "2026-11-17T02:22:14.836281+00:00",
+    "run": {
+      "conclusion": "",
+      "headSha": "d537b7277b4f2dc8ad571416a213373e82477990",
+      "status": "in_progress",
+      "updatedAt": "2026-11-17T02:20:47Z",
+      "url": "https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/44002282709"
+    }
+  },
+  "claims": {
+    "autonomyProven": false,
+    "continuousCoverageProven": false,
+    "f6Authorized": false,
+    "fullF4GateClosed": false,
+    "fullF5GateClosed": false,
+    "fullSoakGateClosed": false,
+    "generalSoftwarePreparationComplete": false,
+    "physicalEvidenceVerified": false,
+    "productionInferenceEnabled": false,
+    "profileQualified": false,
+    "real24HourDurationProven": false,
+    "sourceAuthenticated": false
+  },
+  "collectorSourceCommit": "4c987d761c875a4259c113098724f4d569f8d21d",
+  "countsAreSeparateOverlappingSnapshots": true,
+  "currentCiPass": false,
+  "currentCiPassScope": "NO_CI_APPROVAL_ASSERTED_FOR_COLLECTOR_OR_DOCUMENTARY_REVISION",
+  "currentPreparationStatus": {
+    "generalSoftwareComplete": false,
+    "integrated": [
+      "151/PR156",
+      "153/PR157",
+      "158/PR162",
+      "159/PR164",
+      "160/PR166"
+    ],
+    "localValidatedPendingIntegration": [
+      "163/161 published PR167 CI_IN_PROGRESS",
+      "165 local validated pending integration"
+    ]
+  },
+  "integrationStatus": "LOCAL_VALIDATED_PENDING_INTEGRATION",
+  "kind": "ORION_F5_QUALIFIED_MONITORING_EVIDENCE",
+  "minimization": [
+    "APKs",
+    "models",
+    "system images",
+    "raw emulator log",
+    "raw device serial",
+    "raw session/correlation/graph identifiers",
+    "private keys",
+    "home paths in text"
+  ],
+  "noGlobalUniqueTotal": true,
+  "omittedSourceArtifacts": [
+    {
+      "omittedFromArchive": true,
+      "originalBytes": 18072,
+      "originalSha256": "d6a8fca0f0a6c1729573d213d42880f3dde577f6d6f51ce47f51f458f9f30ff0",
+      "reason": "RAW_LAUNCH_LOG_WITH_VIRTUAL_SERIAL_AND_HOME_PATHS",
+      "retainedExternally": true,
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/emulator.log"
+    },
+    {
+      "omittedFromArchive": true,
+      "originalBytes": 7728,
+      "originalSha256": "b0bccb2f4860590738ea5abcd7be04506e5bd2b282d0ad0c675ab06c86b3a085",
+      "reason": "LOCAL_DRIVER_SOURCE_NOT_COPIED",
+      "retainedExternally": true,
+      "sourceLabel": "LOCAL_DRIVER/orion-165-actual-monitoring-driver-20261116.py"
+    }
+  ],
+  "originals": [
+    {
+      "member": "host/orion-165-resource-qualified-red-20261116.log",
+      "memberBytes": 6132,
+      "memberSha256": "377a464851ef4d39a2008922342854ddaaca89cb1fb83010888f1eaedcd41d77",
+      "originalBytes": 6132,
+      "originalSha256": "377a464851ef4d39a2008922342854ddaaca89cb1fb83010888f1eaedcd41d77",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "orion-165-resource-qualified-red-20261116.log"
+    },
+    {
+      "member": "host/orion-165-maintenance-qualified-red-20261116.log",
+      "memberBytes": 3982,
+      "memberSha256": "5293649359460e4af5ad159d6d12610ed60a68144f7aaa181cb7d9f1fd03538c",
+      "originalBytes": 3982,
+      "originalSha256": "5293649359460e4af5ad159d6d12610ed60a68144f7aaa181cb7d9f1fd03538c",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "orion-165-maintenance-qualified-red-20261116.log"
+    },
+    {
+      "member": "host/orion-165-resource-focused-20261116.log",
+      "memberBytes": 6745,
+      "memberSha256": "1da9416652b0b05597fc305a7ebaca12806b536db26802840fbd5fa470f7d6ef",
+      "originalBytes": 6745,
+      "originalSha256": "1da9416652b0b05597fc305a7ebaca12806b536db26802840fbd5fa470f7d6ef",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "orion-165-resource-focused-20261116.log"
+    },
+    {
+      "member": "host/orion-165-maintenance-focused-20261116.log",
+      "memberBytes": 3011,
+      "memberSha256": "90553b4c222ce6b8904cc925ad99e513601165290e1b9cad7418d8c9892dc6e3",
+      "originalBytes": 3011,
+      "originalSha256": "90553b4c222ce6b8904cc925ad99e513601165290e1b9cad7418d8c9892dc6e3",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "orion-165-maintenance-focused-20261116.log"
+    },
+    {
+      "member": "host/orion-165-full-host-20261116.log",
+      "memberBytes": 921,
+      "memberSha256": "d4c17d90b84f8286bc63740bedcf9c8c4c551005ff4f501013fdf4f77a36743b",
+      "originalBytes": 921,
+      "originalSha256": "d4c17d90b84f8286bc63740bedcf9c8c4c551005ff4f501013fdf4f77a36743b",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "orion-165-full-host-20261116.log"
+    },
+    {
+      "member": "host/orion-165-validation-20261116.json",
+      "memberBytes": 1312,
+      "memberSha256": "da5aeab30228b1dd400ee4e4f7e2248dd0f759a21c109e89a1e1a24d2e229ec9",
+      "originalBytes": 1312,
+      "originalSha256": "658bf30ec657d2a155d31f12e812c260e48fd5cdbf815080abd91c8f93461e5c",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "orion-165-validation-20261116.json"
+    },
+    {
+      "member": "host/orion-165-full-freeze-20261116.json",
+      "memberBytes": 485,
+      "memberSha256": "d085b9fbf43d5db486a2f70b36af69360ea56fde64280baa30ac74ec3a87fbbe",
+      "originalBytes": 485,
+      "originalSha256": "d085b9fbf43d5db486a2f70b36af69360ea56fde64280baa30ac74ec3a87fbbe",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "orion-165-full-freeze-20261116.json"
+    },
+    {
+      "member": "host/orion-165-final-files-20261116.json",
+      "memberBytes": 852,
+      "memberSha256": "6431bbe757f722fffb72a4d9943e07af9758bb046eea41f561e91480f31712e6",
+      "originalBytes": 852,
+      "originalSha256": "6431bbe757f722fffb72a4d9943e07af9758bb046eea41f561e91480f31712e6",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "orion-165-final-files-20261116.json"
+    },
+    {
+      "member": "actual-android/result.json",
+      "memberBytes": 696,
+      "memberSha256": "e254ca1116eea5286d83c5e5016bf254a5f7794a03c1efa2dad30e1a1bdc83ca",
+      "originalBytes": 696,
+      "originalSha256": "a5662482f4a033fb8d93a878de8272bf785905c64b8093d41685dc969445c1a2",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/result.json"
+    },
+    {
+      "member": "actual-android/source-binding.json",
+      "memberBytes": 954,
+      "memberSha256": "5e1449b29e087a3a75d7f1c33da2ca6dd76cfb3776f6f7007e179c4bd8d7f395",
+      "originalBytes": 954,
+      "originalSha256": "4d71aad209a4a161d7389edfe06033136d4959ed8d63e3978519842b0d2eb1a3",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/source-binding.json"
+    },
+    {
+      "member": "actual-android/coexisting-installed-identities.json",
+      "memberBytes": 348,
+      "memberSha256": "22771ea987cf5b19170efee5d1fc08611dbaec686f89a67dad56e2d52fc6eb4f",
+      "originalBytes": 348,
+      "originalSha256": "b6231f6f98b258a1ba11408df95140ba4f5076fd8ec6b17f0b35379eb71b45f9",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/coexisting-installed-identities.json"
+    },
+    {
+      "member": "actual-android/collector-command-inventory.json",
+      "memberBytes": 3795,
+      "memberSha256": "ea8267a4bb638cffb2533e5f20b8ca194bea713ff6c85bb6599c397c0ef95d12",
+      "originalBytes": 4107,
+      "originalSha256": "4190493109b62cfd836715bac4df112235db06c09db68c74ee514f2a6f34e7ab",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/collector-command-inventory.json"
+    },
+    {
+      "member": "actual-android/resource/soak-observation-report.json",
+      "memberBytes": 2236,
+      "memberSha256": "22ac87b28063a8e0d538f7489c9f95044fee20e855380c50e34f2c3b411df699",
+      "originalBytes": 2202,
+      "originalSha256": "d9c55776bf0a9a1809bf10ebd19bb87b76a7857404aaa1c5304ae1d9ec999fab",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/resource/soak-observation-report.json"
+    },
+    {
+      "member": "actual-android/resource/samples.jsonl",
+      "memberBytes": 1372,
+      "memberSha256": "bdc8189a3e7d1b09c92d6037ff58f17b6ac3c4e54a20afe0e90a1014300b2c3c",
+      "originalBytes": 1372,
+      "originalSha256": "bdc8189a3e7d1b09c92d6037ff58f17b6ac3c4e54a20afe0e90a1014300b2c3c",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/resource/samples.jsonl"
+    },
+    {
+      "member": "actual-android/maintenance/maintenance-history-report.json",
+      "memberBytes": 2866,
+      "memberSha256": "85e9ec378ab680600c6418d91ffc3936f8b06ee554f740c871dd0978002de63a",
+      "originalBytes": 2832,
+      "originalSha256": "148b8a4687659f97bae4976a436d1751628cfe3e2a92b9e52476984b839b6422",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/maintenance/maintenance-history-report.json"
+    },
+    {
+      "member": "actual-android/maintenance/maintenance-history.jsonl",
+      "memberBytes": 2843,
+      "memberSha256": "beb6503553b4cc209bc814c1390e0b77bbec0a6d381150d931986c7a647ff0c3",
+      "originalBytes": 2741,
+      "originalSha256": "62c260a21de9ecedc0de1705e7db7ffdf2fa02de6a3c4977d052523ca329a5d1",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/maintenance/maintenance-history.jsonl"
+    },
+    {
+      "member": "actual-android/cleanup-ownership-check.json",
+      "memberBytes": 160,
+      "memberSha256": "2698f2c85e95210692eea44368ac0f1d3f0bac27e622d16a82dadbd728f8252c",
+      "originalBytes": 103,
+      "originalSha256": "4c01a4fa617f7df6b25eb2a7a7f6d5c740b5658ff287fee6dde631598c2e44a0",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/cleanup-ownership-check.json"
+    },
+    {
+      "member": "actual-android/cleanup-result.json",
+      "memberBytes": 33,
+      "memberSha256": "e2293ee9b17ebfaa48515d8375c6fe068b227e867b47b983d3cddbf921208f7e",
+      "originalBytes": 33,
+      "originalSha256": "e2293ee9b17ebfaa48515d8375c6fe068b227e867b47b983d3cddbf921208f7e",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/cleanup-result.json"
+    },
+    {
+      "member": "actual-android/captureApp-explicit-preparation-install.log",
+      "memberBytes": 36,
+      "memberSha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+      "originalBytes": 36,
+      "originalSha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/captureApp-explicit-preparation-install.log"
+    },
+    {
+      "member": "actual-android/captureTest-explicit-preparation-install.log",
+      "memberBytes": 36,
+      "memberSha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+      "originalBytes": 36,
+      "originalSha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/captureTest-explicit-preparation-install.log"
+    },
+    {
+      "member": "actual-android/explicit-preparation-launch.log",
+      "memberBytes": 222,
+      "memberSha256": "9136a4350f42769c7aaf2a3b272ca346c574e93280bb82326db186fb8dd0676c",
+      "originalBytes": 222,
+      "originalSha256": "9136a4350f42769c7aaf2a3b272ca346c574e93280bb82326db186fb8dd0676c",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/explicit-preparation-launch.log"
+    },
+    {
+      "member": "actual-android/emulator-stop.log",
+      "memberBytes": 33,
+      "memberSha256": "e2d4238ce853e3f4c1ba7b36adf25ff824d93c36a0b94db50cb96dc047aac6d3",
+      "originalBytes": 33,
+      "originalSha256": "e2d4238ce853e3f4c1ba7b36adf25ff824d93c36a0b94db50cb96dc047aac6d3",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "LOCAL_RUNTIME_EVIDENCE/emulator-stop.log"
+    },
+    {
+      "member": "audit/orion-f5-final-independent-audit-20261116.md",
+      "memberBytes": 10986,
+      "memberSha256": "26c5fdc3bbbba97fb4979cafd39e9dfb9d2541fbe91d855aff4fe820fb8e653f",
+      "originalBytes": 11189,
+      "originalSha256": "f92b5c98f25190cdc190774926c2bae5b94b0b37924ae9e8a45fc85bb97e23d1",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "orion-f5-final-independent-audit-20261116.md"
+    },
+    {
+      "member": "audit/orion-f5-final-independent-audit-20261116.json",
+      "memberBytes": 6965,
+      "memberSha256": "0b034daaf3b74f0374e3e562f5c25d7dc7ce812c919558c9568b33f93e2387ba",
+      "originalBytes": 7168,
+      "originalSha256": "cf7802465fb9798a6f1ce25f1da20979a34ef929b52224c6f5ccf63496147726",
+      "representation": "MINIMIZED_DERIVATIVE_NOT_RAW_PROTOCOL",
+      "sourceLabel": "orion-f5-final-independent-audit-20261116.json"
+    }
+  ],
+  "related163Evidence": {
+    "archiveSha256": "d82667b14df1f78406a7f079ca766aba09b8e44ecefe335856d71039f2d0a7e6",
+    "candidateSourceCommit": "2d0b6a2",
+    "copiedIntoThisArchive": false,
+    "documentPath": "F5-ExitPolicyManualValidation-20261116.md",
+    "indexPath": "f5-exit-policy-manual-evidence-20261116.json",
+    "indexSha256": "2b01387e8c82e545048afe7447aa93350868734a5ace0c16c165f15e80a784d8",
+    "integrationStatus": "PUBLISHED_PR167_CI_IN_PROGRESS_NOT_INTEGRATED",
+    "localDocumentaryCommit": "c0606ecc15443b3b90637ccf2e16d31398c63502",
+    "publishedCandidateCommit": "d537b7277b4f2dc8ad571416a213373e82477990",
+    "pullRequest": "https://github.com/otavio-esteves/O.R.I.O.N/pull/167",
+    "runtimeSourceCommit": "3d34e3505e0bf12e26b15020e452c6981ebb5fb9",
+    "wholeTreeMatchReported": true
+  },
+  "runtime": {
+    "actualQualificationMainPssObserved": true,
+    "bothPackagesCoexist": true,
+    "explicitInstallAndLaunchBeforeObservers": true,
+    "noObserverGeneratedMaintenanceOrWork": true,
+    "normalApkSha256": "368f0ad395857fe18747e33bf527af273bb54c97837eae4883fbe70c202b97cb",
+    "normalUid": 10148,
+    "postBaselineGrowthOrProgressProven": false,
+    "qualificationUid": 10150,
+    "qualifiedApkSha256": "cd29083de32e4d844338a0f670cc2648bca653885c06a9a4f587feb332869ca1"
+  },
+  "runtimeAppSourceCommit": "3208ace77fbbf3b58b0b91bc89e6df8a9091c6e6",
+  "schemaVersion": 1,
+  "snapshotUtcDate": "2026-11-17",
+  "snapshots": [
+    {
+      "environment": "DOCKER",
+      "errors": 5,
+      "exitCode": 1,
+      "id": "165-focused-red-resource",
+      "subtestsExplainExtraErrors": true,
+      "tests": 4
+    },
+    {
+      "environment": "DOCKER",
+      "errors": 3,
+      "exitCode": 1,
+      "id": "165-focused-red-maintenance",
+      "tests": 3
+    },
+    {
+      "environment": "DOCKER",
+      "exitCode": 0,
+      "id": "165-focused-resource-before-final-uid-bracketing",
+      "seconds": 4.36,
+      "tests": 35
+    },
+    {
+      "environment": "DOCKER",
+      "exitCode": 0,
+      "id": "165-focused-maintenance-before-final-uid-bracketing",
+      "seconds": 0.076,
+      "tests": 13
+    },
+    {
+      "environment": "DOCKER",
+      "errors": 0,
+      "exitCode": 0,
+      "failures": 0,
+      "id": "165-full-host-final",
+      "seconds": 46.26,
+      "skipped": 0,
+      "tests": 629
+    },
+    {
+      "abi": "x86_64",
+      "api": 35,
+      "baselineMaintenanceEvents": 3,
+      "driverExitCode": 0,
+      "environment": "ANDROID_EMULATOR",
+      "id": "165-runtime",
+      "maintenanceResult": "HISTORY_COLLECTION_COMPLETE_REVIEW_REQUIRED",
+      "maintenanceSamples": 2,
+      "ownedEmulatorExitCode": 0,
+      "pageSizeBytes": 4096,
+      "resourcePrivateStorageUnavailable": true,
+      "resourceResult": "INCOMPLETE",
+      "resourceSamples": 2,
+      "subsequentMaintenanceEvents": 0
+    }
+  ]
+}

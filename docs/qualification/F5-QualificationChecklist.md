@@ -1,5 +1,27 @@
 # F5 remaining qualification — current operational checklist
 
+## Current preparation snapshot — 2026-11-17 UTC
+
+**F5 and F4 stability gates remain OPEN; F6 entry remains NOT AUTHORIZED.** Production configuration is still absent; no approved model/resource profile, production inference or CORTEX_RUNTIME_READY is declared. This dated section supersedes earlier software-gap/status statements below without replacing their historical source hashes, failures or test totals.
+
+| Delivery | Integration status at this snapshot | Evidence and remaining boundary |
+| --- | --- | --- |
+| #151 sampler / PR #156; #153 encoder / PR #157 | INTEGRATED | Bounded seven-phase memory acquisition and rendering exist; their mechanical controls are not physical calibration or authenticated source proof. |
+| #158 HOST assembly / PR #162; #159 qualification composition / PR #164 | INTEGRATED | The source-bound RuntimeEvidence v1 assembly and fixed qualified capture runner exist. Missing source/configuration remains explicit; the empty composition refuses heavy work. |
+| #160 finite instrumented workload / PR #166 | INTEGRATED: merged `ee0b5d8b429dcbac2f57f13273f18b416e05d9eb` at 2026-11-17T02:07:49Z | Required [CI run 43995351105](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/43995351105), exact head `ad259082e97b55a44c42a347a3d84cca18b37708`, succeeded before merge. This is software integration, not a calibrated heavy run or soak. |
+| #163 paired exit/original-policy source and finite manual Core requests; #161 limiter acquisition procedure | LOCALLY VALIDATED; [PR #167](https://github.com/otavio-esteves/O.R.I.O.N/pull/167) published, required CI/integration pending | Original Main/Owner authority, instance-safe death settlement, explicit new requests, no UNKNOWN replay and a bounded target-build/owned-cleanup procedure are prepared. No real limiter incident, admitted model or physical profile is supplied. |
+| #165 selected-package passive monitoring | LOCALLY VALIDATED; integration/required CI for this revision not asserted | Collector source `4c987d761c875a4259c113098724f4d569f8d21d` passed its scoped 629-case HOST invocation and short actual qualified-package mechanics. [Scoped evidence](F5-QualifiedMonitoringValidation-20261117.md). |
+
+PR #167 exact head `d537b7277b4f2dc8ad571416a213373e82477990` was OPEN/BLOCKED with [CI 44002282709](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/44002282709) IN_PROGRESS when read at 2026-11-17T02:22:16Z. This pending snapshot is separate from PR #166's successful merged state.
+
+The #165 runtime used an owned API35/x86_64/4KiB emulator with both packages installed under distinct UIDs. It observed actual qualified Main PSS and three preexisting maintenance baseline events, **zero subsequent events**, and unavailable private storage without bypass. Resource collection remains INCOMPLETE; maintenance collection is REVIEW_REQUIRED, not growth/retention/autonomy qualification. The independent targeted audit resolved its one original P2 and found no new demonstrable P1/P2 in scope; it is not exhaustive execution or current-CI proof.
+
+#163 evidence snapshots remain separate: 383 JVM cases/46 suites on functional source `5cb5246` (unchanged production code in documentary `3208ace`); 619 HOST cases before #165; the first Android selection at `3208ace` retained 117 PASS/1 FAIL out of 118 because its fake qualification namespace was correctly rejected by the existing Main ownership guard. Test-only `3d34e35` corrected that fixture and a new run passed 118 START/OK in 41.617s, zero skips, plus two R8 OPEN controls with the same Main identity. These are overlapping local snapshots, never a summed unique total. R8 still reports NO_QUALIFIED_PROFILE/owner-call false; no model, actual paired incident or real Core resource decision is claimed.
+
+The historical inventories below describe their stated baselines. #130 remains a one-shot partial recorder and #142 remains an abstract/port-based controller in its own scope; they are supplemented by the concrete #159/#160/#163 paths, not retroactively relabeled. RuntimeEvidence v1 native token/prefill/decode timing stays UNAVAILABLE, source authentication remains unproven, trusted operating values remain absent, and physical S21/API37/native-matrix plus real 24-hour obligations remain open.
+
+## Historical review baseline — 2026-11-16
+
 Work package: [ORION-F5-QUAL-PLAN-001](../issues/ORION-F5-QUAL-PLAN-001.md).
 Review renewed on 2026-11-16 against main
 `dc130a0e0728e50cc2da99f24d79aa2c4be4668e`, including integrated PRs #143, #145,
@@ -97,11 +119,11 @@ This is software evidence, with no native-model, physical, API37 or 24-hour appr
 | --- | --- | --- |
 | S21/arm64 Cortex lifecycle | Real-model import/load/stream/cancel/timeout/unload and actual AI death/rebind on scoped emulators | Same paths on Galaxy S21 8GB, with the exact source, installed APK pair, model hash, API/build, ABI and page size recorded; failures retained |
 | Resource/model profiles | Fail-closed governor, authenticated fresh telemetry and deterministic restart/backoff tests | Real cold/warm load, prefill/decode, per-process and aggregate memory/headroom, thermal/battery, foreground/background and storage-pressure measurements; reviewed bounds for the exact model/context/threads/tokens |
-| API37 memory limiter | Synthetic exit classification/backoff, watchdog coverage and an offline consistency protocol; no real stimulus procedure | A reviewed stimulus/correlation/policy-transition procedure on an actual compatible physical API37 build, actual reported reason/description classification, changed policy before the next heavy request, bounded cooldown/fallback and eventual refusal under repeated resource deaths |
+| API37 memory limiter | Offline consistency/classification controls plus the locally prepared #161 acquisition procedure and #163 paired-source/manual-request implementation | Integrate/review pending software and execute that prepared procedure on an actual compatible physical API37 build, with its real signal, original policy transition before heavy work, cooldown/fallback/refusal and owned override restoration |
 | Native/API compatibility | Docker ELF/ABI/APK/AAB/16KiB checks, scoped API35/API37 x86_64 R8 probes, an API35 x86_64 real-model minified optional-metrics probe with synthetic admission, historical earlier physical loads | Complete the declared physical/native/API cells using current artifact identities; production admission and physical arm64/16KiB qualification cannot be inferred from the scoped emulator probes or debug loading |
 | Core stability (#64) | Functional F4 exit and short, artifact-bound workloads | Complete approved 24-hour Core workload, including tasks/reminders/heartbeat, reboot/unlock, actual process death, continuous backlog/UNKNOWN observations, retention and growth review |
 | Post-Cortex stability (#89) | 33-cycle regression; no 24-hour approval | At least 24 real elapsed hours plus memory stress, with actual heavy work and crash/ANR/resource-exit/recovery/queue/reminder/thermal/battery/storage review |
-| Complete MAIN/HOST runtime and heavy-work producers | Integrated split bytes #140, capture contract #141, finite HOST controller #142, observation foundation #144, genuine Lifecycle events #146 and Client/Owner checkpoints #148; sampler #151 and encoder #153 remain IN_PROGRESS | Complete and review the source-bound RuntimeEvidence v1 MAIN/HOST assembly and heavy-work/memory-stress executor/adapters, preserving genuine timing, missing phases, loss, identity, interruption, owned cleanup and existing admission boundaries |
+| Complete MAIN/HOST runtime and heavy-work producers | Integrated #151/#153 sampler/encoder, #158 assembly, #159 capture composition and #160 executable finite workload; #163 actual paired-source/policy/manual requests and #165 passive qualified monitoring are locally validated pending integration | Finish pending integration/required CI and execute the prepared, source/artifact-bound paths after profile calibration/target allocation, preserving genuine time, missing phases/loss, UNKNOWN, owned cleanup and original Core authority |
 | Final F5 decision | Software checklist and explicit remaining gates | Review every §11.11 criterion, #64 prerequisite and #89 evidence against the frozen candidate; only then decide CORTEX_RUNTIME_READY and F6 entry |
 
 The user reconfirmed on 2026-11-15 that no physical devices are available,
@@ -210,10 +232,9 @@ duration/interval and a new evidence directory. They retain sampling gaps. They
 do not generate a Cortex load, prove continuous heartbeat autonomy by themselves,
 or qualify undisturbed idle/battery behavior while ADB is polling.
 
-## Software preparation status — 2026-11-16
+## Historical software preparation inventory — 2026-11-16
 
-This inventory separates integrated software from local validation. It does not
-close F5 or imply that all preparation is implemented and only hardware remains.
+This historical inventory records the stated review baseline; the dated 2026-11-17 section above provides the current integration status. It does not close F5 or imply that all preparation is integrated and only hardware remains.
 Counts below retain their individual execution scopes; they are not additive.
 
 | Package | Current software/evidence scope |
@@ -256,8 +277,8 @@ not assigned a guessed cause. Actual emulator execution is software evidence.
 Exit capture is CAPTURE_ONLY/NON_DEFINITIVE, not a limiter stimulus or proof of
 incident causation; unavailable AI and truncated history remain explicit.
 
-Baseline, readiness, exit capture and the single-attempt program are
-mutually exclusive opt-in modes of the separate network.orion.qualification APK.
+Baseline, readiness, exit capture, single-attempt, runtime-capture and
+instrumented-workload programs are mutually exclusive opt-in modes of the separate network.orion.qualification APK.
 The independent `orionCortexGenerationMetrics` property is not enabled by the
 single-attempt mode. Normal Debug/Release keep single-attempt disabled even when
 both `orionQualificationRelease` and `orionCortexSingleAttempt` properties are true.
@@ -268,76 +289,25 @@ DB/Keystore/WorkManager state; these runs do not attest a wholly read-only devic
 or quiescent Core. Physical Build candidate classification is not verified
 physical provenance. Neither JSON consistency nor CLI inputs approve a profile.
 
-The following software/protocol dependencies still need bounded implementation
-or reviewed decisions before a complete heavy qualification run:
+## Prepared paths and remaining integration/execution — 2026-11-17 UTC
 
-- Complete and review the source-bound MAIN/HOST RuntimeEvidence v1 producer
-  assembled from the integrated checkpoints and remaining sampler/encoder work
-  (#151/#153). Genuine event time and split-byte acquisition now have delivered
-  sources; complete seven-phase fresh memory, qualified delivery association,
-  bounded export/HOST assembly and independently bound installed source/model/
-  device provenance are still incomplete. ORION_MAIN_CYCLE_PARTIAL remains a
-  separate partial projection and cannot repair missing source facts.
-- Keep the distinct sources explicit: #132 retains original deadline samples;
-  #140 retains original split bytes; #146 records dedicated first-terminal and
-  ordered-acceptance moments; #148 associates genuine Client/Owner call/reply
-  points with the actual runOnce. None is downstream delivery time, native
-  compute/token timing or source authentication. The #130 HOST tool still
-  captures one minimized program result. It does not assemble a complete v1
-  receipt or provide an automatic execution loop. Formatter125 is unchanged.
-- Native token counters and API-wall measurements are implemented under accepted
-  ADR-0003. Their integration does not provide synchronized backend phase compute,
-  throughput, authenticated TTFT, calibrated budgets or approved production
-  profiles. Missing measurements remain unavailable; chunks/bytes and end-to-end
-  elapsed time cannot substitute for native token/phase metrics. The unchanged
-  [RuntimeEvidence v1 format](F5-RuntimeEvidenceProtocol.md) still reports its
-  token/prefill/decode metrics unavailable and rejects extra metric fields.
-- Trusted model provisioning, an explicitly reviewed attempt template/profile,
-  physical memory/native coverage and budget calibration. Production qualified
-  plans remain empty and the attempt template null, with admission blocked.
-- A reviewed physical MemoryLimiter stimulus/correlation/policy-transition
-  procedure. Passive facts and offline consistency checks do not stimulate or
-  prove the physical limiter's behavior.
-- An executable post-Cortex workload/stress/observation program for the actual
-  24-hour window. The integrated finite #142 controller requires reviewed live
-  configuration/admission/producer adapters and supplies no Android workload or
-  CLI loop. The offline validator, durable journal and one-shot #130 capture do
-  not complete that executor or authorize repeated attempts.
+- The MAIN/HOST receipt path is implemented through #151/#153/#158/#159. #160 supplies concrete finite HOST/adapters and the existing Owner invocation; #163 adds local paired exit/original-policy sources and a separate finite manual post-death path; #165 binds passive monitoring to the actual qualification package/UID. The published #163/#161 PR #167 still needs its required CI/integration; #165 still needs publication/integration/CI before treating the combined candidate as integrated. A source capsule or consistent JSON is not source authentication or a calibrated profile.
+- Keep source meanings distinct: original deadline samples (#132), split bytes (#140), dedicated first-terminal/ordered-acceptance moments (#146), Client/Owner call/reply points (#148), memory acquisition (#151) and bounded export (#153) do not become downstream delivery/native compute time. #130 remains a one-shot minimized partial recorder; #142's own abstract ports are not retroactively a concrete Android executor. Formatter125 and v1 formats remain unchanged.
+- Native counters/API-wall measurements under ADR-0003 do not supply synchronized native phase compute, throughput, authenticated TTFT or production budgets. RuntimeEvidence v1 still reports native token/prefill/decode metrics unavailable and rejects extra metric fields.
+- Trusted model provisioning, a reviewed attempt template/resource profile, physical native/memory coverage and budget calibration remain required. Production plans remain empty and the template null; unavailable configuration causes actual refusal.
+- The bounded physical MemoryLimiter acquisition/correlation/policy-transition procedure exists locally under #161, with #163's actual-source/manual-request support. It still needs pending integration and execution on the allocated build. Unsupported symbols, ambiguous units, missing pairing and UNKNOWN remain explicit; no stimulus, public reason or override restoration has been physically qualified.
+- The finite instrumented workload and separate passive monitoring paths exist. Execute their reviewed schedule on the allocated target; do not use missed-slot catch-up, Owner replacement or UNKNOWN retry. Complete Core and post-Cortex duration/memory-stress evidence remains absent. Collection completion or before/after samples do not establish continuous backlog, autonomy, real 24h or a full gate.
 
-The accepted optional IPC, retained cycle, partial projection and one-use driver
-do not approve an integrated MAIN/HOST heavy receipt or performance/profile
-benchmark. A runner RESULT_OK is a program outcome, always NOT_QUALIFIED, rather
-than physical qualification. No complete RuntimeEvidence v1 producer or executable
-heavy-soak program is delivered by the inventoried packages.
-
-Physical S21/API/native/model qualification and real-duration evidence remain
-pending alongside those software gaps. F4 #64 and F5 #89 stay OPEN. No entry here
-declares CORTEX_RUNTIME_READY, enables production inference or opens F6.
+A runner RESULT_OK is a program outcome and remains NOT_QUALIFIED. The optional IPC, retained partials, capture/source assembly and prepared executors do not approve a benchmark, a production profile, F4 stability, CORTEX_RUNTIME_READY or F6. The physical #64/#89 obligations remain open alongside the explicitly pending software integration/CI.
 
 ## Bounded work needed before the physical run
 
-1. Implement the remaining heavy physical Cortex instrumentation/measurement
-   producer under #89 using the specified protocol. Keep
-   actual device resource observations and reviewed candidate limits separate from
-   synthetic functional controls; do not weaken the emulator fixture to manufacture
-   physical qualification. Record exact model input, load/prefill/decode/unload,
-   memory/native accounting, thermal/battery and deadline results without content
-   or sensitive traces in diagnostics.
-2. Plan the actual API37 memory-limiter stimulus and classify the build's returned
-   signal. Unsupported or unavailable signals remain explicit. Synthetic low-memory
-   tests and watchdog self-kills do not prove this physical behavior.
-3. Add the post-Cortex heavy-work/memory-stress component to the approved 24-hour
-   profile. The existing Core reminder workload does not issue Cortex requests.
-   Preserve interruption journals, real elapsed duration and observation gaps;
-   define bounded owned cleanup before running it.
-4. Freeze candidate source, produced and actually installed artifact identities,
-   qualification criteria, per-device allocation and the complete run schedule.
-   Keep hardware-dependent profile approval after measurement and review.
+1. Finish required exact-head CI/integration for the published #163/#161 PR #167, then the pending #165 publication/review/CI/integration. Freeze the combined source, local/actually-installed artifacts, source/model/configuration references and target identity; retain failed and historical snapshots separately.
+2. After target allocation and calibration, execute the prepared Main/HOST runtime measurement paths with actual reviewed configuration. Keep physical observations separate from synthetic functional controls and record model input/load/prefill/decode/unload, native-inclusive memory, thermal/battery/deadline facts without content or sensitive traces. Absent values remain refusal/unavailable.
+3. Execute the prepared API37 limiter procedure on the identified compatible build: actual bounded owned stimulus, instance-safe pairing, original Core policy transition before another heavy request, bounded new requests until refusal and explicit owned restoration. No watchdog/synthetic exit substitutes for that evidence.
+4. Allocate the complete approved Core/post-Cortex 24-hour windows and execute the prepared finite workload/passive history components, including memory stress, genuine elapsed time and visible gaps. The Core reminder workload alone supplies no Cortex workload; partial windows and cleanup do not qualify a soak.
 
-This documentary update executes no device command and closes no gate. The #148
-capture-fence races have their own actual RED/GREEN mechanical evidence and fixed
-source. The old client's separate unload/status hypotheses must not be reported
-as current main failures without a current-source reproduction.
+This documentary reconciliation executes no device command and closes no gate. Historical counts, source identities, failed attempts and scoped controls remain intact. It makes no claim that general software preparation or all required CI is complete.
 
 ## Read-only preflight and blocked execution plan
 

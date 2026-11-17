@@ -24,7 +24,7 @@ The collectors trust the Android package manager and logcat's fixed `--uid` filt
 
 ## Existing producer and honest private-storage limits
 
-MAIN already publishes the versioned maintenance line from `OrionFoundationRuntime.runMaintenance`: `Log.i(OrionMaintenanceSnapshot.LOG_TAG, readMaintenanceSnapshot(...).toLogLine())`. It has no BuildConfig.DEBUG gate. The collector only reads this existing same-UID `orion_maintenance` log; it does not call the producer or schedule a pass.
+MAIN already publishes the versioned maintenance line from `OrionFoundationRuntime.performMaintenance`: `Log.i(OrionMaintenanceSnapshot.LOG_TAG, readMaintenanceSnapshot(...).toLogLine())`. It has no BuildConfig.DEBUG gate. The collector only reads this existing same-UID `orion_maintenance` log; it does not call the producer or schedule a pass.
 
 The twenty existing metric names and all maintenance v1 record fields remain unchanged. Actual records supply action/Event/Ingress/reminder totals, pruning/retention batch counts and `databaseBytes`. Baseline records are not new progress; an empty/missing buffer supplies no queue or database-growth values. Bounded logcat history may omit passes. A sampled heartbeat-origin record does not prove autonomous scheduling or successful delivery.
 
@@ -55,3 +55,8 @@ python3 -B scripts/android/record-maintenance-history.py \
 An exit code indicating incomplete resource collection is expected when private storage or another metric is unavailable. Preserve reports and gaps; do not repeat work, trigger a maintenance pass or relax identity checks to manufacture data. All existing cadence, BOOTTIME/suspend, interruption and history dedup semantics remain in force. Polling affects CPU/idle/battery, and collection completion is never qualification or continuous coverage.
 
 VALIDATION: Tests were added before collector edits. Qualification selection REDs failed in canonical Docker because the old APIs could not select a package. The first focused runs passed 35 resource and 13 maintenance tests. After UID-bracketing controls, the full canonical Docker HOST suite passed **629 tests in 46.260s**, EXIT0 with no failures/errors/skips; log `/tmp/orion-165-full-host-20261116.log`, frozen source/test hashes `/tmp/orion-165-full-freeze-20261116.json`. These are DOCKER/HOST synthetic fixtures, not Android or physical evidence. Read-only target mechanics remain separately coordinated; no APP/Gradle/ADB action was performed by this implementation.
+
+
+## Dated validation supplement — 2026-11-17 UTC
+
+The root completed the separately coordinated read-only mechanics against collector source `4c987d7` and APP source `3208ace` on an owned API35/x86_64/4KiB emulator with both package identities installed. Actual qualified Main PSS and distinct UIDs were observed; private storage stayed unavailable/INCOMPLETE without bypass. Maintenance supplied three preexisting baseline events and zero subsequent events, not a growth/autonomy result. The [scoped validation/index](F5-QualifiedMonitoringValidation-20261117.md) retains all original hashes, separate failed/passing snapshots, explicit preparation and owned teardown. This is local validation pending integration/required CI for the collector revision; it is not a physical or general-software/F5-complete claim.
