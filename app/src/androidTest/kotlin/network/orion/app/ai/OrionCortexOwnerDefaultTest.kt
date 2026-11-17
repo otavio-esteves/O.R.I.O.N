@@ -25,34 +25,41 @@ import org.junit.runner.RunWith
 /** No usable model or resource calibration: proves gates precede storage and binding. */
 @RunWith(AndroidJUnit4::class)
 class OrionCortexOwnerDefaultTest {
-    @Test fun exitSourceRequiresExplicitConfigurationAndOptInWithoutFunctionalClockOrNativeBinding() = fixture { context, db, importer, bindings ->
+    @Test fun exitSourceRejectsSpoofedNamespaceAndStaysAbsentInActualNormalRuntime() = fixture { context, db, importer, bindings ->
         val reads = AtomicInteger()
         val clock = object : network.orion.core.time.OrionClock {
             override fun monotonicNow() = network.orion.core.time.MonotonicInstant(network.orion.core.time.BootSessionId(1), 1000)
                 .also { reads.incrementAndGet() }
             override fun wallNow() = java.time.Instant.EPOCH.also { reads.incrementAndGet() }
         }
-        // Construction-only namespace fixture. No query runs and this does not prove an actual qualification process.
-        val qualification = object : ContextWrapper(context) {
-            override fun getApplicationContext(): Context = this
-            override fun getPackageName() = "network.orion.qualification"
-        }
-        val ordinary = object : ContextWrapper(context) {
-            override fun getApplicationContext(): Context = this
-            override fun getPackageName() = "network.orion"
-        }
-        val bounds = OrionQualificationExitConfiguration(10, 1000, 10000)
+        assertEquals("network.orion", context.packageName)
+        assertEquals(context.packageName, android.app.Application.getProcessName())
+        val bounds = OrionQualificationExitConfiguration(10, 1000, 10000) // Synthetic diagnostic bounds, not calibration.
         val facts = OrionCortexResourceFactBuffer(64)
-        val noConfiguration = OrionCortexRuntimeOwner(qualification, importer, db, clock, resourceFacts = facts)
-        val noOptIn = OrionCortexRuntimeOwner(qualification, importer, db, clock, qualificationExitConfiguration = bounds)
-        val configured = OrionCortexRuntimeOwner(qualification, importer, db, clock, resourceFacts = facts, qualificationExitConfiguration = bounds)
-        val normal = OrionCortexRuntimeOwner(ordinary, importer, db, clock, resourceFacts = facts, qualificationExitConfiguration = bounds)
+        val noConfiguration = OrionCortexRuntimeOwner(context, importer, db, clock, resourceFacts = facts)
+        val noOptIn = OrionCortexRuntimeOwner(context, importer, db, clock, qualificationExitConfiguration = bounds)
+        val configured = OrionCortexRuntimeOwner(context, importer, db, clock, resourceFacts = facts, qualificationExitConfiguration = bounds)
         try {
+            // Real normal MAIN remains ineligible even when fixture config and passive buffer are supplied.
             assertNull(noConfiguration.newInstrumentedExitSource()); assertNull(noOptIn.newInstrumentedExitSource())
-            assertNotNull(configured.newInstrumentedExitSource()); assertNull(normal.newInstrumentedExitSource())
+            assertNull(configured.newInstrumentedExitSource())
+            assertTrue(checkNotNull(noConfiguration.drainInstrumentedResourceFacts()).facts.isEmpty())
+            assertNull(noOptIn.drainInstrumentedResourceFacts())
+            assertTrue(checkNotNull(configured.drainInstrumentedResourceFacts()).facts.isEmpty())
+            // Namespace substitution is explicitly a rejected negative control, never qualification proof.
+            val spoofed = object : ContextWrapper(context) {
+                override fun getApplicationContext(): Context = this
+                override fun getPackageName() = "network.orion.qualification"
+            }
+            var rejected = false
+            try { OrionCortexRuntimeOwner(spoofed, importer, db, clock, resourceFacts = facts, qualificationExitConfiguration = bounds).close() }
+            catch (failure: IllegalArgumentException) {
+                rejected = true; assertEquals("Cortex runtime belongs to MAIN.", failure.message)
+            }
+            assertTrue(rejected)
             configured.close(); assertNull(configured.newInstrumentedExitSource())
             assertEquals(0, reads.get()); assertEquals(0, bindings.get()); assertTrue(facts.drain().facts.isEmpty())
-        } finally { noConfiguration.close(); noOptIn.close(); configured.close(); normal.close() }
+        } finally { noConfiguration.close(); noOptIn.close(); configured.close() }
     }
 
     @Test fun runtimeCaptureDoesNotActivateOrReadAnyClockPastTheEmptyProfileGate() = fixture { context, db, importer, bindings ->
