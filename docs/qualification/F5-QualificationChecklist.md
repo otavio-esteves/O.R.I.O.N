@@ -1,6 +1,28 @@
 # F5 remaining qualification — current operational checklist
 
-## Current preparation snapshot — 2026-11-17 UTC
+## Current offline software closeout — 2026-11-17 UTC
+
+**The reviewed offline F5 implementation and local validation are complete. F5 and F4 physical stability gates remain OPEN; F6 entry is NOT AUTHORIZED.** The independent audit's original P2 is fixed and no new demonstrable P1/P2 remains in its reviewed scope.
+
+Sampler/encoder #151/#153, HOST assembly #158, capture composition #159 and finite instrumented workload #160 are integrated through PRs #156/#157/#162/#164/#166. Paired exit/original-policy acquisition and the finite manual Core path #163, together with the build-specific limiter acquisition procedure #161, are integrated through PR #167. PR #167 merged `fdf3d8c7949a14ccde6e506c089650547c2f26b4` at 2026-11-17T03:03:20Z after exact-head `d537b7277b4f2dc8ad571416a213373e82477990` [CI 44002282709](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/44002282709/job/133769025849) succeeded at 2026-11-17T03:02:46Z.
+
+This revision delivers #165's final selected-package passive monitoring correction and evidence/checklist reconciliation. Acceptance requires its own exact-head required CI to pass before merge; that live integration record is on the PR closing [#165](https://github.com/otavio-esteves/O.R.I.O.N/issues/165). Historical PENDING fields in the immutable evidence packages are timestamped snapshots, not a claim that this revision's CI has already passed or that delivered source is still missing.
+
+Validation remains scoped rather than additive: [source/manual evidence](F5-ExitPolicyManualValidation-20261116.md) records 383 JVM cases/46 suites and 118 Android START/OK, zero skips, plus two actual R8 OPEN controls; [monitoring evidence](F5-QualifiedMonitoringValidation-20261117.md) records 629 HOST cases and short actual target-binding mechanics. Earlier failed invocations remain retained. Production code stayed unchanged by the Android fixture correction. No positive configured qualification factory, model admission or actual paired limiter incident is inferred from the no-profile controls.
+
+| Remaining qualification | Required evidence |
+| --- | --- |
+| Galaxy S21 8GB and reviewed profiles | Actual lifecycle, memory/headroom, performance, thermal/battery and storage observations, followed by model/context/thread/budget review. |
+| Physical API37 MemoryLimiter | Execute the prepared build-specific owned stimulus/correlation/policy-transition and restoration procedure; preserve unsupported/missing/UNKNOWN results. |
+| Native/API hardware matrix | Complete the declared physical/native/API cells with the frozen and actually installed artifacts. |
+| Core stability #64 and post-Cortex #89 | At least 24 real elapsed hours of approved workload plus memory stress, with visible gaps, backlog/UNKNOWN, retention, growth, reminder, exit and recovery review. |
+
+Production profiles/template remain absent, inference remains disabled and CORTEX_RUNTIME_READY is not declared. RuntimeEvidence v1's unavailable native phase/token fields and source-authentication limits remain explicit. Execute the prepared paths only after allocation and calibration; collection completion, brief emulator controls and cleanup do not qualify a soak.
+
+The sections below preserve earlier preparation and execution snapshots, including their then-pending integration wording. This current closeout governs the delivered offline scope; no historical count, source identity or failure is relabeled.
+
+
+## Historical preparation snapshot — 2026-11-17, 02:22:16 UTC
 
 **F5 and F4 stability gates remain OPEN; F6 entry remains NOT AUTHORIZED.** Production configuration is still absent; no approved model/resource profile, production inference or CORTEX_RUNTIME_READY is declared. This dated section supersedes earlier software-gap/status statements below without replacing their historical source hashes, failures or test totals.
 

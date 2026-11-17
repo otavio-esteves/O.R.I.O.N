@@ -1,6 +1,15 @@
 # F5 Cortex runtime — scoped validation and open qualification
 
-## Current preparation refresh — 2026-11-17 UTC
+## Current offline software closeout — 2026-11-17 UTC
+
+The reviewed offline implementation, local validation and independent finding corrections are complete. The source-bound capture/assembly, finite workload, paired exit/original-policy source, bounded manual Core path, physical acquisition procedure and selected-package passive monitoring are delivered. PR #167 merged `fdf3d8c7949a14ccde6e506c089650547c2f26b4` at 2026-11-17T03:03:20Z after exact-head `d537b7277b4f2dc8ad571416a213373e82477990` [CI 44002282709](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/44002282709/job/133769025849) succeeded at 2026-11-17T03:02:46Z.
+
+This revision closes the #165 collector-target correction and final documentary handoff. Its required exact-head CI and merge acceptance remain mandatory and are recorded by the PR closing [#165](https://github.com/otavio-esteves/O.R.I.O.N/issues/165); this paragraph does not assert a current CI result for itself. The [current checklist](F5-QualificationChecklist.md) lists the remaining physical obligations and source-bound validation scopes. Earlier PENDING fields below and in immutable archives retain their original timestamps.
+
+F5 formal qualification and the #64/#89 duration gates remain OPEN. Production model/resource configuration remains absent, CORTEX_RUNTIME_READY is not declared and F6 entry is NOT AUTHORIZED. No physical performance, actual MemoryLimiter, approved profile, 24-hour soak, continuous autonomy or source-authentication proof follows from software completion or the brief no-profile emulator controls.
+
+
+## Historical preparation refresh — 2026-11-17, 02:22:16 UTC
 
 F5 remains OPEN. #151/#153/#158/#159 are integrated through PRs #156/#157/#162/#164; #160 is integrated through PR #166 after exact-head `ad259082e97b55a44c42a347a3d84cca18b37708` [CI 43995351105](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/43995351105) succeeded and merge `ee0b5d8b429dcbac2f57f13273f18b416e05d9eb` completed at 2026-11-17T02:07:49Z. Source-bound receipt assembly, fixed capture composition and a concrete finite instrumented workload now exist; they do not supply operating/profile approval or physical duration.
 
