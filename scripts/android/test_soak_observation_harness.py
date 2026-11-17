@@ -14,6 +14,9 @@ RECORDER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RECORDER)
 HASH = "a" * 64
 APK_PATH = "/data/app/~~abc==/network.orion-abc==/base.apk"
+QUALIFIED = "network.orion.qualification"
+QUALIFIED_APK_PATH = "/data/app/~~qual==/network.orion.qualification-xyz==/base.apk"
+QUALIFIED_HASH = "c" * 64
 BATTERY = "level: 90\nscale: 100\nstatus: 2\ntemperature: 300\nUSB powered: true\nserial: SECRET"
 EXITS = """ACTIVITY MANAGER PROCESS EXIT INFO (dumpsys activity exit-info)
   ApplicationExitInfo #0:
@@ -41,11 +44,12 @@ class FakeAdb:
             ("shell", "getprop", "ro.build.version.sdk"): "35",
             ("shell", "getprop", "ro.serialno"): "SYNTHETIC_SERIAL",
             ("shell", "pm", "path", "network.orion"): "package:" + APK_PATH,
+            ("shell", "cmd", "package", "list", "packages", "-U", "network.orion"): "package:network.orion uid:10148",
             ("shell", "sha256sum", APK_PATH): HASH + "  " + APK_PATH,
             ("shell", "settings", "get", "global", "boot_count"): "358",
             ("shell", "pidof", "network.orion"): "123",
             ("shell", "dumpsys", "battery"): BATTERY,
-            ("shell", "dumpsys", "meminfo", "-s", "123"): "TOTAL PSS: 23000 TOTAL RSS: 40000\nSECRET",
+            ("shell", "dumpsys", "meminfo", "-s", "123"): "** MEMINFO in pid 123 [network.orion] **\nTOTAL PSS: 23000 TOTAL RSS: 40000\nSECRET",
             ("shell", "run-as", "network.orion", "du", "-sk", "databases", "files"): "100\tdatabases\n24\tfiles",
             ("shell", "dumpsys", "activity", "exit-info", "network.orion"): EXITS,
         }
@@ -58,6 +62,73 @@ class FakeAdb:
 
 
 class SoakObservationTest(unittest.TestCase):
+    def qualified_adb(self,coexist=False):
+        adb=FakeAdb()
+        global_responses={command:value for command,value in adb.responses.items()
+            if "network.orion" not in command and command not in {("shell","sha256sum",APK_PATH),("shell","dumpsys","meminfo","-s","123")}}
+        if not coexist:adb.responses=global_responses
+        adb.responses.update({
+            ("shell","pm","path",QUALIFIED):"package:"+QUALIFIED_APK_PATH,
+            ("shell","sha256sum",QUALIFIED_APK_PATH):QUALIFIED_HASH+"  "+QUALIFIED_APK_PATH,
+            ("shell","cmd","package","list","packages","-U",QUALIFIED):
+                "package:network.orion uid:10148\npackage:network.orion.qualification.test uid:10162\npackage:"+QUALIFIED+" uid:10161",
+            ("shell","pidof",QUALIFIED):"334",
+            ("shell","dumpsys","meminfo","-s","334"):"** MEMINFO in pid 334 ["+QUALIFIED+"] **\nTOTAL PSS: 33000 TOTAL RSS: 44000",
+            ("shell","run-as",QUALIFIED,"du","-sk","databases","files"):RuntimeError("Non-debuggable private storage unavailable"),
+            ("shell","dumpsys","activity","exit-info",QUALIFIED):EXITS.replace("network.orion",QUALIFIED),
+        })
+        return adb
+    def collect_qualified(self,adb):
+        clock=Clock()
+        with tempfile.TemporaryDirectory() as tmp:
+            directory=Path(tmp)/"qualified"
+            report=RECORDER.observe(adb,directory,QUALIFIED_HASH,"PHYSICAL_DEVICE",10,5,clock.read,clock.sleep,package=QUALIFIED)
+            samples=directory/"samples.jsonl"
+            rows=[json.loads(line) for line in samples.read_text().splitlines()] if samples.exists() else []
+            return report,rows
+    def test_qualified_only_and_coexisting_targets_never_query_the_main_package(self):
+        for coexist in [False,True]:
+            with self.subTest(coexist=coexist):
+                adb=self.qualified_adb(coexist);report,rows=self.collect_qualified(adb)
+                self.assertEqual(QUALIFIED,report['packageName']);self.assertEqual(10161,report['applicationUidBefore'])
+                self.assertEqual(10161,report['applicationUidAfter']);self.assertFalse(report['artifactMismatch'])
+                self.assertTrue(rows);self.assertEqual(33000,rows[0]['metrics']['mainMemory']['pssKiB'])
+                self.assertNotIn('privateStorage',rows[0]['metrics']);self.assertIn('privateStorage',rows[0]['unavailable'])
+                self.assertEqual('INCOMPLETE',report['result']);self.assertFalse(report['fullSoakGateClosed'])
+                self.assertFalse(any('network.orion' in command for command in adb.calls))
+    def test_qualified_artifact_mismatch_cannot_fall_back_to_a_coexisting_main_apk(self):
+        adb=self.qualified_adb(True);adb.responses[("shell","sha256sum",QUALIFIED_APK_PATH)]="b"*64+"  "+QUALIFIED_APK_PATH
+        report,rows=self.collect_qualified(adb)
+        self.assertTrue(report['artifactMismatch']);self.assertEqual([],rows)
+    def test_qualified_meminfo_rejects_wrong_pid_package_and_prefix_collision(self):
+        for header in ["** MEMINFO in pid 123 ["+QUALIFIED+"] **","** MEMINFO in pid 334 [network.orion] **",
+                       "** MEMINFO in pid 334 [networkXorionXqualification] **","** MEMINFO in pid 334 ["+QUALIFIED+".extra] **"]:
+            adb=self.qualified_adb(True);adb.responses[("shell","dumpsys","meminfo","-s","334")]=header+"\nTOTAL PSS: 33000"
+            report,rows=self.collect_qualified(adb)
+            self.assertNotIn('mainMemory',rows[0]['metrics']);self.assertIn('mainMemory',rows[0]['unavailable'])
+    def test_package_allowlist_rejects_injection_before_any_device_call(self):
+        for package in ['network.orion.qualification.test','networkXorion','network.orion;reboot','$(id)']:
+            adb=FakeAdb()
+            with tempfile.TemporaryDirectory() as tmp,self.assertRaises(ValueError):
+                RECORDER.observe(adb,Path(tmp)/'new',HASH,'PHYSICAL_DEVICE',10,5,package=package)
+            self.assertEqual([],adb.calls)
+    def test_qualified_exit_snapshot_rejects_foreign_or_prefix_collision_records(self):
+        valid=EXITS.replace('network.orion',QUALIFIED)
+        self.assertEqual(2,RECORDER.exits(valid,package=QUALIFIED)['retainedRecords'])
+        for foreign in [EXITS,valid.replace(QUALIFIED,QUALIFIED+'.extra'),valid.replace(QUALIFIED,'networkXorionXqualification')]:
+            with self.assertRaises(ValueError):RECORDER.exits(foreign,package=QUALIFIED)
+    def test_uid_change_inside_qualified_poll_discards_target_metrics_instead_of_mixing_identities(self):
+        adb=self.qualified_adb(True);uid_reads=0
+        def changed(*args,**kwargs):
+            nonlocal uid_reads
+            if args==('shell','cmd','package','list','packages','-U',QUALIFIED):
+                uid_reads+=1
+                if uid_reads>=3:return 'package:'+QUALIFIED+' uid:10163'
+            return adb(*args,**kwargs)
+        report,rows=self.collect_qualified(changed)
+        self.assertTrue(report['uidMismatch']);self.assertEqual('INCOMPLETE',report['result'])
+        self.assertIn('packageIdentity',rows[0]['unavailable'])
+        for name in ['mainPids','mainMemory','privateStorage','retainedExitHistory']:self.assertNotIn(name,rows[0]['metrics'])
     def collect(self, adb=None, duration=11, interval=5, sleep=None):
         clock = Clock()
         with tempfile.TemporaryDirectory() as tmp:

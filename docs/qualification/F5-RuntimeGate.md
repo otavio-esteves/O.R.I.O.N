@@ -1,4 +1,27 @@
-# F5 Cortex runtime — implementation and scoped validation complete
+# F5 Cortex runtime — scoped validation and open qualification
+
+## Current offline software closeout — 2026-11-17 UTC
+
+The reviewed offline implementation, local validation and independent finding corrections are complete. The source-bound capture/assembly, finite workload, paired exit/original-policy source, bounded manual Core path, physical acquisition procedure and selected-package passive monitoring are delivered. PR #167 merged `fdf3d8c7949a14ccde6e506c089650547c2f26b4` at 2026-11-17T03:03:20Z after exact-head `d537b7277b4f2dc8ad571416a213373e82477990` [CI 44002282709](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/44002282709/job/133769025849) succeeded at 2026-11-17T03:02:46Z.
+
+This revision closes the #165 collector-target correction and final documentary handoff. Its required exact-head CI and merge acceptance remain mandatory and are recorded by the PR closing [#165](https://github.com/otavio-esteves/O.R.I.O.N/issues/165); this paragraph does not assert a current CI result for itself. The [current checklist](F5-QualificationChecklist.md) lists the remaining physical obligations and source-bound validation scopes. Earlier PENDING fields below and in immutable archives retain their original timestamps.
+
+F5 formal qualification and the #64/#89 duration gates remain OPEN. Production model/resource configuration remains absent, CORTEX_RUNTIME_READY is not declared and F6 entry is NOT AUTHORIZED. No physical performance, actual MemoryLimiter, approved profile, 24-hour soak, continuous autonomy or source-authentication proof follows from software completion or the brief no-profile emulator controls.
+
+
+## Historical preparation refresh — 2026-11-17, 02:22:16 UTC
+
+F5 remains OPEN. #151/#153/#158/#159 are integrated through PRs #156/#157/#162/#164; #160 is integrated through PR #166 after exact-head `ad259082e97b55a44c42a347a3d84cca18b37708` [CI 43995351105](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/43995351105) succeeded and merge `ee0b5d8b429dcbac2f57f13273f18b416e05d9eb` completed at 2026-11-17T02:07:49Z. Source-bound receipt assembly, fixed capture composition and a concrete finite instrumented workload now exist; they do not supply operating/profile approval or physical duration.
+
+The locally validated #163 paired exit/original-policy/manual Core path and #161 physical acquisition procedure are published in [PR #167](https://github.com/otavio-esteves/O.R.I.O.N/pull/167), with exact-head `d537b7277b4f2dc8ad571416a213373e82477990` required [CI 44002282709](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/44002282709) IN_PROGRESS/merge BLOCKED at 2026-11-17T02:22:16Z; integration remains pending. #165's selected-package passive collectors have source and short actual emulator validation, also pending integration; no current required-CI PASS is asserted for this documentary/collector revision. The [current checklist](F5-QualificationChecklist.md) separates these states from historical baselines.
+
+The [new scoped monitoring evidence](F5-QualifiedMonitoringValidation-20261117.md) preserves its separate 629-case DOCKER/HOST run and API35/x86_64/4KiB runtime: distinct coexisting UIDs, actual qualification Main PSS, three baseline maintenance records and zero subsequent records. Private storage remains unavailable without bypass, leaving resource collection INCOMPLETE. No growth/retention/autonomy or continuous coverage is inferred. The targeted independent audit resolved its one original P2 and identified no new demonstrable P1/P2; it is not an exhaustive correctness or physical approval.
+
+#163's 383 JVM/46-suite and pre-#165 619-HOST snapshots are separate overlapping runs. The retained first Android selection had 117 PASS/1 FAIL out of 118 due to a test fixture correctly rejected by the Main ownership guard; test-only `3d34e35` then passed a fresh 118 START/OK in 41.617s with zero skips. Its two R8 OPEN controls preserve Main identity and report NO_QUALIFIED_PROFILE/owner-call false. They prove no configured model, actual paired limiter incident or real Core resource decision.
+
+Production trusted plans/template remain absent, RuntimeEvidence v1 native phase/token timing remains UNAVAILABLE, source authentication is not established and CORTEX_RUNTIME_READY/F6 are not declared. Physical S21/resource/native/API cells, actual limiter behavior and real Core/post-Cortex 24-hour/memory-stress evidence remain open. General software preparation and pending integration/CI are not declared complete.
+
+## Historical runtime scope — 2026-11-10 and earlier
 
 **F5 remains open; CORTEX_RUNTIME_READY is not declared.** The runtime, canonical
 checks, installed upgrade and complete R8 probes have passed within their recorded
@@ -120,7 +143,7 @@ Debug/R8 filename-whitelist assertions and unsuccessful full-suite/UI attempts.
 The corrected runs retain separate outcomes. JSON records the exact logs and
 artifacts; no failed aggregate build or probe is relabelled as a pass.
 
-The authorized work possible without a physical device is complete. Physical S21/arm64 loading,
+For the historical source and execution scope recorded above, that closeout reported the then-authorized work possible without a physical device complete. This is not a current general-software or integration/CI-complete claim; the dated refresh above governs later preparation. Physical S21/arm64 loading,
 performance/thermal/battery, real MemoryLimiter evidence, approved production
 profiles, the complete native/API matrix and post-Cortex 24-hour/memory-stress work
 remain open. Emulator results do not authorize stable release or 24/7 readiness.

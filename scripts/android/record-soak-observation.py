@@ -18,8 +18,31 @@ HOST_TIME = importlib.util.module_from_spec(CLOCK_SPEC)
 CLOCK_SPEC.loader.exec_module(HOST_TIME)
 
 PACKAGE = "network.orion"
+PACKAGES = frozenset({PACKAGE, "network.orion.qualification"})
 MAX_SAMPLES = 20_000
 MAX_OUTPUT_BYTES = 1_048_576
+
+
+def selected_package(package):
+    if type(package) is not str or package not in PACKAGES:
+        raise ValueError("Unsupported observation package.")
+    return package
+
+
+def package_uid(output, package=PACKAGE):
+    package = selected_package(package)
+    rows = output.splitlines()
+    if not rows or len(rows) > 1024 or any(not re.fullmatch(r"package:[A-Za-z0-9_.]+ uid:[0-9]{1,10}", row) for row in rows):
+        raise ValueError("Application UID is unavailable.")
+    matches = re.findall(r"(?m)^package:" + re.escape(package) + r" uid:([0-9]{1,10})$", output)
+    if len(matches) != 1 or not 0 < int(matches[0]) <= 2**31 - 1:
+        raise ValueError("Application UID is unavailable.")
+    return int(matches[0])
+
+
+def own_uid(adb, package=PACKAGE):
+    package = selected_package(package)
+    return package_uid(adb("shell", "cmd", "package", "list", "packages", "-U", package), package)
 
 
 def bounds(duration, interval):
@@ -75,6 +98,14 @@ def memory(output):
     return fields
 
 
+def bound_memory(output, pid, package=PACKAGE):
+    package = selected_package(package)
+    headers = re.findall(r"(?m)^\*\* MEMINFO in pid ([1-9][0-9]{0,9}) \[([A-Za-z0-9_.:]+)\] \*\*\s*$", output)
+    if headers != [(str(pid), package)]:
+        raise ValueError("Process memory identity is unavailable.")
+    return memory(output)
+
+
 def storage(output):
     values = {}
     for line in output.splitlines():
@@ -87,7 +118,8 @@ def storage(output):
     return values
 
 
-def exits(output):
+def exits(output, package=PACKAGE):
+    package = selected_package(package)
     # Snapshot of Android's retained ring buffer, not a count of new exits.
     if "ACTIVITY MANAGER PROCESS EXIT INFO" not in output:
         raise ValueError("Unsupported exit-info output.")
@@ -96,10 +128,10 @@ def exits(output):
         raise ValueError("Exit history exceeds the observation bound.")
     reasons = {}
     for row in rows:
-        match = re.search(r"\bprocess=(network\.orion(?::[a-z_]+)?)\s+reason=([0-9]{1,3})\b", row)
-        if not match:
+        matches = re.findall(r"\bprocess=([^\s]+)\s+reason=([0-9]{1,3})\b", row)
+        if len(matches) != 1 or not re.fullmatch(re.escape(package) + r"(?::[a-z_]+)?", matches[0][0]):
             raise ValueError("Unrecognized exit history record.")
-        key = match.group(2)
+        key = matches[0][1]
         reasons[key] = reasons.get(key, 0) + 1
     return {"retainedRecords": len(rows), "reasonCounts": reasons}
 
@@ -123,9 +155,11 @@ class Adb:
         return text
 
 
-def installed_hash(adb):
-    path = adb("shell", "pm", "path", PACKAGE)
-    if not re.fullmatch(r"package:/data/app/[A-Za-z0-9_./=+~\-]+/base\.apk", path):
+def installed_hash(adb, package=PACKAGE):
+    package = selected_package(package)
+    path = adb("shell", "pm", "path", package)
+    if (not re.fullmatch(r"package:/data/app/[A-Za-z0-9_./=+~\-]+/base\.apk", path)
+            or ".." in Path(path.removeprefix("package:")).parts):
         raise ValueError("Expected one installed base APK; splits are not supported.")
     digest = adb("shell", "sha256sum", path.removeprefix("package:"))
     if not re.fullmatch(r"[0-9a-f]{64}\s+" + re.escape(path[8:]), digest):
@@ -140,8 +174,9 @@ def device_identity(adb):
     return hashlib.sha256(serial.encode()).hexdigest()
 
 
-def snapshot(adb):
-    sample = {"metrics": {}, "unavailable": []}
+def snapshot(adb, package=PACKAGE, *, expected_uid=None):
+    package = selected_package(package)
+    sample = {"packageName": package, "metrics": {}, "unavailable": []}
     def read(name, parser, *command, **kwargs):
         try:
             value = parser(adb(*command, **kwargs))
@@ -151,26 +186,41 @@ def snapshot(adb):
             sample["unavailable"].append(name)
             return None
     read("bootCount", integer, "shell", "settings", "get", "global", "boot_count")
-    current = read("mainPids", pids, "shell", "pidof", PACKAGE, allow_absent=True)
+    uid = read("packageUid", lambda output: package_uid(output, package), "shell", "cmd", "package", "list", "packages", "-U", package)
+    if uid is None or expected_uid is not None and uid != expected_uid:
+        sample["unavailable"].append("packageIdentity")
+        sample["identityMismatch"] = uid is not None
+        return sample
+    current = read("mainPids", pids, "shell", "pidof", package, allow_absent=True)
     read("battery", battery, "shell", "dumpsys", "battery")
     if current and len(current) == 1:
-        read("mainMemory", memory, "shell", "dumpsys", "meminfo", "-s", str(current[0]))
+        read("mainMemory", lambda output: bound_memory(output, current[0], package), "shell", "dumpsys", "meminfo", "-s", str(current[0]))
     elif current:
         sample["unavailable"].append("mainMemory")
-    read("privateStorage", storage, "shell", "run-as", PACKAGE, "du", "-sk", "databases", "files")
-    read("retainedExitHistory", exits, "shell", "dumpsys", "activity", "exit-info", PACKAGE)
+    read("privateStorage", storage, "shell", "run-as", package, "du", "-sk", "databases", "files")
+    read("retainedExitHistory", lambda output: exits(output, package), "shell", "dumpsys", "activity", "exit-info", package)
+    after_uid = read("packageUidAfter", lambda output: package_uid(output, package), "shell", "cmd", "package", "list", "packages", "-U", package)
+    if after_uid is None or after_uid != uid:
+        # Do not retain a poll assembled across different/unavailable package identities.
+        for name in ("mainPids", "mainMemory", "privateStorage", "retainedExitHistory"):
+            sample["metrics"].pop(name, None)
+        sample["unavailable"].append("packageIdentity")
+        sample["identityMismatch"] = after_uid is not None and after_uid != uid
     return sample
 
 
 def observe(adb, directory, expected_hash, environment, duration, interval,
-            monotonic=None, sleep=time.sleep, *, clock=None):
+            monotonic=None, sleep=time.sleep, *, clock=None, package=PACKAGE):
+    package = selected_package(package)
     limit = bounds(duration, interval)
     directory.mkdir(parents=True, exist_ok=False)
-    report = {"hostTiming": HOST_TIME.unavailable_metadata(), "result": "INCOMPLETE", "fullSoakGateClosed": False,
+    report = {"packageName": package, "hostTiming": HOST_TIME.unavailable_metadata(), "result": "INCOMPLETE", "fullSoakGateClosed": False,
+              "fullF4GateClosed": False, "fullF5GateClosed": False, "f6Authorized": False, "profileQualified": False,
+              "physicalEvidenceVerified": False, "real24HourDurationProven": False, "autonomyProven": False,
               "environment": environment, "expectedApkSha256": expected_hash,
               "requestedSeconds": duration, "intervalSeconds": interval,
               "samples": 0, "samplesWithGaps": 0, "samplingGaps": 0, "samplingGapReasons": {}, "elapsedNanoseconds": None,
-              "artifactMismatch": False, "deviceMismatch": False,
+              "artifactMismatch": False, "deviceMismatch": False, "uidMismatch": False,
               "startedAtUtc": datetime.now(timezone.utc).isoformat(),
               "collectorSha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               "clockHelperSha256": hashlib.sha256(Path(HOST_TIME.__file__).read_bytes()).hexdigest(),
@@ -194,16 +244,19 @@ def observe(adb, directory, expected_hash, environment, duration, interval,
                                             else "NON_DEFINITIVE" if emulated else "PHYSICAL_OBSERVATION_ONLY")
         report["apiLevel"] = integer(adb("shell", "getprop", "ro.build.version.sdk"))
         report["deviceIdentitySha256"] = device_identity(adb)
-        initial_hash = installed_hash(adb)
+        initial_hash = installed_hash(adb, package)
         report["installedApkSha256Before"] = initial_hash
         if initial_hash != expected_hash:
             report["artifactMismatch"] = True
             raise ValueError("Installed APK mismatch.")
+        uid = own_uid(adb, package)
+        report["applicationUidBefore"] = uid
         window = HOST_TIME.ObservationWindow(clock, duration, interval)
         with (directory / "samples.jsonl").open("x") as stream:
             for index in range(limit):
                 sample_start = window.start_sample()
-                sample = snapshot(adb)
+                sample = snapshot(adb, package, expected_uid=uid)
+                report["uidMismatch"] |= sample.get("identityMismatch", False)
                 completed = window.complete_sample()
                 sample.update({"index": index, "elapsedSeconds": round(window.elapsed_ns / HOST_TIME.NANOS, 3),
                                "startedElapsedSeconds": round((sample_start - window.start_ns) / HOST_TIME.NANOS, 3),
@@ -215,15 +268,17 @@ def observe(adb, directory, expected_hash, environment, duration, interval,
                 stream.flush()
                 report["samples"] += 1
                 report["samplesWithGaps"] += bool(sample["unavailable"])
-                if completed >= window.deadline_ns:
+                if report["uidMismatch"] or completed >= window.deadline_ns:
                     break
                 sleep(min(interval, window.remaining_seconds()))
-        report["installedApkSha256After"] = installed_hash(adb)
+        report["installedApkSha256After"] = installed_hash(adb, package)
+        report["applicationUidAfter"] = own_uid(adb, package)
+        report["uidMismatch"] |= report["applicationUidAfter"] != uid
         report["artifactMismatch"] = report["installedApkSha256After"] != expected_hash
         report["deviceMismatch"] = device_identity(adb) != report["deviceIdentitySha256"]
         window.end_check()
         window.update_report(report)
-        if not any(report[k] for k in ("artifactMismatch", "deviceMismatch", "samplesWithGaps", "samplingGaps")) and window.last_completed_ns >= window.deadline_ns:
+        if not any(report[k] for k in ("artifactMismatch", "deviceMismatch", "uidMismatch", "samplesWithGaps", "samplingGaps")) and window.last_completed_ns >= window.deadline_ns:
             report["result"] = "OBSERVATION_COMPLETE_REVIEW_REQUIRED"
     except KeyboardInterrupt:
         report["interrupted"] = True
@@ -244,6 +299,7 @@ def observe(adb, directory, expected_hash, environment, duration, interval,
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--serial", required=True)
+    parser.add_argument("--package", default=PACKAGE, help="Observation identity: network.orion or network.orion.qualification only.")
     parser.add_argument("--environment", required=True, choices=("PHYSICAL_DEVICE", "ANDROID_EMULATOR"))
     parser.add_argument("--adb", default=shutil.which("adb"))
     parser.add_argument("--apk", type=Path, required=True)
@@ -253,13 +309,14 @@ def main():
     args = parser.parse_args()
     try:
         bounds(args.duration_seconds, args.interval_seconds)
+        selected_package(args.package)
         if not args.adb or not args.apk.is_file() or args.evidence_dir.exists():
             raise ValueError("Provide host ADB, a built APK and a NEW evidence directory.")
     except ValueError as error:
         parser.error(str(error))
     report = observe(Adb(args.adb, args.serial), args.evidence_dir,
                      hashlib.sha256(args.apk.read_bytes()).hexdigest(), args.environment,
-                     args.duration_seconds, args.interval_seconds)
+                     args.duration_seconds, args.interval_seconds, package=args.package)
     print(json.dumps(report, indent=2))
     return 0 if report["result"] == "OBSERVATION_COMPLETE_REVIEW_REQUIRED" else 1
 

@@ -102,25 +102,26 @@ class History:
         return fresh
 
 
-def own_uid(adb):
-    output = adb("shell", "cmd", "package", "list", "packages", "-U", OBS.PACKAGE)
-    matches = re.findall(r"(?m)^package:network\.orion uid:([0-9]+)$", output)
-    if len(matches) != 1 or not 0 < int(matches[0]) <= 2**31 - 1: raise ValueError("Application UID is unavailable.")
-    return int(matches[0])
+def own_uid(adb, package=OBS.PACKAGE):
+    return OBS.own_uid(adb, package)
 
 
 def observe(adb, directory, expected_hash, environment, duration, interval,
-            monotonic=None, sleep=time.sleep, *, clock=None):
+            monotonic=None, sleep=time.sleep, *, clock=None, package=OBS.PACKAGE):
+    package = OBS.selected_package(package)
     limit = OBS.bounds(duration, interval)
     directory.mkdir(parents=True, exist_ok=False)
-    report = {"hostTiming": OBS.HOST_TIME.unavailable_metadata(), "result": "INCOMPLETE", "environment": environment, "fullSoakGateClosed": False, "fullF4GateClosed": False,
+    report = {"packageName": package, "hostTiming": OBS.HOST_TIME.unavailable_metadata(), "result": "INCOMPLETE", "environment": environment, "fullSoakGateClosed": False, "fullF4GateClosed": False,
+              "fullF5GateClosed": False, "f6Authorized": False, "profileQualified": False, "physicalEvidenceVerified": False,
+              "real24HourDurationProven": False, "autonomyProven": False, "uidMismatch": False,
               "continuousCoverageProven": False, "heartbeatAutonomyProven": False, "requestedSeconds": duration,
               "intervalSeconds": interval, "startedAtUtc": datetime.now(timezone.utc).isoformat(), "samples": 0,
               "samplesWithGaps": 0, "samplingGaps": 0, "samplingGapReasons": {}, "elapsedNanoseconds": None, "baselineEvents": 0, "firstSeenSubsequentEvents": 0,
               "heartbeatPassesFirstSeenAfterBaseline": 0, "expectedApkSha256": expected_hash,
               "collectorSha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              "observationHelperSha256": hashlib.sha256(Path(OBS.__file__).read_bytes()).hexdigest(),
               "clockHelperSha256": hashlib.sha256(Path(OBS.HOST_TIME.__file__).read_bytes()).hexdigest(),
-              "identityCheckedAtEndpointsOnly": True,
+              "identityCheckedAtEndpointsOnly": False, "identityCheckScope": "APK_DEVICE_ENDPOINTS_UID_EACH_POLL",
               "limitations": ["Logcat is a bounded buffer; events before baseline are not new progress.",
                   "Subsequent means first seen after baseline, not independently proven event time or autonomy.",
                   "A heartbeat-origin record proves an observed worker maintenance pass, not exact scheduling or successful external delivery.",
@@ -136,19 +137,28 @@ def observe(adb, directory, expected_hash, environment, duration, interval,
         if qemu not in ("", "0", "1") or environment not in ("PHYSICAL_DEVICE", "ANDROID_EMULATOR") or (qemu == "1") != (environment == "ANDROID_EMULATOR"):
             raise ValueError("Environment mismatch.")
         report["deviceIdentitySha256"] = OBS.device_identity(adb)
-        if OBS.installed_hash(adb) != expected_hash: raise ValueError("Installed APK mismatch.")
-        uid = own_uid(adb)
+        report["installedApkSha256Before"] = OBS.installed_hash(adb, package)
+        if report["installedApkSha256Before"] != expected_hash: raise ValueError("Installed APK mismatch.")
+        uid = own_uid(adb, package)
+        report["applicationUidBefore"] = uid
         report["androidRuntimeEvidence"] = ("UNVERIFIED_SYNTHETIC_HOST_TIME" if clock.metadata["clockSource"] != "CLOCK_BOOTTIME"
                                             else "NON_DEFINITIVE" if qemu == "1" else "PHYSICAL_OBSERVATION_ONLY")
         window = OBS.HOST_TIME.ObservationWindow(clock, duration, interval)
         with (directory / "maintenance-history.jsonl").open("x") as stream:
             for index in range(limit):
                 poll = window.start_sample()
-                sample = {"index": index, "elapsedHostSeconds": round((poll - window.start_ns) / OBS.HOST_TIME.NANOS, 3), "baseline": index == 0,
+                sample = {"packageName": package, "index": index, "elapsedHostSeconds": round((poll - window.start_ns) / OBS.HOST_TIME.NANOS, 3), "baseline": index == 0,
                           "events": [], "unavailable": []}
                 try:
+                    sample["applicationUid"] = own_uid(adb, package)
+                    if sample["applicationUid"] != uid:
+                        report["uidMismatch"] = True
+                        raise ValueError("Application UID changed.")
                     boot = OBS.integer(adb("shell", "settings", "get", "global", "boot_count"))
                     values = records(adb("logcat", "-d", "-v", "raw", "--uid=" + str(uid), TAG + ":I", "*:S"))
+                    if own_uid(adb, package) != uid:
+                        report["uidMismatch"] = True
+                        raise ValueError("Application UID changed.")
                     if any(v["bootCount"] > boot for v in values): raise ValueError("Inconsistent boot snapshot.")
                     sample["bootCount"] = boot
                     sample["events"] = history.accept(values, baseline=index == 0)
@@ -166,7 +176,10 @@ def observe(adb, directory, expected_hash, environment, duration, interval,
                 report["samples"] += 1
                 if completed >= window.deadline_ns: break
                 sleep(min(interval, window.remaining_seconds()))
-        if OBS.installed_hash(adb) != expected_hash or own_uid(adb) != uid or OBS.device_identity(adb) != report["deviceIdentitySha256"]:
+        report["installedApkSha256After"] = OBS.installed_hash(adb, package)
+        report["applicationUidAfter"] = own_uid(adb, package)
+        report["uidMismatch"] |= report["applicationUidAfter"] != uid
+        if report["installedApkSha256After"] != expected_hash or report["uidMismatch"] or OBS.device_identity(adb) != report["deviceIdentitySha256"]:
             raise ValueError("Endpoint identity mismatch.")
         window.end_check()
         window.update_report(report)
@@ -191,16 +204,18 @@ def observe(adb, directory, expected_hash, environment, duration, interval,
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--adb", default=shutil.which("adb")); parser.add_argument("--serial", required=True)
+    parser.add_argument("--package", default=OBS.PACKAGE, help="Observation identity: network.orion or network.orion.qualification only.")
     parser.add_argument("--environment", required=True, choices=("PHYSICAL_DEVICE", "ANDROID_EMULATOR"))
     parser.add_argument("--apk", type=Path, required=True); parser.add_argument("--evidence-dir", type=Path, required=True)
     parser.add_argument("--duration-seconds", type=float, default=3600); parser.add_argument("--interval-seconds", type=float, default=60)
     args = parser.parse_args()
     try:
         OBS.bounds(args.duration_seconds, args.interval_seconds)
+        OBS.selected_package(args.package)
         if not args.adb or not args.apk.is_file() or args.evidence_dir.exists(): raise ValueError("Provide host ADB, an APK and a NEW evidence directory.")
     except ValueError as error: parser.error(str(error))
     result = observe(OBS.Adb(args.adb, args.serial), args.evidence_dir, hashlib.sha256(args.apk.read_bytes()).hexdigest(),
-                     args.environment, args.duration_seconds, args.interval_seconds)
+                     args.environment, args.duration_seconds, args.interval_seconds, package=args.package)
     print(json.dumps(result, indent=2))
     return 0 if result["result"] == "HISTORY_COLLECTION_COMPLETE_REVIEW_REQUIRED" else 1
 
