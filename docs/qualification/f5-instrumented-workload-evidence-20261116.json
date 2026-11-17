@@ -1,0 +1,273 @@
+{
+  "android": {
+    "abi": "x86_64",
+    "actualIndependentResourceSamplesObtained": false,
+    "api": 35,
+    "bothOwnedEmulatorsStoppedExit0": true,
+    "environment": "ANDROID_EMULATOR",
+    "mechanical": {
+      "adbExitCode": 0,
+      "failed": 0,
+      "passed": 115,
+      "skipped": 0,
+      "starts": 115
+    },
+    "pageSizeBytes": 4096,
+    "separateR8Pair": {
+      "actualNoRestartOpenCalls": 2,
+      "modelLoaded": false,
+      "noMechanicalCasesExecutedAgain": true,
+      "noRawGraphNonceOrTranscriptRetained": true,
+      "ownerCallInvoked": false,
+      "result": "REFUSED/NO_QUALIFIED_PROFILE",
+      "sameMainPidKernelStartTicksBootAndGraphNonceHashAfterEachFinish": true
+    },
+    "sourceCommit": "7ac36834d8b8a2c6a383d54a40b91c8772424a64",
+    "subsequentCollector": {
+      "cause": "Tuple unpack expected2 while read-only OPEN API returned3, after115 mechanical PASS; framework pair proof incomplete in that invocation.",
+      "classification": "HOST_VALIDATION_HELPER_CONTRACT_MISMATCH",
+      "coreWorkRequested": false,
+      "mechanical115Rerun": false,
+      "result": "FAILED_HELPER_ONLY"
+    }
+  },
+  "archive": {
+    "bytes": 547376,
+    "manifest": "manifest-sha256.json",
+    "manifestSha256": "76d69effe562a5d56124409665001d9cd4be032169d72bd38586b3b987684535",
+    "path": "artifacts/f5-instrumented-workload-evidence-20261116.tar.gz",
+    "payloadFiles": 179,
+    "regularTarMembers": 180,
+    "sha256": "0bc98574178d6cf8ef88345b2a93317203df5f76316431bb1411d353df565908"
+  },
+  "builds": {
+    "compilerFix": {
+      "change": "Qualification-only bridge snapshots terminal into a local val; no MAIN/JVM/AI source changed.",
+      "configurationCacheReused": true,
+      "normal": {
+        "duration": "2m58s",
+        "executed": 12,
+        "fromCache": 1,
+        "result": "PASS",
+        "tasks": 2635,
+        "upToDate": 2622
+      },
+      "runtimeCaptureR8": {
+        "duration": "11m34s",
+        "executed": 32,
+        "result": "PASS",
+        "tasks": 2762,
+        "upToDate": 2730
+      },
+      "sourceCommit": "7ac36834d8b8a2c6a383d54a40b91c8772424a64"
+    },
+    "firstAggregate": {
+      "normal": {
+        "duration": "14m10s",
+        "executed": 970,
+        "fromCache": 654,
+        "result": "PASS",
+        "tasks": 2635,
+        "upToDate": 1011
+      },
+      "runtimeCaptureR8": {
+        "cause": "Kotlin public cross-module terminal property cannot be smart-cast",
+        "duration": "4m51s",
+        "executed": 54,
+        "fromCache": 42,
+        "result": "FAILED",
+        "tasks": 2739,
+        "upToDate": 2643
+      },
+      "sourceCommit": "cd7bb99a408fd43d0da06455062a11fc9f82b0a3"
+    }
+  },
+  "claims": {
+    "autonomyProven": false,
+    "f6Authorized": false,
+    "fullF4GateClosed": false,
+    "fullF5GateClosed": false,
+    "fullSoakGateClosed": false,
+    "physicalEvidenceVerified": false,
+    "productionInferenceEnabled": false,
+    "profileQualified": false,
+    "real24HourDurationProven": false,
+    "sourceAuthenticated": false
+  },
+  "counting": {
+    "additive": false,
+    "reason": "Focused44/47/54, RED selections and full586 overlap. JVM354 and Android115 overlap prior packages; the separate two OPEN controls are not another115-case run."
+  },
+  "environments": [
+    "CONTAINER",
+    "HOST",
+    "ANDROID_EMULATOR"
+  ],
+  "failureHandling": "Failed builds, actual RED regressions and helper/launcher failures remain separate failing records; no historical result is reclassified.",
+  "historicalHostInvocations": [
+    {
+      "file": "logs/orion-f5-workload-docker-focused-freeze-20261116.log",
+      "result": "PASS",
+      "seconds": 5.153,
+      "tests": 44
+    },
+    {
+      "errors": 3,
+      "file": "logs/orion-f5-workload-bootstrap-red-20261116.log",
+      "result": "FAILED_TEST_LAUNCH_IMPORT_SETUP_NOT_PRODUCT_REGRESSION",
+      "tests": 3
+    },
+    {
+      "errors": 3,
+      "file": "logs/orion-f5-workload-bootstrap-red-actual-20261116.log",
+      "result": "ACTUAL_RED_ABSENT_BOOTSTRAP_SUPPORT",
+      "seconds": 0.035,
+      "tests": 3
+    },
+    {
+      "file": "logs/orion-f5-workload-bootstrap-green-first-20261116.log",
+      "result": "PASS",
+      "seconds": 6.867,
+      "tests": 47
+    },
+    {
+      "errors": 1,
+      "failures": 2,
+      "file": "logs/orion-f5-workload-review-regressions-red3-20261116.log",
+      "result": "ACTUAL_RED_THREE_AUDIT_REGRESSIONS",
+      "seconds": 0.199,
+      "tests": 3
+    },
+    {
+      "errors": 1,
+      "failures": 2,
+      "file": "logs/orion-f5-workload-review-integrated-red-20261116.log",
+      "result": "ACTUAL_RED_INTEGRATED_SAME_REGRESSIONS",
+      "seconds": 0.121,
+      "tests": 3
+    },
+    {
+      "file": "logs/orion-f5-workload-bootstrap-review-green-20261116.log",
+      "result": "PASS",
+      "seconds": 6.47,
+      "tests": 54
+    }
+  ],
+  "hostFinal": {
+    "focusedResult": "PASS",
+    "focusedSeconds": 5.728,
+    "focusedTests": 54,
+    "fullResult": "PASS",
+    "fullSeconds": 36.068,
+    "fullTests": 586,
+    "realLinuxFsyncPipePublicationChecks": true,
+    "syntheticClockAdbAnd24hTimeline": true
+  },
+  "jvm": {
+    "duration": "11m37s",
+    "errors": 0,
+    "failures": 0,
+    "mainJvmAiSourcesByteIdenticalThrough7ac": true,
+    "moduleBoundariesAndLintPassed": true,
+    "qualificationBridgeNotPartOfJvmSourceEquivalence": true,
+    "result": "PASS",
+    "skipped": 0,
+    "sourceCommit": "e67cb82b8216854f88f52a690e54e83612c0ab60",
+    "suites": 43,
+    "tests": 354
+  },
+  "limitations": [
+    "No model loaded, no actual calibrated WORK/BOOTSTRAP schedule or24h source span demonstrated.",
+    "Two no-restart OPEN refusals establish the observed API35 MAIN/graph continuity only. Instrumentation perturbs importance/CPU/lifetime; autonomy is not proved.",
+    "Null resourceExit/policyFacts/resources/observation are honest absence, not zero telemetry or current policy permission.",
+    "Source hashes and pinned AOSP review are not independent source authentication or physical API/native/memory-limiter qualification."
+  ],
+  "officialFrameworkReview": {
+    "notApi37RuntimeQualification": true,
+    "path": "framework/pinned-source-review.json",
+    "scope": "Pinned AOSP API31-37 start/finish no-restart source review only; bodies excluded. matchesPriorBytes=false in some entries records changed source bytes, not absence of reviewed needles."
+  },
+  "pendingSoftware": [
+    "Actual paired exit and passive original policy source163 is still under separate validation at this snapshot.",
+    "Reviewed bounded manual post-death request path on the same MAIN/Owner remains outside160."
+  ],
+  "privacy": {
+    "apkModelNativeBinaryKeystoreDiskImagesIncluded": false,
+    "r8MappingExcluded": true,
+    "rawActualSerialUserHomeOrGraphNonceIncluded": false,
+    "rawR8TranscriptsNeverRetainedByOriginalCollector": true,
+    "redactedTextHasOriginalShaAndExplicitScope": true
+  },
+  "remoteRequiredCi": {
+    "asOf": "local validation snapshot; no integration or remote approval asserted",
+    "status": "PENDING"
+  },
+  "schema": "orion-f5-instrumented-workload-evidence-v1",
+  "snapshotStatus": "LOCAL_SOFTWARE_SCOPES_VALIDATED_REMOTE_CI_PENDING",
+  "softwareF5Complete": false,
+  "sourceCommit": "7ac36834d8b8a2c6a383d54a40b91c8772424a64",
+  "sourceScope": {
+    "allTenApprovalFlagsFalse": true,
+    "allTrackedFilesVerifiedBeforeDocs": 1038,
+    "bothOwnedEmulatorsStoppedExit0": true,
+    "frozenManifestHistoricalAndFinalComparison": {
+      "7ac36834d8b8a2c6a383d54a40b91c8772424a64": {
+        "differences": [
+          ".github/workflows/ci.yml",
+          "app/src/cortexInstrumentedWorkloadTarget/kotlin/network/orion/app/ai/OrionCortexInstrumentedWorkloadBridge.kt",
+          "docs/qualification/F5-InstrumentedWorkload-WorkPackage.md"
+        ],
+        "entries": 27,
+        "matchOriginalFreeze": 24
+      },
+      "e67cb82b8216854f88f52a690e54e83612c0ab60": {
+        "differences": [
+          ".github/workflows/ci.yml",
+          "docs/qualification/F5-InstrumentedWorkload-WorkPackage.md"
+        ],
+        "entries": 27,
+        "matchOriginalFreeze": 25
+      }
+    },
+    "jvmScopes": {
+      "ai/api": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "suites": 6,
+        "tests": 76
+      },
+      "app": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "suites": 37,
+        "tests": 278
+      }
+    },
+    "jvmTotal": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "suites": 43,
+      "tests": 354
+    },
+    "localInstalledPairsMatch": true,
+    "mainJvmAiSourcesIdenticalAtE67Cd7And7ac": true,
+    "mechanicalAndroid": {
+      "failed": 0,
+      "passed": 115,
+      "skipped": 0,
+      "starts": 115
+    },
+    "rawNonceRetained": false,
+    "sourceCommit": "7ac36834d8b8a2c6a383d54a40b91c8772424a64",
+    "twoOpenMainPidTicksBootAndGraphNonceHashEqual": true
+  },
+  "sourceTree": "3f797599efa143393c74614ee7c7cfece03ed5d2",
+  "verification": {
+    "allPayloadHashesAndTarMembersReadBack": true,
+    "noBuildTestsGradleAdbExecutedForDocs": true,
+    "safeRegularRelativeMembersOnly": true
+  }
+}
