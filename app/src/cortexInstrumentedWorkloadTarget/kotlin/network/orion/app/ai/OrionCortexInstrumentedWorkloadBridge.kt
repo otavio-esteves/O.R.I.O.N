@@ -100,9 +100,10 @@ object OrionCortexInstrumentedWorkloadBridge {
                     val ownerCalled = actual.witness()?.ownerCallInvoked
                     val unavailable = original as? OrionCortexRunResult.Unavailable
                     val status = (original as? OrionCortexRunResult.Completed)?.status
+                    val terminal = status?.terminal
                     val outcome = when {
                         unavailable != null -> OrionInstrumentedOutcome.REFUSED
-                        status?.terminal != null -> OrionInstrumentedOutcome.valueOf(status.terminal.name)
+                        terminal != null -> OrionInstrumentedOutcome.valueOf(terminal.name)
                         ownerCalled == false -> OrionInstrumentedOutcome.REFUSED
                         else -> OrionInstrumentedOutcome.UNAVAILABLE
                     }
