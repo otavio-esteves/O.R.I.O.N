@@ -15,6 +15,57 @@ FIXTURE = Path(__file__).with_name("testdata") / "maintenance-snapshot-v1.json"
 
 
 class MaintenanceHistoryTest(unittest.TestCase):
+    def qualified_collection(self,coexist=False,uid_change=False,wrong_artifact=False):
+        package='network.orion.qualification';clock=[0.0];calls=[];uid_reads=0
+        baseline=self.event(pid=334);later=self.event(2,pid=334);later['metrics']['databaseBytes']+=128
+        def adb(*args,**kwargs):
+            nonlocal uid_reads
+            calls.append(args)
+            if args[-1]=='ro.kernel.qemu':return '1'
+            if args[-1]=='ro.serialno':return 'synthetic'
+            if args[:3]==('shell','pm','path'):
+                self.assertEqual(package,args[-1]);return 'package:/data/app/qualified/base.apk'
+            if args[:2]==('shell','sha256sum'):
+                return ('b' if wrong_artifact else 'c')*64+'  /data/app/qualified/base.apk'
+            if args[:4]==('shell','cmd','package','list'):
+                self.assertEqual(package,args[-1]);uid_reads+=1
+                selected='package:'+package+' uid:'+('10163' if uid_change and uid_reads>1 else '10161')
+                return ('package:network.orion uid:10148\n' if coexist else '')+'package:'+package+'.test uid:10162\n'+selected
+            if args[:3]==('shell','settings','get'):return '4'
+            if args[0]=='logcat':
+                self.assertIn('--uid=10161',args);self.assertNotIn('--uid=10148',args)
+                return json.dumps(baseline)+('\n'+json.dumps(later) if clock[0]>=5 else '')
+            self.fail('Unexpected command '+repr(args))
+        with tempfile.TemporaryDirectory() as tmp:
+            directory=Path(tmp)/'qualified'
+            report=HISTORY.observe(adb,directory,'c'*64,'ANDROID_EMULATOR',10,5,monotonic=lambda:clock[0],
+                sleep=lambda seconds:clock.__setitem__(0,clock[0]+seconds),package=package)
+            path=directory/'maintenance-history.jsonl'
+            rows=[json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+        return report,rows,calls
+    def test_qualified_maintenance_only_and_coexistence_use_selected_uid_and_existing_twenty_metrics(self):
+        for coexist in [False,True]:
+            report,rows,calls=self.qualified_collection(coexist)
+            self.assertEqual('HISTORY_COLLECTION_COMPLETE_REVIEW_REQUIRED',report['result'])
+            self.assertEqual('network.orion.qualification',report['packageName'])
+            self.assertEqual(10161,report['applicationUidBefore']);self.assertEqual(10161,report['applicationUidAfter'])
+            self.assertTrue(report['queueHistoryAvailable']);self.assertFalse(report['fullF4GateClosed'])
+            events=[event for row in rows for event in row['events']]
+            self.assertEqual(2,len(events));self.assertEqual(HISTORY.METRICS,set(events[0]['metrics']))
+            self.assertFalse(any('network.orion' in command for command in calls))
+    def test_qualified_wrong_artifact_or_changed_uid_remains_incomplete_without_switching_package(self):
+        for options in [dict(wrong_artifact=True),dict(uid_change=True)]:
+            report,rows,calls=self.qualified_collection(coexist=True,**options)
+            self.assertEqual('INCOMPLETE',report['result']);self.assertFalse(report['fullSoakGateClosed'])
+            self.assertFalse(any('network.orion' in command for command in calls))
+    def test_qualified_uid_selection_is_exact_and_rejects_injected_package(self):
+        output='package:network.orion uid:10148\npackage:network.orion.qualification.test uid:10162\npackage:network.orion.qualification uid:10161'
+        self.assertEqual(10161,HISTORY.own_uid(lambda *args:output,package='network.orion.qualification'))
+        with self.assertRaises(ValueError):HISTORY.own_uid(lambda *args:output,package='network.orion.qualification;id')
+    def test_qualified_missing_uid_or_prefix_collision_never_selects_principal_uid(self):
+        for output in ['package:network.orion uid:10148','package:network.orion.qualification.test uid:10162',
+                       'package:networkXorionXqualification uid:10161','package:network.orion.qualification.extra uid:10161']:
+            with self.assertRaises(ValueError):HISTORY.own_uid(lambda *args:output,package='network.orion.qualification')
     def event(self, sequence=1, pid=123, boot=4, wall=1000):
         value = json.loads(FIXTURE.read_text())
         value.update(correlationId=str(uuid.uuid4()), sequence=sequence, processId=pid, bootCount=boot,

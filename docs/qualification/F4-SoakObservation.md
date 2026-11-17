@@ -36,6 +36,16 @@ The evidence directory must be new. Samples are appended and flushed to
 `INCOMPLETE` report. Abrupt host/power termination may leave only flushed samples;
 missing summaries must never be interpreted as success. Reruns use a new directory.
 Commands time out after ten seconds; decoded output is capped at 1 MiB per command.
+
+The optional `--package` selection now accepts exactly `network.orion` (the
+compatible default) or `network.orion.qualification`. The qualification APK must
+use its own exact artifact/UID/process namespace; a coexisting principal package
+is never a fallback. Selected snapshots bind the MEMINFO PID/package header, and
+UID changes leave an explicit gap. Non-debuggable qualification private storage
+remains unavailable. The existing same-UID maintenance log can supply its actual
+twenty technical counters without triggering work or changing APP/debug settings.
+See the [qualification monitoring procedure](F5-QualifiedMonitoring-WorkPackage.md)
+for both concrete passive commands, evidence limits and compatibility controls.
 Collection is limited to seven days and 20,000 samples. New runs use the Linux
 HOST `CLOCK_BOOTTIME` nanosecond clock, which includes suspend, and a pinned hashed
 HOST boot identity. The clock must be available and nondecreasing in the same boot;
