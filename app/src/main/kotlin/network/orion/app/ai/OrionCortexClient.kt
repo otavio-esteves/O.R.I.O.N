@@ -162,6 +162,54 @@ internal class OrionCortexClient(
             OrionRuntimeDiagnosticEndpoint(this, frame, stamp, app.packageName, android.os.Process.myPid())
     } catch (_: Throwable) { null } }
 
+    private class InstrumentedEndpoint(val service: IOrionCortex, val connection: ServiceConnection,
+        val binder: IBinder, val epoch: Long, val turn: Long, val pid: Int?, val model: String?)
+
+    /** Only supplementary to an original confirmed unload/no-invocation proof, never a terminal source. */
+    internal fun instrumentedScalarIdle(): Boolean = synchronized(monitor) {
+        !closed && activeId == null && loaded == null && !OrionRuntimeMemorySamplingWorker.outstanding()
+    }
+
+    /** Separate idle qualification observation. No acquire/bind, functional pin write or lostConnection. */
+    internal fun instrumentedMemoryObservation(): OrionRuntimeAiMemoryReading? {
+        if (!OrionRuntimeMemorySamplingWorker.tryManualDiagnostic()) return null
+        try {
+            val selected = synchronized(monitor) {
+                if (closed || runtimeFenceExhausted || activeId != null) return null
+                InstrumentedEndpoint(remote ?: return null, connection ?: return null, runtimeBinder ?: return null,
+                    runtimeConnectionEpoch, runtimeTurnGeneration, pinnedAiPid, loaded?.modelId)
+            }
+            fun current(): Boolean = synchronized(monitor) {
+                !closed && !runtimeFenceExhausted && activeId == null && remote === selected.service &&
+                    connection === selected.connection && runtimeBinder === selected.binder &&
+                    runtimeConnectionEpoch == selected.epoch && runtimeTurnGeneration == selected.turn &&
+                    pinnedAiPid == selected.pid && loaded?.modelId == selected.model
+            }
+            if (!current()) return null
+            val health = selected.service.healthCheck()
+            OrionCortexWire.requireEnvelope(health, MEMORY_KEYS)
+            require(health.keySet() == MEMORY_KEYS && OrionCortexWire.text(health, "status") == "OK" &&
+                OrionCortexWire.text(health, "processName", 255) == "${app.packageName}:ai")
+            val pid = OrionCortexWire.int(health, "pid")
+            val boot = OrionCortexWire.int(health, "bootCount")
+            val at = OrionCortexWire.long(health, "sampledElapsed")
+            val pss = OrionCortexWire.long(health, "totalPssBytes")
+            val native = OrionCortexWire.boolean(health, "nativeIncluded")
+            val runtime = OrionCortexWire.boolean(health, "nativeRuntimeLoaded")
+            val validated = OrionCortexWire.boolean(health, "nativeValidationCompleted")
+            require(pid > 0 && pid != android.os.Process.myPid() && (selected.pid == null || selected.pid == pid) &&
+                boot >= 0 && at >= 0 && pss > 0 && native && (!validated || runtime))
+            if (!current()) return null
+            val status = selected.service.getStatus()
+            OrionCortexWire.requireEnvelope(status, setOf("schemaVersion", "status", "modelId"))
+            val state = OrionRuntimeServiceState.valueOf(OrionCortexWire.text(status, "status"))
+            if (state == OrionRuntimeServiceState.LOADED || state == OrionRuntimeServiceState.INFERENCING)
+                require(runtime && validated && selected.model != null && OrionCortexWire.text(status, "modelId") == selected.model)
+            return if (!current()) null else OrionRuntimeAiMemoryReading(pid, boot, at, pss, native, runtime, validated, state)
+        } catch (_: Throwable) { return null }
+        finally { OrionRuntimeMemorySamplingWorker.finishManualDiagnostic() }
+    }
+
     fun newRequestId(): String { check(!closed); return requestHistory.newRequestId() }
 
     private fun restartCandidate(id: String, context: Int, threads: Int, tokens: Int,

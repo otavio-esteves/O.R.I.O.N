@@ -34,3 +34,5 @@ jobs:
         run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build -PorionQualificationRelease=true -PorionCortexSingleAttempt=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2
       - name: Build opt-in bounded runtime capture qualification artifacts
         run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build -PorionQualificationRelease=true -PorionCortexRuntimeCapture=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest :app:assembleDebug :app:assembleRelease --max-workers=2
+      - name: Build opt-in finite instrumented workload qualification artifacts
+        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build -PorionQualificationRelease=true -PorionCortexInstrumentedWorkload=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2

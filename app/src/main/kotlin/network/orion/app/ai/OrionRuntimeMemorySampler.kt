@@ -182,6 +182,7 @@ internal object OrionRuntimeMemorySamplingWorker {
     private val lock = ReentrantLock()
     private val queue = ArrayDeque<OrionRuntimeSamplingTicket>(7)
     private val prepared = AtomicBoolean()
+    private val manualDiagnostic = AtomicBoolean()
     @Volatile private var thread: Thread? = null
     @Volatile private var failed = false
     @Volatile private var active: OrionRuntimeSamplingTicket? = null
@@ -192,7 +193,7 @@ internal object OrionRuntimeMemorySamplingWorker {
                 while (true) {
                     val ticket = run {
                         lock.lock()
-                        try { if (queue.isEmpty()) null else queue.removeFirst().also { active = it } }
+                        try { if (manualDiagnostic.get() || queue.isEmpty()) null else queue.removeFirst().also { active = it } }
                         finally { lock.unlock() }
                     }
                     if (ticket == null) LockSupport.park()
@@ -209,12 +210,24 @@ internal object OrionRuntimeMemorySamplingWorker {
         if (failed || thread == null) return OrionRuntimeSamplingOffer.WORKER_UNAVAILABLE
         if (!lock.tryLock()) return OrionRuntimeSamplingOffer.CONTENDED
         return try {
-            if (queue.size >= 7) OrionRuntimeSamplingOffer.QUEUE_FULL
+            if (manualDiagnostic.get()) OrionRuntimeSamplingOffer.CONTENDED
+            else if (queue.size >= 7) OrionRuntimeSamplingOffer.QUEUE_FULL
             else { queue.addLast(ticket); LockSupport.unpark(thread); OrionRuntimeSamplingOffer.QUEUED }
         } catch (_: Throwable) { failed = true; OrionRuntimeSamplingOffer.RECORDING_FAILURE }
         finally { lock.unlock() }
     }
-    fun outstanding(): Boolean = active != null || !lock.tryLock().let { acquired ->
+    /** Same single diagnostic lane for explicit idle checkpoints; no worker creation or waiting. */
+    fun tryManualDiagnostic(): Boolean {
+        if (failed) return false
+        if (!lock.tryLock()) return false
+        return try { active == null && queue.isEmpty() && manualDiagnostic.compareAndSet(false, true) }
+        finally { lock.unlock() }
+    }
+    fun finishManualDiagnostic() {
+        manualDiagnostic.set(false)
+        LockSupport.unpark(thread)
+    }
+    fun outstanding(): Boolean = manualDiagnostic.get() || active != null || !lock.tryLock().let { acquired ->
         if (!acquired) false else try { queue.isEmpty() } finally { lock.unlock() }
     }
 }

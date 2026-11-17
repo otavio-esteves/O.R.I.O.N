@@ -60,6 +60,7 @@ class OrionCortexRuntimeCaptureClientTest {
         var automatic = true
         var wireTemperature: Float? = null
         var queryAction: (() -> Unit)? = null
+        var healthAction: (() -> Unit)? = null
         var modelId: String? = null
         private var inference = ""
         private var callback: IOrionInferenceCallback? = null
@@ -95,6 +96,7 @@ class OrionCortexRuntimeCaptureClientTest {
         override fun cancelInference(requestId: String) { trace.add("cancel") }
         override fun unloadModel() { trace.add("unload"); unloads.incrementAndGet(); modelId = null }
         override fun healthCheck() = OrionCortexWire.reply("OK").apply {
+            healthAction?.invoke()
             readTrace("health"); health.incrementAndGet(); putString("processName", "$mainPackage:ai"); putInt("pid", pid)
             putInt("bootCount", 1); putLong("sampledElapsed", 1000); putLong("totalPssBytes", 100)
             putBoolean("nativeIncluded", true); putBoolean("nativeRuntimeLoaded", false); putBoolean("nativeValidationCompleted", false)
@@ -108,6 +110,47 @@ class OrionCortexRuntimeCaptureClientTest {
                 OrionGenerationMetricsWire.queryId(query), pid, null, 1, OrionInferenceTerminal.SUCCEEDED,
                 OrionGenerationNativeState.UNKNOWN, OrionGenerationNativeFinish.UNKNOWN, OrionGenerationSlotState.UNKNOWN,
                 OrionGenerationSnapshotState.UPDATING, OrionGenerationPartialWork.UNKNOWN, 0, OrionGenerationTimeState.UNAVAILABLE))
+        }
+    }
+
+
+    @Test fun instrumentedObservationUsesOnlyExistingEndpointAndDoesNotChangeFunctionalClockOrBinding() = runBlocking {
+        Fixture().use { f ->
+            assertNull(f.owner.instrumentedMemoryObservation())
+            assertEquals(0, f.context.binds.get())
+            f.run(null, f.request())
+            val reads = f.clock.reads.get(); val calls = f.context.endpoint.trace.toList()
+            val binds = f.context.binds.get(); val unbinds = f.context.unbinds.get()
+            val reading = checkNotNull(f.owner.instrumentedMemoryObservation())
+            assertEquals(f.context.endpoint.pid, reading.pid); assertEquals(100L, reading.pssBytes)
+            assertEquals(OrionRuntimeServiceState.UNLOADED, reading.state)
+            assertFalse(reading.runtimeLoaded); assertFalse(reading.validated)
+            assertEquals(reads, f.clock.reads.get()); assertEquals(binds, f.context.binds.get())
+            assertEquals(unbinds, f.context.unbinds.get()); assertEquals(calls + listOf("health", "status"), f.context.endpoint.trace.toList())
+        }
+    }
+
+    @Test fun instrumentedObservationFaultDoesNotDropEndpointOrRetryAndLaneStaysOwnedUntilActualReturn() = runBlocking {
+        Fixture().use { f ->
+            f.run(null, f.request())
+            val reads = f.clock.reads.get(); val binds = f.context.binds.get()
+            f.context.endpoint.healthAction = { throw AssertionError("SECRET_DIAGNOSTIC_ERROR") }
+            val before = f.context.endpoint.health.get()
+            assertNull(f.owner.instrumentedMemoryObservation())
+            assertEquals(before, f.context.endpoint.health.get())
+            assertEquals(binds, f.context.binds.get()); assertEquals(0, f.context.unbinds.get())
+            val entered = CountDownLatch(1); val release = CountDownLatch(1)
+            f.context.endpoint.healthAction = { entered.countDown(); check(release.await(5, TimeUnit.SECONDS)) }
+            val worker = async(Dispatchers.Default) { f.owner.instrumentedMemoryObservation() }
+            try {
+                assertTrue(entered.await(3, TimeUnit.SECONDS)); assertTrue(OrionRuntimeMemorySamplingWorker.outstanding())
+                assertNull(f.owner.instrumentedMemoryObservation())
+                assertEquals(before, f.context.endpoint.health.get())
+            } finally { release.countDown() }
+            assertNotNull(withTimeout(5000) { worker.await() })
+            assertEquals(before + 1, f.context.endpoint.health.get()); assertEquals(reads, f.clock.reads.get())
+            assertEquals(binds, f.context.binds.get()); assertEquals(0, f.context.unbinds.get())
+            assertFalse(OrionRuntimeMemorySamplingWorker.outstanding())
         }
     }
 

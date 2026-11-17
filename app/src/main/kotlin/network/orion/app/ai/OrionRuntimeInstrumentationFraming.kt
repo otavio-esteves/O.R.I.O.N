@@ -14,11 +14,14 @@ internal class OrionRuntimeInstrumentationContext private constructor(val qualif
     val component: ComponentName) {
     companion object {
         const val RUNNER = "network.orion.app.compatibility.OrionCortexRuntimeCaptureInstrumentation"
+        const val WORKLOAD_RUNNER = "network.orion.app.compatibility.OrionCortexInstrumentedWorkloadInstrumentation"
         fun fromInstrumentation(instrumentation: Instrumentation): OrionRuntimeInstrumentationContext? = try {
             val qualified = OrionRuntimeQualifiedContext.fromInstrumentation(instrumentation)
             val component = instrumentation.componentName
-            if (qualified == null || instrumentation.javaClass.name != RUNNER ||
-                component.packageName != qualified.testPackage || component.className != RUNNER ||
+            val actualRunner = instrumentation.javaClass.name
+            val permitted = actualRunner == RUNNER || actualRunner == WORKLOAD_RUNNER && network.orion.app.BuildConfig.ORION_CORTEX_INSTRUMENTED_WORKLOAD
+            if (qualified == null || !permitted ||
+                component.packageName != qualified.testPackage || component.className != actualRunner ||
                 Binder.getCallingUid() != Process.myUid() || instrumentation.isProfiling ||
                 instrumentation.targetContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) null
             else OrionRuntimeInstrumentationContext(qualified, component)
