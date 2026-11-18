@@ -71,3 +71,12 @@ authority or structural changes inferred from this sequencing exception.
 References: [F4 functional exit](../qualification/F4-FunctionalAudit.md),
 [F5 qualification contract](../issues/ORION-F5-QUAL-001.md),
 [F6 first work package](../issues/ORION-F6-ROUTER-001.md).
+
+## Authorized software completion scope (2026-11-18)
+
+The user subsequently instructed “tenta finalizar f6 (de ponta a ponta ignorando
+aparelho físico)”. Continue the software increments through Master Plan §§12.3–12.7
+and record software gate evidence separately. This expands the implementation
+work, not the sequencing exception: production resource profiles, physical
+qualification and CORTEX_RUNTIME_READY remain governed by the unaffected rules.
+See ORION-F6-HYBRID-001.
