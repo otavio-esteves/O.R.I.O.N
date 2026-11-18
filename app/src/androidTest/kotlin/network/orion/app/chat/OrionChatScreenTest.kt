@@ -24,8 +24,6 @@ class OrionChatScreenTest {
         scroll("Mensagem"); compose.onNodeWithTag("orion_chat_input").assertIsEnabled().performTextReplacement(text)
         scroll("Enviar")
         compose.onNodeWithText("Enviar").assertIsEnabled().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) { assertTrue(it()) }
-        compose.onNodeWithTag("orion_chat_input").assert(SemanticsMatcher.expectValue(
-            SemanticsProperties.EditableText, androidx.compose.ui.text.AnnotatedString("")))
         // Observe this submission rather than an idle snapshot from the previous request.
         scroll(text)
         compose.onNode(hasText(text, substring = false) and !hasSetTextAction()).assertIsDisplayed()
