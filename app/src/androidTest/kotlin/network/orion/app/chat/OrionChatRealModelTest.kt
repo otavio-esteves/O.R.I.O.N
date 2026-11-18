@@ -68,8 +68,9 @@ class OrionChatRealModelTest {
         }).build()
         val decisions = AtomicInteger(); val streamed = AtomicInteger(); val killNext = AtomicBoolean()
         val pauseNextDelta = AtomicBoolean(); val deltaPaused = CountDownLatch(1); val releaseDelta = CountDownLatch(1)
+        // Emulator-only calibration: four provisioned vCPUs, bounded 1024-token context.
         val plan = OrionInferenceResourcePlan(InferenceModelProfile(QWEN_MODEL_ID, 1024L * 1024 * 1024),
-            "ANDROID_EMULATOR_SYNTHETIC_CHAT_TEST_ONLY", 2, 4096, 128, 0,
+            "ANDROID_EMULATOR_SYNTHETIC_CHAT_TEST_ONLY", 4, 1024, 128, 0,
             2L * 1024 * 1024 * 1024, 3L * 1024 * 1024 * 1024, 512L * 1024 * 1024, 20, 2)
         val guard = OrionCortexRestartGuard(clock, listOf(plan), 1000, 1000)
         val client = OrionCortexClient(app, clock, resources = { modelId, context, threads, tokens ->
@@ -198,6 +199,8 @@ class OrionChatRealModelTest {
                 putInt("orion_chat_governor_decisions", decisions.get())
                 putInt("orion_chat_fresh_request_ids", requestIds.size)
                 putString("orion_chat_profile", plan.tier)
+                putInt("orion_chat_context_cap", plan.maxContext)
+                putInt("orion_chat_threads", plan.maxThreads)
                 putBoolean("orion_chat_main_survived_ai_kill", true)
             })
         } finally {

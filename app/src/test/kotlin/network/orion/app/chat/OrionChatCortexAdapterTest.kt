@@ -47,6 +47,17 @@ class OrionChatCortexAdapterTest {
         }
         assertEquals(OrionChatTerminal.UNAVAILABLE, OrionChatCortexAdapter(clock) { runtime }.generate(original, "hi", "corr") {})
     }
+    @Test fun constrainedChatProfileKeepsMandatoryRequestAndDropsWholeOptionalHistory() {
+        val model = qwenChatModel(plan().copy(maxContext = 1024))!!
+        val history = List(12) { network.orion.core.orchestrator.chat.OrionChatTurn(java.util.UUID.randomUUID(), false, "optional context ".repeat(100)) }
+        for (request in listOf("Diga apenas olá.", "Crie uma tarefa com o título Comprar pão.", "Conte uma história longa sobre o espaço.")) {
+            val context = network.orion.core.orchestrator.chat.OrionChatContext.build(request, history, model)
+            assertNotNull("Mandatory request must fit in the constrained profile", context)
+            assertTrue(context!!.promptTokenUpperBound + model.reservedOutputTokens <= 1024)
+            assertTrue(context.omittedBlocks > 0)
+            assertTrue(context.prompt.contains(network.orion.core.orchestrator.chat.OrionStructuredResponse.quote(request)))
+        }
+    }
     @Test fun byteBoundCoversTransportNewlineUnicodeAndSpecialFraming() {
         val model = qwenChatModel(plan())!!
         val prompt = "<|im_start|>user\n🌟é<|im_end|>"
