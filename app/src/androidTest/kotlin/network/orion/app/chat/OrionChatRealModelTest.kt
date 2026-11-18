@@ -124,16 +124,28 @@ class OrionChatRealModelTest {
                 activity.setContent { MaterialTheme { ChatScreen(checkNotNull(controller)) } }
             }
             fun scroll(label: String) { compose.onNodeWithTag("orion_chat").performScrollToNode(hasText(label)) }
+            fun checkpoint(stage: String) {
+                InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply {
+                    putString("orion_chat_checkpoint", stage)
+                    putString("orion_chat_cortex_state", checkNotNull(controller).state.value.cortex)
+                    putInt("orion_chat_governor_decisions", decisions.get())
+                    putInt("orion_chat_native_deltas", streamed.get())
+                    putInt("orion_chat_issued_ids", requestIds.size)
+                })
+            }
             fun send(text: String) {
                 scroll("Mensagem"); compose.onNodeWithTag("orion_chat_input").performTextInput(text)
                 scroll("Enviar"); compose.onNodeWithText("Enviar").performClick()
                 compose.waitUntil(150_000) { !checkNotNull(controller).state.value.busy }
+                checkpoint("REQUEST_COMPLETED")
             }
             val mainPid = Process.myPid()
             send("Diga apenas olá.")
             assertTrue("Actual native deltas required", streamed.get() > 0)
             assertTrue("Validated local answer required", checkNotNull(controller).state.value.turns.any { !it.user && it.proposal == null })
             assertFalse(checkNotNull(controller).state.value.canRetry)
+            assertTrue("Greeting must answer the request, not copy a schema placeholder",
+                checkNotNull(controller).state.value.turns.last().text.contains("olá", ignoreCase = true))
             pauseNextDelta.set(true)
             scroll("Mensagem"); compose.onNodeWithTag("orion_chat_input").performTextInput("Diga olá novamente.")
             scroll("Enviar"); compose.onNodeWithText("Enviar").performClick()
@@ -144,12 +156,14 @@ class OrionChatRealModelTest {
             assertEquals("", checkNotNull(controller).state.value.draft)
             scroll("Tentar inferência novamente"); compose.onNodeWithText("Tentar inferência novamente").performClick()
             compose.waitUntil(150_000) { !checkNotNull(controller).state.value.busy }
-            assertFalse(checkNotNull(controller).state.value.canRetry)
+            checkpoint("EXPLICIT_RETRY_COMPLETED")
+            assertFalse("Retry Cortex state: " + checkNotNull(controller).state.value.cortex, checkNotNull(controller).state.value.canRetry)
             assertFalse(checkNotNull(controller).state.value.turns.last().user)
             val title = "Comprar pão"
             send("Crie uma tarefa com o título Comprar pão.")
             val proposal = checkNotNull(controller).state.value.turns.last().proposal
             assertNotNull("Real model must produce a validated task proposal", proposal)
+            assertEquals("The proposed title must match the natural-language request", title, checkNotNull(proposal).title)
             val taskId = checkNotNull(proposal).taskId
             assertFalse(runBlocking(Dispatchers.IO) { runtime.taskKernel!!.query.get(GetTasks()).items.any { it.taskId == taskId } })
             scroll("Preparar tarefa sugerida"); compose.onNodeWithText("Preparar tarefa sugerida").performClick()
