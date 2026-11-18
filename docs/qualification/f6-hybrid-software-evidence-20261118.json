@@ -1,0 +1,110 @@
+{
+  "androidRegression": {
+    "environment": "ANDROID_EMULATOR",
+    "log": "orion-f6-hybrid-debug-final-android.log",
+    "outcome": "PASS",
+    "seconds": 42.115,
+    "tests": 10
+  },
+  "archive": {
+    "allMembersVerified": true,
+    "bytes": 316843,
+    "functionalSourceCommit": "ba6d0f9a0cf30d194cdcc04f28fe97089e733dd5",
+    "members": 203,
+    "path": "artifacts/f6-hybrid-software-evidence-20261118.tar.gz",
+    "privateKeyPemMarkerAbsent": true,
+    "rawHomePathMarkerAbsent": true,
+    "sha256": "78d6a323216a55b9617bad63da870151e33579ec1f33c5d4ffe9f36de94b32bd",
+    "sourceFiles": 1100,
+    "sourceManifestSha256": "978189b3e1d450bc12f91266d84e33765bab4e4051286d00816ca5dba43f886e"
+  },
+  "branch": "feat/f6-hybrid-chat",
+  "builds": {
+    "canonical": "PASS",
+    "minifiedQualification": "PASS",
+    "nativePackaging": "STATIC_PASS_ONLY"
+  },
+  "cleanup": {
+    "adbUnrootedBeforeShutdown": true,
+    "name": "OrionF6Hybrid20261118",
+    "originalUserAvdsTouched": false,
+    "outcome": "OWNED_AVD_STOPPED_AND_REMOVED",
+    "ownedRootRemoved": true,
+    "serial": "emulator-5584"
+  },
+  "cortexRuntimeReady": false,
+  "date": "2026-11-18",
+  "earlierAttempts": "Preserved in archive logs; failures are not counted as PASS. See report for source/test-harness corrections.",
+  "f6FullyQualified": false,
+  "f6SoftwareComplete": true,
+  "fullCheckSourceCommit": "fb323ce83c4e8bd31389217c18a59f70c5818e8d",
+  "functionalSourceCommit": "ba6d0f9a0cf30d194cdcc04f28fe97089e733dd5",
+  "hostContracts": {
+    "outcome": "PASS",
+    "tests": 629
+  },
+  "hybridRuntime": {
+    "actualAiKillMainSurvived": true,
+    "contextCap": 1024,
+    "environment": "ANDROID_EMULATOR",
+    "exactPersistedTaskReadableAfterKill": true,
+    "fastPathAfterKillPassed": true,
+    "freshRequestIds": 5,
+    "governorApprovals": 10,
+    "inferenceDeadlineMs": 120000,
+    "nativeDeltas": 43,
+    "outcome": "PASS",
+    "productionProfileApproved": false,
+    "seconds": 485.337,
+    "skipped": 0,
+    "sourceCommit": "ba6d0f9a0cf30d194cdcc04f28fe97089e733dd5",
+    "syntheticResourceProfile": true,
+    "tests": 2,
+    "threads": 4
+  },
+  "installedArtifacts": {
+    "adbUid": "2000",
+    "declaredTestContext": 1024,
+    "declaredTestThreads": 4,
+    "sourceCommit": "ba6d0f9a0cf30d194cdcc04f28fe97089e733dd5",
+    "target": {
+      "installedVerified": true,
+      "path": "app/build/outputs/apk/qualificationRelease/app-qualificationRelease.apk",
+      "sha256": "b0f9630f8ad8093ca88b27cb512a47958a8b8efaa1bf253954a5c5829aa65918"
+    },
+    "tests": {
+      "installedVerified": true,
+      "path": "app/build/outputs/apk/androidTest/qualificationRelease/app-qualificationRelease-androidTest.apk",
+      "sha256": "daa3418c1f598c5a0c3a3287b3dda06637117bd62ae4a123ad96c5c1850b54ed"
+    }
+  },
+  "jvm": {
+    "errors": 0,
+    "failures": 0,
+    "modules": 53,
+    "skipped": 0,
+    "suites": 140,
+    "tests": 1127
+  },
+  "merge": "NOT_PERFORMED",
+  "migrationRequired": false,
+  "milestoneTag": "NOT_CREATED",
+  "moduleBoundaryCases": 36,
+  "newF6JvmCases": 23,
+  "physicalQualification": false,
+  "productionProfileApproved": false,
+  "push": "NOT_PERFORMED",
+  "remoteCI": "NOT_RUN",
+  "roomSchemaVersion": 6,
+  "schemaVersion": 1,
+  "softwareGates": {
+    "coreSurvivesAiDeath": "PASS",
+    "cortexOnlyWhenNeeded": "PASS",
+    "fastPathsWithoutCortex": "PASS",
+    "invalidToolCallsExecuteNothing": "PASS",
+    "localChat": "PASS",
+    "policyOutsideLlmAuthority": "PASS",
+    "simpleNaturalLanguageRouting": "PASS",
+    "validatedStructuredOutput": "PASS"
+  }
+}

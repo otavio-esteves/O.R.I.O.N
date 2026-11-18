@@ -28,8 +28,12 @@ permits bounded F6 development with physical qualification deferred. The first
 [Intent Router work package](docs/issues/ORION-F6-ROUTER-001.md) interprets a small
 deterministic task/battery grammar using existing command/query contracts. A routing
 proposal grants no authority and invokes no Skill, persistence or Cortex work.
-Physical/stability gates remain open, production profiles remain absent and
-CORTEX_RUNTIME_READY/F6 completion are not declared.
+The [hybrid chat software validation](docs/qualification/F6-HybridSoftware-20261118.md)
+now records completion of all eight F6 software criteria: bounded context, strict
+structured output, local chat with streaming/cancel/safe retry, human-confirmed
+tasks and actual AI-process-death degradation, verified with a real model in an
+emulator. Physical/stability gates remain open, production profiles remain absent
+and CORTEX_RUNTIME_READY/full qualification are not declared.
 
 The [software-entry validation](docs/qualification/F6-SoftwareEntry-20261118.md)
 records the diagnostic regressions, first router scope, active-module JVM inventory

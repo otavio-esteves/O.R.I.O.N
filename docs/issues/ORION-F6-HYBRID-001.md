@@ -9,7 +9,8 @@ confirmation through the existing Core. User instruction 2026-11-18:
 FILES ALLOWED: core/context/**; core/orchestrator/**; task read descriptor in
 core/skills/metadata/**; feature/chat/**; app/chat adapters, existing Cortex owner
 read-only configuration selector, MainActivity and related tests; settings and
-module dependencies and opt-in qualification test selection; this issue, ADR-0004 clarification and F6 evidence.
+module dependencies and opt-in qualification test selection; this issue,
+ADR-0004 clarification, README phase-status link and F6 evidence.
 
 CONTRACTS: OrionIntent, ContextBudgetManager, SkillDescriptor, TaskGateway,
 DeviceInformationGateway, existing Cortex runtime/client, ActionRequest and exact
@@ -45,3 +46,10 @@ the two chat instrumentation tests against the optimized native/R8 qualification
 APK. Test entry APIs are retained only in this probe; normal production profiles,
 normal Debug/Release and the ordinary qualification probe are unchanged. All
 failed attempts remain evidence, not PASS.
+
+SOFTWARE RESULT (2026-11-18): COMPLETE. All eight §12.7 criteria have scoped
+software evidence in docs/qualification/F6-HybridSoftware-20261118.md. Final R8
+Android invocation passed both tests with the real pinned model, five inference
+IDs, ten governor approvals and actual AI death followed by a readable persisted
+task. Physical qualification, production profiles and CORTEX_RUNTIME_READY remain
+OPEN; no phase milestone tag or remote merge is authorized by this result.
