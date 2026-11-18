@@ -3,6 +3,7 @@ package network.orion.core.orchestrator.routing
 import java.util.Locale
 import java.util.UUID
 import network.orion.core.commands.tasks.CreateTaskRejection
+import network.orion.core.queries.device.GetDeviceInformation
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -14,7 +15,7 @@ class OrionIntentRouterTest {
         OrionRoutingInput(text, inputId, correlation, source, final)
 
     @Test fun exactListAliasesProduceOnlyTheExistingReadQuery() {
-        for (text in listOf("listar tarefas", "  LISTAR TAREFAS  ", "Ver tarefas")) {
+        for (text in listOf("listar tarefas", "  LISTAR TAREFAS  ", "Ver tarefas", "minhas tarefas")) {
             val route = router.route(input(text)) as OrionIntentRoute.TaskList
             assertEquals("task.list", route.intent.intentType)
             assertEquals(correlation, route.intent.correlationId)
@@ -23,6 +24,16 @@ class OrionIntentRouterTest {
             assertEquals(1.0, route.intent.confidence, 0.0)
             assertEquals(50, route.intent.arguments.limit)
             assertNull(route.intent.arguments.after)
+        }
+    }
+
+    @Test fun batteryUsesTheExistingReadOnlyDeviceQueryWithoutCortex() {
+        for (text in listOf("bateria", " BATERIA ", "consultar bateria")) {
+            val route = router.route(input(text)) as OrionIntentRoute.BatteryQuery
+            assertSame(GetDeviceInformation, route.intent.arguments)
+            assertEquals("device.battery", route.intent.intentType)
+            assertEquals(correlation, route.intent.correlationId)
+            assertFalse(route.intent.requiresCortex)
         }
     }
 
@@ -76,13 +87,13 @@ class OrionIntentRouterTest {
     }
 
     @Test fun nonfinalTextNeverProducesACommandOrCognitiveCandidate() {
-        for (text in listOf("listar tarefas", "criar tarefa: Comprar pão", "uma pergunta")) {
+        for (text in listOf("listar tarefas", "bateria", "criar tarefa: Comprar pão", "uma pergunta")) {
             assertTrue(router.route(input(text, final = false)) is OrionIntentRoute.AwaitingFinalInput)
         }
     }
 
     @Test fun externalContentCannotSelectAnExecutableOrCognitiveCommandRoute() {
-        for (text in listOf("listar tarefas", "criar tarefa: Comprar pão", "uma pergunta")) {
+        for (text in listOf("listar tarefas", "bateria", "criar tarefa: Comprar pão", "uma pergunta")) {
             val route = router.route(input(text, source = OrionRoutingSource.EXTERNAL_CONTENT)) as OrionIntentRoute.Rejected
             assertEquals(OrionRoutingRejection.UNTRUSTED_SOURCE, route.reason)
         }
@@ -130,7 +141,7 @@ class OrionIntentRouterTest {
 
     @Test fun diagnosticsNeverExposeInputContentOrIdentifiers() {
         val secret = "segredo-exclusivo-123"
-        val requests = listOf(input("criar tarefa: $secret"), input(secret), input(secret, final = false),
+        val requests = listOf(input("minhas tarefas"), input("bateria"), input("criar tarefa: $secret"), input(secret), input(secret, final = false),
             input("criar tarefa:"), input(secret, source = OrionRoutingSource.EXTERNAL_CONTENT))
         for (request in requests) {
             val route = router.route(request)

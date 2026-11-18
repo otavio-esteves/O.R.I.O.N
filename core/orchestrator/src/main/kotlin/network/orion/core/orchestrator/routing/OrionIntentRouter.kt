@@ -8,7 +8,9 @@ import network.orion.core.commands.tasks.CreateTaskRejection
 import network.orion.core.commands.tasks.OrionCreateTaskPreparer
 import network.orion.core.commands.tasks.ValidatedCreateTask
 import network.orion.core.model.OrionIntent
+import network.orion.core.queries.device.GetDeviceInformation
 import network.orion.core.queries.tasks.GetTasks
+import network.orion.core.skills.metadata.device.OrionDeviceDescriptors
 import network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor
 
 /** Producer metadata only. A source label is never user presence, policy or execution authority. */
@@ -38,6 +40,9 @@ sealed interface OrionIntentRoute {
     class TaskCreation(val intent: OrionIntent<ValidatedCreateTask>) : OrionIntentRoute {
         override fun toString() = "OrionIntentRoute.TaskCreation(<redacted>)"
     }
+    class BatteryQuery(val intent: OrionIntent<GetDeviceInformation>) : OrionIntentRoute {
+        override fun toString() = "OrionIntentRoute.BatteryQuery(<redacted>)"
+    }
     class CognitiveCandidate(val correlationId: UUID) : OrionIntentRoute {
         override fun toString() = "OrionIntentRoute.CognitiveCandidate(<redacted>)"
     }
@@ -54,7 +59,7 @@ sealed interface OrionIntentRoute {
 }
 
 /**
- * First F6 slice: a closed, bounded task grammar, not a general language/model parser.
+ * First F6 slice: a closed, bounded task/battery grammar, not a general language/model parser.
  * All text after `criar tarefa:` is one literal title. Schema validation is reused
  * from core:commands; no authorization/confirmation field is accepted from text.
  *
@@ -72,9 +77,13 @@ class OrionIntentRouter {
         val text = input.text.trim()
         val command = text.lowercase(Locale.ROOT)
         if (text.isEmpty()) return OrionIntentRoute.Clarification(OrionRoutingClarification.EMPTY_INPUT, input.correlationId)
-        if (command == "listar tarefas" || command == "ver tarefas") {
+        if (command == "listar tarefas" || command == "ver tarefas" || command == "minhas tarefas") {
             return OrionIntentRoute.TaskList(OrionIntent("task.list", 1.0, GetTasks(),
                 input.source.name, false, input.correlationId))
+        }
+        if (command == "bateria" || command == "consultar bateria") {
+            return OrionIntentRoute.BatteryQuery(OrionIntent(OrionDeviceDescriptors.battery.name, 1.0,
+                GetDeviceInformation, input.source.name, false, input.correlationId))
         }
         if (command == "criar tarefa") {
             return OrionIntentRoute.Clarification(OrionRoutingClarification.MISSING_TASK_TITLE, input.correlationId)

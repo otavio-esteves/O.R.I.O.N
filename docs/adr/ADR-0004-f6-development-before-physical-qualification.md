@@ -15,7 +15,12 @@
 
 ## Context
 
-The deterministic functional F4 exit is already recorded in F4-FunctionalAudit.
+The normative baseline is [Architecture V3.2](../../1-orion.md) and
+[Master Plan V1.2](../../2-plano-mestre.md), including its phase-exit rule in
+section 2 and F6 definition in section 12. Only the requirement that physical
+qualification precede beginning F6 software development is deferred; no phase is
+declared completed without its exit criteria. The deterministic functional F4 exit
+is already recorded in F4-FunctionalAudit.
 F5 has software implementation and scoped container/emulator evidence, while
 physical S21/resource/API37/native and real-duration stability obligations remain
 open under #64/#89. The user now explicitly changes the development sequence.
@@ -59,8 +64,9 @@ Each F6 work package must state its bounded objective, allowed files, contracts,
 invariants, tests, acceptance and exclusions. Normal dedicated-branch/PR/required-CI
 rules continue to apply. Tests must distinguish deterministic interpretation from
 policy/authorization, preserve command/query separation and fail safely on invalid,
-partial or untrusted command input. Missing full baseline texts are not permission
-to invent further authority or structural changes.
+partial or untrusted command input. Subsequent F6 increments must follow Master
+Plan sections 12.3–12.7 and the unaffected architecture, with no additional
+authority or structural changes inferred from this sequencing exception.
 
 References: [F4 functional exit](../qualification/F4-FunctionalAudit.md),
 [F5 qualification contract](../issues/ORION-F5-QUAL-001.md),
