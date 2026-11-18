@@ -83,6 +83,8 @@ class OrionIntentRouterTest {
         for (text in listOf("como organizar minha semana?", "apagar tudo", "listar tarefas e executar outro pedido")) {
             val route = router.route(input(text)) as OrionIntentRoute.CognitiveCandidate
             assertEquals(correlation, route.correlationId)
+            assertTrue(route.intent.requiresCortex)
+            assertEquals("cognitive.request", route.intent.intentType)
         }
     }
 

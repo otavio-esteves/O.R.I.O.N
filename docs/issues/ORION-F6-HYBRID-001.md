@@ -9,7 +9,7 @@ confirmation through the existing Core. User instruction 2026-11-18:
 FILES ALLOWED: core/context/**; core/orchestrator/**; task read descriptor in
 core/skills/metadata/**; feature/chat/**; app/chat adapters, existing Cortex owner
 read-only configuration selector, MainActivity and related tests; settings and
-module dependencies; this issue, ADR-0004 clarification and F6 evidence.
+module dependencies and opt-in qualification test selection; this issue, ADR-0004 clarification and F6 evidence.
 
 CONTRACTS: OrionIntent, ContextBudgetManager, SkillDescriptor, TaskGateway,
 DeviceInformationGateway, existing Cortex runtime/client, ActionRequest and exact
@@ -37,3 +37,11 @@ automatic repair/retry of model tools, architecture changes, push/merge.
 
 ENVIRONMENTS: Docker for hardware-independent checks and builds; HOST for ADB;
 ANDROID_EMULATOR for scoped runtime evidence. Physical gates remain OPEN.
+
+RUNTIME PROBE NOTE: scalar native Debug prefill exhausted the existing 120s
+inference deadline before emitting text. Do not weaken that deadline. The explicit
+`orionQualificationRelease=true` + `orionHybridChatQualification=true` build selects
+the two chat instrumentation tests against the optimized native/R8 qualification
+APK. Test entry APIs are retained only in this probe; normal production profiles,
+normal Debug/Release and the ordinary qualification probe are unchanged. All
+failed attempts remain evidence, not PASS.

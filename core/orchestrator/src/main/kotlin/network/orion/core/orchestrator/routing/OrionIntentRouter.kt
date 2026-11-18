@@ -43,7 +43,8 @@ sealed interface OrionIntentRoute {
     class BatteryQuery(val intent: OrionIntent<GetDeviceInformation>) : OrionIntentRoute {
         override fun toString() = "OrionIntentRoute.BatteryQuery(<redacted>)"
     }
-    class CognitiveCandidate(val correlationId: UUID) : OrionIntentRoute {
+    class CognitiveCandidate(val intent: OrionIntent<Unit>) : OrionIntentRoute {
+        val correlationId: UUID get() = intent.correlationId
         override fun toString() = "OrionIntentRoute.CognitiveCandidate(<redacted>)"
     }
     class AwaitingFinalInput(val correlationId: UUID) : OrionIntentRoute {
@@ -59,11 +60,11 @@ sealed interface OrionIntentRoute {
 }
 
 /**
- * First F6 slice: a closed, bounded task/battery grammar, not a general language/model parser.
+ * Closed, bounded task/battery grammar. Unmatched trusted final text is a cognitive intent.
  * All text after `criar tarefa:` is one literal title. Schema validation is reused
  * from core:commands; no authorization/confirmation field is accepted from text.
  *
- * A future trusted adapter still submits through the existing gateway/ingress,
+ * The trusted chat adapter submits through the existing gateway/ingress,
  * obtains policy/capability/permission decisions and binds human confirmation.
  * CognitiveCandidate means no deterministic match, not ResourceGovernor approval
  * or permission to bind/load/infer. Partial and external input cannot select it.
@@ -102,7 +103,8 @@ class OrionIntentRouter {
                 else OrionIntentRoute.Rejected(OrionRoutingRejection.INVALID_TASK_ARGUMENTS, input.correlationId, prepared.reason)
             }
         }
-        return OrionIntentRoute.CognitiveCandidate(input.correlationId)
+        return OrionIntentRoute.CognitiveCandidate(OrionIntent("cognitive.request", 0.0, Unit,
+            input.source.name, true, input.correlationId))
     }
 
     /** Guard raw UTF-16 length and scan bounded Unicode scalars before trim/case-folding/allocation. */

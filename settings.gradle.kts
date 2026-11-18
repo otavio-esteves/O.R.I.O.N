@@ -70,3 +70,6 @@ include(":feature:notifications")
 
 include(":ai:llama")
 include(":ai:service")
+
+include(":core:context")
+include(":feature:chat")
