@@ -111,7 +111,8 @@ android {
         buildTypes.getByName("qualificationRelease").proguardFiles("src/hybridChatQualification/proguard-rules.pro")
         sourceSets.getByName("androidTest").java.directories.clear()
         sourceSets.getByName("androidTest").kotlin.directories.clear()
-        sourceSets.getByName("androidTest").java.directories.add("src/androidTest/kotlin/network/orion/app/chat")
+        sourceSets.getByName("androidTest").java.setSrcDirs(emptyList<String>())
+        sourceSets.getByName("androidTest").kotlin.setSrcDirs(listOf("src/androidTest/kotlin/network/orion/app/chat"))
     }
     if (physicalBaselineEnabled) {
         sourceSets.getByName("qualificationRelease").kotlin.directories.add("src/physicalBaselineTarget/kotlin")
@@ -226,6 +227,7 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.compose.material3)
     implementation(libs.coroutines.android)
+    if (hybridChatEnabled) androidTestCompileOnly(libs.errorprone.annotations)
     if (!qualificationEnabled || hybridChatEnabled) {
         androidTestImplementation(platform(libs.compose.bom))
         androidTestImplementation(libs.compose.ui.test.junit4)
@@ -245,4 +247,12 @@ dependencies {
     }
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.runtime)
+}
+
+if (hybridChatEnabled) {
+    // Compiler-only meta-annotations refer to JDK javax.lang.model, absent on Android.
+    // Keep them as compileOnly libraries, never runtime payload; preserve R8 missing-class checks.
+    configurations.matching { it.name.endsWith("AndroidTestRuntimeClasspath") }.configureEach {
+        exclude(group = "com.google.errorprone", module = "error_prone_annotations")
+    }
 }
