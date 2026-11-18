@@ -134,8 +134,13 @@ class OrionChatRealModelTest {
                 })
             }
             fun send(text: String) {
-                scroll("Mensagem"); compose.onNodeWithTag("orion_chat_input").performTextInput(text)
-                scroll("Enviar"); compose.onNodeWithText("Enviar").performClick()
+                compose.waitUntil(15_000) { !checkNotNull(controller).state.value.busy }
+                val oldUserIds = checkNotNull(controller).state.value.turns.filter { it.user }.map { it.id }.toSet()
+                scroll("Mensagem"); compose.onNodeWithTag("orion_chat_input").assertIsEnabled().performTextReplacement(text)
+                scroll("Enviar"); compose.onNodeWithText("Enviar").assertIsEnabled().performClick()
+                // Observe admission before completion: a fast query can finish between frames,
+                // and an old idle snapshot must never count as the new click's completion.
+                compose.waitUntil(15_000) { checkNotNull(controller).state.value.turns.any { it.user && it.text == text && it.id !in oldUserIds } }
                 compose.waitUntil(150_000) { !checkNotNull(controller).state.value.busy }
                 checkpoint("REQUEST_COMPLETED")
             }

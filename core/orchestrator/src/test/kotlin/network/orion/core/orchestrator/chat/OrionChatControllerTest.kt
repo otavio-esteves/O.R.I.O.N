@@ -15,11 +15,12 @@ class OrionChatControllerTest {
         var creates = 0; var confirmations = 0; var lists = 0
         var admissionWait: CompletableDeferred<Unit>? = null
         var pendingRows = emptyList<TaskConfirmation>()
+        var rows = emptyList<TaskSummary>()
         override suspend fun create(command: CreateTask): CreateTaskResult {
             creates++; admissionWait?.await(); pendingRows = listOf(TaskConfirmation(UUID.randomUUID(), 0, TaskOperation.CREATE, command.title))
             return CreateTaskResult.QUEUED
         }
-        override suspend fun list(request: GetTasks): TaskPage { lists++; return TaskPage(emptyList(), null) }
+        override suspend fun list(request: GetTasks): TaskPage { lists++; return TaskPage(rows, null) }
         override suspend fun pending() = pendingRows
         override suspend fun change(command: TaskStatusCommand) = TaskStatusResult.REJECTED
         override suspend fun confirm(actionId: UUID, displayedVersion: Long): TaskOperationOutcome {
@@ -118,6 +119,17 @@ class OrionChatControllerTest {
         assertEquals(1, cortex.calls); assertTrue(chat.state.value.canRetry)
         cortex.terminal = OrionChatTerminal.SUCCEEDED; chat.retryInference()
         assertEquals(2, cortex.calls); assertNotNull(chat.state.value.turns.last().proposal)
+    }
+    @Test fun taskRowsRemainReadableThroughFastPathAfterCortexDeathWithoutAnotherInference() = runBlocking {
+        val tasks = Tasks().apply { rows = listOf(TaskSummary(UUID.randomUUID(), "Comprar pão", TaskState.OPEN, 0, TaskContentState.READABLE)) }
+        val cortex = Cortex().apply { terminal = OrionChatTerminal.PROCESS_DIED }
+        val chat = controller(this, tasks, cortex)
+        chat.send("Como organizar meu dia?"); assertTrue(chat.state.value.canRetry)
+        chat.send("minhas tarefas")
+        assertEquals(1, cortex.calls); assertEquals(1, tasks.lists)
+        assertFalse(chat.state.value.turns.last().user)
+        assertTrue(chat.state.value.turns.last().text.contains("Comprar pão"))
+        assertFalse(chat.state.value.canRetry)
     }
     @Test fun boundedHistoryAndNoUnqualifiedRuntimeStillPermitFastPaths() = runBlocking {
         val tasks = Tasks(); val cortex = Cortex().apply { available = false }; val chat = controller(this, tasks, cortex)
