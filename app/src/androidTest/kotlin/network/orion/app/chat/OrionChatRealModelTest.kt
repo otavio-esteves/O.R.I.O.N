@@ -147,7 +147,7 @@ class OrionChatRealModelTest {
             assertFalse(checkNotNull(controller).state.value.canRetry)
             assertFalse(checkNotNull(controller).state.value.turns.last().user)
             val title = "Comprar pão"
-            send("Crie uma tarefa com o título Comprar pão. Use task.create.")
+            send("Crie uma tarefa com o título Comprar pão.")
             val proposal = checkNotNull(controller).state.value.turns.last().proposal
             assertNotNull("Real model must produce a validated task proposal", proposal)
             val taskId = checkNotNull(proposal).taskId
@@ -165,6 +165,9 @@ class OrionChatRealModelTest {
             assertTrue(checkNotNull(controller).state.value.canRetry)
             assertEquals(before + 1, checkNotNull(controller).state.value.turns.size)
             assertEquals(mainPid, Process.myPid())
+            assertTrue(runBlocking(Dispatchers.IO) {
+                runtime.taskKernel!!.query.get(GetTasks()).items.any { it.taskId == taskId && it.title == title }
+            })
             send("minhas tarefas")
             assertTrue(checkNotNull(controller).state.value.turns.last().text.contains(title))
             assertTrue(decisions.get() >= 10)
