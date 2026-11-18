@@ -76,19 +76,20 @@ class MainActivity : ComponentActivity() {
                 var destination by rememberSaveable { mutableStateOf("Início") }
                 var taskQueues by remember { mutableStateOf<network.orion.core.health.TaskQueueDiagnostics?>(null) }
                 var schedulingDiagnostics by remember { mutableStateOf<network.orion.core.health.OrionSchedulingDiagnostics?>(null) }
+                val diagnosticsReader = remember(runtime) {
+                    OrionDiagnosticsReader(runtime::schedulingDiagnostics,
+                        { withContext(Dispatchers.IO) { runtime.taskKernel?.diagnostics() } })
+                }
                 LaunchedEffect(report.lastRecovery) {
                     if (report.lastRecovery != null) {
                         deliveryAlerts.onCoreRecovered()
                         deliveryAlerts.processPending()
                     }
                 }
-                LaunchedEffect(destination, report.lastRecovery) {
-                    if (destination == "Diagnóstico") {
-                        schedulingDiagnostics = runtime.schedulingDiagnostics()
-                        taskQueues = try {
-                        withContext(Dispatchers.IO) { runtime.taskKernel?.diagnostics() }
-                    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-                    catch (_: Exception) { null }
+                if (destination == "Diagnóstico") {
+                    OrionDiagnosticsObservation(lifecycle, diagnosticsReader, report.lastRecovery, notificationRevision) {
+                        schedulingDiagnostics = it.scheduling
+                        taskQueues = it.queues
                     }
                 }
                 Scaffold(
