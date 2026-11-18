@@ -11,7 +11,9 @@ FILES ALLOWED: `core/orchestrator/build.gradle.kts`,
 related JVM tests; this issue, ADR-0004 and current status additions in README,
 F5-QualificationChecklist, F5-RuntimeGate and the sequencing note in
 ORION-F5-QUAL-001; the integrated validation record
-`docs/qualification/F6-SoftwareEntry-20261118.md`. F5 diagnostic changes remain a
+`docs/qualification/F6-SoftwareEntry-20261118.md`, its evidence JSON and the
+corresponding evidence archive in `docs/qualification/artifacts/`.
+F5 diagnostic changes remain a
 separate responsibility and commit.
 
 CONTRACTS INVOLVED: [Architecture V3.2](../../1-orion.md) sections 15–18/58–61;

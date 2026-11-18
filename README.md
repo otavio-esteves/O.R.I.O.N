@@ -31,6 +31,10 @@ proposal grants no authority and invokes no Skill, persistence or Cortex work.
 Physical/stability gates remain open, production profiles remain absent and
 CORTEX_RUNTIME_READY/F6 completion are not declared.
 
+The [software-entry validation](docs/qualification/F6-SoftwareEntry-20261118.md)
+records the diagnostic regressions, first router scope, active-module JVM inventory
+and final emulator/R8 checks, separately from physical qualification.
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,
