@@ -2,6 +2,13 @@
 
 Tracking: https://github.com/otavio-esteves/O.R.I.O.N/issues/89
 
+Development sequencing update — 2026-11-18:
+[accepted ADR-0004](../adr/ADR-0004-f6-development-before-physical-qualification.md)
+permits bounded F6 software development while the physical/stability obligations
+below remain deferred and OPEN. Only the blanket F6-development prerequisite is
+superseded. CORTEX_RUNTIME_READY, approved production profiles and all evidence/
+qualification acceptance conditions remain subject to the original requirements.
+
 OBJECTIVE: Close the remaining F5 hardware/resource/stability gates using definitive
 physical evidence for the integrated audit candidate, then decide whether
 CORTEX_RUNTIME_READY and entry to F6 are justified.

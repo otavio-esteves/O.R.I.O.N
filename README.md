@@ -17,6 +17,17 @@ this candidate does not declare F5 qualified or production inference enabled.
 Current evidence and remaining criteria are in the
 [F5 runtime gate](docs/qualification/F5-RuntimeGate.md).
 
+## F6 software development
+
+The user's 2026-11-18 decision, recorded in
+[ADR-0004](docs/adr/ADR-0004-f6-development-before-physical-qualification.md),
+permits bounded F6 development with physical qualification deferred. The first
+[Intent Router work package](docs/issues/ORION-F6-ROUTER-001.md) interprets a small
+deterministic task grammar using existing command/query contracts. A routing
+proposal grants no authority and invokes no Skill, persistence or Cortex work.
+Physical/stability gates remain open, production profiles remain absent and
+CORTEX_RUNTIME_READY/F6 completion are not declared.
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,
