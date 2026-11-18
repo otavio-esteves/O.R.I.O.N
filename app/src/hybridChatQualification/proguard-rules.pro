@@ -19,10 +19,14 @@
 # The test APK shares these dependencies with its target, so AGP removes duplicate
 # definitions from test dex. Retain their APIs in the target even when product
 # call sites inline them (e.g. androidx.tracing.Trace and ComponentActivity.setContent).
--keep,allowobfuscation class androidx.** { *; }
--keep,allowobfuscation class kotlin.** { *; }
--keep,allowobfuscation class kotlinx.** { *; }
--keep,allowobfuscation class com.google.common.** { *; }
+-keep class androidx.** { *; }
+-keep class kotlin.** { *; }
+-keep class kotlinx.** { *; }
+-keep class com.google.common.** { *; }
 -keep,allowobfuscation class network.orion.core.** { *; }
 -keep,allowobfuscation class network.orion.app.tasks.** { *; }
 -keep,allowobfuscation class network.orion.feature.chat.** { *; }
+
+# Kotlin compiler-emitted DefaultImpls calls in the separate APK must keep
+# their complete library ABI, including names; application code still uses R8.
+-keep class network.orion.ai.api.** { *; }
