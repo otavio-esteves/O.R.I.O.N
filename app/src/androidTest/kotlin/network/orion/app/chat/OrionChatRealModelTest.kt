@@ -138,10 +138,18 @@ class OrionChatRealModelTest {
                 compose.waitUntil(15_000) { !checkNotNull(controller).state.value.busy }
                 val oldUserIds = checkNotNull(controller).state.value.turns.filter { it.user }.map { it.id }.toSet()
                 scroll("Mensagem"); compose.onNodeWithTag("orion_chat_input").assertIsEnabled().performTextReplacement(text)
-                scroll("Enviar"); compose.onNodeWithText("Enviar").assertIsEnabled().performClick()
+                scroll("Enviar")
+                // Exercise the button's accessibility action. IME viewport animations can move
+                // its touch coordinates between scroll and injection on a slow emulator.
+                compose.onNodeWithText("Enviar").assertIsEnabled().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) { assertTrue(it()) }
                 // Observe admission before completion: a fast query can finish between frames,
                 // and an old idle snapshot must never count as the new click's completion.
-                compose.waitUntil(15_000) { checkNotNull(controller).state.value.turns.any { it.user && it.text == text && it.id !in oldUserIds } }
+                try {
+                    compose.waitUntil(15_000) { checkNotNull(controller).state.value.turns.any { it.user && it.text == text && it.id !in oldUserIds } }
+                } catch (failure: androidx.compose.ui.test.ComposeTimeoutException) {
+                    val snapshot = checkNotNull(controller).state.value
+                    throw AssertionError("Send not admitted: busy=${snapshot.busy}, cortex=${snapshot.cortex}, notice=${snapshot.notice}, turns=${snapshot.turns.size}, inputLength=${text.length}", failure)
+                }
                 compose.waitUntil(150_000) { !checkNotNull(controller).state.value.busy }
                 checkpoint("REQUEST_COMPLETED")
             }
