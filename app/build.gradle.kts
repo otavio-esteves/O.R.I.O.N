@@ -12,6 +12,10 @@ val nativeQualificationStatus = nativeStatusMatches.single().groupValues[1]
 val qualificationFlag = providers.gradleProperty("orionQualificationRelease").orElse("false").get()
 check(qualificationFlag in setOf("true", "false")) { "orionQualificationRelease must be true or false." }
 val qualificationEnabled = qualificationFlag == "true"
+val hybridChatFlag = providers.gradleProperty("orionHybridChatQualification").orElse("false").get()
+check(hybridChatFlag in setOf("true", "false")) { "orionHybridChatQualification must be true or false." }
+val hybridChatEnabled = hybridChatFlag == "true"
+check(!hybridChatEnabled || qualificationEnabled) { "Hybrid chat probes require the separate qualification identity." }
 val physicalBaselineFlag = providers.gradleProperty("orionPhysicalBaseline").orElse("false").get()
 check(physicalBaselineFlag in setOf("true", "false")) { "orionPhysicalBaseline must be true or false." }
 val physicalBaselineEnabled = physicalBaselineFlag == "true"
@@ -37,7 +41,7 @@ check(cortexInstrumentedWorkloadFlag in setOf("true", "false")) { "orionCortexIn
 val cortexInstrumentedWorkloadEnabled = cortexInstrumentedWorkloadFlag == "true"
 check(!cortexInstrumentedWorkloadEnabled || qualificationEnabled) { "Instrumented workload requires the separate qualification identity." }
 check(listOf(physicalBaselineEnabled, cortexReadinessEnabled, exitEvidenceCaptureEnabled, cortexSingleAttemptEnabled,
-    cortexRuntimeCaptureEnabled, cortexInstrumentedWorkloadEnabled).count { it } <= 1) {
+    cortexRuntimeCaptureEnabled, cortexInstrumentedWorkloadEnabled, hybridChatEnabled).count { it } <= 1) {
     "Qualification measurement modes are mutually exclusive."
 }
 
@@ -51,6 +55,7 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
         testInstrumentationRunner = when {
+            hybridChatEnabled -> "androidx.test.runner.AndroidJUnitRunner"
             cortexInstrumentedWorkloadEnabled -> "network.orion.app.compatibility.OrionCortexInstrumentedWorkloadInstrumentation"
             cortexRuntimeCaptureEnabled -> "network.orion.app.compatibility.OrionCortexRuntimeCaptureInstrumentation"
             cortexSingleAttemptEnabled -> "network.orion.app.compatibility.OrionCortexSingleAttemptInstrumentation"
@@ -100,6 +105,14 @@ android {
         sourceSets.getByName("androidTest").java.directories.clear()
         sourceSets.getByName("androidTest").kotlin.directories.clear()
         sourceSets.getByName("androidTest").java.directories.add("src/qualificationAndroidTest/java")
+    }
+    if (hybridChatEnabled) {
+        // Only the explicit probe APK retains test entry APIs. Ordinary Release remains unchanged.
+        buildTypes.getByName("qualificationRelease").proguardFiles("src/hybridChatQualification/proguard-rules.pro")
+        sourceSets.getByName("androidTest").java.directories.clear()
+        sourceSets.getByName("androidTest").kotlin.directories.clear()
+        sourceSets.getByName("androidTest").java.setSrcDirs(emptyList<String>())
+        sourceSets.getByName("androidTest").kotlin.setSrcDirs(listOf("src/androidTest/kotlin/network/orion/app/chat"))
     }
     if (physicalBaselineEnabled) {
         sourceSets.getByName("qualificationRelease").kotlin.directories.add("src/physicalBaselineTarget/kotlin")
@@ -204,6 +217,7 @@ dependencies {
     implementation(project(":data:memory"))
     implementation(project(":feature:memories"))
     implementation(project(":feature:home"))
+    implementation(project(":feature:chat"))
     implementation(project(":feature:tasks"))
     implementation(project(":feature:timers"))
     implementation(project(":skills:notifications"))
@@ -213,7 +227,8 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.compose.material3)
     implementation(libs.coroutines.android)
-    if (!qualificationEnabled) {
+    if (hybridChatEnabled) androidTestCompileOnly(libs.errorprone.annotations)
+    if (!qualificationEnabled || hybridChatEnabled) {
         androidTestImplementation(platform(libs.compose.bom))
         androidTestImplementation(libs.compose.ui.test.junit4)
         androidTestImplementation(libs.androidx.test.runner)
@@ -232,4 +247,12 @@ dependencies {
     }
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.runtime)
+}
+
+if (hybridChatEnabled) {
+    // Compiler-only meta-annotations refer to JDK javax.lang.model, absent on Android.
+    // Keep them as compileOnly libraries, never runtime payload; preserve R8 missing-class checks.
+    configurations.matching { it.name.endsWith("AndroidTestRuntimeClasspath") }.configureEach {
+        exclude(group = "com.google.errorprone", module = "error_prone_annotations")
+    }
 }

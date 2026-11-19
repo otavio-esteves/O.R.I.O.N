@@ -1,5 +1,21 @@
 # F5 remaining qualification — current operational checklist
 
+## Development sequence — 2026-11-18
+
+The user explicitly authorized starting F6 software development with physical
+qualification deferred. [Accepted ADR-0004](../adr/ADR-0004-f6-development-before-physical-qualification.md)
+supersedes only the blanket prohibition on beginning F6 development before these
+gates close. The first bounded work package is
+[ORION-F6-ROUTER-001](../issues/ORION-F6-ROUTER-001.md), following the diagnostic
+corrections in [ORION-F5-DIAGNOSTICS-001](../issues/ORION-F5-DIAGNOSTICS-001.md).
+
+F4/#64 and F5/#89 physical/stability obligations remain OPEN and deferred, including
+S21 measurements, actual API37 MemoryLimiter, the required native/API matrix and
+real-duration stress/soak. Production profiles remain absent; neither F5 physical
+qualification, CORTEX_RUNTIME_READY nor F6 completion is declared. Earlier dated
+F6-not-authorized statements below retain their historical scope; ADR-0004 governs
+the current permission to develop software only.
+
 ## Current offline software closeout — 2026-11-17 UTC
 
 **The reviewed offline F5 implementation and local validation are complete. F5 and F4 physical stability gates remain OPEN; F6 entry is NOT AUTHORIZED.** The independent audit's original P2 is fixed and no new demonstrable P1/P2 remains in its reviewed scope.

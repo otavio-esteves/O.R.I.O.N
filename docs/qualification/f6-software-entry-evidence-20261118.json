@@ -1,0 +1,102 @@
+{
+  "archive": {
+    "allMembersVerified": true,
+    "bytes": 199047,
+    "members": 155,
+    "path": "artifacts/f6-software-entry-evidence-20261118.tar.gz",
+    "privateKeyPemMarkerAbsent": true,
+    "rawHomePathMarkerAbsent": true,
+    "sha256": "0c40c5bc918d372ea27aaa356c2ba7954e0e0dbf31539a82769dc5ab9e48da10"
+  },
+  "baselineCorrection": "THE_TWO_NORMATIVE_MARKDOWN_FILES_WERE_ALREADY_TRACKED_AT_ROOT; THE_EARLIER_FILENAME_SEARCH_MISSED_THEM",
+  "branch": "feat/f6-deterministic-intent-router",
+  "builds": {
+    "canonical": "PASS",
+    "minifiedQualification": "PASS"
+  },
+  "cleanup": "OWNED_AVDS_REMOVED_ORIGINAL_AVDS_PRESERVED",
+  "cortexRuntimeReady": false,
+  "earlierAttempts": [
+    {
+      "log": "orion-f5-diagnostics-focused-20261118.log",
+      "outcome": "FAILED_TEST_NULLABILITY_COMPILATION_THEN_CORRECTED"
+    },
+    {
+      "log": "orion-f5-f6-full-20261118.log",
+      "outcome": "SUPERSEDED_STOPPED_EXIT_143_BEFORE_BASELINE_ALIGNMENT"
+    },
+    {
+      "outcome": "TWO_AVD_SETUP_DISK_REJECTIONS_NO_TESTS_STARTED",
+      "rawLogs": "HOST_ONLY_NOT_INCLUDED_WITH_RAW_HOME_PATHS"
+    }
+  ],
+  "f5Closed": false,
+  "f6Complete": false,
+  "fixCommit": "ee421d4",
+  "focusedDiagnosticsJvm": 8,
+  "focusedRouterJvm": 15,
+  "functionalSourceCommit": "89a6baa829148a86a417d9ed7277676c10df07a1",
+  "hostContracts": {
+    "outcome": "PASS",
+    "tests": 629
+  },
+  "installedArtifacts": {
+    "network.orion": {
+      "installedSha256": "4868c62d330550038c3ed4f112b14b7393cf6052ca04bbbb20e5fafce1c9c7c9",
+      "localSha256": "4868c62d330550038c3ed4f112b14b7393cf6052ca04bbbb20e5fafce1c9c7c9"
+    },
+    "network.orion.qualification": {
+      "installedSha256": "fee75735e4ea1505b7f014330b4972836c4c9641b4f0f7b13905464e7944889c",
+      "localSha256": "fee75735e4ea1505b7f014330b4972836c4c9641b4f0f7b13905464e7944889c"
+    },
+    "network.orion.qualification.test": {
+      "installedSha256": "9ef03ed844dae1e02cd1c16f7ea05382a1a62572422272f89fe3a30a3d163c1c",
+      "localSha256": "9ef03ed844dae1e02cd1c16f7ea05382a1a62572422272f89fe3a30a3d163c1c"
+    },
+    "network.orion.test": {
+      "installedSha256": "3a91c6ac6793726a52c1b2dd359c9b4e208511428da2ad57c2a8c3ec56cb6e6d",
+      "localSha256": "3a91c6ac6793726a52c1b2dd359c9b4e208511428da2ad57c2a8c3ec56cb6e6d"
+    }
+  },
+  "inventoryCorrection": {
+    "excludedInactiveCases": 53,
+    "excludedInactiveSuites": 3,
+    "newCases": 23,
+    "priorActiveCases": 1081,
+    "priorChatRawCases": 1134,
+    "priorChatRawSuites": 137
+  },
+  "jvm": {
+    "activeModules": 51,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "suites": 136,
+    "tests": 1104
+  },
+  "merge": "NOT_PERFORMED",
+  "moduleBoundaryCases": 36,
+  "physicalQualification": false,
+  "productionProfileApproved": false,
+  "remoteCI": "NOT_RUN",
+  "runtime": {
+    "environment": "ANDROID_EMULATOR",
+    "physicalQualification": false,
+    "results": {
+      "diagnostics": {
+        "cases": 3,
+        "log": "orion-f6-final-diagnostics-android-20261118.log",
+        "outcome": "PASS"
+      },
+      "r8": {
+        "cases": 3,
+        "log": "orion-f6-final-r8-android-20261118.log",
+        "outcome": "PASS"
+      }
+    },
+    "sourceCommit": "89a6baa829148a86a417d9ed7277676c10df07a1"
+  },
+  "schemaVersion": 1,
+  "sourceFiles": 1080,
+  "sourceManifestSha256": "320373bcf40ed7c9ca262b1cf309b0d75b7f6ee9742be95f5bc6986a36108177"
+}

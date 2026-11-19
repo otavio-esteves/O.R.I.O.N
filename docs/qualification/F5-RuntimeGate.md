@@ -1,5 +1,17 @@
 # F5 Cortex runtime — scoped validation and open qualification
 
+## Development sequence — 2026-11-18
+
+[Accepted ADR-0004](../adr/ADR-0004-f6-development-before-physical-qualification.md)
+records the user's explicit decision to defer physical gates and begin bounded
+F6 software development after the diagnostic fixes. This supersedes the blanket
+F6-development prohibition in the dated records below. It does not close F5/#89,
+F4 stability/#64, hardware/native/API/profile or real-duration soak obligations,
+declare CORTEX_RUNTIME_READY, approve production inference or complete F6.
+The first F6 package is the pure deterministic
+[Intent Router slice](../issues/ORION-F6-ROUTER-001.md); policy, confirmation,
+ingress, ResourceGovernor and existing recovery/IPC contracts remain binding.
+
 ## Current offline software closeout — 2026-11-17 UTC
 
 The reviewed offline implementation, local validation and independent finding corrections are complete. The source-bound capture/assembly, finite workload, paired exit/original-policy source, bounded manual Core path, physical acquisition procedure and selected-package passive monitoring are delivered. PR #167 merged `fdf3d8c7949a14ccde6e506c089650547c2f26b4` at 2026-11-17T03:03:20Z after exact-head `d537b7277b4f2dc8ad571416a213373e82477990` [CI 44002282709](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/44002282709/job/133769025849) succeeded at 2026-11-17T03:02:46Z.

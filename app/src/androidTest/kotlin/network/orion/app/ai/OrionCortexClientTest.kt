@@ -6,6 +6,8 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.SharedMemory
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -80,6 +82,7 @@ class OrionCortexClientTest {
         var historyCapability = true
         var capabilitiesReply: Bundle? = null
         var capabilitiesUnavailable = false
+        var beforeProtocol: (() -> Unit)? = null
         val capabilityQueries = AtomicInteger()
         val issued = AtomicInteger()
         var holdInferenceIssue = false
@@ -102,8 +105,11 @@ class OrionCortexClientTest {
         private var loadId = ""
         private var inferenceId = ""
         private var callback: IOrionInferenceCallback? = null
-        override fun getProtocolInfo() = OrionCortexWire.reply("OK").apply {
-            putInt("major", protocolMajor); putInt("minor", protocolMinor)
+        override fun getProtocolInfo(): Bundle {
+            beforeProtocol?.invoke()
+            return OrionCortexWire.reply("OK").apply {
+                putInt("major", protocolMajor); putInt("minor", protocolMinor)
+            }
         }
         override fun getCapabilities(): Bundle {
             capabilityQueries.incrementAndGet()
@@ -162,6 +168,8 @@ class OrionCortexClientTest {
         val connections = CopyOnWriteArrayList<ServiceConnection>()
         val bound = CompletableDeferred<Unit>()
         var autoConnect = true
+        var callbackOnMain = false
+        var beforeProtocol: (() -> Unit)? = null
         var completeInference = true
         var delayModelReadiness = false
         var protocolMajor = 1
@@ -180,11 +188,15 @@ class OrionCortexClientTest {
                 it.autoComplete = completeInference; it.modelReady = !delayModelReadiness
                 it.protocolMajor = protocolMajor; it.protocolMinor = protocolMinor; it.historyCapability = historyCapability
                 it.capabilitiesReply = capabilitiesReply; it.capabilitiesUnavailable = capabilitiesUnavailable
+                it.beforeProtocol = beforeProtocol
                 it.holdInferenceIssue = holdInferenceIssue
                 it.unloadReply = unloadReply; it.unloadFailure = unloadFailure
             }
             endpoints.add(endpoint); connections.add(connection); bound.complete(Unit)
-            if (autoConnect) connection.onServiceConnected(component, endpoint)
+            if (autoConnect) {
+                if (callbackOnMain) Handler(Looper.getMainLooper()).post { connection.onServiceConnected(component, endpoint) }
+                else connection.onServiceConnected(component, endpoint)
+            }
             return true
         }
         fun connect(index: Int) { connections[index].onServiceConnected(component, endpoints[index]) }
@@ -229,6 +241,84 @@ class OrionCortexClientTest {
 
     private suspend fun awaitDiagnosticsIdle() = withTimeout(10_000) {
         while (OrionCortexUnloadDiagnosticDispatcher.hasPendingSample()) kotlinx.coroutines.delay(1)
+    }
+
+    @Test fun slowHandshakeFromAndroidMainKeepsUiResponsiveAndNegotiatesOffMain() = runBlocking {
+        Fixture().use { fixture ->
+            val entered=CountDownLatch(1);val resume=CountDownLatch(1);val uiPulse=CountDownLatch(1)
+            val negotiatedOnMain=AtomicBoolean()
+            fixture.context.callbackOnMain=true
+            fixture.context.beforeProtocol={
+                negotiatedOnMain.set(Looper.myLooper()==Looper.getMainLooper())
+                entered.countDown();check(resume.await(10,TimeUnit.SECONDS))
+            }
+            val result=async(Dispatchers.IO) { fixture.run() }
+            try {
+                assertTrue("Handshake must enter the scripted slow endpoint",entered.await(5,TimeUnit.SECONDS))
+                Handler(Looper.getMainLooper()).post { uiPulse.countDown() }
+                assertTrue("A slow Binder reply must not occupy Android MAIN",uiPulse.await(2,TimeUnit.SECONDS))
+                assertFalse(negotiatedOnMain.get())
+            } finally { resume.countDown() }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED,withTimeout(10_000) { result.await() }.terminal)
+        }
+    }
+
+    @Test fun callerTimeoutDuringHandshakeRejectsLateReplyAndAllowsAnExplicitNewBind() = runBlocking {
+        Fixture().use { fixture ->
+            val entered=CountDownLatch(1);val resume=CountDownLatch(1)
+            fixture.context.callbackOnMain=true
+            fixture.context.beforeProtocol={entered.countDown();check(resume.await(10,TimeUnit.SECONDS))}
+            val result=async(Dispatchers.IO) { withTimeoutOrNull(1_000) { fixture.run() } }
+            try {
+                assertTrue(entered.await(5,TimeUnit.SECONDS))
+                assertNull(withTimeout(3_000) { result.await() })
+                assertEquals(1,fixture.context.unbinds.get())
+                assertFalse(fixture.availability.contains(true))
+            } finally { resume.countDown() }
+            fixture.context.beforeProtocol=null
+            assertEquals(OrionInferenceTerminal.SUCCEEDED,withTimeout(10_000) { fixture.run() }.terminal)
+            val old=fixture.context.endpoints.first()
+            assertEquals(0,old.issued.get());assertEquals(0,old.loads.get());assertEquals(0,old.inferences.get())
+            assertEquals(2,fixture.context.connections.size)
+        }
+    }
+
+    @Test fun closeDuringSlowHandshakeCannotPublishOrLoadFromALateReply() = runBlocking {
+        Fixture().use { fixture ->
+            val entered=CountDownLatch(1);val resume=CountDownLatch(1)
+            fixture.context.beforeProtocol={entered.countDown();check(resume.await(10,TimeUnit.SECONDS))}
+            val result=async(Dispatchers.IO) { fixture.run() }
+            try {
+                assertTrue(entered.await(5,TimeUnit.SECONDS))
+                fixture.client.close()
+            } finally { resume.countDown() }
+            assertEquals(OrionInferenceTerminal.CANCELLED,withTimeout(10_000) { result.await() }.terminal)
+            assertFalse(fixture.availability.contains(true))
+            val endpoint=fixture.context.endpoints.single()
+            assertEquals(0,endpoint.issued.get());assertEquals(0,endpoint.loads.get())
+        }
+    }
+
+    @Test fun duplicateConnectionCallbacksCannotFillTheHandshakeQueueOrRepeatNegotiation() = runBlocking {
+        Fixture().use { fixture ->
+            val entered=CountDownLatch(1);val resume=CountDownLatch(1);val callbacksReturned=CountDownLatch(1)
+            fixture.context.autoConnect=false
+            fixture.context.beforeProtocol={entered.countDown();check(resume.await(10,TimeUnit.SECONDS))}
+            val result=async(Dispatchers.IO) { fixture.run() }
+            try {
+                withTimeout(5_000) { fixture.context.bound.await() }
+                Handler(Looper.getMainLooper()).post { fixture.context.connect(0) }
+                assertTrue(entered.await(5,TimeUnit.SECONDS))
+                Handler(Looper.getMainLooper()).post {
+                    repeat(100) { fixture.context.connect(0) }
+                    callbacksReturned.countDown()
+                }
+                assertTrue(callbacksReturned.await(2,TimeUnit.SECONDS))
+                assertEquals(0,fixture.context.unbinds.get())
+            } finally { resume.countDown() }
+            assertEquals(OrionInferenceTerminal.SUCCEEDED,withTimeout(10_000) { result.await() }.terminal)
+            assertEquals(1,fixture.context.endpoints.single().capabilityQueries.get())
+        }
     }
 
     private suspend fun observedBatch(buffer: OrionCortexUnloadObservationBuffer): OrionCortexUnloadObservationBatch = withTimeout(10_000) {

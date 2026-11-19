@@ -17,6 +17,28 @@ this candidate does not declare F5 qualified or production inference enabled.
 Current evidence and remaining criteria are in the
 [F5 runtime gate](docs/qualification/F5-RuntimeGate.md).
 
+## F6 software development
+
+Normative references: [Architecture V3.2](1-orion.md),
+[Master Plan V1.2, section 12](2-plano-mestre.md#12-fase-6--hybrid-orchestrator).
+
+The user's 2026-11-18 decision, recorded in
+[ADR-0004](docs/adr/ADR-0004-f6-development-before-physical-qualification.md),
+permits bounded F6 development with physical qualification deferred. The first
+[Intent Router work package](docs/issues/ORION-F6-ROUTER-001.md) interprets a small
+deterministic task/battery grammar using existing command/query contracts. A routing
+proposal grants no authority and invokes no Skill, persistence or Cortex work.
+The [hybrid chat software validation](docs/qualification/F6-HybridSoftware-20261118.md)
+now records completion of all eight F6 software criteria: bounded context, strict
+structured output, local chat with streaming/cancel/safe retry, human-confirmed
+tasks and actual AI-process-death degradation, verified with a real model in an
+emulator. Physical/stability gates remain open, production profiles remain absent
+and CORTEX_RUNTIME_READY/full qualification are not declared.
+
+The [software-entry validation](docs/qualification/F6-SoftwareEntry-20261118.md)
+records the diagnostic regressions, first router scope, active-module JVM inventory
+and final emulator/R8 checks, separately from physical qualification.
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,

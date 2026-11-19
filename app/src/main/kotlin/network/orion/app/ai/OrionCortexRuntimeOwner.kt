@@ -124,6 +124,10 @@ internal class OrionCortexRuntimeOwner(
     internal fun preResourceReadiness(): OrionCortexPreResourceReadiness = evaluateCortexPreResourceReadiness(
         { closed }, { plans.isNotEmpty() }, { timing != null }, coreReady)
 
+    /** Read-only candidate metadata; never a permit, registry lookup, model load or resource decision. */
+    internal fun chatResourcePlan(): OrionInferenceResourcePlan? =
+        if (preResourceReadiness().unavailable == null) plans.firstOrNull { it.model.modelId == network.orion.app.chat.QWEN_MODEL_ID } else null
+
     /** Candidature only. Early refusals precede even the one selected registry lookup. */
     internal suspend fun selectSingleAttemptTemplate(): OrionCortexAttemptConfiguration = selectAttemptTemplate(true)
 

@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.lifecycleScope
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var memoryChannel: OrionMemoryAdmissionOwner.UiChannel
     private lateinit var notificationChannel: OrionNotificationAdmissionOwner.UiChannel
     private lateinit var deliveryAlerts: network.orion.app.scheduling.OrionReminderDeliveryUiGateway
+    private var chat: network.orion.core.orchestrator.chat.OrionChatController? = null
     private var notificationRevision by mutableLongStateOf(0L)
     private val notificationPermissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         notificationRevision++
@@ -57,6 +59,11 @@ class MainActivity : ComponentActivity() {
         taskChannel = runtime.taskAdmissions.openUiChannel()
         taskChannel.onWindowFocus(hasWindowFocus())
         val tasks = runtime.taskGateway(taskChannel)
+        val chatController = network.orion.core.orchestrator.chat.OrionChatController(
+            lifecycleScope, tasks, runtime.deviceGateway,
+            network.orion.app.chat.OrionChatCortexAdapter(network.orion.core.time.AndroidOrionClock(contentResolver)) {
+                runtime.cortexRuntime()?.let { network.orion.app.chat.OrionOwnedChatRuntime(it) }
+            }).also { chat = it }
         reminderChannel = runtime.reminderAdmissions.openUiChannel()
         reminderChannel.onWindowFocus(hasWindowFocus())
         val reminders = runtime.reminderGateway(reminderChannel)
@@ -76,19 +83,20 @@ class MainActivity : ComponentActivity() {
                 var destination by rememberSaveable { mutableStateOf("Início") }
                 var taskQueues by remember { mutableStateOf<network.orion.core.health.TaskQueueDiagnostics?>(null) }
                 var schedulingDiagnostics by remember { mutableStateOf<network.orion.core.health.OrionSchedulingDiagnostics?>(null) }
+                val diagnosticsReader = remember(runtime) {
+                    OrionDiagnosticsReader(runtime::schedulingDiagnostics,
+                        { withContext(Dispatchers.IO) { runtime.taskKernel?.diagnostics() } })
+                }
                 LaunchedEffect(report.lastRecovery) {
                     if (report.lastRecovery != null) {
                         deliveryAlerts.onCoreRecovered()
                         deliveryAlerts.processPending()
                     }
                 }
-                LaunchedEffect(destination, report.lastRecovery) {
-                    if (destination == "Diagnóstico") {
-                        schedulingDiagnostics = runtime.schedulingDiagnostics()
-                        taskQueues = try {
-                        withContext(Dispatchers.IO) { runtime.taskKernel?.diagnostics() }
-                    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-                    catch (_: Exception) { null }
+                if (destination == "Diagnóstico") {
+                    OrionDiagnosticsObservation(lifecycle, diagnosticsReader, report.lastRecovery, notificationRevision) {
+                        schedulingDiagnostics = it.scheduling
+                        taskQueues = it.queues
                     }
                 }
                 Scaffold(
@@ -104,7 +112,7 @@ class MainActivity : ComponentActivity() {
                         Surface(tonalElevation = 3.dp) {
                             Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(8.dp),
                                 horizontalArrangement = Arrangement.SpaceEvenly) {
-                                for (label in listOf("Início", "Tarefas", "Diagnóstico", "Ajustes")) {
+                                for (label in listOf("Início", "Chat", "Tarefas", "Diagnóstico", "Ajustes")) {
                                     TextButton(onClick = { destination = label }, modifier = Modifier.weight(1f).semantics { selected = destination == label },
                                         contentPadding = PaddingValues(0.dp)) {
                                         Text(label, style = MaterialTheme.typography.labelMedium,
@@ -142,6 +150,7 @@ class MainActivity : ComponentActivity() {
                                 })
                             "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
                             "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
+                            "Chat" -> network.orion.feature.chat.ChatScreen(chatController, report.lastRecovery)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
                                 platform = runtime.platformDiagnostics(), onRetry = { runtime.start() })
@@ -198,6 +207,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        chat?.close()
+        chat = null
         if (::deliveryAlerts.isInitialized) deliveryAlerts.close()
         if (::taskChannel.isInitialized) taskChannel.close()
         if (::reminderChannel.isInitialized) reminderChannel.close()

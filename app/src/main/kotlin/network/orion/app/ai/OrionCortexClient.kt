@@ -14,6 +14,11 @@ import java.nio.CharBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.security.MessageDigest
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -50,6 +55,11 @@ internal class OrionCortexClient(
     private val operation = Mutex()
     private val connectionMutex = Mutex()
     private val monitor = Any()
+    // A stalled Binder handshake must neither block Android MAIN nor create unbounded
+    // replacement threads/queued negotiations. The worker starts only on a real bind.
+    private val connectionExecutor = ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS,
+        ArrayBlockingQueue<Runnable>(1), { task -> Thread(task, "orion_cortex_connection").apply { isDaemon = true } })
+        .apply { allowCoreThreadTimeOut(true) }
     @Volatile private var closed = false
     @Volatile private var remote: IOrionCortex? = null
     @Volatile private var active: OrionInferenceLifecycle? = null
@@ -58,6 +68,7 @@ internal class OrionCortexClient(
     private var loadedContext = 0
     private var loadedThreads = 0
     private var connection: ServiceConnection? = null
+    private var pendingConnectionFailure: (() -> Unit)? = null // Owned by connection, under monitor.
     private var deathRecipient: IBinder.DeathRecipient? = null
     private var pinnedAiPid: Int? = null
     private var metricsConnectionEpoch: Long? = 0
@@ -744,15 +755,30 @@ internal class OrionCortexClient(
         remote?.let { return@withLock it }
         releaseConnection()
         suspendCancellableCoroutine { pending ->
+            val settled = AtomicBoolean()
+            fun reject(failure: Exception) {
+                if (settled.compareAndSet(false, true)) pending.resumeWithException(failure)
+            }
             val owner = object : ServiceConnection {
+                private val handshakeStarted = AtomicBoolean()
                 override fun onServiceConnected(name: ComponentName, binder: IBinder) {
-                    if (!pending.isActive) { releaseConnection(this); return }
-                    if (closed || connection !== this) {
+                    // Android normally dispatches this callback on MAIN. Do no remote
+                    // negotiation here, even when a test supplies a synchronous callback.
+                    if (!handshakeStarted.compareAndSet(false, true)) return
+                    try { connectionExecutor.execute { negotiate(binder) } }
+                    catch (_: RejectedExecutionException) {
                         releaseConnection(this)
-                        if (pending.isActive) pending.resumeWithException(IllegalStateException("Cortex client closed."))
-                        return
+                        reject(IllegalStateException("Cortex connection unavailable."))
                     }
+                }
+                private fun requireCurrent() = synchronized(monitor) {
+                    check(pending.isActive && !settled.get() && !closed && connection === this) {
+                        "Cortex connection no longer current."
+                    }
+                }
+                private fun negotiate(binder: IBinder) {
                     try {
+                        requireCurrent()
                         val service = IOrionCortex.Stub.asInterface(binder)
                         val protocol = service.getProtocolInfo()
                         OrionCortexWire.requireEnvelope(protocol, setOf("schemaVersion", "status", "major", "minor"))
@@ -762,6 +788,7 @@ internal class OrionCortexClient(
                         check(major == OrionCortexProtocol.CURRENT.protocolMajor && minor >= 1) {
                             "Cortex capability discovery unavailable."
                         }
+                        requireCurrent()
                         val capabilities = service.getCapabilities()
                         OrionCortexWire.requireEnvelope(capabilities, setOf("schemaVersion", "status", "capabilities"))
                         check(OrionCortexWire.text(capabilities, "status") == "OK")
@@ -774,7 +801,7 @@ internal class OrionCortexClient(
                             OrionCortexProtocol.ISSUED_HISTORY in negotiated.capabilities) { "Cortex issued history unavailable." }
                         val death = IBinder.DeathRecipient { lostConnection(this) }
                         synchronized(monitor) {
-                            check(!closed && connection === this)
+                            requireCurrent()
                             binder.linkToDeath(death, 0)
                             cycleEndpointSnapshot = null
                             deathRecipient = death; remote = service; runtimeBinder = binder
@@ -782,32 +809,36 @@ internal class OrionCortexClient(
                             updateCycleEndpoint()
                             updateUnloadOwner(endpointChanged = true)
                             metricsCorrelation.isolatedMetrics { it.connected(service, this, metricsConnectionEpoch, negotiated.protocolMinor) }
+                            availabilityChanged(true)
+                            if (settled.compareAndSet(false, true)) {
+                                pendingConnectionFailure = null
+                                pending.resume(service)
+                            } else releaseConnection(this)
                         }
-                        availabilityChanged(true)
-                        pending.resume(service)
                     } catch (failure: Exception) {
                         releaseConnection(this)
-                        if (pending.isActive) pending.resumeWithException(failure)
+                        reject(failure)
                     }
                 }
                 private fun disconnected() {
                     lostConnection(this)
-                    if (pending.isActive) pending.resumeWithException(IllegalStateException("Cortex disconnected."))
+                    reject(IllegalStateException("Cortex disconnected."))
                 }
                 override fun onServiceDisconnected(name: ComponentName) = disconnected()
                 override fun onBindingDied(name: ComponentName) = disconnected()
                 override fun onNullBinding(name: ComponentName) {
                     releaseConnection(this)
-                    if (pending.isActive) pending.resumeWithException(IllegalStateException("Cortex bind unavailable."))
+                    reject(IllegalStateException("Cortex bind unavailable."))
                 }
             }
-            pending.invokeOnCancellation { releaseConnection(owner) }
+            pending.invokeOnCancellation { settled.set(true); releaseConnection(owner) }
             val intent = Intent().setComponent(ComponentName(app.packageName, "network.orion.ai.service.OrionCortexService"))
             val bound = synchronized(monitor) {
                 check(!closed)
                 if (!pending.isActive) false else {
                     cycleEndpointSnapshot = null
                     connection = owner
+                    pendingConnectionFailure = { reject(IllegalStateException("Cortex connection released.")) }
                     runtimeBinder = null
                     if (runtimeConnectionEpoch == Long.MAX_VALUE) { runtimeFenceExhausted = true; runtimeFrame?.valid = false }
                     else runtimeConnectionEpoch++
@@ -820,7 +851,7 @@ internal class OrionCortexClient(
             }
             if (!bound) {
                 releaseConnection(owner)
-                if (pending.isActive) pending.resumeWithException(IllegalStateException("Cortex bind rejected."))
+                reject(IllegalStateException("Cortex bind rejected."))
             }
         }
     }
@@ -838,7 +869,7 @@ internal class OrionCortexClient(
     }
 
     private fun releaseConnection(expected: ServiceConnection? = null) {
-        synchronized(monitor) {
+        val rejectPending = synchronized(monitor) {
             if (expected != null && connection !== expected) return
             val service = remote
             cycleEndpointSnapshot = null
@@ -850,12 +881,15 @@ internal class OrionCortexClient(
             metricsCorrelation.isolatedMetrics { it.clear() }
             cycleCallback = null
             connection?.let { runCatching { app.unbindService(it) } }; connection = null
+            pendingConnectionFailure.also { pendingConnectionFailure = null }
         }
+        rejectPending?.invoke()
     }
 
     override fun close() {
         synchronized(monitor) { runtimeFrame?.valid = false; cycleEndpointSnapshot = null; closed = true; updateUnloadOwner(); cancel() }
         session.close()
+        connectionExecutor.shutdownNow()
         releaseConnection()
     }
 

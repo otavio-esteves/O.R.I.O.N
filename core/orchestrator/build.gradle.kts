@@ -12,7 +12,11 @@ android {
 }
 
 dependencies {
+    api(project(":core:context"))
+    api(libs.coroutines.android)
     api(project(":core:model"))
     api(project(":core:commands"))
     api(project(":core:queries"))
+    implementation(project(":core:skills:metadata"))
+    testImplementation(libs.junit4)
 }
