@@ -213,3 +213,11 @@ emulator fixture evidence must not be substituted for production profile approva
 S21/API37/MemoryLimiter/native runtime matrix, 24h/stress evidence or
 CORTEX_RUNTIME_READY. F7 intelligent memory and voice are outside this work package.
 No push, remote CI, PR merge, stable release or cognitive milestone tag is claimed.
+
+## Subsequent audit follow-up
+
+The [F6 audit follow-up](F6-AuditFollowup-20261118.md) records fixes for notification
+dismissal starvation, MAIN-thread Cortex negotiation and reversed selected history,
+with RED/GREEN evidence and fresh scoped Docker/emulator/R8 validation. Its source
+and artifacts are separate from the historical evidence above. F7 planning is a
+separate delivery; production/physical/stability qualification remains open.

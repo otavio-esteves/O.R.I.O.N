@@ -38,3 +38,17 @@ voice, release publication or merging. The approved follow-up workflow uses a
 focused draft PR against the existing `feat/f6-hybrid-chat` branch; the F7 plan
 gets a separate branch/review. F7 planning follows Master Plan §13 and does not
 declare MEMORY_ENGINE_READY or extend ADR-0004 implicitly.
+
+## Validation result — 2026-11-18
+
+Functional source `9073011`: implementation and scoped local validation complete.
+Two JVM and three selected Android regressions fail against the old version;
+GREEN passes 1129 active Debug JVM cases, 131 relevant Android cases and 629 host
+contracts. Canonical Docker build/check/lint/dependencies/native packaging and
+R8 build plus three non-debuggable smoke checks passed. No case failure/skip was
+credited as a pass. Platform boot/System UI failures and the cancelled extra
+Gradle attempt remain recorded in the
+[validation report](../qualification/F6-AuditFollowup-20261118.md).
+
+No schema, wire contract, production profile or physical gate changed. Draft PR
+review/required remote CI remain before merge. F7 is a separate planning delivery.

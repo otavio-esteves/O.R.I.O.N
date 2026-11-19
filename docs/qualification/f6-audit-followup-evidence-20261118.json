@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "functionalCommit": "9073011d0906f58719497b725affa035d7c3d12d",
+  "baseCommit": "171bbda151a80adb32a8046377dff9124ba18dd7",
+  "recordedAtUtc": "2026-11-19T00:30:09.680648+00:00",
+  "jvmDebug": {
+    "suites": 141,
+    "tests": 1129,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "activeModules": 53,
+  "canonicalCheck": {
+    "result": "PASS",
+    "seconds": 1390,
+    "actionableTasks": 4571,
+    "executed": 609,
+    "fromCache": 56,
+    "upToDate": 3906
+  },
+  "hostContracts": {
+    "environment": "CONTAINER",
+    "tests": 629,
+    "failures": 0
+  },
+  "sourceFiles": {
+    "app/src/androidTest/kotlin/network/orion/app/ai/OrionCortexClientTest.kt": "9205302a9b8a6ea0a7d5c77f8d11b6e705a09ac4fd57b1699dd7be6e5ef8065e",
+    "app/src/androidTest/kotlin/network/orion/app/notifications/OrionNotificationRuntimeTest.kt": "34031c66048a90df26ef1a986c3d0c76813bf6e52f12ee9714e3d7350c74fa2b",
+    "app/src/main/kotlin/network/orion/app/ai/OrionCortexClient.kt": "07b48464369b271d58915b20a00aad064295418c0a9a4ed2b44479847f51458d",
+    "app/src/main/kotlin/network/orion/app/notifications/OrionNotificationKernel.kt": "8e52863cb81e16642dba3ed8a9942b360ffe3fb6c1316b7962b68534c5c4939a",
+    "core/orchestrator/src/main/kotlin/network/orion/core/orchestrator/chat/OrionChatContext.kt": "88989fd6e99951562880a14bdb6f5c9da15597de649e403bc805b86ae26e9cfe",
+    "core/orchestrator/src/test/kotlin/network/orion/core/orchestrator/chat/OrionChatContextTest.kt": "d77ed712e4cebec1a7ebe9c941cfae0b0688229dd961816e8e79346da43da8aa",
+    "docs/issues/ORION-F6-AUDIT-001.md": "b0941f06f530aa3cc5de1fcac280dcd29fe195fb8160e5610b97a91659c720bb"
+  },
+  "r8Build": {
+    "environment": "CONTAINER",
+    "result": "PASS",
+    "seconds": 771,
+    "actionableTasks": 1809,
+    "executed": 33,
+    "upToDate": 1776
+  },
+  "r8Smoke": {
+    "environment": "ANDROID_EMULATOR",
+    "tests": 3,
+    "result": "PASS",
+    "hardwareQualified": false
+  },
+  "environment": {
+    "recordedAtUtc": "2026-11-19T00:37:24.745851+00:00",
+    "runtimeEnvironment": "ANDROID_EMULATOR",
+    "definitiveHardwareEvidence": false,
+    "deviceSerial": "emulator-5588",
+    "avd": "OrionF6Audit20261118",
+    "buildFingerprint": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+    "api": "35",
+    "pageSize": "4096",
+    "adbShellIdentity": "uid=2000(shell) gid=2000(shell) groups=2000(shell),1004(input),1007(log),1011(adb),1015(sdcard_rw),1028(sdcard_r),1078(ext_data_rw),1079(ext_obb_rw),3001(net_bt_admin),3002(net_bt),3003(inet),3006(net_bw_stats),3009(readproc),3011(uhid),3012(readtracefs) context=u:r:shell:s0",
+    "systemServerPidAfterGreen": "1761",
+    "debugAppPidAfterInstrumentation": null,
+    "dockerImageId": "sha256:4e1b776c374c4ba3064323ff3106bd004e7946551e2d86ee0ff86a5d38777371",
+    "hardware": {
+      "hw.cpu.arch": "x86_64",
+      "hw.cpu.ncore": "2",
+      "hw.ramSize": "2048",
+      "hw.lcd.width": "720",
+      "hw.lcd.height": "1280",
+      "hw.lcd.density": "320",
+      "hw.gpu.mode": "swiftshader"
+    }
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "red": {
+      "tests": 3,
+      "failures": 3
+    },
+    "green": {
+      "tests": 131,
+      "failures": 0,
+      "skipped": 0,
+      "seconds": 167.612
+    }
+  },
+  "archive": {
+    "path": "docs/qualification/artifacts/f6-audit-followup-evidence-20261118.tar.gz",
+    "sha256": "c018134f1ed141698dacd5352475522ed7ee4f7bdc2cb210e55e3b008ad036eb",
+    "bytes": 743682,
+    "files": 187,
+    "membersVerified": true,
+    "payloadFilesVerified": 186,
+    "manifestProtectedByArchiveHash": true
+  }
+}
