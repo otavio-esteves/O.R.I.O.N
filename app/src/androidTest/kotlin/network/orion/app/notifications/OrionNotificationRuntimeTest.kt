@@ -150,6 +150,50 @@ class OrionNotificationRuntimeTest {
         assertEquals(NotificationOutcome.BLOCKED,kernel.executeFromUser(admission(),id))
         assertEquals(ActionStatus.CONFIRMED,db.actions().find(id.toString())!!.status);assertEquals(0,invokes)
     }
+    private fun dismissBlockedConsent(deny:()->Unit) {
+        val pending=prepare();val confirmationKey=UUID.randomUUID()
+        deny();wall=wall.plusSeconds(1)
+        assertEquals(NotificationOutcome.QUEUED,kernel.submit(consent(pending),confirmationKey))
+        wall=wall.plusSeconds(1)
+        assertEquals(NotificationOutcome.APPLIED,kernel.submit(pending.dismissWire,UUID.randomUUID()))
+        assertEquals(ActionStatus.CANCELLED,db.actions().find(pending.display.actionId.toString())!!.status)
+        assertEquals(0,invokes)
+        // Restoring permission/capability cannot revive the old confirmed intent.
+        permitted=true;capable=true
+        kernel.ingress.drain(25)
+        assertEquals(DurableIngressStatus.REJECTED,db.ingress().findByKey(OrionNotificationIngressWire.SCOPE,confirmationKey.toString())!!.status)
+        assertEquals(ActionStatus.CANCELLED,db.actions().find(pending.display.actionId.toString())!!.status)
+        assertEquals(0,invokes)
+    }
+    @Test fun permissionDeniedConsentCannotStarveAnExactUserDismissal() = dismissBlockedConsent { permitted=false }
+    @Test fun channelDisabledConsentCannotStarveAnExactUserDismissal() = dismissBlockedConsent { capable=false }
+    @Test fun dismissalPriorityStillRequiresOpenBarrierAndCurrentFocusedPresence() {
+        val pending=prepare()
+        channel.onWindowFocus(false)
+        assertEquals(NotificationOutcome.QUEUED,kernel.submit(consent(pending),UUID.randomUUID()))
+        barrier.beginRecovery()
+        assertEquals(NotificationOutcome.QUEUED,kernel.submit(pending.dismissWire,UUID.randomUUID()))
+        assertEquals(0,kernel.ingress.drain(25))
+        release();assertEquals(0,kernel.ingress.drain(25))
+        assertEquals(ActionStatus.NEEDS_CONFIRMATION,db.actions().find(pending.display.actionId.toString())!!.status)
+        channel.onWindowFocus(true)
+        assertEquals(2,kernel.ingress.drain(25))
+        assertEquals(ActionStatus.CANCELLED,db.actions().find(pending.display.actionId.toString())!!.status)
+        assertEquals(0,invokes)
+    }
+    @Test fun dismissalPriorityCannotCancelOrRetryAnUnknownExternalAction() {
+        val pending=prepare()
+        assertEquals(NotificationOutcome.APPLIED,kernel.submit(consent(pending),UUID.randomUUID()))
+        postResult=NotificationPostResult.UNKNOWN
+        assertEquals(NotificationOutcome.UNKNOWN,kernel.executeFromUser(admission(),pending.display.actionId))
+        val current=db.actions().find(pending.display.actionId.toString())!!
+        val dismiss=OrionNotificationIngressWire("DISMISS",request.requestId,request.idempotencyKey,request.correlationId,
+            actionId=pending.display.actionId,actionVersion=current.version,fingerprint=current.confirmationFingerprint,
+            policyVersion=current.policyVersion)
+        assertEquals(NotificationOutcome.REJECTED,kernel.submit(dismiss,UUID.randomUUID()))
+        assertEquals(ActionStatus.UNKNOWN,db.actions().find(current.actionId)!!.status)
+        assertEquals(1,invokes)
+    }
     @Test fun channelDenialAndBarrierGateNeverInvokeExternalApi() {
         val id=confirmed();capable=false
         assertEquals(NotificationOutcome.BLOCKED,kernel.executeFromUser(admission(),id));assertEquals(0,invokes)

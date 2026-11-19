@@ -57,7 +57,10 @@ internal class OrionNotificationKernel(private val db:OrionDatabase,encryption:O
         val bytes=wire.encode()
         val result=try { ingress.submit(DurableIngressRequest(UUID.randomUUID(),OrionNotificationIngressWire.SCOPE,key,
             OrionNotificationIngressWire.SOURCE,OrionNotificationIngressWire.TYPE,1,Sensitivity.SENSITIVE,false,null,bytes,
-            Duration.ofDays(1).toMillis(),Duration.ofDays(90).toMillis(),correlationId=wire.trace)) } finally { bytes.fill(0) }
+            Duration.ofDays(1).toMillis(),Duration.ofDays(90).toMillis(),
+            // A denied POST must not starve an exact cancellation. Priority grants no authority:
+            // consume still checks the barrier, live presence, binding/version and legal state.
+            priority=if(wire.operation=="DISMISS")100 else 0,correlationId=wire.trace)) } finally { bytes.fill(0) }
         if(result !in setOf(DurableIngressOutcome.QUEUED,DurableIngressOutcome.DEDUP))return if(result==DurableIngressOutcome.IDEMPOTENCY_CONFLICT)NotificationOutcome.REJECTED else NotificationOutcome.UNAVAILABLE
         ingress.drain(25)
         return when(db.ingress().findByKey(OrionNotificationIngressWire.SCOPE,key.toString())?.status) {
