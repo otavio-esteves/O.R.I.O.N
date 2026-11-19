@@ -39,6 +39,11 @@ The [software-entry validation](docs/qualification/F6-SoftwareEntry-20261118.md)
 records the diagnostic regressions, first router scope, active-module JVM inventory
 and final emulator/R8 checks, separately from physical qualification.
 
+The [F7 implementation plan](docs/plans/F7-ImplementationPlan.md) proposes eight
+bounded packages for intelligent memory, their dependencies and the eleven-item
+exit-gate matrix. It plans the next phase without declaring implementation started,
+extending ADR-0004's scope or closing physical/production qualification.
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,
