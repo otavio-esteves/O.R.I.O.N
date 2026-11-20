@@ -71,6 +71,7 @@ class OrionChatControllerTest {
     @Test fun validatedCognitiveReadsUseOnlyTheirClosedReadGateway() = runBlocking {
         val tasks = Tasks(); val cortex = Cortex().apply { output = """{"type":"tool","skill":"task.list","arguments":{}}""" }
         val chat = controller(this, tasks, cortex); chat.send("Quais tarefas eu tenho?")
+        assertEquals(1, cortex.configs); assertEquals(1, cortex.calls)
         assertEquals(1, tasks.lists); assertEquals(0, tasks.creates); assertEquals(0, tasks.confirmations)
     }
     @Test fun cognitiveCreationIsOnlyAProposalUntilASeparatePrepareGesture() = runBlocking {

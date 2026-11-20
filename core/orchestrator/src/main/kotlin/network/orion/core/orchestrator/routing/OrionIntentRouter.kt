@@ -88,11 +88,12 @@ class OrionIntentRouter {
         val text = input.text.trim()
         val command = text.lowercase(Locale.ROOT)
         if (text.isEmpty()) return OrionIntentRoute.Clarification(OrionRoutingClarification.EMPTY_INPUT, input.correlationId)
-        if (command == "listar tarefas" || command == "ver tarefas" || command == "minhas tarefas") {
+        val query = queryExpression(command)
+        if (query in TASK_LIST_ALIASES) {
             return OrionIntentRoute.TaskList(OrionIntent("task.list", 1.0, GetTasks(),
                 input.source.name, false, input.correlationId))
         }
-        if (command == "bateria" || command == "consultar bateria") {
+        if (query in BATTERY_ALIASES) {
             return OrionIntentRoute.BatteryQuery(OrionIntent(OrionDeviceDescriptors.battery.name, 1.0,
                 GetDeviceInformation, input.source.name, false, input.correlationId))
         }
@@ -117,5 +118,18 @@ class OrionIntentRouter {
             input.source.name, true, input.correlationId))
     }
 
-    companion object { const val MAX_INPUT_UTF8_BYTES = OrionChatInputPolicy.MAX_UTF8_BYTES }
+    /** Queries only: whole expression, Locale.ROOT case, runs of ASCII spaces and
+     * at most one terminal '?' or '.', optionally preceded by ASCII spaces.
+     * Never remove quotes, words, negation, filters or punctuation from task arguments.
+     */
+    private fun queryExpression(command: String): String {
+        val expression = if (command.lastOrNull() in setOf('?', '.')) command.dropLast(1).trimEnd(' ') else command
+        return ASCII_SPACES.replace(expression, " ")
+    }
+    companion object {
+        const val MAX_INPUT_UTF8_BYTES = OrionChatInputPolicy.MAX_UTF8_BYTES
+        private val ASCII_SPACES = Regex(" +")
+        private val TASK_LIST_ALIASES = setOf("listar tarefas", "ver tarefas", "minhas tarefas", "quais são minhas tarefas")
+        private val BATTERY_ALIASES = setOf("bateria", "consultar bateria", "como está a bateria")
+    }
 }
