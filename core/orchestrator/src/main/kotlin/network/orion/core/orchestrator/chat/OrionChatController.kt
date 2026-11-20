@@ -65,18 +65,35 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
             }
         }
     }
-    fun send(text: String) {
-        if (closed || state.value.busy) return
+    fun send(text: String): OrionChatAdmission {
+        if (closed) return OrionChatAdmission.Closed
+        if (state.value.busy) return OrionChatAdmission.Busy
         val input = OrionRoutingInput(text, UUID.randomUUID(), UUID.randomUUID(), OrionRoutingSource.UI_TEXT, true)
         val route = OrionIntentRouter().route(input)
         // Rejected oversized input is never retained in the conversation.
-        if (route is OrionIntentRoute.Rejected || route is OrionIntentRoute.Clarification) {
-            status(notice = "Revise a mensagem (até 4 KiB, sem caracteres de controle).")
-            return
+        val rejection = when (route) {
+            is OrionIntentRoute.Clarification -> when (route.reason) {
+                OrionRoutingClarification.EMPTY_INPUT -> OrionChatInputError.EMPTY_INPUT
+                OrionRoutingClarification.MISSING_TASK_TITLE -> OrionChatInputError.MISSING_TASK_TITLE
+            }
+            is OrionIntentRoute.Rejected -> when (route.reason) {
+                OrionRoutingRejection.INPUT_TOO_LARGE -> OrionChatInputError.INPUT_TOO_LARGE
+                OrionRoutingRejection.INVALID_CHARACTER -> OrionChatInputError.INVALID_CHARACTER
+                OrionRoutingRejection.INVALID_UNICODE -> OrionChatInputError.INVALID_UNICODE
+                else -> if (route.taskRejection == CreateTaskRejection.TITLE_TOO_LARGE)
+                    OrionChatInputError.TASK_TITLE_TOO_LARGE else OrionChatInputError.INVALID_TASK_TITLE
+            }
+            else -> null
+        }
+        if (rejection != null) {
+            // The editor owns input feedback. Rejection must not erase a prior result,
+            // safe inference retry, streaming preview or other conversation state.
+            return OrionChatAdmission.Rejected(rejection)
         }
         retryInput = null
         append(true, text)
         launchOperation { dispatch(route, input) }
+        return OrionChatAdmission.Accepted
     }
     fun retryInference() {
         val input = retryInput ?: return
