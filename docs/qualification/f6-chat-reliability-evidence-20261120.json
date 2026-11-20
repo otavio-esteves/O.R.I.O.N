@@ -1,0 +1,142 @@
+{
+  "actionlint": {
+    "environment": "DOCKER",
+    "imageId": "sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667",
+    "result": "PASS"
+  },
+  "androidRuntime": {
+    "abi": "x86_64",
+    "api": "35",
+    "apkHashes": {
+      "app-debug-androidTest.apk": "cc43deeec5e315f8d2135c7411983ad1fbe026a091881f087834d2880f6c865d",
+      "app-debug.apk": "3128a62df313289a28fca475779157a3188e0f7f51910e49ae6a139afc643e43"
+    },
+    "buildFingerprint": "Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys",
+    "definitiveHardwareEvidence": false,
+    "environment": "ANDROID_EMULATOR",
+    "errors": [],
+    "expected": 9,
+    "failed": 0,
+    "pageSize": 4096,
+    "passed": 9,
+    "result": "PASS",
+    "skipped": 0,
+    "started": 9
+  },
+  "archive": {
+    "allMembersVerified": true,
+    "bytes": 89319,
+    "members": 45,
+    "path": "artifacts/f6-chat-reliability-evidence-20261120.tar.gz",
+    "privateKeyPemMarkerAbsent": true,
+    "rawHomePathMarkerAbsent": true,
+    "sha256": "883a6039c8623cda7cca4fc52d1548cb227ac0df15bedbb256cedc66b9b06f62"
+  },
+  "baseCommit": "79ae400",
+  "branch": "fix/f6-chat-reliability",
+  "buildEnvironment": {
+    "agp": "9.4.0",
+    "gradle": "9.6.0",
+    "imageId": "sha256:4e1b776c374c4ba3064323ff3106bd004e7946551e2d86ee0ff86a5d38777371",
+    "kind": "DOCKER",
+    "kotlin": "2.4.10",
+    "ndk": "29.0.14206865",
+    "toolchainUnchanged": true
+  },
+  "builds": {
+    "canonical.log": {
+      "duration": "15m 58s",
+      "result": "PASS",
+      "tasks": "4571 actionable tasks: 205 executed, 7 from cache, 4359 up-to-date"
+    },
+    "hybrid-qualification.log": {
+      "duration": "19m 22s",
+      "result": "PASS",
+      "tasks": "1808 actionable tasks: 28 executed, 3 from cache, 1777 up-to-date"
+    },
+    "ui-regression-build.log": {
+      "duration": "2m 27s",
+      "result": "PASS",
+      "tasks": "976 actionable tasks: 10 executed, 966 up-to-date"
+    }
+  },
+  "cleanup": {
+    "avdName": "OrionF6ChatReliability",
+    "ownedDirectoriesRemoved": true,
+    "ownedEmulatorStopped": true,
+    "preexistingEmulator5554Preserved": true,
+    "serial": "emulator-5590"
+  },
+  "corpus": {
+    "cases": 69,
+    "clarificationsCorrect": {
+      "denominator": 5,
+      "numerator": 5
+    },
+    "fallbackWithUnavailableConfiguration": 33,
+    "generations": 0,
+    "realModelEvaluated": false,
+    "rejectionsCorrect": {
+      "denominator": 8,
+      "numerator": 8
+    },
+    "routeCorrect": 69,
+    "routes": {
+      "BATTERY": 8,
+      "CLARIFY": 5,
+      "COGNITIVE": 33,
+      "REJECT": 8,
+      "TASK_CREATE": 7,
+      "TASK_LIST": 8
+    },
+    "titlesCorrect": {
+      "denominator": 7,
+      "numerator": 7
+    },
+    "unnecessaryCortex": {
+      "denominator": 36,
+      "numerator": 0
+    }
+  },
+  "dateUTC": "2026-11-20T01:26:49.131328+00:00",
+  "f7Implemented": false,
+  "hostHarness": {
+    "environment": "DOCKER",
+    "failures": 0,
+    "skipped": 0,
+    "tests": 650
+  },
+  "jvm": {
+    "activeModules": 53,
+    "canonicalFreshTests": 319,
+    "errors": 0,
+    "failures": 0,
+    "focusedOrchestratorExecuted": 225,
+    "modulesWithResults": 32,
+    "skipped": 0,
+    "suites": 145,
+    "tests": 1322
+  },
+  "merge": "NOT_PERFORMED",
+  "migrationRequired": false,
+  "newHostHarness": {
+    "failures": 0,
+    "skipped": 0,
+    "tests": 21
+  },
+  "physicalQualification": false,
+  "productionProfileApproved": false,
+  "push": "NOT_PERFORMED",
+  "realModelExecution": false,
+  "remoteCI": "NOT_RUN",
+  "roomSchemaVersion": 6,
+  "schemaVersion": 1,
+  "simulatedParser": {
+    "accepted": 4,
+    "cases": 10,
+    "correct": 10,
+    "rejected": 6
+  },
+  "sourceCommit": "2f4b16a58a4b4db49c936253629317d607e5cc11",
+  "sourceManifestSha256": "7e12ef6e4dd12b675ef33a3da6f635463ffd1756f8dd71fd413e6b068daa71c9"
+}

@@ -44,6 +44,12 @@ bounded packages for intelligent memory, their dependencies and the eleven-item
 exit-gate matrix. It plans the next phase without declaring implementation started,
 extending ADR-0004's scope or closing physical/production qualification.
 
+The [F6 chat reliability contract and validation](docs/qualification/F6-ChatReliability-20261120.md)
+documents explicit send admission, draft preservation, shared UTF-8 validation,
+closed Portuguese query aliases, the model-free functional corpus and separate
+qualification-build/UI-execution CI checks. Model quality and physical readiness
+remain separate from these software checks.
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,
