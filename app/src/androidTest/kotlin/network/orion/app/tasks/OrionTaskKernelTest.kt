@@ -65,6 +65,36 @@ class OrionTaskKernelTest {
         return pending.wire(ActionConfirmationBinding(clock).recordConfirmation(stored.request, wall.plusSeconds(60)))
     }
     private fun count(table: String) = db.openHelper.readableDatabase.query("SELECT count(*) FROM $table").use { it.moveToFirst(); it.getInt(0) }
+
+    @Test fun ingressDiagnosticsDistinguishRetainedReceiptsFromQueuedWorkAtCapacity() {
+        val capacity = OrionIngressDao.MAX_STORED_ROWS
+        val now = wall.toEpochMilli()
+        db.openHelper.writableDatabase.execSQL(
+            """WITH RECURSIVE slots(n) AS (
+                SELECT 1 UNION ALL SELECT n + 1 FROM slots WHERE n < ?
+            )
+            INSERT INTO orion_ingress_envelopes(
+                ingressId, idempotencyScope, idempotencyKey, canonicalPayloadHash, schemaVersion, commandType,
+                source, priority, correlationId, payloadSensitivity, payloadEnvelope, receivedAt, expiresAt,
+                idempotencyRetainUntil, status, version, updatedAt, attemptCount, lastErrorCode
+            )
+            SELECT n, 'fixture.retained', n, 'fixture', 1, 'Fixture', 'test', 0, n, 'SENSITIVE',
+                X'00', ?, ?, ?, 'CONSUMED', 2, ?, 1, NULL FROM slots""",
+            arrayOf<Any>(capacity, now - 2_000, now - 1_000, now + 60_000, now - 1_500),
+        )
+        val request = DurableIngressRequest(UUID.randomUUID(), OrionTaskIngressWire.SCOPE, command.idempotencyKey,
+            OrionTaskIngressWire.SOURCE, OrionTaskIngressWire.TYPE, 1, Sensitivity.SENSITIVE, false, null,
+            wire().encode(), 1_000, 2_000, correlationId = command.correlationId)
+        assertEquals(DurableIngressOutcome.CAPACITY_EXCEEDED, kernel.ingress.submit(request))
+        val snapshot = kernel.diagnostics()
+        assertEquals(0, snapshot.queuedIngress)
+        val occupancy = checkNotNull(snapshot.ingressCapacity)
+        assertEquals(capacity, occupancy.stored)
+        assertEquals(capacity, occupancy.limit)
+        assertTrue(occupancy.saturated)
+        assertEquals(capacity, db.ingress().count())
+    }
+
     @Test fun gatedQueuePersistsAndOnlyPreparesAfterRelease() {
         barrier.beginRecovery()
         assertEquals(TaskOperationOutcome.QUEUED, kernel.submit(wire(), command.idempotencyKey))
