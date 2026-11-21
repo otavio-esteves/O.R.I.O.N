@@ -69,6 +69,14 @@ The [F8 validation report](docs/qualification/F8-SoftwareCloseout.md) and
 [ADR-0006](docs/adr/ADR-0006-f8-software-entry.md) record the acceptance evidence
 and the qualification scope.
 
+## F9 software development
+
+The initial voice IPC package adds a private MAIN gateway for protocol and
+readiness queries, a version-negotiating client, and bounded transcript and
+response DTOs. [ADR-0007](docs/adr/ADR-0007-f9-software-entry.md) records the
+software entry scope. The [first work package](docs/issues/ORION-F9-IPC-001.md)
+tracks the remaining push-to-talk integration.
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,

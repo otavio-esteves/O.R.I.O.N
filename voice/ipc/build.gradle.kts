@@ -3,6 +3,7 @@ plugins {
 }
 
 android {
+    buildFeatures { aidl = true }
     namespace = "network.orion.voice.ipc"
     compileSdk = libs.versions.compile.sdk.get().toInt()
 
@@ -13,5 +14,6 @@ android {
 
 dependencies {
     api(project(":core:ipc"))
+    implementation(libs.coroutines.android)
     testImplementation(libs.junit4)
 }
