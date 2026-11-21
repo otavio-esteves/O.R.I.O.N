@@ -66,6 +66,7 @@ class OrionMemoryTransactionProcessDeathTest {
                             armed.set(false); observed.set(true)
                             assertTrue(database.memories().creationActions().all { it.argumentsEnvelope.isEmpty() && it.targetEnvelope.isEmpty() })
                             assertEquals(0,count(database,"orion_memory_claims"))
+                            assertEquals(0,count(database,"orion_memory_fts"))
                             if (mode=="prepare") {
                                 FileOutputStream(checkpoint).use { stream ->
                                     stream.write(Process.myPid().toString().toByteArray(Charsets.US_ASCII)); stream.fd.sync()
@@ -124,6 +125,7 @@ class OrionMemoryTransactionProcessDeathTest {
             assertEquals(baseline.readText(Charsets.US_ASCII),snapshot(db))
             assertEquals(create.content,kernel.query.get(GetMemories()).items.single().content)
             assertEquals(1,count(db,"orion_memory_claims"))
+            assertEquals(1,count(db,"orion_memory_fts"))
             assertTrue(db.memories().creationActions().all { it.argumentsEnvelope.isNotEmpty() && it.targetEnvelope.isNotEmpty() })
             assertEquals(0,db.memories().forgotten(id("memory").toString()))
             if (mode=="verify") {
@@ -135,6 +137,7 @@ class OrionMemoryTransactionProcessDeathTest {
             val originalIngress=db.memories().memoryIngress().filter { it.idempotencyKey in setOf(id("create-key").toString(),id("create-consent").toString()) }.map { it.ingressId }
             assertEquals(MemoryOperationOutcome.APPLIED,kernel.submit(consent(kernel.pending().single()),id("forget-consent")))
             assertEquals(0,count(db,"orion_memories")); assertEquals(0,count(db,"orion_memory_claims"))
+            assertEquals(0,count(db,"orion_memory_fts"))
             assertTrue(db.memories().creationActions().all { it.argumentsEnvelope.isEmpty() && it.targetEnvelope.isEmpty() })
             for (key in originalIngress) assertTrue(db.ingress().find(key)!!.payloadEnvelope.isEmpty())
             val ingressCount=db.ingress().count()
@@ -149,7 +152,7 @@ class OrionMemoryTransactionProcessDeathTest {
     private fun snapshot(db:OrionDatabase):String {
         val buffer=ByteArrayOutputStream()
         DataOutputStream(buffer).use { out ->
-            for (table in listOf("orion_memories","orion_memory_claims","orion_action_requests","orion_action_audit","orion_ingress_envelopes","orion_domain_event_outbox","orion_audit")) {
+            for (table in listOf("orion_memories","orion_memory_claims","orion_memory_fts","orion_action_requests","orion_action_audit","orion_ingress_envelopes","orion_domain_event_outbox","orion_audit")) {
                 out.writeUTF(table)
                 db.openHelper.readableDatabase.query("SELECT * FROM $table ORDER BY 1").use { rows ->
                     while (rows.moveToNext()) for (column in 0 until rows.columnCount) {

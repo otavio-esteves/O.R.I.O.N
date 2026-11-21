@@ -3,6 +3,7 @@ package network.orion.app.memories
 import java.time.Duration
 import java.util.UUID
 import network.orion.core.actions.*
+import network.orion.core.commands.memories.ForgetConversation
 import network.orion.core.commands.memories.ForgetMemory
 import network.orion.core.ingress.StartupBarrier
 import network.orion.core.model.Capability
@@ -89,7 +90,7 @@ internal class OrionMemoryStatusRunner(
             SkillFailure.EXECUTION_NOT_OWNED -> OrionMemoryExecutionFailure.OWNERSHIP_UNAVAILABLE
             else -> OrionMemoryExecutionFailure.UNREADABLE
         })
-        if (change.command is ForgetMemory) erasure.erase(change.memoryId)
+        if (change.command is ForgetMemory || change.command is ForgetConversation) erasure.erase(change.memoryId)
         if (!freshPolicy()) abort(OrionMemoryExecutionFailure.POLICY_DENIED)
         val receipt = stored.confirmation ?: abort(OrionMemoryExecutionFailure.UNREADABLE)
         if (ActionConfirmationBinding(clock).validate(expected, receipt) != ConfirmationBindingResult.VALID_BINDING)

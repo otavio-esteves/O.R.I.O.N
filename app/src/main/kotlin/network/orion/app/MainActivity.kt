@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
             lifecycleScope, tasks, runtime.deviceGateway,
             network.orion.app.chat.OrionChatCortexAdapter(network.orion.core.time.AndroidOrionClock(contentResolver)) {
                 runtime.cortexRuntime()?.let { network.orion.app.chat.OrionOwnedChatRuntime(it) }
-            }).also { chat = it }
+            }, network.orion.core.orchestrator.chat.OrionChatMemorySource(runtime::chatMemories)).also { chat = it }
         reminderChannel = runtime.reminderAdmissions.openUiChannel()
         reminderChannel.onWindowFocus(hasWindowFocus())
         val reminders = runtime.reminderGateway(reminderChannel)
@@ -150,7 +150,7 @@ class MainActivity : ComponentActivity() {
                                 })
                             "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
                             "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
-                            "Chat" -> network.orion.feature.chat.ChatScreen(chatController, report.lastRecovery)
+                            "Chat" -> network.orion.feature.chat.ChatScreen(chatController, report.lastRecovery, memories)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
                                 platform = runtime.platformDiagnostics(), onRetry = { runtime.start() })

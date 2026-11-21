@@ -12,6 +12,8 @@ import network.orion.core.commands.memories.*
 import network.orion.core.common.process.OrionProcessRole
 import network.orion.core.health.CoreReadiness
 import network.orion.core.ingress.*
+import network.orion.core.model.OrionConversationEntry
+import network.orion.core.model.OrionConversationTranscript
 import network.orion.core.model.Sensitivity
 import network.orion.core.orchestrator.memories.*
 import network.orion.core.policy.tasks.OrionPolicyEvidence
@@ -233,6 +235,31 @@ class OrionMemoryKernelTest {
         assertFalse(rejected.userConfirmed)
         assertTrue(db.records().memoryClaim(command.memoryId.toString(), first.toString())!!.userConfirmed)
         assertEquals(3, count("orion_domain_event_outbox"))
+    }
+
+    @Test fun archivedConversationRequiresExactOptInAndForgetErasesEveryDurableCopy() {
+        val id = UUID.randomUUID()
+        val transcript = OrionConversationTranscript(listOf(
+            OrionConversationEntry(UUID.randomUUID(), MemoryOrigin.USER_DECLARED, "Meu histórico local"),
+            OrionConversationEntry(UUID.randomUUID(), MemoryOrigin.LLM_INFERRED, "Resposta inferida"),
+        ))
+        val request = ArchiveConversation(id, UUID.randomUUID(), UUID.randomUUID(), transcript)
+        val archive = prepareRevision(request)
+        assertNull(kernel.query.archived(GetArchivedConversation(id, 0)))
+        assertTrue(checkNotNull(archive.display.content).contains("Meu histórico local"))
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(consent(archive), UUID.randomUUID()))
+        assertNull(kernel.query.find(id))
+        val loaded = checkNotNull(kernel.query.archived(GetArchivedConversation(id, 0)))
+        assertEquals(transcript.entries.map { it.text }, loaded.entries.map { it.text })
+        assertEquals(MemoryOrigin.LLM_INFERRED, loaded.entries.last().origin)
+        assertEquals(Sensitivity.SENSITIVE, db.memories().find(id.toString())?.sensitivity)
+        assertEquals(0, count("orion_memory_fts"))
+
+        val forget = prepareRevision(ForgetConversation(id, 0, UUID.randomUUID(), UUID.randomUUID()))
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(consent(forget), UUID.randomUUID()))
+        assertNull(kernel.query.archived(GetArchivedConversation(id, 0)))
+        assertTrue(db.actions().find(archive.display.actionId.toString())!!.argumentsEnvelope.isEmpty())
+        assertTrue(db.ingress().findByKey(OrionMemoryIngressWire.SCOPE, request.idempotencyKey.toString())!!.payloadEnvelope.isEmpty())
     }
 
     private fun forgetPending(): OrionMemoryPending {

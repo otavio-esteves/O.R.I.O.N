@@ -8,6 +8,8 @@ enum class MemoryStatusOperation(val skillName: String) {
     CORRECT("memory.correct"),
     CONFIRM_CLAIM("memory.claim.confirm"),
     REJECT_CLAIM("memory.claim.reject"),
+    ARCHIVE_CONVERSATION("conversation.archive"),
+    FORGET_CONVERSATION("conversation.forget"),
 }
 
 enum class MemoryStatusResult { QUEUED, REJECTED, UNAVAILABLE }
@@ -46,7 +48,7 @@ data class ReviewMemoryClaim(override val memoryId: UUID, override val expectedV
     override fun toString() = "ReviewMemoryClaim(<redacted>)"
 }
 
-enum class MemoryStatusRejection { INVALID_VERSION, INVALID_REPLACEMENT }
+enum class MemoryStatusRejection { INVALID_VERSION, INVALID_REPLACEMENT, INVALID_TRANSCRIPT }
 
 sealed interface MemoryStatusPreparation {
     class Ready internal constructor(val change: ValidatedMemoryStatusChange) : MemoryStatusPreparation {
@@ -59,6 +61,7 @@ sealed interface MemoryStatusPreparation {
 class ValidatedMemoryStatusChange internal constructor(
     val command: MemoryStatusCommand,
     val replacement: ValidatedCreateMemory? = null,
+    private val encodedTranscript: String? = null,
 ) {
     val memoryId get() = command.memoryId
     val expectedVersion get() = command.expectedVersion
@@ -74,7 +77,8 @@ class ValidatedMemoryStatusChange internal constructor(
     val canonicalNormalizedArguments: String get() = buildString {
         append("{\"memoryId\":\"$memoryId\",\"expectedVersion\":$expectedVersion")
         when (command) {
-            is ForgetMemory -> Unit
+            is ForgetMemory, is ForgetConversation -> Unit
+            is ArchiveConversation -> append(",\"transcript\":\"").append(checkNotNull(encodedTranscript)).append('"')
             is CorrectMemory -> append(",\"replacement\":").append(checkNotNull(replacement).canonicalNormalizedArguments)
             is ReviewMemoryClaim -> append(",\"claimId\":\"${command.claimId}\",\"claimVersion\":${command.expectedClaimVersion}")
         }
@@ -88,7 +92,12 @@ object OrionMemoryStatusPreparer {
         if (command.expectedVersion !in 0 until Long.MAX_VALUE)
             return MemoryStatusPreparation.Rejected(MemoryStatusRejection.INVALID_VERSION)
         return when (command) {
-            is ForgetMemory -> MemoryStatusPreparation.Ready(ValidatedMemoryStatusChange(command))
+            is ForgetMemory, is ForgetConversation -> MemoryStatusPreparation.Ready(ValidatedMemoryStatusChange(command))
+            is ArchiveConversation -> try {
+                MemoryStatusPreparation.Ready(ValidatedMemoryStatusChange(command, encodedTranscript = command.transcript.encode()))
+            } catch (_: IllegalArgumentException) {
+                MemoryStatusPreparation.Rejected(MemoryStatusRejection.INVALID_TRANSCRIPT)
+            }
             is ReviewMemoryClaim -> {
                 if (command.expectedClaimVersion !in 0 until Long.MAX_VALUE)
                     MemoryStatusPreparation.Rejected(MemoryStatusRejection.INVALID_VERSION)

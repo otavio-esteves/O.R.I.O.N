@@ -15,6 +15,14 @@ class SearchMemoriesTest {
         }
     }
 
+    @Test fun chatUsesBoundedKeywordsWithoutTurningInputIntoFtsOperators() {
+        val request = checkNotNull(SearchMemories.forChat("Você lembra da minha viagem e do café?"))
+        assertEquals(listOf("viagem", "cafe"), request.tokens)
+        assertEquals("\"viagem\" OR \"cafe\"", request.ftsExpression)
+        assertEquals(4, request.limit)
+        assertNull(SearchMemories.forChat("Onde você lembra?"))
+    }
+
     @Test fun cursorCannotBeReusedForADifferentQuery() {
         val original = SearchMemories("café da manhã")
         val cursor = MemorySearchCursor(original.ftsExpression, Instant.EPOCH, 200, UUID.randomUUID())

@@ -47,10 +47,11 @@ internal class OrionMemoryPayloadErasure(private val db: OrionDatabase,
                             stored.request.policyVersion)) unavailable()
                     setOf(memoryId)
                 } else {
-                    val change = decodeMemoryRevision(MemoryStatusOperation.CORRECT, args, key, trace)
+                    val kind = MemoryStatusOperation.entries.single { it.skillName == row.skill }
+                    val change = decodeMemoryRevision(kind, args, key, trace)
                     if (stored.request != OrionMemoryStatusActionStore.normalized(stored.request.actionId, change,
                             stored.request.policyVersion)) unavailable()
-                    setOf(change.memoryId, checkNotNull(change.replacement).memoryId)
+                    setOfNotNull(change.memoryId, change.replacement?.memoryId)
                 }
             } catch (_: org.json.JSONException) { unavailable() }
               catch (_: IllegalArgumentException) { unavailable() }
@@ -84,7 +85,7 @@ internal class OrionMemoryPayloadErasure(private val db: OrionDatabase,
               catch (_: java.io.IOException) { unavailable() }
               finally { clear.fill(0) }
             val matches = when (wire.operation) {
-                "CREATE" -> wire.memoryId == id
+                "CREATE", MemoryStatusOperation.ARCHIVE_CONVERSATION.name -> wire.memoryId == id
                 "CORRECT" -> wire.memoryId == id || wire.actionId == null && (wire.change() as CorrectMemory).replacementId == id
                 else -> false
             }

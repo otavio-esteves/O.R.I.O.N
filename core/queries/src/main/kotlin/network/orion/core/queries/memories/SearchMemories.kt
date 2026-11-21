@@ -9,10 +9,11 @@ import java.util.UUID
 import network.orion.core.queries.Query
 
 /** Only quoted Unicode words are ever sent to FTS. The cursor belongs to that exact normalized query. */
-class SearchMemories(text: String, val limit: Int = 20, val after: MemorySearchCursor? = null) : Query<MemorySearchPage> {
+class SearchMemories(text: String, val limit: Int = 20, val after: MemorySearchCursor? = null,
+    private val anyTerm: Boolean = false) : Query<MemorySearchPage> {
     val tokens: List<String>
     // A space intersects terms in both SQLite FTS4 query parsers.
-    val ftsExpression: String get() = tokens.joinToString(" ") { "\"$it\"" }
+    val ftsExpression: String get() = tokens.joinToString(if (anyTerm) " OR " else " ") { "\"$it\"" }
 
     init {
         require(text.length in 1..256 && Charsets.UTF_8.newEncoder().canEncode(text))
@@ -24,6 +25,21 @@ class SearchMemories(text: String, val limit: Int = 20, val after: MemorySearchC
     }
 
     override fun toString() = "SearchMemories(<redacted>)"
+
+    companion object {
+        fun forChat(text: String): SearchMemories? {
+            if (text.length !in 1..4_096) return null
+            val keywords = memorySearchTokens(text).asSequence()
+                .filter { it.length in 3..24 && it !in chatStopWords }.distinct().take(8).toList()
+            if (keywords.isEmpty()) return null
+            return try { SearchMemories(keywords.joinToString(" "), limit = 4, anyTerm = true) }
+            catch (_: IllegalArgumentException) { null }
+        }
+
+        private val chatStopWords = setOf("como", "qual", "quais", "quando", "onde", "voce", "pode", "sabe",
+            "sobre", "minha", "meu", "meus", "minhas", "para", "com", "que", "isso", "este", "essa", "esse",
+            "lembra", "lembre", "memoria", "informacao", "esta", "estou", "tenho", "favor", "diga")
+    }
 }
 
 class MemorySearchCursor(val expression: String, val rankedAt: Instant, val score: Int, val memoryId: UUID) {

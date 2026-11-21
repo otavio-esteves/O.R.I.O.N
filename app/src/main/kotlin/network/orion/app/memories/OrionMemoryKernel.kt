@@ -78,6 +78,8 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
                     db.memories().forgotten(command.replacementId.toString()) != 0)
                     return@Callable DurableIngressOutcome.IDEMPOTENCY_CONFLICT
             }
+            if (wire.operation == MemoryStatusOperation.ARCHIVE_CONVERSATION.name && wire.actionId == null &&
+                db.memories().forgotten(wire.memoryId.toString()) != 0) return@Callable DurableIngressOutcome.IDEMPOTENCY_CONFLICT
             store.enqueue(request)
         })
         override fun consumeNext(): Boolean {
@@ -228,17 +230,30 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
     }
 
     private fun revisionPreview(change: ValidatedMemoryStatusChange): String? {
+        when (val command = change.command) {
+            is ArchiveConversation -> return transcriptPreview(command.transcript)
+            is ForgetConversation -> return query.archived(GetArchivedConversation(command.memoryId, command.expectedVersion))
+                ?.let(::transcriptPreview)
+            else -> Unit
+        }
         val current = query.find(change.memoryId)?.takeIf {
             it.version == change.expectedVersion && it.state != MemoryState.DELETED
         } ?: return null
         return when (val command = change.command) {
             is ForgetMemory -> current.content
+            is ArchiveConversation, is ForgetConversation -> null
             is CorrectMemory -> current.content?.takeIf { current.state == MemoryState.ACTIVE }?.let { "Anterior: $it\nCorreção: ${command.content}" }
             is ReviewMemoryClaim -> query.claims(GetMemoryClaims(change.memoryId, change.expectedVersion))
                 ?.singleOrNull { it.claimId == command.claimId && it.version == command.expectedClaimVersion && it.canReview }
                 ?.statement
         }
     }
+
+    private fun transcriptPreview(transcript: network.orion.core.model.OrionConversationTranscript): String =
+        transcript.entries.joinToString("\n") { entry ->
+            val speaker = if (entry.origin == MemoryOrigin.USER_DECLARED) "Você" else "O.R.I.O.N."
+            "$speaker: ${entry.text}"
+        }
 
     private fun transient(failure: OrionMemoryTransactionBlocked) = when (failure) {
         is OrionMemoryTransactionBlocked.Action -> failure.reason in setOf(OrionMemoryActionFailure.STARTUP_GATED,

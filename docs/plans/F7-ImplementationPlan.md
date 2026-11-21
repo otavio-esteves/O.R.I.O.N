@@ -1,8 +1,8 @@
 # F7 — Plano de implementação de memória inteligente
 
-**Status.** Implementação iniciada pelo primeiro incremento de
-[ORION-F7-001](../issues/ORION-F7-001.md). O gate `MEMORY_ENGINE_READY`
-permanece aberto.
+**Status.** O [fechamento de software](../qualification/F7-SoftwareCloseout.md)
+registra a implementação dos pacotes e as evidências de validação. O gate
+`MEMORY_ENGINE_READY` permanece aberto.
 
 Autoridade: [Arquitetura V3.2, §§62–77](../../1-orion.md#62-memory-engine),
 [Plano Mestre V1.2, §13](../../2-plano-mestre.md#13-fase-7--intelligent-memory),
@@ -281,7 +281,8 @@ ADB. Aprovação de software, física, estabilidade e produção não são confu
 
 ## 4. Matriz do gate F7
 
-Todos os itens permanecem **ABERTOS** neste planejamento.
+A matriz define os critérios da revisão de saída. A evidência obtida durante
+a implementação está no [fechamento de software](../qualification/F7-SoftwareCloseout.md).
 
 | Critério do Plano Mestre §13.8 | Pacotes | Evidência de aceite |
 | --- | --- | --- |
