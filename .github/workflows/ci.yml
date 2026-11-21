@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        case: [one, two]
+        case: [one, two, three]
     env:
       ORION_CHAT_AVD: orion-chat-diag-${{ github.run_id }}-${{ matrix.case }}
     steps:
@@ -20,7 +20,7 @@ jobs:
         with:
           name: orion-chat-ui-apks
           github-token: ${{ github.token }}
-          run-id: 44926222477
+          run-id: 44932089340
           path: ${{ runner.temp }}/orion-chat-apks
       - name: Enable KVM
         run: |
