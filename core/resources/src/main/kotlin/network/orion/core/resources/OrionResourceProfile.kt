@@ -12,7 +12,7 @@ enum class OrionResourceProfile {
     THERMAL_LIMIT,
 }
 
-data class OrionResourcePolicy internal constructor(
+class OrionResourcePolicy internal constructor(
     val profile: OrionResourceProfile,
     val allowsProactivity: Boolean,
 ) {
