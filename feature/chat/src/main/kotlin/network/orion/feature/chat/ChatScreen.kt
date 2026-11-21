@@ -24,6 +24,7 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
     var input by remember { mutableStateOf("") }
     var inputError by remember { mutableStateOf<String?>(null) }
     var oversizedEditRejected by remember { mutableStateOf(false) }
+    var editorVersion by remember { mutableIntStateOf(0) }
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(controller, recoveryVersion) { controller.refresh() }
@@ -47,24 +48,35 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
         }
         if (state.draft.isNotEmpty()) item { Text(state.draft, Modifier.testTag("orion_chat_stream")) }
         item { if (inputError == null) state.notice?.let { Text(it) } }
-        item {
-            OutlinedTextField(input, onValueChange = edit@{ edited ->
-                // Focus/IME updates can repeat the retained value after an edit was refused.
-                if (oversizedEditRejected && edited == input) return@edit
-                val error = OrionChatInputPolicy.validate(edited)
-                // Oversized edits preserve the previous bounded draft; no silent truncation.
-                // Other bounded invalid text stays exactly editable and is rejected by send.
-                oversizedEditRejected = error == OrionChatInputError.INPUT_TOO_LARGE
-                if (!oversizedEditRejected) input = edited
-                inputError = error?.takeUnless { it == OrionChatInputError.EMPTY_INPUT }?.message
-            }, label = { Text("Mensagem") }, singleLine = true, isError = inputError != null,
-                supportingText = { inputError?.let { Text(it, Modifier.testTag("orion_chat_input_error")) } },
-                enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("orion_chat_input"))
+        item(key = "editor") {
+            val version = editorVersion
+            key(version) {
+                OutlinedTextField(input, onValueChange = edit@{ edited ->
+                    // Focus loss can deliver an edit from the input session that just sent a draft.
+                    if (version != editorVersion) return@edit
+                    // Focus/IME updates can repeat the retained value after an edit was refused.
+                    if (oversizedEditRejected && edited == input) return@edit
+                    val error = OrionChatInputPolicy.validate(edited)
+                    // Oversized edits preserve the previous bounded draft; no silent truncation.
+                    // Other bounded invalid text stays exactly editable and is rejected by send.
+                    oversizedEditRejected = error == OrionChatInputError.INPUT_TOO_LARGE
+                    if (!oversizedEditRejected) input = edited
+                    inputError = error?.takeUnless { it == OrionChatInputError.EMPTY_INPUT }?.message
+                }, label = { Text("Mensagem") }, singleLine = true, isError = inputError != null,
+                    supportingText = { inputError?.let { Text(it, Modifier.testTag("orion_chat_input_error")) } },
+                    enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("orion_chat_input"))
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = send@{
                     if (oversizedEditRejected) return@send
                     when (val result = controller.send(input)) {
-                        OrionChatAdmission.Accepted -> { input = ""; inputError = null; focus.clearFocus(); keyboard?.hide() }
+                        OrionChatAdmission.Accepted -> {
+                            editorVersion++
+                            input = ""
+                            inputError = null
+                            focus.clearFocus()
+                            keyboard?.hide()
+                        }
                         is OrionChatAdmission.Rejected -> inputError = result.reason.message
                         OrionChatAdmission.Busy -> inputError = "Aguarde o envio em andamento."
                         OrionChatAdmission.Closed -> inputError = "Esta sessão foi encerrada. Abra o chat novamente."
