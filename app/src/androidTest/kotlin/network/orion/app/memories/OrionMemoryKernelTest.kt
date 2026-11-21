@@ -160,6 +160,81 @@ class OrionMemoryKernelTest {
         assertEquals(MemoryOperationOutcome.APPLIED,kernel.submit(consent(pending),UUID.randomUUID()))
         return pending
     }
+    private fun prepareRevision(request: MemoryStatusCommand): OrionMemoryPending {
+        val change = (OrionMemoryStatusPreparer.prepare(request) as MemoryStatusPreparation.Ready).change
+        val submission = OrionMemoryIngressWire(change.operation.name, change.memoryId, change.idempotencyKey,
+            change.correlationId, expectedVersion = change.expectedVersion,
+            revisionArguments = change.canonicalNormalizedArguments)
+        assertEquals(MemoryOperationOutcome.QUEUED, kernel.submit(submission, request.idempotencyKey))
+        return kernel.pending().single { it.change?.change?.idempotencyKey == request.idempotencyKey }
+    }
+
+    @Test fun correctionBindsTheReplacementAndTheOldVersionAndErasesItsCopiesWhenForgotten() {
+        created()
+        val replacement = UUID.randomUUID()
+        val request = CorrectMemory(command.memoryId, 0, UUID.randomUUID(), UUID.randomUUID(), replacement, "Priorizar viagem")
+        val first = prepareRevision(request)
+        val stale = prepareRevision(request.copy(idempotencyKey = UUID.randomUUID(), replacementId = UUID.randomUUID()))
+        assertTrue(checkNotNull(first.display.content).contains(request.content))
+        val confirmation = consent(first)
+        assertEquals("", confirmation.revisionArguments)
+        val confirmationKey = UUID.randomUUID()
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(confirmation, confirmationKey))
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(confirmation, confirmationKey))
+        assertEquals(MemoryOperationOutcome.REJECTED, kernel.submit(consent(stale), UUID.randomUUID()))
+        assertEquals(MemoryState.SUPERSEDED, kernel.query.find(command.memoryId)?.state)
+        assertEquals(request.content, kernel.query.find(replacement)?.content)
+        assertEquals(3, count("orion_domain_event_outbox"))
+
+        val forgetKey = UUID.randomUUID()
+        assertEquals(MemoryOperationOutcome.QUEUED, kernel.submit(OrionMemoryIngressWire("DELETE", replacement, forgetKey,
+            UUID.randomUUID(), expectedVersion = 0), forgetKey))
+        val forget = kernel.pending().single { it.display.operation == MemoryOperation.DELETE }
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(consent(forget), UUID.randomUUID()))
+        assertNull(kernel.query.find(replacement))
+        assertTrue(db.actions().find(first.display.actionId.toString())!!.argumentsEnvelope.isEmpty())
+        assertTrue(db.ingress().findByKey(OrionMemoryIngressWire.SCOPE, request.idempotencyKey.toString())!!.payloadEnvelope.isEmpty())
+    }
+
+    @Test fun reviewOnlyConfirmsTheSelectedInferredClaimAndKeepsItsOriginAndConfidence() {
+        created()
+        val first = UUID.randomUUID()
+        val second = UUID.randomUUID()
+        for ((id, text) in listOf(first to "Visita no sábado", second to "Visita à tarde")) {
+            val envelope = (crypto.encrypt(text.toByteArray(), FieldEncryptionContext(
+                "memory/${command.memoryId}/claim/$id", "statement", 1)) as FieldEncryptionResult.Encrypted).envelope
+            db.openHelper.writableDatabase.execSQL("""INSERT INTO orion_memory_claims
+                (claimId,memoryId,statementEnvelope,sensitivity,origin,confidence,userConfirmed,status,validFrom,validUntil,version)
+                VALUES(?,?,?,'PERSONAL','LLM_INFERRED',0.25,0,'CANDIDATE',?,NULL,0)""",
+                arrayOf(id.toString(), command.memoryId.toString(), FieldEnvelopeCodec.encode(envelope), wall.toEpochMilli()))
+        }
+        val request = ReviewMemoryClaim(command.memoryId, 0, UUID.randomUUID(), UUID.randomUUID(), first, 0, MemoryClaimDecision.CONFIRM)
+        val pending = prepareRevision(request)
+        val stale = prepareRevision(request.copy(idempotencyKey = UUID.randomUUID(), claimId = second))
+        assertEquals("Visita no sábado", pending.display.content)
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(consent(pending), UUID.randomUUID()))
+        assertEquals(MemoryOperationOutcome.REJECTED, kernel.submit(consent(stale), UUID.randomUUID()))
+        val approved = checkNotNull(db.records().memoryClaim(command.memoryId.toString(), first.toString()))
+        assertEquals(MemoryStatus.ACTIVE, approved.status)
+        assertEquals(MemoryOrigin.LLM_INFERRED, approved.origin)
+        assertTrue(approved.userConfirmed)
+        assertEquals(0.25, approved.confidence, 0.0)
+        val other = checkNotNull(db.records().memoryClaim(command.memoryId.toString(), second.toString()))
+        assertEquals(MemoryStatus.CANDIDATE, other.status)
+        assertFalse(other.userConfirmed)
+        assertEquals(2, count("orion_domain_event_outbox"))
+
+        val rejection = prepareRevision(request.copy(expectedVersion = 1, idempotencyKey = UUID.randomUUID(),
+            claimId = second, decision = MemoryClaimDecision.REJECT))
+        assertEquals("Visita à tarde", rejection.display.content)
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(consent(rejection), UUID.randomUUID()))
+        val rejected = checkNotNull(db.records().memoryClaim(command.memoryId.toString(), second.toString()))
+        assertEquals(MemoryStatus.REJECTED, rejected.status)
+        assertFalse(rejected.userConfirmed)
+        assertTrue(db.records().memoryClaim(command.memoryId.toString(), first.toString())!!.userConfirmed)
+        assertEquals(3, count("orion_domain_event_outbox"))
+    }
+
     private fun forgetPending(): OrionMemoryPending {
         val key=UUID.randomUUID()
         assertEquals(MemoryOperationOutcome.QUEUED,kernel.submit(OrionMemoryIngressWire("DELETE",command.memoryId,key,

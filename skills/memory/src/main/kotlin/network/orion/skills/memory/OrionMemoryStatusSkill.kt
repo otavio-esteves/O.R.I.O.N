@@ -9,7 +9,7 @@ import network.orion.skills.api.*
 
 /** One static descriptor per instance/operation. No suspension, Android side effects or authority from intent metadata. */
 class OrionMemoryStatusSkill(private val operation: MemoryStatusOperation, private val writer: OrionOwnedMemoryStatusWriter) : OrionSkill {
-    override val descriptor get() = OrionMemoryStatusDescriptors.delete
+    override val descriptor = checkNotNull(OrionMemoryStatusDescriptors.forName(operation.skillName))
     override fun canHandle(intent: OrionIntent<*>) = intent.intentType == descriptor.name &&
         (intent.arguments as? ValidatedMemoryStatusChange)?.operation == operation
     override suspend fun execute(intent: OrionIntent<*>, context: SkillContext) = executeInTransaction(intent, context)

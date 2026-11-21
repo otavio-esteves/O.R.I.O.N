@@ -28,12 +28,12 @@ abstract class OrionMemoryDao {
     @Query("SELECT count(*) FROM orion_action_requests WHERE skill = 'memory.create' AND idempotencyScope = 'memory.create' AND status IN ('PENDING','NEEDS_CONFIRMATION','CONFIRMED')")
     abstract fun pendingCreationActionCount(): Int
 
-    @Query("SELECT max(actionId) FROM orion_action_requests WHERE skill = 'memory.create' AND idempotencyScope = 'memory.create'")
-    abstract fun lastCreationActionId(): String?
+    @Query("SELECT max(actionId) FROM orion_action_requests WHERE skill IN ('memory.create','memory.correct') AND idempotencyScope = skill")
+    abstract fun lastContentActionId(): String?
 
-    @Query("""SELECT * FROM orion_action_requests WHERE skill = 'memory.create' AND idempotencyScope = 'memory.create'
+    @Query("""SELECT * FROM orion_action_requests WHERE skill IN ('memory.create','memory.correct') AND idempotencyScope = skill
         AND actionId > :after AND actionId <= :through ORDER BY actionId LIMIT :limit""")
-    abstract fun creationActionPage(after: String, through: String, limit: Int): List<ActionRequestEntity>
+    abstract fun contentActionPage(after: String, through: String, limit: Int): List<ActionRequestEntity>
 
     @Query("SELECT * FROM orion_ingress_envelopes WHERE idempotencyScope = 'orion_ui_memory_v1' ORDER BY ingressId LIMIT 10001")
     abstract fun memoryIngress(): List<IngressEnvelopeEntity>
@@ -47,9 +47,9 @@ abstract class OrionMemoryDao {
 
     /** Terminal payload retention erasure only; state/hash/key/audit material stays unchanged. */
     @Query("""UPDATE orion_action_requests SET argumentsEnvelope = X'', targetEnvelope = X''
-        WHERE actionId = :id AND version = :version AND skill = 'memory.create'
-        AND idempotencyScope = 'memory.create' AND status IN ('SUCCEEDED','FAILED','CANCELLED')""")
-    abstract fun eraseTerminalCreate(id: String, version: Long): Int
+        WHERE actionId = :id AND version = :version AND skill IN ('memory.create','memory.correct')
+        AND idempotencyScope = skill AND status IN ('SUCCEEDED','FAILED','CANCELLED')""")
+    abstract fun eraseTerminalContentAction(id: String, version: Long): Int
 
     @Query("""UPDATE orion_ingress_envelopes SET payloadEnvelope = X''
         WHERE ingressId = :id AND version = :version AND idempotencyScope = 'orion_ui_memory_v1'

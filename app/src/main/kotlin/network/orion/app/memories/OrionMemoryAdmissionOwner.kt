@@ -172,7 +172,7 @@ internal class OrionMemoryAdmissionOwner(
 
     @Synchronized fun replayStatus(origin: OrionVerifiedMemoryIngress): OrionMemoryStatusAdmission? {
         val channel = current ?: return null
-        if (!channel.activeForReplay() || origin.wire.operation !in setOf("DELETE", "DELETE")) return null
+        if (!channel.activeForReplay() || origin.wire.operation != "DELETE" && origin.wire.operation !in OrionMemoryIngressWire.revisionOperations) return null
         val prepared = OrionMemoryStatusPreparer.prepare(origin.wire.change()) as? MemoryStatusPreparation.Ready ?: return null
         val binding = MemoryStatusPolicyInputBinding.from(prepared.change)
         val id = UUID.randomUUID(); val generation = uiGeneration

@@ -3,10 +3,16 @@ package network.orion.core.commands.memories
 import java.util.UUID
 import network.orion.core.commands.Command
 
-enum class MemoryStatusOperation { DELETE }
+enum class MemoryStatusOperation(val skillName: String) {
+    DELETE("memory.delete"),
+    CORRECT("memory.correct"),
+    CONFIRM_CLAIM("memory.claim.confirm"),
+    REJECT_CLAIM("memory.claim.reject"),
+}
+
 enum class MemoryStatusResult { QUEUED, REJECTED, UNAVAILABLE }
 
-/** Expected version is domain concurrency data, never authorization or a confirmation flag. */
+/** Expected versions are concurrency data. The Core captures consent independently. */
 sealed interface MemoryStatusCommand : Command<MemoryStatusResult> {
     val memoryId: UUID
     val expectedVersion: Long
@@ -21,7 +27,26 @@ data class ForgetMemory(override val memoryId: UUID, override val expectedVersio
     override fun toString() = "ForgetMemory(<redacted>)"
 }
 
-enum class MemoryStatusRejection { INVALID_VERSION }
+data class CorrectMemory(override val memoryId: UUID, override val expectedVersion: Long,
+    override val idempotencyKey: UUID, override val correlationId: UUID,
+    val replacementId: UUID, val content: String) : MemoryStatusCommand {
+    override val operation get() = MemoryStatusOperation.CORRECT
+    override fun toString() = "CorrectMemory(<redacted>)"
+}
+
+enum class MemoryClaimDecision(val operation: MemoryStatusOperation) {
+    CONFIRM(MemoryStatusOperation.CONFIRM_CLAIM),
+    REJECT(MemoryStatusOperation.REJECT_CLAIM),
+}
+
+data class ReviewMemoryClaim(override val memoryId: UUID, override val expectedVersion: Long,
+    override val idempotencyKey: UUID, override val correlationId: UUID,
+    val claimId: UUID, val expectedClaimVersion: Long, val decision: MemoryClaimDecision) : MemoryStatusCommand {
+    override val operation get() = decision.operation
+    override fun toString() = "ReviewMemoryClaim(<redacted>)"
+}
+
+enum class MemoryStatusRejection { INVALID_VERSION, INVALID_REPLACEMENT }
 
 sealed interface MemoryStatusPreparation {
     class Ready internal constructor(val change: ValidatedMemoryStatusChange) : MemoryStatusPreparation {
@@ -30,22 +55,53 @@ sealed interface MemoryStatusPreparation {
     data class Rejected(val reason: MemoryStatusRejection) : MemoryStatusPreparation
 }
 
-/** Fixed schema-v1 material: memoryId then expectedVersion. Operation is bound by static Skill name. */
+/** Canonical schema v1. The static Skill name binds the operation in the ActionRequest. */
 class ValidatedMemoryStatusChange internal constructor(
-    val memoryId: UUID, val expectedVersion: Long, val idempotencyKey: UUID,
-    val correlationId: UUID, val operation: MemoryStatusOperation,
+    val command: MemoryStatusCommand,
+    val replacement: ValidatedCreateMemory? = null,
 ) {
-    val skillName get() = "memory.delete"
+    val memoryId get() = command.memoryId
+    val expectedVersion get() = command.expectedVersion
+    val idempotencyKey get() = command.idempotencyKey
+    val correlationId get() = command.correlationId
+    val operation get() = command.operation
+    val skillName get() = operation.skillName
     val argumentSchemaVersion get() = 1
-    val normalizedTarget get() = "memory/$memoryId"
-    val canonicalNormalizedArguments get() = "{\"memoryId\":\"$memoryId\",\"expectedVersion\":$expectedVersion}"
+    val normalizedTarget get() = when (command) {
+        is ReviewMemoryClaim -> "memory/$memoryId/claim/${command.claimId}"
+        else -> "memory/$memoryId"
+    }
+    val canonicalNormalizedArguments: String get() = buildString {
+        append("{\"memoryId\":\"$memoryId\",\"expectedVersion\":$expectedVersion")
+        when (command) {
+            is ForgetMemory -> Unit
+            is CorrectMemory -> append(",\"replacement\":").append(checkNotNull(replacement).canonicalNormalizedArguments)
+            is ReviewMemoryClaim -> append(",\"claimId\":\"${command.claimId}\",\"claimVersion\":${command.expectedClaimVersion}")
+        }
+        append('}')
+    }
     override fun toString() = "ValidatedMemoryStatusChange(<redacted>)"
 }
 
 object OrionMemoryStatusPreparer {
-    fun prepare(command: MemoryStatusCommand): MemoryStatusPreparation =
-        if (command.expectedVersion < 0 || command.expectedVersion == Long.MAX_VALUE)
-            MemoryStatusPreparation.Rejected(MemoryStatusRejection.INVALID_VERSION)
-        else MemoryStatusPreparation.Ready(ValidatedMemoryStatusChange(command.memoryId, command.expectedVersion,
-            command.idempotencyKey, command.correlationId, command.operation))
+    fun prepare(command: MemoryStatusCommand): MemoryStatusPreparation {
+        if (command.expectedVersion !in 0 until Long.MAX_VALUE)
+            return MemoryStatusPreparation.Rejected(MemoryStatusRejection.INVALID_VERSION)
+        return when (command) {
+            is ForgetMemory -> MemoryStatusPreparation.Ready(ValidatedMemoryStatusChange(command))
+            is ReviewMemoryClaim -> {
+                if (command.expectedClaimVersion !in 0 until Long.MAX_VALUE)
+                    MemoryStatusPreparation.Rejected(MemoryStatusRejection.INVALID_VERSION)
+                else MemoryStatusPreparation.Ready(ValidatedMemoryStatusChange(command))
+            }
+            is CorrectMemory -> {
+                if (command.replacementId == command.memoryId)
+                    return MemoryStatusPreparation.Rejected(MemoryStatusRejection.INVALID_REPLACEMENT)
+                val ready = OrionCreateMemoryPreparer.prepare(CreateMemory(command.replacementId, command.content,
+                    command.idempotencyKey, command.correlationId)) as? CreateMemoryPreparation.Ready
+                    ?: return MemoryStatusPreparation.Rejected(MemoryStatusRejection.INVALID_REPLACEMENT)
+                MemoryStatusPreparation.Ready(ValidatedMemoryStatusChange(command.copy(content = ready.memory.content), ready.memory))
+            }
+        }
+    }
 }

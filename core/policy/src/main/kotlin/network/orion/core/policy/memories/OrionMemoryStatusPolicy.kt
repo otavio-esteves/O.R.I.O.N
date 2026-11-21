@@ -2,6 +2,7 @@ package network.orion.core.policy.memories
 
 import network.orion.core.policy.tasks.OrionPolicyEvidence
 import java.util.concurrent.CancellationException
+import network.orion.core.commands.memories.MemoryStatusOperation
 import network.orion.core.commands.memories.ValidatedMemoryStatusChange
 import network.orion.core.common.process.OrionProcessRole
 import network.orion.core.model.*
@@ -22,7 +23,7 @@ sealed interface MemoryStatusPolicyDecision {
 }
 
 /**
- * Specific complete/cancel preparation policy, not execution authority or consent.
+ * Preparation policy for explicit memory mutations.
  * A negative STARTUP_GATED observation must preserve durable ingress behind its gate.
  * Two matching observations are advisory, not an atomic OS snapshot; execution
  * revalidates authority/consent inside writer admission. No preferences waive v1 confirmation.
@@ -38,7 +39,10 @@ class OrionMemoryStatusPolicy(private val source: MemoryStatusPolicyContextSourc
         if (context.processRole != OrionProcessRole.MAIN) return denied(MemoryStatusPolicyReason.PROCESS_NOT_MAIN)
         if (context.inputBinding != MemoryStatusPolicyInputBinding.from(change)) return denied(MemoryStatusPolicyReason.INPUT_MISMATCH)
         val descriptor = OrionMemoryStatusDescriptors.forName(change.skillName) ?: return denied(MemoryStatusPolicyReason.UNSUPPORTED_DESCRIPTOR)
-        if (descriptor.authorizationLevel != AuthorizationLevel.DESTRUCTIVE || descriptor.sideEffectClass != SideEffectClass.DESTRUCTIVE ||
+        val deleting = change.operation == MemoryStatusOperation.DELETE
+        val authorization = if (deleting) AuthorizationLevel.DESTRUCTIVE else AuthorizationLevel.SAFE_WRITE
+        val sideEffect = if (deleting) SideEffectClass.DESTRUCTIVE else SideEffectClass.LOCAL_MUTATION
+        if (descriptor.authorizationLevel != authorization || descriptor.sideEffectClass != sideEffect ||
             descriptor.argumentSchemaVersion != change.argumentSchemaVersion || descriptor.confirmationPolicy != ConfirmationPolicy.ALWAYS ||
             !descriptor.requiresUserPresence) return denied(MemoryStatusPolicyReason.UNSUPPORTED_DESCRIPTOR)
         when (context.origin) {

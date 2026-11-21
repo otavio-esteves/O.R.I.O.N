@@ -32,7 +32,8 @@ internal class OrionMemoryUiGateway(private val channel: OrionMemoryAdmissionOwn
         if (captured is OrionMemoryStatusAdmissionResult.Invalid) return MemoryStatusResult.REJECTED
         val change = (captured as? OrionMemoryStatusAdmissionResult.Admitted)?.request?.change ?: return MemoryStatusResult.UNAVAILABLE
         return when (send(OrionMemoryIngressWire(change.operation.name, change.memoryId, change.idempotencyKey,
-            change.correlationId, expectedVersion = change.expectedVersion), change.idempotencyKey)) {
+            change.correlationId, expectedVersion = change.expectedVersion,
+            revisionArguments = if (change.command is ForgetMemory) "" else change.canonicalNormalizedArguments), change.idempotencyKey)) {
             MemoryOperationOutcome.QUEUED, MemoryOperationOutcome.APPLIED -> MemoryStatusResult.QUEUED
             MemoryOperationOutcome.REJECTED -> MemoryStatusResult.REJECTED
             MemoryOperationOutcome.UNAVAILABLE -> MemoryStatusResult.UNAVAILABLE
@@ -56,8 +57,7 @@ internal class OrionMemoryUiGateway(private val channel: OrionMemoryAdmissionOwn
             OrionCreateMemoryActionStore.normalized(p.actionId, p.memory, p.policyVersion)
         } ?: selected.change?.let { p ->
             val c = p.change
-            val command = ForgetMemory(c.memoryId, c.expectedVersion, c.idempotencyKey, c.correlationId)
-            if (channel.captureStatusFromUser(command) !is OrionMemoryStatusAdmissionResult.Admitted) return MemoryOperationOutcome.UNAVAILABLE
+            if (channel.captureStatusFromUser(c.command) !is OrionMemoryStatusAdmissionResult.Admitted) return MemoryOperationOutcome.UNAVAILABLE
             OrionMemoryStatusActionStore.normalized(p.actionId, c, p.policyVersion)
         } ?: return MemoryOperationOutcome.REJECTED
         // Recorded now, at the live callback; persisted replay must retain these exact times.
