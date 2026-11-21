@@ -1,0 +1,81 @@
+{
+  "phase": "F7",
+  "scope": "SOFTWARE_CANDIDATE",
+  "memoryEngineReady": false,
+  "artifactCommit": "7bc02e3a1c86a3738087f9efe4bfb4b881186ce0",
+  "docker": {
+    "build": "PASS",
+    "jvm": {
+      "modules": {
+        "core:model": 29,
+        "core:commands": 67,
+        "core:queries": 18,
+        "core:policy": 181,
+        "core:orchestrator": 228,
+        "app": 319
+      },
+      "passed": 842,
+      "failed": 0,
+      "skipped": 0
+    },
+    "moduleBoundaryContracts": {
+      "passed": 36,
+      "failed": 0
+    }
+  },
+  "android": {
+    "environment": "ANDROID_EMULATOR",
+    "apiLevel": 35,
+    "abi": "x86_64",
+    "pageSize": 4096,
+    "instrumentation": {
+      "started": 70,
+      "passed": 70,
+      "failed": 0,
+      "skipped": 0
+    },
+    "upgrade": {
+      "from": 8,
+      "to": 9,
+      "checks": {
+        "seed_prior_installation": "PASS",
+        "encrypted_records_queues_and_keys_survived": "PASS",
+        "pending_and_unknown_never_replayed": "PASS"
+      },
+      "baselineInstrumentation": "CANDIDATE_FIXTURE_COMPATIBLE_WITH_SCHEMA_8",
+      "artifactSha256": {
+        "previous": "e65909ecd93d2073c2457c41a7a0a9f4ed7249547908722b4f2b4d361cd0864c",
+        "previousTest": "2fc779699efac507f27150fda506a32762bd75d8c0a4f05242863975ae2bc385",
+        "candidate": "5e9efc4bc94029492a10a267b206f22f98e7258b9cadee0c46f4333b56ffb83b",
+        "candidateTest": "2fc779699efac507f27150fda506a32762bd75d8c0a4f05242863975ae2bc385"
+      }
+    },
+    "processDeath": {
+      "result": "PASS",
+      "terminationMethod": "RUN_AS_SIGKILL",
+      "checkpointBoundary": "OPEN_ROOM_TRANSACTION",
+      "checks": {
+        "kill_during_room_transaction": "PASS",
+        "committed_present_uncommitted_absent": "PASS"
+      },
+      "sourceSha256": {
+        "app/src/androidTest/kotlin/network/orion/app/memories/OrionMemoryTransactionProcessDeathTest.kt": "ccd3c68c14efc2be30f22dc9ad114daa3181e4c42265417aa4e23b81af279b02",
+        "scripts/android/verify-transaction-process-death.py": "69fad52c4940e65a1d6fc32ab5799acbe7e8d7e2d85d16a2fa23b4f01f77f448"
+      },
+      "beforePid": 2988,
+      "afterPid": 3055
+    }
+  },
+  "design": {
+    "history": "EXPLICIT_CONFIRMATION",
+    "archivesLimit": 20,
+    "summary": "EXTRACTIVE_SYSTEM_DERIVED",
+    "indexEligibility": "USER_DECLARED_CONFIRMED_PERSONAL"
+  },
+  "review": {
+    "softwareCI": "PENDING",
+    "mainIntegration": "PENDING",
+    "physicalQualification": "OPEN",
+    "stabilityQualification": "OPEN"
+  }
+}
