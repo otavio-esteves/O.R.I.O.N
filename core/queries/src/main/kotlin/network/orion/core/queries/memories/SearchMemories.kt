@@ -11,7 +11,8 @@ import network.orion.core.queries.Query
 /** Only quoted Unicode words are ever sent to FTS. The cursor belongs to that exact normalized query. */
 class SearchMemories(text: String, val limit: Int = 20, val after: MemorySearchCursor? = null) : Query<MemorySearchPage> {
     val tokens: List<String>
-    val ftsExpression: String get() = tokens.joinToString(" AND ") { "\"$it\"" }
+    // A space intersects terms in both SQLite FTS4 query parsers.
+    val ftsExpression: String get() = tokens.joinToString(" ") { "\"$it\"" }
 
     init {
         require(text.length in 1..256 && Charsets.UTF_8.newEncoder().canEncode(text))
