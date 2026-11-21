@@ -12,6 +12,7 @@ object OrionDatabaseMigrations {
                 `memoryId` TEXT NOT NULL, `body` TEXT NOT NULL, tokenize=unicode61, notindexed=`memoryId`)""")
             db.execSQL("""CREATE TABLE IF NOT EXISTS `orion_memory_index_state` (
                 `id` INTEGER NOT NULL, `cursor` TEXT NOT NULL, `ready` INTEGER NOT NULL, PRIMARY KEY(`id`))""")
+            db.execSQL(ORION_REMOVE_INELIGIBLE_MEMORY_POSTINGS)
         }
     }
 

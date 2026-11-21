@@ -38,3 +38,10 @@ interface OrionMemoryIndexDao {
         AND memoryId > :cursor ORDER BY memoryId LIMIT :limit""")
     fun pageForBackfill(cursor: String, limit: Int): List<MemoryEntity>
 }
+
+internal const val ORION_REMOVE_INELIGIBLE_MEMORY_POSTINGS = """CREATE TRIGGER IF NOT EXISTS orion_remove_ineligible_memory_postings
+    AFTER UPDATE OF sensitivity ON orion_memories
+    WHEN NEW.sensitivity <> 'PERSONAL'
+    BEGIN
+        DELETE FROM orion_memory_fts WHERE memoryId = NEW.memoryId;
+    END"""

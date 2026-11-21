@@ -86,6 +86,11 @@ class OrionMemorySearchIndexTest {
             assertEquals(OrionMemoryIndexProgress.READY, index.backfillBatch(1))
             assertEquals(OrionMemoryIndexProgress.READY, index.backfillBatch(1))
             assertEquals(listOf("marcadorlegado0", "marcadorlegado1"), bodies(db))
+            db.runInTransaction {
+                db.openHelper.writableDatabase.execSQL("UPDATE orion_memories SET sensitivity = 'SENSITIVE' WHERE memoryId = ?",
+                    arrayOf(ids.first().toString()))
+                assertEquals(listOf("marcadorlegado1"), bodies(db))
+            }
         }
     }
 

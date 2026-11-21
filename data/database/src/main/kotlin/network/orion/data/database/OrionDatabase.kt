@@ -71,6 +71,7 @@ object OrionDatabaseFactory {
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     db.execSQL("INSERT INTO orion_storage_metadata (id, formatVersion) VALUES (1, 1)")
+                    db.execSQL(ORION_REMOVE_INELIGIBLE_MEMORY_POSTINGS)
                 }
             })
             // Deliberately no destructive fallback or main-thread query permission.
