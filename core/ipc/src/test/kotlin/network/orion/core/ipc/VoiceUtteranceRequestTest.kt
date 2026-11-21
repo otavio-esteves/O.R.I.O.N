@@ -33,6 +33,8 @@ class VoiceUtteranceRequestTest {
         val response = VoiceCoreResponse(version, id, 0, OrionVoiceResponseKind.TEXT_DELTA, "texto privado",
             false, null, null)
         assertFalse(response.toString().contains("texto privado"))
+        val space = VoiceCoreResponse(version, id, 1, OrionVoiceResponseKind.TEXT_DELTA, " ", false, null, null)
+        assertTrue(space.textDelta == " ")
         assertThrows(IllegalArgumentException::class.java) {
             VoiceCoreResponse(version, id, 1, OrionVoiceResponseKind.TERMINAL, null, false, null, null)
         }

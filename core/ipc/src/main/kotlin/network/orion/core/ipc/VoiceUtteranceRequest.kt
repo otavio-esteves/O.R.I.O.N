@@ -22,6 +22,7 @@ class VoiceUtteranceRequest(
 ) {
     init {
         require(schemaVersion.value == 1)
+        require(text.isNotBlank())
         requireVoiceText(text)
         require(locale.length in 2..64)
         val language = try {
@@ -67,6 +68,6 @@ class VoiceCoreResponse(
 private fun requireVoiceText(text: String) {
     // Leaves room for metadata and UTF-16 marshalling under the common Binder limit.
     val maxUtf8Bytes = 16 * 1024
-    require(text.length in 1..maxUtf8Bytes && text.isNotBlank() && Charsets.UTF_8.newEncoder().canEncode(text))
+    require(text.length in 1..maxUtf8Bytes && Charsets.UTF_8.newEncoder().canEncode(text))
     require(text.toByteArray(Charsets.UTF_8).size <= maxUtf8Bytes)
 }
