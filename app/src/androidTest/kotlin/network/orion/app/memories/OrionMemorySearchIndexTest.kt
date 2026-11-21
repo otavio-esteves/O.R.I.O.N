@@ -37,7 +37,7 @@ class OrionMemorySearchIndexTest {
     @After fun cleanup() { context.deleteDatabase(name) }
 
     @Test fun protectedBytesNeverEnterFtsAndRemovalFollowsSupersessionAndDeletion() {
-        Room.databaseBuilder(context, OrionDatabase::class.java, name).build().use { db ->
+        withRoom { db ->
             val store = OrionMemoryStore(db, crypto, clock)
             val prior = UUID.randomUUID()
             val next = UUID.randomUUID()
@@ -70,13 +70,12 @@ class OrionMemorySearchIndexTest {
             }
         }
         migrations.runMigrationsAndValidate(name, 9, true, *OrionDatabaseMigrations.ALL).close()
-        fun open() = Room.databaseBuilder(context, OrionDatabase::class.java, name).build()
-        open().use { db ->
+        withRoom { db ->
             assertEquals(OrionMemoryIndexProgress.BUILDING, OrionMemorySearchIndex(db, crypto, clock).backfillBatch(1))
             assertEquals(ids.first().toString(), db.memoryIndex().state()?.cursor)
             assertEquals(listOf("marcadorlegado0"), bodies(db))
         }
-        open().use { db ->
+        withRoom { db ->
             val originalKey = key
             val index = OrionMemorySearchIndex(db, crypto, clock)
             key = FieldKeyResult.Unavailable
@@ -88,6 +87,11 @@ class OrionMemorySearchIndexTest {
             assertEquals(OrionMemoryIndexProgress.READY, index.backfillBatch(1))
             assertEquals(listOf("marcadorlegado0", "marcadorlegado1"), bodies(db))
         }
+    }
+
+    private fun withRoom(block: (OrionDatabase) -> Unit) {
+        val database = Room.databaseBuilder(context, OrionDatabase::class.java, name).build()
+        try { block(database) } finally { database.close() }
     }
 
     private fun canonical(id: UUID, content: String): ByteArray = (OrionCreateMemoryPreparer.prepare(
