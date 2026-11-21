@@ -20,7 +20,7 @@ fun interface LocalIngressConsumer {
 
 class LocalIngressPayload internal constructor(
     val ingressId: UUID, val scope: String, val idempotencyKey: UUID,
-    val commandType: String, val schemaVersion: Int, val sensitivity: Sensitivity,
+    val commandType: String, val schemaVersion: Int, val sensitivity: Sensitivity, val source: String, val receivedAt: Long,
     val referenceId: UUID?, private val content: ByteArray?,
 ) {
     fun copyContent(): ByteArray? = content?.copyOf()
@@ -158,7 +158,7 @@ class OrionDurableIngressStore(
             else -> throw IllegalArgumentException("Unsupported ingress payload.")
         }
         return LocalIngressPayload(UUID.fromString(row.ingressId), row.idempotencyScope, UUID.fromString(row.idempotencyKey),
-            row.commandType, row.schemaVersion, row.payloadSensitivity, reference, content)
+            row.commandType, row.schemaVersion, row.payloadSensitivity, row.source, row.receivedAt, reference, content)
     }
 
     private fun encode(reference: UUID?, content: ByteArray?): ByteArray = if (reference != null) {

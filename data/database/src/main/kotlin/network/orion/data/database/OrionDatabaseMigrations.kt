@@ -4,7 +4,23 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object OrionDatabaseMigrations {
-    val ALL: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+    val ALL: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+
+    val MIGRATION_9_10: Migration = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_orion_tasks_status_createdAt ON orion_tasks (status, createdAt)")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS orion_sentinel_consent (
+                id INTEGER NOT NULL PRIMARY KEY, enabled INTEGER NOT NULL, version INTEGER NOT NULL)""")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS orion_sentinel_suggestions (
+                suggestionId TEXT NOT NULL PRIMARY KEY, taskId TEXT NOT NULL, reservedAt INTEGER NOT NULL)""")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_orion_sentinel_suggestions_reservedAt ON orion_sentinel_suggestions (reservedAt)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_orion_sentinel_suggestions_taskId ON orion_sentinel_suggestions (taskId)")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS orion_sentinel_feedback (
+                suggestionId TEXT NOT NULL, kind TEXT NOT NULL, occurredAt INTEGER NOT NULL, timeToActionMillis INTEGER,
+                PRIMARY KEY(suggestionId, kind), FOREIGN KEY(suggestionId) REFERENCES orion_sentinel_suggestions(suggestionId)
+                ON UPDATE NO ACTION ON DELETE CASCADE)""")
+        }
+    }
 
     val MIGRATION_8_9: Migration = object : Migration(8, 9) {
         override fun migrate(db: SupportSQLiteDatabase) {

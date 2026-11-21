@@ -35,6 +35,7 @@ import network.orion.feature.timers.TimersScreen
 import network.orion.app.memories.OrionMemoryAdmissionOwner
 import network.orion.feature.memories.MemoriesScreen
 import network.orion.app.notifications.OrionNotificationAdmissionOwner
+import network.orion.app.sentinel.OrionSentinelOpenActivity
 import network.orion.feature.notifications.NotificationsScreen
 
 class MainActivity : ComponentActivity() {
@@ -46,6 +47,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var deliveryAlerts: network.orion.app.scheduling.OrionReminderDeliveryUiGateway
     private var chat: network.orion.core.orchestrator.chat.OrionChatController? = null
     private var notificationRevision by mutableLongStateOf(0L)
+    private var tasksNavigation by mutableLongStateOf(0L)
     private val notificationPermissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         notificationRevision++
         (application as OrionApplication).mainRuntime?.refreshNotificationHealth()
@@ -55,6 +57,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val runtime = checkNotNull((application as OrionApplication).mainRuntime)
+        if (intent.getBooleanExtra(OrionSentinelOpenActivity.OPEN_TASKS, false)) {
+            intent.removeExtra(OrionSentinelOpenActivity.OPEN_TASKS)
+            tasksNavigation++
+        }
         runtime.observeForegroundStartup()
         taskChannel = runtime.taskAdmissions.openUiChannel()
         taskChannel.onWindowFocus(hasWindowFocus())
@@ -80,7 +86,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 val report by runtime.health.collectAsState()
+                val sentinelEnabled by runtime.sentinelEnabled.collectAsState()
+                val resourceProfile by runtime.resourceProfile.collectAsState()
                 var destination by rememberSaveable { mutableStateOf("Início") }
+                LaunchedEffect(tasksNavigation) { if (tasksNavigation > 0) destination = "Tarefas" }
                 var taskQueues by remember { mutableStateOf<network.orion.core.health.TaskQueueDiagnostics?>(null) }
                 var schedulingDiagnostics by remember { mutableStateOf<network.orion.core.health.OrionSchedulingDiagnostics?>(null) }
                 val diagnosticsReader = remember(runtime) {
@@ -153,8 +162,16 @@ class MainActivity : ComponentActivity() {
                             "Chat" -> network.orion.feature.chat.ChatScreen(chatController, report.lastRecovery, memories)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
-                                platform = runtime.platformDiagnostics(), onRetry = { runtime.start() })
-                            "Ajustes" -> SettingsScreen(report)
+                                platform = runtime.platformDiagnostics(), resourceProfile = resourceProfile?.name,
+                                onRetry = { runtime.start() })
+                            "Ajustes" -> SettingsScreen(report, sentinelEnabled, onSetSentinelEnabled = { enabled ->
+                                val applied = runtime.setSentinelEnabled(enabled)
+                                if (applied && enabled && Build.VERSION.SDK_INT >= 33 &&
+                                    checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                                    android.content.pm.PackageManager.PERMISSION_GRANTED
+                                ) notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                applied
+                            })
                             else -> HomeScreen(report, onOpenDevice = { destination = "Dispositivo" },
                                 onOpenActivity = { destination = "Atividade" }, onOpenReminders = { destination = "Lembretes" },
                                 onOpenTimers = { destination = "Timers" }, onOpenMemories = { destination = "Memórias" },
@@ -168,6 +185,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        (application as OrionApplication).mainRuntime?.noteForegroundInteraction()
         deliveryAlerts.onResumed(true)
         deliveryAlerts.onWindowFocus(hasWindowFocus())
         taskChannel.onResumed(true)
@@ -182,6 +200,16 @@ class MainActivity : ComponentActivity() {
         notificationChannel.onWindowFocus(hasWindowFocus())
         notificationRevision++
         (application as OrionApplication).mainRuntime?.refreshNotificationHealth()
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        (application as OrionApplication).mainRuntime?.noteForegroundInteraction()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(OrionSentinelOpenActivity.OPEN_TASKS, false)) tasksNavigation++
     }
 
     override fun onPause() {

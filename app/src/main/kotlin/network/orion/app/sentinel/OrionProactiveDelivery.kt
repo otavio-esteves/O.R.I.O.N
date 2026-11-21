@@ -241,7 +241,7 @@ internal class OrionProactiveDelivery(
                 setContentIntent(feedback("OPENED"))
                 setDeleteIntent(feedback("DISMISSED"))
                 setAutoCancel(true)
-                addAction(Notification.Action.Builder(null, "Adiar", feedback("SNOOZED")).build())
+                addAction(Notification.Action.Builder(null, "Pausar por 24 h", feedback("SNOOZED")).build())
             }
     }
 }

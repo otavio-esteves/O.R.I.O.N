@@ -72,4 +72,5 @@ include(":ai:llama")
 include(":ai:service")
 
 include(":core:context")
+include(":core:sentinel")
 include(":feature:chat")

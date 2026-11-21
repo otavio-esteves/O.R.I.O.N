@@ -65,7 +65,7 @@ android {
             qualificationEnabled -> "network.orion.app.compatibility.OrionQualificationInstrumentation"
             else -> "androidx.test.runner.AndroidJUnitRunner"
         }
-        versionCode = 9
+        versionCode = 10
         versionName = "0.5.0-development"
         resValue("string", "orion_native_qualification_status", nativeQualificationStatus)
         // A normal APK never gains this observer, even with qualification properties supplied.
@@ -196,6 +196,7 @@ dependencies {
     implementation(project(":core:skills:metadata"))
     implementation(project(":core:model"))
     implementation(project(":core:resources"))
+    implementation(project(":core:sentinel"))
     implementation(project(":core:security"))
     implementation(project(":core:exitinfo"))
     implementation(project(":data:database"))
