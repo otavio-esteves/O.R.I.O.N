@@ -62,7 +62,7 @@ abstract class OrionIngressDao {
             else IngressRegistration.IDEMPOTENCY_CONFLICT
         }
         if (find(envelope.ingressId) != null) return IngressRegistration.INGRESS_ID_CONFLICT
-        if (count() >= 10_000) return IngressRegistration.CAPACITY_EXCEEDED
+        if (count() >= MAX_STORED_ROWS) return IngressRegistration.CAPACITY_EXCEEDED
         insert(envelope)
         return IngressRegistration.INSERTED
     }
@@ -82,5 +82,9 @@ abstract class OrionIngressDao {
         require(to != DurableIngressStatus.PROCESSING || at < current.expiresAt) { "Ingress expired." }
         require(to != DurableIngressStatus.EXPIRED || at >= current.expiresAt) { "Ingress has not expired." }
         return if (update(id, expectedVersion, current.status, to, at) == 1) ActionMutation.APPLIED else ActionMutation.CONFLICT
+    }
+
+    companion object {
+        const val MAX_STORED_ROWS = 10_000
     }
 }

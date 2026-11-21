@@ -5,6 +5,7 @@ import java.util.UUID
 import network.orion.core.actions.*
 import network.orion.core.commands.tasks.*
 import network.orion.core.health.CoreReadiness
+import network.orion.core.health.OrionIngressCapacity
 import network.orion.core.ingress.*
 import network.orion.core.model.Sensitivity
 import network.orion.core.orchestrator.tasks.*
@@ -146,13 +147,20 @@ internal class OrionTaskKernel(private val db: OrionDatabase, encryption: OrionF
 
     fun diagnostics(): network.orion.core.health.TaskQueueDiagnostics {
         fun count(sql: String) = db.openHelper.readableDatabase.query(sql).use { it.moveToFirst(); it.getInt(0) }
+        val (stored, queued) = db.openHelper.readableDatabase.query(
+            "SELECT count(*), count(CASE WHEN status = 'QUEUED' THEN 1 END) FROM orion_ingress_envelopes",
+        ).use { cursor ->
+            check(cursor.moveToFirst())
+            cursor.getInt(0) to cursor.getInt(1)
+        }
         return network.orion.core.health.TaskQueueDiagnostics(
-            count("SELECT count(*) FROM orion_ingress_envelopes WHERE status = 'QUEUED'"),
+            queued,
             count("SELECT count(*) FROM orion_action_requests WHERE status = 'NEEDS_CONFIRMATION'"),
             count("SELECT count(*) FROM orion_action_requests WHERE status = 'RUNNING'"),
             count("SELECT count(*) FROM orion_action_requests WHERE status = 'UNKNOWN'"),
             count("SELECT count(*) FROM orion_action_requests WHERE status IN ('MANUAL_REVIEW', 'CONFIRMED')"),
-            count("SELECT count(*) FROM orion_domain_event_outbox WHERE status != 'DELIVERED'"))
+            count("SELECT count(*) FROM orion_domain_event_outbox WHERE status != 'DELIVERED'"),
+            OrionIngressCapacity(stored, OrionIngressDao.MAX_STORED_ROWS))
     }
 
     fun recoverActions() {

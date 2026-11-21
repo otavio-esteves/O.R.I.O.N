@@ -9,13 +9,19 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import network.orion.core.health.OrionIngressCapacity
 import network.orion.core.health.OrionSchedulingDiagnostics
 import network.orion.core.health.TaskQueueDiagnostics
+import network.orion.feature.diagnostics.DiagnosticsScreen
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -24,6 +30,25 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class OrionDiagnosticsObservationAndroidTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+
+    @Test fun ingressCapacityExplainsBlockedAdmissionAndClearsAfterSpaceReturns() {
+        val capacity = mutableStateOf(OrionIngressCapacity(10_000, 10_000))
+        compose.activityRule.scenario.onActivity { activity ->
+            val runtime = checkNotNull((activity.application as OrionApplication).mainRuntime)
+            val report = runtime.health.value
+            val schemaVersion = runtime.databaseSchemaVersion
+            activity.setContent {
+                DiagnosticsScreen(report, schemaVersion,
+                    TaskQueueDiagnostics(0, 0, 0, 0, 0, 0, capacity.value), onRetry = {})
+            }
+        }
+        val explanation = "Novos pedidos bloqueados. Limite de armazenamento de ingressos atingido."
+        compose.onNodeWithText("Ingressos na fila: 0").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Ingressos armazenados: 10000 de 10000").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(explanation).performScrollTo().assertIsDisplayed()
+        compose.runOnIdle { capacity.value = OrionIngressCapacity(9_999, 10_000) }
+        compose.onNodeWithText(explanation).assertDoesNotExist()
+    }
 
     @Test fun optionalReadFailureDoesNotCrashAndNextObservationReplacesMissingData() {
         val failed = AtomicBoolean(true)
