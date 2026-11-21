@@ -100,9 +100,11 @@ class OrionChatInputScreenTest {
         val previous = "criar tarefa: comprar pão"
         edit(previous)
         edit("á".repeat(2049))
+        error(OrionChatInputError.INPUT_TOO_LARGE)
         scroll("Enviar")
         compose.onNodeWithText("Enviar").assertIsNotEnabled().performTouchInput { click() }
         draft(previous)
+        error(OrionChatInputError.INPUT_TOO_LARGE)
         assertTrue(controller.state.value.turns.isEmpty())
         assertEquals(0, tasks.creates)
 

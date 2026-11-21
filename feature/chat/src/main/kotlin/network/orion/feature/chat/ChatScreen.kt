@@ -47,7 +47,9 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
         if (state.draft.isNotEmpty()) item { Text(state.draft, Modifier.testTag("orion_chat_stream")) }
         item { if (inputError == null) state.notice?.let { Text(it) } }
         item {
-            OutlinedTextField(input, onValueChange = { edited ->
+            OutlinedTextField(input, onValueChange = edit@{ edited ->
+                // Focus/IME updates can repeat the retained value after an edit was refused.
+                if (oversizedEditRejected && edited == input) return@edit
                 val error = OrionChatInputPolicy.validate(edited)
                 // Oversized edits preserve the previous bounded draft; no silent truncation.
                 // Other bounded invalid text stays exactly editable and is rejected by send.
