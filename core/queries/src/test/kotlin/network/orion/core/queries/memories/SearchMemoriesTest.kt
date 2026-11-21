@@ -9,7 +9,7 @@ class SearchMemoriesTest {
     @Test fun queryProducesOnlyQuotedTermsAndRejectsUnboundedInput() {
         val request = SearchMemories("Café \"OR\" almoço* -café")
         assertEquals(listOf("cafe", "or", "almoco"), request.tokens)
-        assertEquals("\"cafe\" AND \"or\" AND \"almoco\"", request.ftsExpression)
+        assertEquals("\"cafe\" \"or\" \"almoco\"", request.ftsExpression)
         for (invalid in listOf("", "*****", "a\nb", "é".repeat(129), (1..13).joinToString(" "))) {
             assertThrows(IllegalArgumentException::class.java) { SearchMemories(invalid) }
         }
