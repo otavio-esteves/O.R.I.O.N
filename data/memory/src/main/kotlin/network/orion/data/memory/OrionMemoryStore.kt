@@ -1,6 +1,7 @@
 package network.orion.data.memory
 
 import java.util.UUID
+import java.util.concurrent.Callable
 import network.orion.core.model.OrionMemoryDetails
 import network.orion.core.model.OrionMemoryLifecycle
 import network.orion.core.model.Sensitivity
@@ -21,9 +22,10 @@ sealed interface MemoryWriteResult {
     data class Rejected(val mutation: ActionMutation) : MemoryWriteResult
 }
 
-/** Storage only: provenance is supplied by trusted Core; no inference promotion, FTS or ranking. */
+/** Storage only: provenance is supplied by trusted Core; no inference promotion or ranking. */
 class OrionMemoryStore(private val database: OrionDatabase, private val encryption: OrionFieldEncryption,
     private val clock: WallClock) {
+    private val searchIndex = OrionMemorySearchIndex(database, encryption, clock)
     fun create(id: UUID, content: ByteArray, sensitivity: Sensitivity, origin: MemoryOrigin, confidence: Double,
         claims: List<MemoryClaimInput>, correlationId: UUID, userConfirmed: Boolean = false,
         originEventId: UUID? = null, lifecycle: OrionMemoryLifecycle = OrionMemoryLifecycle(),
@@ -69,15 +71,19 @@ class OrionMemoryStore(private val database: OrionDatabase, private val encrypti
             validFrom = lifecycle.validFrom?.toEpochMilli(), validUntil = lifecycle.validUntil?.toEpochMilli(),
             expiresAt = lifecycle.expiresAt?.toEpochMilli(), detailsEnvelope = detailsEnvelope)
         val created = event(id, 0, "MEMORY_CREATED", sensitivity, at, correlationId)
-        if (priorId == null) {
-            database.records().createMemoryWithClaimsAndEvent(row, rows, created)
-        } else {
-            val prior = database.records().memory(priorId.toString()) ?: return MemoryWriteResult.Rejected(ActionMutation.NOT_FOUND)
-            val result = database.records().supersedeWithEvents(priorId.toString(), checkNotNull(version), row, rows,
-                event(priorId, version + 1, "MEMORY_SUPERSEDED", prior.sensitivity, at, correlationId), created)
-            if (result != ActionMutation.APPLIED) return MemoryWriteResult.Rejected(result)
-        }
-        return MemoryWriteResult.Stored(id)
+        return database.runInTransaction(Callable {
+            if (priorId == null) {
+                database.records().createMemoryWithClaimsAndEvent(row, rows, created)
+            } else {
+                val prior = database.records().memory(priorId.toString())
+                    ?: return@Callable MemoryWriteResult.Rejected(ActionMutation.NOT_FOUND)
+                val result = database.records().supersedeWithEvents(priorId.toString(), checkNotNull(version), row, rows,
+                    event(priorId, version + 1, "MEMORY_SUPERSEDED", prior.sensitivity, at, correlationId), created)
+                if (result != ActionMutation.APPLIED) return@Callable MemoryWriteResult.Rejected(result)
+            }
+            searchIndex.indexWrittenMemory(row, content)
+            MemoryWriteResult.Stored(id)
+        })
     }
 
     fun readContent(id: UUID): FieldDecryptionResult? = database.records().memory(id.toString())?.let {

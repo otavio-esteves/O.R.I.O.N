@@ -31,13 +31,15 @@ interface OrionStorageMetadataDao {
     TaskEntity::class, TimerEntity::class, ReminderEntity::class, MemoryEntity::class, MemoryClaimEntity::class,
     AuditEntity::class, TechnicalEventEntity::class, DomainEventOutboxEntity::class,
     EventConsumerReceiptEntity::class, IngressEnvelopeEntity::class,
-    OrionReminderSeriesEntity::class, OrionReminderOccurrenceEntity::class, ModelRegistryEntity::class], version = 8, exportSchema = true)
+    OrionReminderSeriesEntity::class, OrionReminderOccurrenceEntity::class, ModelRegistryEntity::class,
+    OrionMemoryIndexRow::class, OrionMemoryIndexState::class], version = 9, exportSchema = true)
 abstract class OrionDatabase : RoomDatabase() {
     abstract fun models(): OrionModelRegistryDao
     abstract fun metadata(): OrionStorageMetadataDao
     abstract fun actions(): OrionActionDao
     abstract fun timers(): OrionTimerDao
     abstract fun memories(): OrionMemoryDao
+    abstract fun memoryIndex(): OrionMemoryIndexDao
     abstract fun tasks(): OrionTaskDao
     abstract fun reminders(): OrionReminderDao
     abstract fun reminderSchedules(): OrionReminderScheduleDao

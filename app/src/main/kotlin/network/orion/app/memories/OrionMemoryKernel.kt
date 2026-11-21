@@ -52,6 +52,7 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
     private val createRunner = OrionCreateMemoryRunner(db, actions, owned, clock, barrier)
     private val statusRunner = OrionMemoryStatusRunner(db, actions, statusWriter, clock, barrier, OrionMemoryPayloadErasure(db, encryption, clock))
     val query = OrionMemoryQuery(db, encryption, clock)
+    val searchIndex = OrionMemorySearchIndex(db, encryption, clock)
     private var processingId: UUID? = null // Only touched under barrier admission; no coroutine suspension.
     private val store = OrionDurableIngressStore(db, encryption, clock, barrier, LocalIngressConsumer { payload ->
         processingId = payload.ingressId
