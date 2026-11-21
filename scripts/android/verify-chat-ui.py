@@ -61,6 +61,11 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir):
             raise RunnerFailure('EMULATOR_OWNERSHIP_MISMATCH')
         if adb('shell', 'getprop', 'sys.boot_completed') != '1':
             raise RunnerFailure('EMULATOR_NOT_BOOTED')
+        packages = adb('shell', 'pm', 'list', 'packages', '-u', 'network.orion').splitlines()
+        if any(not re.fullmatch(r'package:[A-Za-z0-9_.]+', line) for line in packages):
+            raise RunnerFailure('INVALID_PACKAGE_INVENTORY')
+        if any(f'package:{package}' in packages for package in APK_NAMES):
+            raise RunnerFailure('PREEXISTING_PACKAGE')
         for prop, key in [('ro.build.version.sdk', 'api'), ('ro.product.cpu.abi', 'abi'), ('ro.build.fingerprint', 'buildFingerprint')]:
             value = adb('shell', 'getprop', prop)
             if not re.fullmatch(r'[A-Za-z0-9_./:;,+\-]{1,255}', value):
@@ -73,7 +78,8 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir):
         adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
         adb('shell', 'wm', 'dismiss-keyguard')
         for package, filename in APK_NAMES.items():
-            if adb('install', '-r', '-t', str(apk_dir / filename), timeout=90).splitlines()[-1:] != ['Success']:
+            # Package Manager -R refuses replacement even if a package appears after preflight.
+            if adb('install', '--no-incremental', '-R', '-t', str(apk_dir / filename), timeout=90).splitlines()[-1:] != ['Success']:
                 raise RunnerFailure('INSTALL_FAILED')
             installed.append(package)
             location = adb('shell', 'pm', 'path', package)

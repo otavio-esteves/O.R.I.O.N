@@ -155,6 +155,7 @@ class ChatUiRunnerTest(unittest.TestCase):
     def test_success_verifies_installed_bytes_and_cleans_both_owned_packages(self):
         with patch.object(subprocess, 'run', side_effect=self.fake_adb), patch('builtins.print'):
             self.assertEqual(0, self.execute())
+        self.assertTrue(all('-R' in call and '-r' not in call for call in self.calls if call[3:4] == ['install']))
         self.assertEqual(2, sum(call[3:4] == ['uninstall'] for call in self.calls))
         instrument = next(call for call in self.calls if call[3:6] == ['shell', 'am', 'instrument'])
         self.assertIn(','.join(SELECTED), instrument)
@@ -178,6 +179,37 @@ class ChatUiRunnerTest(unittest.TestCase):
             return self.fake_adb(command, **kwargs)
         with patch.object(subprocess, 'run', side_effect=other_owner), patch('builtins.print'):
             self.assertEqual(1, self.execute())
+        self.assertFalse(any(c[3:4] in (['install'], ['uninstall']) for c in self.calls))
+
+    def test_preexisting_app_or_test_package_refuses_before_mutating_emulator(self):
+        for package in runner.APK_NAMES:
+            with self.subTest(package=package):
+                self.calls.clear()
+
+                def preexisting(command, **kwargs):
+                    if command[3:7] == ['shell', 'pm', 'list', 'packages']:
+                        self.calls.append(command)
+                        return subprocess.CompletedProcess(command, 0, 'package:' + package, '')
+                    return self.fake_adb(command, **kwargs)
+
+                with patch.object(subprocess, 'run', side_effect=preexisting), patch('builtins.print'):
+                    self.assertEqual(1, self.execute())
+                summary = json.loads((self.root / 'report/summary.json').read_text())
+                self.assertEqual(['PREEXISTING_PACKAGE'], summary['errors'])
+                self.assertEqual(0, summary['started'])
+                self.assertFalse(any(c[3:4] in (['install'], ['uninstall']) or c[3:5] in
+                    (['shell', 'settings'], ['shell', 'am'], ['shell', 'input'], ['shell', 'wm']) for c in self.calls))
+
+    def test_malformed_package_inventory_refuses_install_and_cleanup(self):
+        def malformed(command, **kwargs):
+            if command[3:7] == ['shell', 'pm', 'list', 'packages']:
+                return subprocess.CompletedProcess(command, 0, 'unexpected package inventory', '')
+            return self.fake_adb(command, **kwargs)
+
+        with patch.object(subprocess, 'run', side_effect=malformed), patch('builtins.print'):
+            self.assertEqual(1, self.execute())
+        summary = json.loads((self.root / 'report/summary.json').read_text())
+        self.assertEqual(['INVALID_PACKAGE_INVENTORY'], summary['errors'])
         self.assertFalse(any(c[3:4] in (['install'], ['uninstall']) for c in self.calls))
 
     def test_partial_install_failure_cleans_only_the_package_installed_by_this_run(self):
