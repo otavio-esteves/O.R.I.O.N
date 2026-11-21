@@ -10,7 +10,9 @@ object OrionDatabaseMigrations {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE orion_sentinel_consent ADD COLUMN evaluationFloor INTEGER NOT NULL DEFAULT 0")
             // Previous saves never asked for indexing consent. Keep their encrypted records.
-            db.execSQL("PRAGMA secure_delete=ON")
+            db.query("PRAGMA secure_delete=ON").use {
+                check(it.moveToFirst() && it.getInt(0) == 1)
+            }
             db.execSQL("DROP TRIGGER IF EXISTS orion_remove_ineligible_memory_postings")
             db.execSQL("DROP TABLE orion_memory_fts")
             db.execSQL("""UPDATE orion_memories SET sensitivity = 'SENSITIVE'
