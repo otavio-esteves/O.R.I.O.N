@@ -212,6 +212,16 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         } catch (_: Throwable) { null }
 
     /** Optional on-demand port. No approved production profile ships with this candidate. */
+    internal suspend fun chatMemories(text: String): List<network.orion.core.orchestrator.chat.OrionChatMemory> =
+        withContext(Dispatchers.IO) {
+            if (!taskStartupBarrier.isOpen()) return@withContext emptyList()
+            val query = memoryKernel?.query ?: return@withContext emptyList()
+            val request = network.orion.core.queries.memories.SearchMemories.forChat(text) ?: return@withContext emptyList()
+            query.currentContextMemories(query.search(request).hits).mapNotNull { memory ->
+                memory.content?.let { network.orion.core.orchestrator.chat.OrionChatMemory(memory.memoryId, memory.version, it) }
+            }
+        }
+
     internal suspend fun cortexRuntime(): network.orion.app.ai.OrionCortexRuntimeOwner? = withContext(Dispatchers.IO) {
         synchronized(cortexOwnershipLock) {
             if (!taskStartupBarrier.isOpen() || !health.value.core.readiness.isStartupBarrierOpen) return@synchronized null

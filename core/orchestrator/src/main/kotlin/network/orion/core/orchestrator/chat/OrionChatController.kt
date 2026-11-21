@@ -32,7 +32,8 @@ class OrionChatState(val turns: List<OrionChatTurn> = emptyList(), val draft: St
  * No output, partial text, cancellation or retry can confirm or automatically submit a model proposal.
  */
 class OrionChatController(private val scope: CoroutineScope, private val tasks: TaskGateway,
-    private val device: DeviceInformationGateway, private val cortex: OrionChatCortex) : AutoCloseable {
+    private val device: DeviceInformationGateway, private val cortex: OrionChatCortex,
+    private val memory: OrionChatMemorySource = OrionChatMemorySource { emptyList() }) : AutoCloseable {
     private val mutable = MutableStateFlow(OrionChatState())
     val state: StateFlow<OrionChatState> = mutable.asStateFlow()
     private var work: Job? = null
@@ -203,7 +204,10 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
             status(cortex = "Indisponível", notice = "Cortex indisponível. Consulte o diagnóstico. Tarefas e bateria continuam disponíveis.", retry = true)
             return
         }
-        val context = OrionChatContext.build(input.text, state.value.turns.dropLast(1), model) ?: run {
+        val memories = try { memory.relevant(input.text) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { emptyList() }
+        val context = OrionChatContext.build(input.text, state.value.turns.dropLast(1), model, memories) ?: run {
             status(cortex = "Contexto excedido", notice = "Pedido não cabe no orçamento seguro de contexto.", retry = true); return
         }
         status(cortex = "Gerando")

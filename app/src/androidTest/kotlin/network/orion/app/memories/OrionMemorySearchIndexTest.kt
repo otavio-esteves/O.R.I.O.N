@@ -124,6 +124,22 @@ class OrionMemorySearchIndexTest {
         }
     }
 
+    @Test fun selectedContextCannotUseAMemoryDeletedAfterTheSearch() {
+        withRoom { db ->
+            val id = UUID.randomUUID()
+            val trace = UUID.randomUUID()
+            val store = OrionMemoryStore(db, crypto, clock)
+            val query = OrionMemoryQuery(db, crypto, clock)
+            assertTrue(store.create(id, canonical(id, "Prefiro café forte"), Sensitivity.PERSONAL, MemoryOrigin.USER_DECLARED,
+                1.0, emptyList(), trace, userConfirmed = true) is MemoryWriteResult.Stored)
+            assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
+            val selected = query.search(checkNotNull(SearchMemories.forChat("Qual meu café?"))).hits
+            assertEquals(id, query.currentContextMemories(selected).single().memoryId)
+            assertEquals(ActionMutation.APPLIED, store.delete(id, 0, trace))
+            assertTrue(query.currentContextMemories(selected).isEmpty())
+        }
+    }
+
     private fun withRoom(block: (OrionDatabase) -> Unit) {
         val database = Room.databaseBuilder(context, OrionDatabase::class.java, name).build()
         try { block(database) } finally { database.close() }

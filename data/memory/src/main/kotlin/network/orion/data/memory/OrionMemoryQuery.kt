@@ -56,6 +56,19 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
         MemorySearchPage(MemorySearchState.READY, page, next, candidates.size > MAX_CANDIDATES)
     })
 
+    /** Revalidate each selected identity and version under the authoritative snapshot. */
+    fun currentContextMemories(candidates: List<MemorySearchHit>): List<MemorySummary> = database.runInTransaction(Callable {
+        require(candidates.size <= 4)
+        val now = clock.wallNow()
+        candidates.mapNotNull { candidate ->
+            val selected = candidate.memory
+            val row = database.memories().find(selected.memoryId.toString())?.takeIf(::visible) ?: return@mapNotNull null
+            if (row.version != selected.version || row.status != MemoryStatus.ACTIVE ||
+                !row.lifecycle().isValidAt(now)) return@mapNotNull null
+            select(row, now).takeIf { it.contentState == MemoryContentState.READABLE }
+        }
+    })
+
     fun find(id: UUID): MemorySummary? = database.memories().find(id.toString())?.takeIf(::visible)
         ?.let { select(it, clock.wallNow()) }
 

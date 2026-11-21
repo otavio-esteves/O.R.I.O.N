@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
             lifecycleScope, tasks, runtime.deviceGateway,
             network.orion.app.chat.OrionChatCortexAdapter(network.orion.core.time.AndroidOrionClock(contentResolver)) {
                 runtime.cortexRuntime()?.let { network.orion.app.chat.OrionOwnedChatRuntime(it) }
-            }).also { chat = it }
+            }, network.orion.core.orchestrator.chat.OrionChatMemorySource(runtime::chatMemories)).also { chat = it }
         reminderChannel = runtime.reminderAdmissions.openUiChannel()
         reminderChannel.onWindowFocus(hasWindowFocus())
         val reminders = runtime.reminderGateway(reminderChannel)
