@@ -171,7 +171,10 @@ class OrionMinimumResourceGovernor(
         if (sample.powerSave) return block(OrionResourceBlock.POWER_SAVER, MemoryRisk.LOW, headroom)
         if (sample.requestedThreads !in 1..plan.maxThreads || sample.requestedContext !in 1..plan.maxContext ||
             sample.requestedTokens !in 1..plan.maxTokens) return block(OrionResourceBlock.REQUEST_LIMITS, MemoryRisk.LOW, headroom)
-        return OrionResourceDecision(null, plan, MemoryRisk.LOW, headroom, sample.sampledAt, exits)
+        val policy = OrionResourceProfiles.select(sample.batteryPercent, sample.thermalStatus, sample.powerSave,
+            sample.memoryPressure, backgroundRestricted = null)
+        val activePlan = plan.copy(keepAliveMs = policy.limitKeepAlive(plan.keepAliveMs))
+        return OrionResourceDecision(null, activePlan, MemoryRisk.LOW, headroom, sample.sampledAt, exits)
     }
 
     private fun denied(reason: OrionResourceBlock) = OrionResourceDecision(reason, null, MemoryRisk.UNKNOWN, null, null, emptyList())
