@@ -4,7 +4,7 @@ import java.util.UUID
 import network.orion.core.commands.memories.*
 import network.orion.core.queries.memories.*
 
-enum class MemoryOperation { CREATE, DELETE }
+enum class MemoryOperation { CREATE, DELETE, CORRECT, CONFIRM_CLAIM, REJECT_CLAIM }
 enum class MemoryOperationOutcome { APPLIED, QUEUED, REJECTED, UNAVAILABLE, FORGOTTEN }
 
 /** Selected immutable display data. IDs/version are references, never confirmation authority. */

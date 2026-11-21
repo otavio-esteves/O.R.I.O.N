@@ -16,11 +16,19 @@ internal class OrionMemoryIngressWire(
     val actionId: UUID? = null, val actionVersion: Long = 0,
     val fingerprint: String = "", val policyVersion: String = "",
     val receipt: ActionConfirmationSnapshot? = null,
+    val revisionArguments: String = "",
 ) {
     fun create() = CreateMemory(memoryId, content, key, trace)
-    fun change(): MemoryStatusCommand = ForgetMemory(memoryId, expectedVersion, key, trace)
+    fun change(): MemoryStatusCommand {
+        val kind = MemoryStatusOperation.valueOf(operation)
+        if (kind == MemoryStatusOperation.DELETE) return ForgetMemory(memoryId, expectedVersion, key, trace)
+        val revision = decodeMemoryRevision(kind, revisionArguments, key, trace)
+        require(revision.memoryId == memoryId && revision.expectedVersion == expectedVersion)
+        return revision.command
+    }
     fun encode(): ByteArray = ByteArrayOutputStream().also { bytes -> DataOutputStream(bytes).use { out ->
-        out.writeInt(1); listOf(operation, memoryId.toString(), key.toString(), content).forEach(out::writeUTF)
+        val revised = operation in revisionOperations
+        out.writeInt(if (revised) 2 else 1); listOf(operation, memoryId.toString(), key.toString(), content).forEach(out::writeUTF)
         out.writeLong(expectedVersion); out.writeUTF(actionId?.toString() ?: ""); out.writeLong(actionVersion)
         out.writeUTF(fingerprint); out.writeUTF(policyVersion); out.writeBoolean(receipt != null)
         receipt?.let { r ->
@@ -29,17 +37,22 @@ internal class OrionMemoryIngressWire(
             out.writeLong(r.confirmedAt.toEpochMilli()); out.writeLong(checkNotNull(r.confirmationExpiresAt).toEpochMilli())
             out.writeLong(r.payloadLockedAt.toEpochMilli())
         }
+        if (revised) out.writeUTF(revisionArguments)
     } }.toByteArray()
     override fun toString() = "OrionMemoryIngressWire(<redacted>)"
     companion object {
         const val SCOPE = "orion_ui_memory_v1"
         const val SOURCE = "MAIN_UI_MEMORY"
         const val TYPE = "MemoryRequest"
+        val revisionOperations = MemoryStatusOperation.entries.filter { it != MemoryStatusOperation.DELETE }
+            .mapTo(mutableSetOf()) { it.name }
+
         fun decode(bytes: ByteArray): OrionMemoryIngressWire {
             require(bytes.size in 1..8192)
             return DataInputStream(ByteArrayInputStream(bytes)).use { input ->
-                require(input.readInt() == 1)
-                val op = input.readUTF(); require(op in setOf("CREATE", "DELETE", "DISMISS"))
+                val schema = input.readInt()
+                val op = input.readUTF()
+                require(schema == 1 && op in setOf("CREATE", "DELETE", "DISMISS") || schema == 2 && op in revisionOperations)
                 val id = UUID.fromString(input.readUTF()); val key = UUID.fromString(input.readUTF()); val trace = UUID(0, 0)
                 val content = input.readUTF(); val version = input.readLong()
                 val action = input.readUTF().takeIf { it.isNotEmpty() }?.let(UUID::fromString); val av = input.readLong()
@@ -47,15 +60,19 @@ internal class OrionMemoryIngressWire(
                 val receipt = if (!input.readBoolean()) null else ActionConfirmationSnapshot(UUID.fromString(input.readUTF()),
                     input.readUTF(), input.readUTF(), input.readUTF(), input.readUTF(), Instant.ofEpochMilli(input.readLong()),
                     Instant.ofEpochMilli(input.readLong()), Instant.ofEpochMilli(input.readLong()))
+                val revision = if (schema == 2) input.readUTF() else ""
                 require(input.available() == 0 && version >= 0 && av >= 0)
-                OrionMemoryIngressWire(op, id, key, trace, content, version, action, av, fingerprint, policy, receipt).also {
+                OrionMemoryIngressWire(op, id, key, trace, content, version, action, av, fingerprint, policy, receipt, revision).also {
                     require(it.encode().contentEquals(bytes))
                     if (op == "CREATE") {
                         if (action == null) {
                             val ready = OrionCreateMemoryPreparer.prepare(it.create()) as? CreateMemoryPreparation.Ready
                             require(ready?.memory?.content == content)
                         } else require(content.isEmpty())
-                    } else if (op != "DISMISS") require(OrionMemoryStatusPreparer.prepare(it.change()) is MemoryStatusPreparation.Ready)
+                    } else if (op != "DISMISS") {
+                        if (schema == 1 || action == null) require(OrionMemoryStatusPreparer.prepare(it.change()) is MemoryStatusPreparation.Ready)
+                        else require(revision.isEmpty() && version < Long.MAX_VALUE)
+                    }
                     require(receipt == null || action != null && receipt.actionId == action)
                     if (op != "CREATE") require(content.isEmpty())
                     if (op == "DISMISS") require(action != null && receipt == null)
@@ -84,10 +101,10 @@ internal class OrionVerifiedMemoryIngress private constructor(val wire: OrionMem
                 // Trace metadata is deliberately outside the canonical idempotency material.
                 val wire = OrionMemoryIngressWire(decoded.operation, decoded.memoryId, decoded.key, UUID.fromString(row.correlationId),
                     decoded.content, decoded.expectedVersion, decoded.actionId, decoded.actionVersion, decoded.fingerprint,
-                    decoded.policyVersion, decoded.receipt)
-                if (wire.operation == "CREATE" && wire.actionId != null) {
-                    // A confirmation persists references and receipt metadata, never another content copy.
-                    require(wire.content.isEmpty())
+                    decoded.policyVersion, decoded.receipt, decoded.revisionArguments)
+                if (wire.actionId != null && (wire.operation == "CREATE" || wire.operation in OrionMemoryIngressWire.revisionOperations)) {
+                    // Confirmation carries references and the original receipt. Read canonical arguments from the action.
+                    require(wire.content.isEmpty() && wire.revisionArguments.isEmpty())
                     val stored = when (val read = actions.read(wire.actionId)) {
                         is network.orion.data.actions.ActionReadResult.Ready -> read.action
                         is network.orion.data.actions.ActionReadResult.Blocked -> throw OrionMemoryTransactionBlocked.Action(
@@ -97,9 +114,15 @@ internal class OrionVerifiedMemoryIngress private constructor(val wire: OrionMem
                     }
                     val json = org.json.JSONObject(stored.request.canonicalNormalizedArguments)
                     require(json.getString("memoryId") == wire.memoryId.toString())
-                    OrionVerifiedMemoryIngress(OrionMemoryIngressWire(wire.operation, wire.memoryId, wire.key, wire.trace,
-                        json.getString("content"), wire.expectedVersion, wire.actionId, wire.actionVersion, wire.fingerprint,
-                        wire.policyVersion, wire.receipt))
+                    val create = wire.operation == "CREATE"
+                    val restored = OrionMemoryIngressWire(wire.operation, wire.memoryId, wire.key, wire.trace,
+                        if (create) json.getString("content") else "", wire.expectedVersion, wire.actionId, wire.actionVersion,
+                        wire.fingerprint, wire.policyVersion, wire.receipt, if (create) "" else stored.request.canonicalNormalizedArguments)
+                    if (!create) {
+                        require(stored.request.skill == MemoryStatusOperation.valueOf(wire.operation).skillName)
+                        restored.change()
+                    }
+                    OrionVerifiedMemoryIngress(restored)
                 } else OrionVerifiedMemoryIngress(wire)
             } finally { bytes.fill(0) }
         }

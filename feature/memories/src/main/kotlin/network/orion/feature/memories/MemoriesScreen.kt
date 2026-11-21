@@ -82,18 +82,36 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
         items(pending,key={ "pending/${it.actionId}" }) { action ->
             Card(Modifier.fillMaxWidth().testTag("orion_memory_confirmation")) {
                 Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Text(if (action.operation==MemoryOperation.CREATE) "Guardar esta memória pessoal?" else "Esquecer esta memória?")
+                    Text(when (action.operation) {
+                        MemoryOperation.CREATE -> "Guardar esta memória pessoal?"
+                        MemoryOperation.DELETE -> "Esquecer esta memória?"
+                        MemoryOperation.CORRECT -> "Guardar esta correção?"
+                        MemoryOperation.CONFIRM_CLAIM -> "Confirmar esta afirmação inferida?"
+                        MemoryOperation.REJECT_CLAIM -> "Rejeitar esta afirmação inferida?"
+                    })
                     Text(action.content ?: "Conteúdo indisponível ou pedido desatualizado. Descarte este pedido e tente novamente.")
                     if (action.operation==MemoryOperation.DELETE) Text("A informação e suas cópias de processamento serão removidas. O histórico mínimo da operação será preservado.")
                     Button(enabled=!busy && action.content!=null,onClick={ run {
                         message=when (gateway.confirm(action.actionId,action.version)) {
-                            MemoryOperationOutcome.APPLIED -> if (action.operation==MemoryOperation.DELETE) "Memória esquecida." else "Memória guardada."
+                            MemoryOperationOutcome.APPLIED -> when (action.operation) {
+                                MemoryOperation.CREATE -> "Memória guardada."
+                                MemoryOperation.DELETE -> "Memória esquecida."
+                                MemoryOperation.CORRECT -> "Correção guardada."
+                                MemoryOperation.CONFIRM_CLAIM -> "Afirmação confirmada."
+                                MemoryOperation.REJECT_CLAIM -> "Afirmação rejeitada."
+                            }
                             MemoryOperationOutcome.QUEUED -> "Confirmação recebida. Atualize para consultar o resultado."
                             MemoryOperationOutcome.REJECTED -> "Pedido desatualizado ou confirmação expirada. Atualize e confirme novamente."
                             MemoryOperationOutcome.UNAVAILABLE -> "Não foi possível confirmar. Tente novamente."
                             MemoryOperationOutcome.FORGOTTEN -> "Esta memória já foi esquecida."
                         }; reload()
-                    } }) { Text(if (action.operation==MemoryOperation.CREATE) "Confirmar memória" else "Confirmar esquecimento") }
+                    } }) { Text(when (action.operation) {
+                        MemoryOperation.CREATE -> "Confirmar memória"
+                        MemoryOperation.DELETE -> "Confirmar esquecimento"
+                        MemoryOperation.CORRECT -> "Confirmar correção"
+                        MemoryOperation.CONFIRM_CLAIM -> "Confirmar afirmação"
+                        MemoryOperation.REJECT_CLAIM -> "Confirmar rejeição"
+                    }) }
                     TextButton(enabled=!busy,onClick={ run {
                         message=when (gateway.dismiss(action.actionId,action.version)) {
                             MemoryOperationOutcome.APPLIED -> "Pedido descartado."

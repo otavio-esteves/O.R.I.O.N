@@ -4,7 +4,6 @@ import java.time.Duration
 import java.util.UUID
 import network.orion.core.actions.*
 import network.orion.core.commands.memories.ValidatedMemoryStatusChange
-import network.orion.core.commands.memories.MemoryStatusOperation
 import network.orion.core.ingress.StartupBarrier
 import network.orion.core.model.Sensitivity
 import network.orion.core.policy.memories.*
@@ -47,6 +46,7 @@ internal class OrionMemoryStatusActionStore(
     private val actions: OrionActionStore,
     private val clock: WallClock,
     private val barrier: StartupBarrier,
+    private val matchesCommitted: (ValidatedMemoryStatusChange) -> Boolean,
 ) {
     private fun idempotency(change: ValidatedMemoryStatusChange) = IdempotencyKeyPolicy("MAIN_UI", change.skillName, Duration.ofDays(90), 1,
         OrionActionStore.IDEMPOTENCY_UNIQUE_CONSTRAINT)
@@ -63,9 +63,7 @@ internal class OrionMemoryStatusActionStore(
         var stored = read(id)
         requireExact(stored, change, version)
         if (stored.status == ActionStatus.SUCCEEDED) {
-            val target = database.memories().find(change.memoryId.toString()) ?: abort(OrionMemoryActionFailure.UNREADABLE)
-            val desired = if (change.operation == MemoryStatusOperation.DELETE) MemoryStatus.DELETED else MemoryStatus.DELETED
-            if (target.version != change.expectedVersion + 1 || target.status != desired) abort(OrionMemoryActionFailure.UNREADABLE)
+            if (!matchesCommitted(change)) abort(OrionMemoryActionFailure.UNREADABLE)
             return@admittedTransaction OrionMemoryStatusActionResult.AlreadySucceeded(id)
         }
         requireOpen(change)

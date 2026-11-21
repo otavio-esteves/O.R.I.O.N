@@ -10,7 +10,9 @@ import network.orion.core.ingress.*
 import network.orion.core.model.Sensitivity
 import network.orion.core.orchestrator.memories.*
 import network.orion.core.queries.memories.*
+import network.orion.core.security.FieldDecryptionResult
 import network.orion.core.security.OrionFieldEncryption
+import network.orion.core.skills.metadata.memories.OrionMemoryStatusDescriptors
 import network.orion.core.time.OrionClock
 import network.orion.data.actions.*
 import network.orion.data.database.*
@@ -43,10 +45,12 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
     readiness: () -> CoreReadiness, storageAvailable: () -> Boolean) {
     val actions = OrionActionStore(db, encryption, clock)
     private val create = OrionCreateMemoryActionStore(db, actions, clock, barrier)
-    private val status = OrionMemoryStatusActionStore(db, actions, clock, barrier)
+    private val memoryRecords = OrionMemoryStore(db, encryption, clock)
+    private val statusWriter = OrionOwnedMemoryStatusStore(db, encryption, clock)
+    private val status = OrionMemoryStatusActionStore(db, actions, clock, barrier, statusWriter::matchesExisting)
     private val owned = OrionOwnedMemoryStore(db, encryption, clock)
     private val createRunner = OrionCreateMemoryRunner(db, actions, owned, clock, barrier)
-    private val statusRunner = OrionMemoryStatusRunner(db, actions, OrionOwnedMemoryStatusStore(db, encryption, clock), clock, barrier, OrionMemoryPayloadErasure(db, encryption, clock))
+    private val statusRunner = OrionMemoryStatusRunner(db, actions, statusWriter, clock, barrier, OrionMemoryPayloadErasure(db, encryption, clock))
     val query = OrionMemoryQuery(db, encryption, clock)
     private var processingId: UUID? = null // Only touched under barrier admission; no coroutine suspension.
     private val store = OrionDurableIngressStore(db, encryption, clock, barrier, LocalIngressConsumer { payload ->
@@ -68,6 +72,12 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
                 val memory = if (wire.actionId == null) (OrionCreateMemoryPreparer.prepare(wire.create()) as? CreateMemoryPreparation.Ready)?.memory else null
                 if (memory != null && orionMemoryWasForgotten(db, clock, memory)) throw OrionMemoryForgottenReplay()
                 return@Callable DurableIngressOutcome.IDEMPOTENCY_CONFLICT
+            }
+            if (wire.operation == MemoryStatusOperation.CORRECT.name && wire.actionId == null) {
+                val command = wire.change() as CorrectMemory
+                if (db.memories().forgotten(command.memoryId.toString()) != 0 ||
+                    db.memories().forgotten(command.replacementId.toString()) != 0)
+                    return@Callable DurableIngressOutcome.IDEMPOTENCY_CONFLICT
             }
             store.enqueue(request)
         })
@@ -113,7 +123,8 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
             if (!owner.presentForQueuedRequest(origin)) unavailable()
             val id = wire.actionId ?: invalid()
             val row = db.actions().find(id.toString()) ?: invalid()
-            if (row.skill !in setOf("memory.create", "memory.delete") || row.version != wire.actionVersion ||
+            if ((row.skill != "memory.create" && OrionMemoryStatusDescriptors.forName(row.skill) == null) ||
+                row.version != wire.actionVersion ||
                 row.status != ActionStatus.NEEDS_CONFIRMATION || row.confirmationFingerprint != wire.fingerprint) invalid()
             if (actions.cancel(id, wire.actionVersion).outcome != ActionStoreOutcome.APPLIED) invalid()
             return
@@ -187,8 +198,9 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
 
     fun pending(): List<OrionMemoryPending> = db.actions().memoryConfirmations(50).mapNotNull { row ->
         val id = UUID.fromString(row.actionId)
+        val kind = MemoryStatusOperation.entries.find { it.skillName == row.skill }
+        val operation = kind?.let { MemoryOperation.valueOf(it.name) } ?: MemoryOperation.CREATE
         fun unreadable(): OrionMemoryPending {
-            val operation = when (row.skill) { "memory.create" -> MemoryOperation.CREATE; "memory.delete" -> MemoryOperation.DELETE; else -> MemoryOperation.DELETE }
             return OrionMemoryPending(MemoryConfirmation(id, row.version, operation, null), unreadable =
                 OrionMemoryIngressWire("DISMISS", id, UUID.fromString(row.idempotencyKey), UUID.fromString(row.correlationId),
                     actionId = id, actionVersion = row.version, fingerprint = row.confirmationFingerprint, policyVersion = row.policyVersion))
@@ -207,16 +219,45 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
                 OrionMemoryPending(MemoryConfirmation(id, stored.version, MemoryOperation.CREATE, memory.content),
                     create = OrionMemoryActionPreview(memory, id, stored.version, fp, stored.request.policyVersion, stored.status))
             } else {
-                val op = MemoryStatusOperation.DELETE
-                val command = ForgetMemory(memoryId, args.getLong("expectedVersion"), key, trace)
-                val change = (OrionMemoryStatusPreparer.prepare(command) as? MemoryStatusPreparation.Ready)?.change ?: return@mapNotNull unreadable()
+                val change = decodeMemoryRevision(kind ?: return@mapNotNull unreadable(),
+                    stored.request.canonicalNormalizedArguments, key, trace)
                 if (stored.request != OrionMemoryStatusActionStore.normalized(id, change, stored.request.policyVersion)) return@mapNotNull unreadable()
-                val current = query.find(memoryId)
-                val content = current?.content?.takeIf { current.state == MemoryState.ACTIVE && current.version == change.expectedVersion }
-                OrionMemoryPending(MemoryConfirmation(id, stored.version, MemoryOperation.valueOf(op.name), content),
+                OrionMemoryPending(MemoryConfirmation(id, stored.version, operation, revisionPreview(change)),
                     change = OrionMemoryStatusActionPreview(change, id, stored.version, fp, stored.request.policyVersion, stored.status))
             }
         } catch (_: org.json.JSONException) { unreadable() } catch (_: IllegalArgumentException) { unreadable() }
+    }
+
+    private fun revisionPreview(change: ValidatedMemoryStatusChange): String? {
+        val current = query.find(change.memoryId)?.takeIf {
+            it.version == change.expectedVersion && it.state == MemoryState.ACTIVE
+        } ?: return null
+        return when (val command = change.command) {
+            is ForgetMemory -> current.content
+            is CorrectMemory -> current.content?.let { "Anterior: $it\nCorreção: ${command.content}" }
+            is ReviewMemoryClaim -> {
+                val row = db.records().memoryClaim(change.memoryId.toString(), command.claimId.toString()) ?: return null
+                val at = clock.wallNow().toEpochMilli()
+                if (row.version != command.expectedClaimVersion || row.origin != MemoryOrigin.LLM_INFERRED ||
+                    row.userConfirmed || row.status !in setOf(MemoryStatus.ACTIVE, MemoryStatus.CANDIDATE) ||
+                    row.sensitivity !in setOf(Sensitivity.PUBLIC, Sensitivity.PERSONAL) ||
+                    at < row.validFrom || row.validUntil?.let { at >= it } == true) return null
+                val decrypted = memoryRecords.readClaim(change.memoryId, command.claimId) as? FieldDecryptionResult.Plaintext
+                    ?: return null
+                val bytes = decrypted.copyBytes()
+                try {
+                    if (bytes.size > OrionCreateMemoryPreparer.MAX_CONTENT_UTF8_BYTES) return null
+                    val text = Charsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString()
+                    val ready = OrionCreateMemoryPreparer.prepare(CreateMemory(command.claimId, text, command.idempotencyKey,
+                        command.correlationId)) as? CreateMemoryPreparation.Ready
+                    ready?.memory?.content?.takeIf { it == text }
+                } catch (_: java.nio.charset.CharacterCodingException) {
+                    null
+                } finally {
+                    bytes.fill(0)
+                }
+            }
+        }
     }
 
     private fun transient(failure: OrionMemoryTransactionBlocked) = when (failure) {

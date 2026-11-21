@@ -123,6 +123,39 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
         return ActionMutation.APPLIED
     }
 
+    @Query("SELECT * FROM orion_memory_claims WHERE claimId = :claimId AND memoryId = :memoryId")
+    abstract fun memoryClaim(memoryId: String, claimId: String): MemoryClaimEntity?
+
+    @Query("""UPDATE orion_memory_claims SET status = :decision, userConfirmed = :confirmed, version = version + 1
+        WHERE memoryId = :memoryId AND claimId = :claimId AND version = :version
+        AND origin = 'LLM_INFERRED' AND userConfirmed = 0 AND status IN ('CANDIDATE','ACTIVE')
+        AND validFrom <= :at AND (validUntil IS NULL OR validUntil > :at)""")
+    protected abstract fun reviewClaim(memoryId: String, claimId: String, version: Long,
+        decision: MemoryStatus, confirmed: Boolean, at: Long): Int
+
+    @Query("""UPDATE orion_memories SET updatedAt = max(updatedAt, :at), version = version + 1
+        WHERE memoryId = :id AND version = :version AND status = 'ACTIVE'""")
+    protected abstract fun advanceClaimParent(id: String, version: Long, at: Long): Int
+
+    @Transaction
+    open fun reviewMemoryClaimWithEvent(memoryId: String, version: Long, claimId: String, claimVersion: Long,
+        confirmed: Boolean, at: Long, event: DomainEventOutboxEntity): ActionMutation {
+        requireVersion(version)
+        requireVersion(claimVersion)
+        val parent = memory(memoryId) ?: return ActionMutation.NOT_FOUND
+        if (parent.version != version || parent.status != MemoryStatus.ACTIVE ||
+            !parent.lifecycle().isValidAt(java.time.Instant.ofEpochMilli(at))) return ActionMutation.CONFLICT
+        val claim = memoryClaim(memoryId, claimId) ?: return ActionMutation.NOT_FOUND
+        val type = if (confirmed) "MEMORY_CLAIM_CONFIRMED" else "MEMORY_CLAIM_REJECTED"
+        val decision = if (confirmed) MemoryStatus.ACTIVE else MemoryStatus.REJECTED
+        requireCreationEvent(claimId, at, type, claim.sensitivity, event, claimVersion + 1)
+        check(eventCount() < 10_000) { "Durable event capacity reached." }
+        if (reviewClaim(memoryId, claimId, claimVersion, decision, confirmed, at) != 1) return ActionMutation.CONFLICT
+        check(advanceClaimParent(memoryId, version, at) == 1)
+        insertEvent(event)
+        return ActionMutation.APPLIED
+    }
+
     @Query("UPDATE orion_memories SET supersedesId = :priorId WHERE memoryId = :id AND version = 0")
     protected abstract fun linkSupersession(id: String, priorId: String): Int
 

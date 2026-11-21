@@ -26,29 +26,40 @@ internal class OrionMemoryPayloadErasure(private val db: OrionDatabase,
         val dao = db.memories()
         // Capture finite high-water marks under this same writer transaction.
         // Legacy histories above the new admission cap must remain forgettable.
-        val lastAction = dao.lastCreationActionId()
+        val lastAction = dao.lastContentActionId()
         val lastIngress = dao.lastMemoryIngressId()
-        for (row in creationActions(lastAction)) {
+        for (row in contentActions(lastAction)) {
             if (row.argumentsEnvelope.isEmpty() && row.targetEnvelope.isEmpty()) {
                 if (row.status !in terminalActions) unavailable()
                 continue
             }
             val stored = (actions.read(UUID.fromString(row.actionId)) as? ActionReadResult.Ready)?.action ?: unavailable()
-            val target = try {
-                val json = JSONObject(stored.request.canonicalNormalizedArguments)
-                val memoryId = UUID.fromString(json.getString("memoryId"))
-                val memory = (OrionCreateMemoryPreparer.prepare(CreateMemory(memoryId, json.getString("content"),
-                    UUID.fromString(row.idempotencyKey), UUID.fromString(row.correlationId))) as? CreateMemoryPreparation.Ready)?.memory ?: unavailable()
-                if (stored.request != OrionCreateMemoryActionStore.normalized(stored.request.actionId, memory, stored.request.policyVersion)) unavailable()
-                memoryId
+            val targets = try {
+                val key = UUID.fromString(row.idempotencyKey)
+                val trace = UUID.fromString(row.correlationId)
+                val args = stored.request.canonicalNormalizedArguments
+                if (row.skill == "memory.create") {
+                    val json = JSONObject(args)
+                    val memoryId = UUID.fromString(json.getString("memoryId"))
+                    val memory = (OrionCreateMemoryPreparer.prepare(CreateMemory(memoryId, json.getString("content"),
+                        key, trace)) as? CreateMemoryPreparation.Ready)?.memory ?: unavailable()
+                    if (stored.request != OrionCreateMemoryActionStore.normalized(stored.request.actionId, memory,
+                            stored.request.policyVersion)) unavailable()
+                    setOf(memoryId)
+                } else {
+                    val change = decodeMemoryRevision(MemoryStatusOperation.CORRECT, args, key, trace)
+                    if (stored.request != OrionMemoryStatusActionStore.normalized(stored.request.actionId, change,
+                            stored.request.policyVersion)) unavailable()
+                    setOf(change.memoryId, checkNotNull(change.replacement).memoryId)
+                }
             } catch (_: org.json.JSONException) { unavailable() }
               catch (_: IllegalArgumentException) { unavailable() }
-            if (target != id) continue
+            if (id !in targets) continue
             if (row.status in setOf(ActionStatus.PENDING, ActionStatus.NEEDS_CONFIRMATION, ActionStatus.CONFIRMED)) {
                 if (actions.cancel(UUID.fromString(row.actionId), row.version).outcome != ActionStoreOutcome.APPLIED) unavailable()
             } else if (row.status !in terminalActions) unavailable()
             val current = db.actions().find(row.actionId) ?: unavailable()
-            if (dao.eraseTerminalCreate(current.actionId, current.version) != 1) unavailable()
+            if (dao.eraseTerminalContentAction(current.actionId, current.version) != 1) unavailable()
         }
         for (row in memoryIngress(lastIngress)) {
             if (row.payloadEnvelope.isEmpty()) {
@@ -69,9 +80,15 @@ internal class OrionMemoryPayloadErasure(private val db: OrionDatabase,
                 val body = clear.copyOfRange(1, clear.size)
                 try { OrionMemoryIngressWire.decode(body) } finally { body.fill(0) }
             } catch (_: IllegalArgumentException) { unavailable() }
+              catch (_: org.json.JSONException) { unavailable() }
               catch (_: java.io.IOException) { unavailable() }
               finally { clear.fill(0) }
-            if (wire.operation != "CREATE" || wire.memoryId != id) continue
+            val matches = when (wire.operation) {
+                "CREATE" -> wire.memoryId == id
+                "CORRECT" -> wire.memoryId == id || wire.actionId == null && (wire.change() as CorrectMemory).replacementId == id
+                else -> false
+            }
+            if (!matches) continue
             if (row.status in setOf(DurableIngressStatus.QUEUED, DurableIngressStatus.PROCESSING)) {
                 if (db.ingress().transition(row.ingressId, row.version, DurableIngressStatus.REJECTED,
                         clock.wallNow().toEpochMilli()) != ActionMutation.APPLIED) unavailable()
@@ -81,11 +98,11 @@ internal class OrionMemoryPayloadErasure(private val db: OrionDatabase,
         }
     }
 
-    private fun creationActions(through: String?): Sequence<ActionRequestEntity> = sequence {
+    private fun contentActions(through: String?): Sequence<ActionRequestEntity> = sequence {
         if (through == null) return@sequence
         var after = ""
         while (true) {
-            val page = db.memories().creationActionPage(after, through, PAGE_SIZE)
+            val page = db.memories().contentActionPage(after, through, PAGE_SIZE)
             if (page.isEmpty()) break
             yieldAll(page)
             after = page.last().actionId
