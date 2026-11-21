@@ -103,7 +103,7 @@ class OrionSentinelRuntimeTest {
         repeat(2) { assertTrue(runtime.receive(UUID.fromString(suggestion.suggestionId), OrionProactivityFeedbackKind.OPENED)) }
         val feedback = db.sentinel().feedback(suggestion.suggestionId).associateBy { it.kind }
         assertEquals(setOf("SHOWN", "OPENED"), feedback.keys)
-        assertEquals(90_000L, feedback.getValue("OPENED").timeToActionMillis?.toLong())
+        assertEquals(90_000L, feedback.getValue("OPENED").timeToActionMillis)
         assertEquals(ActionMutation.APPLIED, db.tasks().changeStatusWithEvent(task.toString(), 0, TaskStatus.COMPLETED,
             now.toEpochMilli(), taskEvent(task, now, Sensitivity.PERSONAL, "TASK_COMPLETED", 1)))
         runtime.maintain(true, now)

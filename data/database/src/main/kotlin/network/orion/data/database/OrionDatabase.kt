@@ -52,9 +52,11 @@ abstract class OrionDatabase : RoomDatabase() {
     abstract fun retention(): OrionRetentionDao
 
     /** Performs disk I/O: call outside the UI thread. Failure never deletes the database. */
-    fun verifyStructure() {
+    fun verifyStructure() = runInTransaction {
         check(metadata().formatVersion() == 1 && metadata().rowCount() == 1) { "Storage metadata invariant failed." }
-        openHelper.readableDatabase.query("PRAGMA quick_check(1)").use { cursor ->
+        // Android SQLite 3.44 validates FTS4 using a scratch write. A transaction pins
+        // this check to the writable connection instead of a pooled read-only connection.
+        openHelper.writableDatabase.query("PRAGMA quick_check(1)").use { cursor ->
             check(cursor.moveToFirst() && cursor.getString(0) == "ok") { "Storage integrity check failed." }
         }
     }
