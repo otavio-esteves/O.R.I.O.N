@@ -59,6 +59,18 @@ class OrionMinimumResourceGovernorTest {
         assertEquals(0, governor.maxContext()); assertEquals(0, governor.maxTokens())
         assertEquals(0L, governor.keepAliveMs())
     }
+    @Test fun `critical battery overrides a permissive qualified plan`() {
+        val permissivePlan = plan.copy(minimumBatteryPercent = 1)
+        val governor = governor(listOf(permissivePlan))
+
+        sample = healthy().copy(batteryPercent = 5)
+        denied(governor, OrionResourceBlock.BATTERY)
+
+        sample = healthy().copy(batteryPercent = 6)
+        assertEquals(permissivePlan.copy(keepAliveMs = 0), governor.evaluate().plan)
+        assertTrue(governor.canLoadModel(model))
+    }
+
     @Test fun `missing observation or model qualification never permits work`() {
         denied(governor(emptyList()), OrionResourceBlock.MODEL_UNQUALIFIED)
         sample = null; denied(governor(), OrionResourceBlock.OBSERVATION_UNAVAILABLE)
