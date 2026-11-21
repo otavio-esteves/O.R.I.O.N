@@ -83,9 +83,11 @@ class UpgradePersistenceTest {
                     val memory = ids.getValue("memory")
                     val claim = ids.getValue("claim")
                     database.records().createMemoryWithClaimsAndEvent(MemoryEntity(memory.toString(), encrypted("memory/$memory"),
-                        Sensitivity.SECRET, MemoryOrigin.LLM_INFERRED, 0.3, false, at, at),
+                        Sensitivity.SECRET, MemoryOrigin.LLM_INFERRED, 0.3, false, at, at,
+                        status = MemoryOrigin.LLM_INFERRED.initialStatus),
                         listOf(MemoryClaimEntity(claim.toString(), memory.toString(), encrypted("memory/$memory/claim/$claim", "statement"),
-                            Sensitivity.SECRET, MemoryOrigin.LLM_INFERRED, 0.3, false, validFrom = at)), event(memory, "MEMORY_CREATED"))
+                            Sensitivity.SECRET, MemoryOrigin.LLM_INFERRED, 0.3, false,
+                            status = MemoryOrigin.LLM_INFERRED.initialStatus, validFrom = at)), event(memory, "MEMORY_CREATED"))
                     for (kind in listOf("pending", "unknown")) {
                         val request = NormalizedActionRequest(ids.getValue(kind), "upgrade.fixture", "{\"fixture\":\"$fixture\"}",
                             "synthetic", AuthorizationLevel.SAFE_WRITE, 1, SideEffectClass.EXTERNAL_IRREVERSIBLE,
