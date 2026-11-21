@@ -27,6 +27,15 @@ interface OrionMemoryIndexDao {
     @Query("DELETE FROM orion_memory_fts WHERE memoryId = :memoryId")
     fun remove(memoryId: String)
 
+    @Query("""SELECT m.* FROM orion_memory_fts JOIN orion_memories m ON m.memoryId = orion_memory_fts.memoryId
+        WHERE orion_memory_fts MATCH :expression AND m.origin = 'USER_DECLARED' AND m.userConfirmed = 1
+        AND m.sensitivity = 'PERSONAL' AND m.status = 'ACTIVE'
+        AND (m.validFrom IS NULL OR m.validFrom <= :now)
+        AND (m.validUntil IS NULL OR m.validUntil > :now)
+        AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+        ORDER BY m.memoryId LIMIT :limit""")
+    fun candidates(expression: String, now: Long, limit: Int): List<MemoryEntity>
+
     @Query("SELECT * FROM orion_memory_index_state WHERE id = 1")
     fun state(): OrionMemoryIndexState?
 

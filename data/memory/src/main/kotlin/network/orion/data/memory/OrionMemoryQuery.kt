@@ -4,6 +4,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.Callable
 import network.orion.core.commands.memories.*
 import network.orion.core.model.OrionMemoryProvenance
 import network.orion.core.queries.memories.*
@@ -22,6 +23,34 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
         val selected = rows.take(request.limit).map { select(it, now) }
         return MemoryPage(selected, if (rows.size > request.limit) selected.last().memoryId else null)
     }
+
+    fun search(request: SearchMemories): MemorySearchPage = database.runInTransaction(Callable {
+        val index = database.memoryIndex()
+        if (index.state()?.ready != true) return@Callable MemorySearchPage(MemorySearchState.BUILDING)
+        val now = clock.wallNow()
+        val rankedAt = request.after?.rankedAt ?: now
+        val candidates = index.candidates(request.ftsExpression, now.toEpochMilli(), MAX_CANDIDATES + 1)
+        val hits = ArrayList<MemorySearchHit>()
+        for (row in candidates.take(MAX_CANDIDATES)) {
+            val memory = select(row, now)
+            if (memory.contentState == MemoryContentState.KEY_UNAVAILABLE)
+                return@Callable MemorySearchPage(MemorySearchState.KEY_UNAVAILABLE)
+            val content = memory.content ?: continue
+            val score = OrionMemoryRanking.score(request, content, Instant.ofEpochMilli(row.updatedAt), rankedAt,
+                memory.lifecycle.importance, memory.provenance.confidence)
+            val after = request.after
+            if (after == null || score < after.score ||
+                score == after.score && row.memoryId > after.memoryId.toString()) {
+                hits += MemorySearchHit(memory, score)
+            }
+        }
+        val ordered = hits.sortedWith(compareByDescending<MemorySearchHit> { it.score }.thenBy { it.memory.memoryId.toString() })
+        val page = ordered.take(request.limit)
+        val next = if (ordered.size > request.limit) page.last().let {
+            MemorySearchCursor(request.ftsExpression, rankedAt, it.score, it.memory.memoryId)
+        } else null
+        MemorySearchPage(MemorySearchState.READY, page, next, candidates.size > MAX_CANDIDATES)
+    })
 
     fun find(id: UUID): MemorySummary? = database.memories().find(id.toString())?.takeIf { it.origin == network.orion.data.database.MemoryOrigin.USER_DECLARED && it.userConfirmed && it.sensitivity == network.orion.core.model.Sensitivity.PERSONAL }?.let { select(it, clock.wallNow()) }
 
@@ -73,4 +102,8 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
             ready.memory.content.takeIf { ready.memory.canonicalNormalizedArguments == text }
         } catch (_: Exception) { null }
     }
+    private companion object {
+        const val MAX_CANDIDATES = 256
+    }
+
 }
