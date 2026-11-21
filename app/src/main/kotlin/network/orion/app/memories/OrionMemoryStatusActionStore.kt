@@ -3,6 +3,7 @@ package network.orion.app.memories
 import java.time.Duration
 import java.util.UUID
 import network.orion.core.actions.*
+import network.orion.core.commands.memories.ForgetMemory
 import network.orion.core.commands.memories.ValidatedMemoryStatusChange
 import network.orion.core.ingress.StartupBarrier
 import network.orion.core.model.Sensitivity
@@ -132,7 +133,8 @@ internal class OrionMemoryStatusActionStore(
 
     private fun requireOpen(change: ValidatedMemoryStatusChange) {
         val target = database.memories().find(change.memoryId.toString()) ?: abort(OrionMemoryActionFailure.NOT_FOUND)
-        if (target.version != change.expectedVersion || target.status != MemoryStatus.ACTIVE) abort(OrionMemoryActionFailure.CONFLICT)
+        val allowed = if (change.command is ForgetMemory) target.status != MemoryStatus.DELETED else target.status == MemoryStatus.ACTIVE
+        if (target.version != change.expectedVersion || !allowed) abort(OrionMemoryActionFailure.CONFLICT)
     }
 
     private fun read(id: UUID): StoredAction = when (val result = actions.read(id)) {

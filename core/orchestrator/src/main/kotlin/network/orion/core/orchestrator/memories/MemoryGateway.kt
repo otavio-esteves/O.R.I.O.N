@@ -17,6 +17,8 @@ interface MemoryGateway {
     suspend fun create(command: CreateMemory): CreateMemoryResult
     suspend fun change(command: MemoryStatusCommand): MemoryStatusResult
     suspend fun list(request: GetMemories): MemoryPage?
+    suspend fun search(request: SearchMemories): MemorySearchPage?
+    suspend fun claims(request: GetMemoryClaims): List<MemoryClaimSummary>?
     suspend fun pending(): List<MemoryConfirmation>
     suspend fun confirm(actionId: UUID, displayedVersion: Long): MemoryOperationOutcome
     suspend fun dismiss(actionId: UUID, displayedVersion: Long): MemoryOperationOutcome

@@ -60,7 +60,8 @@ class OrionOwnedMemoryStatusStore(private val database: OrionDatabase, encryptio
         if (ActionConfirmationBinding(clock).validate(expected, confirmation) != ConfirmationBindingResult.VALID_BINDING)
             return OwnedMemoryStatusResult.NOT_OWNED
         val target = database.memories().find(change.memoryId.toString()) ?: return OwnedMemoryStatusResult.CONFLICT
-        if (target.version != change.expectedVersion || target.status != MemoryStatus.ACTIVE ||
+        val allowed = if (change.command is ForgetMemory) target.status != MemoryStatus.DELETED else target.status == MemoryStatus.ACTIVE
+        if (target.version != change.expectedVersion || !allowed ||
             target.origin != MemoryOrigin.USER_DECLARED || !target.userConfirmed || target.sensitivity != Sensitivity.PERSONAL)
             return OwnedMemoryStatusResult.CONFLICT
         return when (val command = change.command) {

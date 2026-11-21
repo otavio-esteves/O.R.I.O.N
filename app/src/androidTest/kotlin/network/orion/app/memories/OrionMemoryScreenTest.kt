@@ -29,6 +29,8 @@ class OrionMemoryScreenTest {
         var request:CreateMemory?=null
         var pending:MemoryConfirmation?=null
         val gateway=object:MemoryGateway {
+            override suspend fun search(request: SearchMemories): MemorySearchPage? = null
+            override suspend fun claims(request: GetMemoryClaims): List<MemoryClaimSummary> = emptyList()
             override suspend fun create(command:CreateMemory):CreateMemoryResult {
                 request=command
                 pending=MemoryConfirmation(UUID.randomUUID(),1,MemoryOperation.CREATE,command.content)
@@ -71,6 +73,8 @@ class OrionMemoryScreenTest {
         val reads=AtomicInteger()
         val row=MemorySummary(UUID.randomUUID(),"Memória restaurada",MemoryState.ACTIVE,0,MemoryContentState.READABLE,declared)
         val gateway=object:MemoryGateway {
+            override suspend fun search(request: SearchMemories): MemorySearchPage? = null
+            override suspend fun claims(request: GetMemoryClaims): List<MemoryClaimSummary> = emptyList()
             override suspend fun list(request:GetMemories):MemoryPage? { reads.incrementAndGet(); return if (available.value) MemoryPage(listOf(row),null) else null }
             override suspend fun pending()=emptyList<MemoryConfirmation>()
             override suspend fun processPending()=0

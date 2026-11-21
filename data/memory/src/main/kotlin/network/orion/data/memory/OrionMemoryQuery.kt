@@ -7,11 +7,14 @@ import java.util.UUID
 import java.util.concurrent.Callable
 import network.orion.core.commands.memories.*
 import network.orion.core.model.OrionMemoryProvenance
+import network.orion.core.model.Sensitivity
 import network.orion.core.queries.memories.*
 import network.orion.core.security.*
 import network.orion.core.time.WallClock
 import network.orion.data.database.OrionDatabase
 import network.orion.data.database.MemoryEntity
+import network.orion.data.database.MemoryOrigin
+import network.orion.data.database.MemoryStatus
 import org.json.JSONObject
 
 /** MAIN-only read adapter. Legacy opaque/corrupt content stays explicitly unreadable. */
@@ -52,7 +55,44 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
         MemorySearchPage(MemorySearchState.READY, page, next, candidates.size > MAX_CANDIDATES)
     })
 
-    fun find(id: UUID): MemorySummary? = database.memories().find(id.toString())?.takeIf { it.origin == network.orion.data.database.MemoryOrigin.USER_DECLARED && it.userConfirmed && it.sensitivity == network.orion.core.model.Sensitivity.PERSONAL }?.let { select(it, clock.wallNow()) }
+    fun find(id: UUID): MemorySummary? = database.memories().find(id.toString())?.takeIf(::visible)
+        ?.let { select(it, clock.wallNow()) }
+
+    fun claims(request: GetMemoryClaims): List<MemoryClaimSummary>? = database.runInTransaction(Callable {
+        val parent = database.memories().find(request.memoryId.toString())?.takeIf(::visible)
+            ?: return@Callable null
+        if (parent.version != request.expectedVersion || parent.status == MemoryStatus.DELETED) return@Callable null
+        val now = clock.wallNow()
+        val at = now.toEpochMilli()
+        database.records().claims(parent.memoryId).asSequence()
+            .filter { it.sensitivity == Sensitivity.PUBLIC || it.sensitivity == Sensitivity.PERSONAL }
+            .map { row ->
+                val id = UUID.fromString(row.claimId)
+                val (statement, availability) = read(row.statementEnvelope,
+                    FieldEncryptionContext("memory/${parent.memoryId}/claim/$id", "statement", 1)) { decodeClaim(id, it) }
+                val provenance = OrionMemoryProvenance(row.origin, row.confidence, row.userConfirmed, row.sensitivity)
+                val canReview = parent.status == MemoryStatus.ACTIVE && parent.lifecycle().isValidAt(now) &&
+                    provenance.inferred && !provenance.userConfirmed && statement != null && row.version < Long.MAX_VALUE &&
+                    row.status in setOf(MemoryStatus.ACTIVE, MemoryStatus.CANDIDATE) && row.validFrom <= at &&
+                    row.validUntil?.let { at < it } != false
+                MemoryClaimSummary(id, row.version, statement, row.status, availability, provenance,
+                    Instant.ofEpochMilli(row.validFrom), row.validUntil?.let(Instant::ofEpochMilli), canReview)
+            }.toList()
+    })
+
+    private fun visible(row: MemoryEntity): Boolean =
+        row.origin == MemoryOrigin.USER_DECLARED && row.userConfirmed && row.sensitivity == Sensitivity.PERSONAL
+
+    private fun decodeClaim(id: UUID, bytes: ByteArray): String? {
+        if (bytes.size !in 1..OrionCreateMemoryPreparer.MAX_CONTENT_UTF8_BYTES) return null
+        return try {
+            val text = Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString()
+            val ready = OrionCreateMemoryPreparer.prepare(CreateMemory(id, text, id, id)) as? CreateMemoryPreparation.Ready
+            ready?.memory?.content?.takeIf { it == text }
+        } catch (_: java.nio.charset.CharacterCodingException) {
+            null
+        }
+    }
 
     private fun select(row: MemoryEntity, at: Instant): MemorySummary {
         val id = UUID.fromString(row.memoryId)

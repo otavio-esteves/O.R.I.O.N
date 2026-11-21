@@ -10,7 +10,6 @@ import network.orion.core.ingress.*
 import network.orion.core.model.Sensitivity
 import network.orion.core.orchestrator.memories.*
 import network.orion.core.queries.memories.*
-import network.orion.core.security.FieldDecryptionResult
 import network.orion.core.security.OrionFieldEncryption
 import network.orion.core.skills.metadata.memories.OrionMemoryStatusDescriptors
 import network.orion.core.time.OrionClock
@@ -45,7 +44,6 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
     readiness: () -> CoreReadiness, storageAvailable: () -> Boolean) {
     val actions = OrionActionStore(db, encryption, clock)
     private val create = OrionCreateMemoryActionStore(db, actions, clock, barrier)
-    private val memoryRecords = OrionMemoryStore(db, encryption, clock)
     private val statusWriter = OrionOwnedMemoryStatusStore(db, encryption, clock)
     private val status = OrionMemoryStatusActionStore(db, actions, clock, barrier, statusWriter::matchesExisting)
     private val owned = OrionOwnedMemoryStore(db, encryption, clock)
@@ -231,33 +229,14 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
 
     private fun revisionPreview(change: ValidatedMemoryStatusChange): String? {
         val current = query.find(change.memoryId)?.takeIf {
-            it.version == change.expectedVersion && it.state == MemoryState.ACTIVE
+            it.version == change.expectedVersion && it.state != MemoryState.DELETED
         } ?: return null
         return when (val command = change.command) {
             is ForgetMemory -> current.content
-            is CorrectMemory -> current.content?.let { "Anterior: $it\nCorreção: ${command.content}" }
-            is ReviewMemoryClaim -> {
-                val row = db.records().memoryClaim(change.memoryId.toString(), command.claimId.toString()) ?: return null
-                val at = clock.wallNow().toEpochMilli()
-                if (row.version != command.expectedClaimVersion || row.origin != MemoryOrigin.LLM_INFERRED ||
-                    row.userConfirmed || row.status !in setOf(MemoryStatus.ACTIVE, MemoryStatus.CANDIDATE) ||
-                    row.sensitivity !in setOf(Sensitivity.PUBLIC, Sensitivity.PERSONAL) ||
-                    at < row.validFrom || row.validUntil?.let { at >= it } == true) return null
-                val decrypted = memoryRecords.readClaim(change.memoryId, command.claimId) as? FieldDecryptionResult.Plaintext
-                    ?: return null
-                val bytes = decrypted.copyBytes()
-                try {
-                    if (bytes.size > OrionCreateMemoryPreparer.MAX_CONTENT_UTF8_BYTES) return null
-                    val text = Charsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString()
-                    val ready = OrionCreateMemoryPreparer.prepare(CreateMemory(command.claimId, text, command.idempotencyKey,
-                        command.correlationId)) as? CreateMemoryPreparation.Ready
-                    ready?.memory?.content?.takeIf { it == text }
-                } catch (_: java.nio.charset.CharacterCodingException) {
-                    null
-                } finally {
-                    bytes.fill(0)
-                }
-            }
+            is CorrectMemory -> current.content?.takeIf { current.state == MemoryState.ACTIVE }?.let { "Anterior: $it\nCorreção: ${command.content}" }
+            is ReviewMemoryClaim -> query.claims(GetMemoryClaims(change.memoryId, change.expectedVersion))
+                ?.singleOrNull { it.claimId == command.claimId && it.version == command.expectedClaimVersion && it.canReview }
+                ?.statement
         }
     }
 
