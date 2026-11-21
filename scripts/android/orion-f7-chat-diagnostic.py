@@ -13,6 +13,14 @@ parse_instrumentation = runner.parse_instrumentation
 
 def diagnose(output, status):
     for line in output.splitlines():
+        if 'could not find any node' in line:
+            print('Draft assertion found no node', flush=True)
+        if 'EditableText = ' in line:
+            value = line.split('EditableText = ', 1)[1].strip()
+            category = ('previous' if 'criar tarefa: comprar pão' in value else
+                'empty' if value in {"''", '""'} else
+                'other-non-empty')
+            print(f'Draft semantics category: {category}', flush=True)
         exception = re.fullmatch(r'INSTRUMENTATION_STATUS: stack=([\w.]+(?:Error|Exception))(?::.*)?', line)
         if exception:
             print(f'Test exception type: {exception[1]}', flush=True)
