@@ -91,9 +91,12 @@ class OrionSentinelRuntimeTest {
         assertEquals(task.toString(), suggestion.taskId)
         val notification = notifications.activeNotifications.single { it.tag == suggestion.suggestionId }.notification
         assertEquals(OrionAndroidNotificationPoster.PROACTIVE_CHANNEL, notification.channelId)
-        assertNotNull(notification.contentIntent)
-        assertNotNull(notification.deleteIntent)
-        assertEquals(1, notification.actions.size)
+        val open = checkNotNull(notification.contentIntent)
+        val dismiss = checkNotNull(notification.deleteIntent)
+        val snooze = checkNotNull(notification.actions.single().actionIntent)
+        assertTrue(open.isImmutable && open.isActivity)
+        assertTrue(dismiss.isImmutable && dismiss.isBroadcast)
+        assertTrue(snooze.isImmutable && snooze.isBroadcast)
         assertEquals(listOf("SHOWN"), db.sentinel().feedback(suggestion.suggestionId).map { it.kind })
 
         now = now.plusSeconds(90)
