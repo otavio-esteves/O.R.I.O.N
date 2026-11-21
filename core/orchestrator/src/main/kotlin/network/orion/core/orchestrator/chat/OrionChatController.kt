@@ -19,7 +19,7 @@ import network.orion.core.queries.tasks.GetTasks
 
 class OrionChatTurn(val id: UUID, val user: Boolean, val text: String, val proposal: CreateTask? = null,
     val origin: OrionMemoryOrigin = if (user) OrionMemoryOrigin.USER_DECLARED else OrionMemoryOrigin.SYSTEM_DERIVED,
-    val archiveId: UUID? = null) {
+    val archiveId: UUID? = null, val usedSelectedMemory: Boolean = false) {
     override fun toString() = "OrionChatTurn(<redacted>)"
 }
 class OrionChatState(val turns: List<OrionChatTurn> = emptyList(), val draft: String = "",
@@ -43,8 +43,9 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
     private var inferring = false
     private fun patch(transform: (OrionChatState) -> OrionChatState) = mutable.update(transform)
     private fun append(user: Boolean, text: String, proposal: CreateTask? = null,
-        origin: OrionMemoryOrigin = if (user) OrionMemoryOrigin.USER_DECLARED else OrionMemoryOrigin.SYSTEM_DERIVED) = patch {
-        OrionChatState((it.turns + OrionChatTurn(UUID.randomUUID(), user, text, proposal, origin)).takeLast(20), it.draft,
+        origin: OrionMemoryOrigin = if (user) OrionMemoryOrigin.USER_DECLARED else OrionMemoryOrigin.SYSTEM_DERIVED,
+        usedSelectedMemory: Boolean = false) = patch {
+        OrionChatState((it.turns + OrionChatTurn(UUID.randomUUID(), user, text, proposal, origin, usedSelectedMemory = usedSelectedMemory)).takeLast(20), it.draft,
             it.busy, it.cortex, it.notice, it.pending, it.canRetry)
     }
     private fun status(busy: Boolean = state.value.busy, cortex: String = state.value.cortex,
@@ -108,7 +109,7 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
     fun archiveCurrent(): ArchiveConversation? {
         val current = state.value
         if (closed || current.busy) return null
-        val completed = current.turns.filter { it.proposal == null && it.archiveId == null }
+        val completed = current.turns.filter { it.proposal == null && it.archiveId == null && !it.usedSelectedMemory }
         return try {
             val transcript = OrionConversationTranscript(completed.map { OrionConversationEntry(it.id, it.origin, it.text) })
             // Validate the same bound that will apply to the encrypted ingress body before capturing consent.
@@ -144,7 +145,7 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
         launchOperation {
             retryInput = null
             // Remove proposal before admission; an uncertain admission must never be retried as inference.
-            patch { OrionChatState(it.turns.map { t -> if (t.id == turnId) OrionChatTurn(t.id, false, t.text, origin = t.origin) else t },
+            patch { OrionChatState(it.turns.map { t -> if (t.id == turnId) OrionChatTurn(t.id, false, t.text, origin = t.origin, usedSelectedMemory = t.usedSelectedMemory) else t },
                 it.draft, it.busy, it.cortex, it.notice, it.pending, false) }
             submit(command); reload()
         }
@@ -243,8 +244,9 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
         retryInput = null
         status(cortex = "Sob demanda")
         when (response) {
-            is OrionChatResponse.Message -> append(false, response.text, origin = OrionMemoryOrigin.LLM_INFERRED)
-            is OrionChatResponse.CreateProposal -> append(false, "Sugestão de tarefa: " + response.command.title, response.command, OrionMemoryOrigin.LLM_INFERRED)
+            is OrionChatResponse.Message -> append(false, response.text, origin = OrionMemoryOrigin.LLM_INFERRED,
+                usedSelectedMemory = memories.isNotEmpty())
+            is OrionChatResponse.CreateProposal -> append(false, "Sugestão de tarefa: " + response.command.title, response.command, OrionMemoryOrigin.LLM_INFERRED, usedSelectedMemory = memories.isNotEmpty())
             OrionChatResponse.TaskList -> showTasks()
             OrionChatResponse.Battery -> showBattery()
         }

@@ -47,7 +47,7 @@ object OrionChatContext {
         }
         // Optional live turns are selected newest first, then rendered chronologically.
         // Explicitly opened archives are for local viewing. Their sensitive text stays out of model context.
-        val live = history.filter { it.archiveId == null }.takeLast(20)
+        val live = history.filter { it.archiveId == null && !it.usedSelectedMemory }.takeLast(20)
         var historyBytes = 0
         live.takeLast(12).reversed().forEach { turn ->
             if (turn.proposal == null && turn.text.isNotBlank()) {

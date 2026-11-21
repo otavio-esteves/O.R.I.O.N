@@ -54,7 +54,7 @@ internal fun ConversationHistory(controller: OrionChatController, gateway: Memor
             if (open) run { gateway.processPending(); reload() }
         }) { Text(if (open) "Fechar histórico local" else "Histórico local") }
         if (open) {
-            Text("Salve as mensagens recentes desta conversa no dispositivo. Cada gravação exige confirmação.")
+            Text("Salve as mensagens recentes desta conversa no dispositivo. Cada gravação exige confirmação. Respostas geradas com memórias selecionadas ficam fora do histórico salvo.")
             TextButton(enabled = hasTurns && !busy && !chatBusy, onClick = {
                 val command = controller.archiveCurrent()
                 if (command == null) notice = "Esta conversa está vazia ou acima do limite de gravação."
