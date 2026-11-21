@@ -51,3 +51,8 @@ O resumo de sessão é extrativo e executa em MAIN. O cenário de morte de
 `:ai` durante geração de resumo previsto no plano não se aplica a essa
 implementação. A morte de `:ai` durante inferência do chat tem
 [evidência separada na F6](F6-HybridSoftware-20261118.md).
+
+Durante o upgrade da F8, a execução no emulador API 35 revelou uma falha
+intermitente na checagem de integridade FTS4 por conexão somente leitura.
+A correção preserva a checagem original e fixa a conexão gravável durante
+a inspeção. [Evidência da F8](F8-SoftwareCloseout.md#upgrade-e-evidências)
