@@ -113,6 +113,7 @@ def main():
     parser.add_argument("--serial", required=True)
     parser.add_argument("--environment", required=True, choices=["ANDROID_EMULATOR", "PHYSICAL_DEVICE"])
     parser.add_argument("--adb", default=shutil.which("adb"))
+    parser.add_argument("--apk-dir", type=Path, help="Directory containing the canonical APK pair.")
     parser.add_argument("--evidence-dir", type=Path, required=True)
     parser.add_argument("--scenario", choices=SCENARIOS, default="generic")
     args = parser.parse_args()
@@ -121,6 +122,8 @@ def main():
     root = Path(__file__).resolve().parents[2]
     artifacts = [root / "app/build/outputs/apk/debug/app-debug.apk",
                  root / "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"]
+    if args.apk_dir:
+        artifacts = [args.apk_dir / path.name for path in artifacts]
     if not all(path.is_file() for path in artifacts):
         parser.error("Build :app:assembleDebug :app:assembleDebugAndroidTest in Docker first.")
     args.evidence_dir.mkdir(parents=True, exist_ok=True)

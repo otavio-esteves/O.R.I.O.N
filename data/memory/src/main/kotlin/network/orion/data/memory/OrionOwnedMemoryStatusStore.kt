@@ -109,7 +109,7 @@ class OrionOwnedMemoryStatusStore(private val database: OrionDatabase, encryptio
     }
 
     private fun isDeclaredPersonal(row: MemoryEntity) =
-        row.origin == MemoryOrigin.USER_DECLARED && row.userConfirmed && row.sensitivity == Sensitivity.PERSONAL
+        row.origin == MemoryOrigin.USER_DECLARED && row.userConfirmed && row.sensitivity in setOf(Sensitivity.PERSONAL, Sensitivity.SENSITIVE)
 
     private fun correct(command: CorrectMemory, replacement: ValidatedCreateMemory, target: MemoryEntity): OwnedMemoryStatusResult {
         val id = command.replacementId.toString()
@@ -119,7 +119,7 @@ class OrionOwnedMemoryStatusStore(private val database: OrionDatabase, encryptio
         val bytes = replacement.canonicalNormalizedArguments.toByteArray(Charsets.UTF_8)
         return try {
             when (val result = memories.supersede(command.memoryId, command.expectedVersion, command.replacementId,
-                bytes, target.sensitivity, MemoryOrigin.USER_DECLARED, 1.0, emptyList(), command.correlationId,
+                bytes, if (replacement.allowSearchIndex) Sensitivity.PERSONAL else Sensitivity.SENSITIVE, MemoryOrigin.USER_DECLARED, 1.0, emptyList(), command.correlationId,
                 userConfirmed = true)) {
                 is MemoryWriteResult.Stored -> OwnedMemoryStatusResult.APPLIED
                 is MemoryWriteResult.Rejected -> OwnedMemoryStatusResult.CONFLICT

@@ -63,7 +63,7 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
         candidates.mapNotNull { candidate ->
             val selected = candidate.memory
             val row = database.memories().find(selected.memoryId.toString())?.takeIf(::visible) ?: return@mapNotNull null
-            if (row.version != selected.version || row.status != MemoryStatus.ACTIVE ||
+            if (row.sensitivity != Sensitivity.PERSONAL || row.version != selected.version || row.status != MemoryStatus.ACTIVE ||
                 !row.lifecycle().isValidAt(now)) return@mapNotNull null
             select(row, now).takeIf { it.contentState == MemoryContentState.READABLE }
         }
@@ -108,7 +108,7 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
     })
 
     private fun visible(row: MemoryEntity): Boolean =
-        row.origin == MemoryOrigin.USER_DECLARED && row.userConfirmed && row.sensitivity == Sensitivity.PERSONAL
+        row.origin == MemoryOrigin.USER_DECLARED && row.userConfirmed && row.sensitivity in setOf(Sensitivity.PERSONAL, Sensitivity.SENSITIVE)
 
     private fun decodeClaim(id: UUID, bytes: ByteArray): String? {
         if (bytes.size !in 1..OrionCreateMemoryPreparer.MAX_CONTENT_UTF8_BYTES) return null
@@ -154,17 +154,19 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
 
     internal fun readIndexContent(row: MemoryEntity): Pair<String?, MemoryContentState> {
         val id = UUID.fromString(row.memoryId)
-        return read(row.contentEnvelope, FieldEncryptionContext("memory/$id", "content", 1)) { decodeContent(id, it) }
+        return read(row.contentEnvelope, FieldEncryptionContext("memory/$id", "content", 1)) { decodeContent(id, it, requireIndexConsent = true) }
     }
 
-    internal fun decodeContent(id: UUID, bytes: ByteArray): String? {
+    internal fun decodeContent(id: UUID, bytes: ByteArray, requireIndexConsent: Boolean = false): String? {
         if (bytes.size !in 1..8192) return null
         return try {
             val text = Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
                 .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()
             val json = JSONObject(text)
-            if (json.length() != 4 || json.opt("origin") != "USER_DECLARED" || json.opt("sensitivity") != "PERSONAL" || json.opt("memoryId") != id.toString() || json.opt("content") !is String) return null
-            val command = CreateMemory(id, json.getString("content"), id, id)
+            val allowSearchIndex = json.opt("allowSearchIndex") == true
+            if (requireIndexConsent && !allowSearchIndex) return null
+            if (json.length() != (if (allowSearchIndex) 5 else 4) || json.opt("origin") != "USER_DECLARED" || json.opt("sensitivity") != "PERSONAL" || json.opt("memoryId") != id.toString() || json.opt("content") !is String) return null
+            val command = CreateMemory(id, json.getString("content"), id, id, allowSearchIndex)
             val ready = OrionCreateMemoryPreparer.prepare(command) as? CreateMemoryPreparation.Ready ?: return null
             ready.memory.content.takeIf { ready.memory.canonicalNormalizedArguments == text }
         } catch (_: Exception) { null }

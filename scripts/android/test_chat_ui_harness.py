@@ -11,21 +11,21 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
-from chat_ui_protocol import EXPECTED, SELECTED, junit_report, parse_instrumentation
+from chat_ui_protocol import EXPECTED, F8_SELECTED, SELECTED, junit_report, parse_instrumentation, test_identities
 
 spec = importlib.util.spec_from_file_location('chat_ui_runner', Path(__file__).with_name('verify-chat-ui.py'))
 runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
 
 
-def transcript(identities=None, terminal=0):
-    identities = sorted(EXPECTED) if identities is None else identities
+def transcript(identities=None, terminal=0, expected=EXPECTED):
+    identities = sorted(expected) if identities is None else identities
     lines = []
     for index, (cls, method) in enumerate(identities, 1):
         frame = [f'INSTRUMENTATION_STATUS: class={cls}', f'INSTRUMENTATION_STATUS: test={method}',
-                 f'INSTRUMENTATION_STATUS: current={index}', f'INSTRUMENTATION_STATUS: numtests={len(EXPECTED)}']
+                 f'INSTRUMENTATION_STATUS: current={index}', f'INSTRUMENTATION_STATUS: numtests={len(expected)}']
         lines += frame + ['INSTRUMENTATION_STATUS_CODE: 1'] + frame + [f'INSTRUMENTATION_STATUS_CODE: {terminal}']
-    return '\n'.join(lines + [f'OK ({len(EXPECTED)} tests)', 'INSTRUMENTATION_CODE: -1'])
+    return '\n'.join(lines + [f'OK ({len(expected)} tests)', 'INSTRUMENTATION_CODE: -1'])
 
 
 class ChatUiProtocolTest(unittest.TestCase):
@@ -90,11 +90,22 @@ class ChatUiProtocolTest(unittest.TestCase):
             self.assertEqual(expected, set(re.findall(r'@Test(?:\([^)]*\))?\s+fun (\w+)', source.read_text())))
         self.assertNotIn('OrionChatRealModelTest', ','.join(SELECTED))
 
+    def test_f8_selection_matches_android_sources_and_rejects_missing_cases(self):
+        root = Path(__file__).resolve().parents[2] / 'app/src/androidTest/kotlin'
+        for cls, methods in F8_SELECTED.items():
+            source = root / (cls.replace('.', '/') + '.kt')
+            self.assertEqual(methods, set(re.findall(r'@Test(?:\([^)]*\))?\s+fun (\w+)', source.read_text())))
+        expected = test_identities(F8_SELECTED)
+        self.assertTrue(parse_instrumentation(transcript(expected=expected), 0, expected).successful)
+        self.assertFalse(parse_instrumentation(transcript(sorted(expected)[:-1], expected=expected), 0, expected).successful)
+
     def test_ci_explicitly_builds_hybrid_probe_and_executes_model_free_suite(self):
         workflow = (Path(__file__).resolve().parents[2] / '.github/workflows/ci.yml').read_text()
         self.assertIn('-PorionHybridChatQualification=true', workflow)
         self.assertIn('chat-ui-no-model:', workflow)
         self.assertIn('verify-chat-ui.py', workflow)
+        self.assertIn('--suite f8', workflow)
+        self.assertIn('--scenario sentinel_delivery', workflow)
         self.assertIn('needs: [android-build-and-check, chat-ui-no-model]', workflow)
         self.assertIn('test "$ORION_UI_RESULT" = success', workflow)
         self.assertNotIn('continue-on-error', workflow)

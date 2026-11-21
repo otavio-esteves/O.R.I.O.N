@@ -1,5 +1,6 @@
 package network.orion.data.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -11,7 +12,12 @@ import androidx.room.Query
 
 /** Authority for the one supported proactive Skill. No permission is implied by installation. */
 @Entity(tableName = "orion_sentinel_consent")
-data class OrionSentinelConsent(@PrimaryKey val id: Int = 1, val enabled: Boolean, val version: Long)
+data class OrionSentinelConsent(
+    @PrimaryKey val id: Int = 1,
+    val enabled: Boolean,
+    val version: Long,
+    @ColumnInfo(defaultValue = "0") val evaluationFloor: Long = 0,
+)
 
 /** Only a reference to a task, with no user content or device observations. */
 @Entity(tableName = "orion_sentinel_suggestions", indices = [Index("reservedAt"), Index(value = ["taskId"], unique = true)])
@@ -47,6 +53,12 @@ interface OrionSentinelDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun saveConsent(consent: OrionSentinelConsent)
+
+    @Query("UPDATE orion_sentinel_consent SET evaluationFloor = max(evaluationFloor, :at) WHERE id = 1")
+    fun advanceEvaluationFloor(at: Long)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM orion_sentinel_feedback WHERE suggestionId = :id AND kind = 'SNOOZED')")
+    fun wasSnoozed(id: String): Boolean
 
     @Query("""SELECT taskId, createdAt FROM orion_tasks t WHERE status = 'OPEN'
         AND sensitivity IN ('PUBLIC', 'PERSONAL') AND createdAt BETWEEN :oldest AND :newest
@@ -89,9 +101,10 @@ interface OrionSentinelDao {
 
     @Query("""DELETE FROM orion_sentinel_suggestions WHERE suggestionId IN (
         SELECT s.suggestionId FROM orion_sentinel_suggestions s WHERE reservedAt < :before
-        AND NOT EXISTS (SELECT 1 FROM orion_tasks t WHERE t.taskId = s.taskId AND t.status = 'OPEN')
+        AND NOT EXISTS (SELECT 1 FROM orion_tasks t WHERE t.taskId = s.taskId AND t.status = 'OPEN'
+            AND t.createdAt >= :oldestEligible)
         ORDER BY reservedAt LIMIT 25)""")
-    fun prune(before: Long): Int
+    fun prune(before: Long, oldestEligible: Long): Int
 
     @Query("""DELETE FROM orion_sentinel_feedback WHERE suggestionId IN (
         SELECT suggestionId FROM orion_sentinel_suggestions WHERE reservedAt < :before AND EXISTS (

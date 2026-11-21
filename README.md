@@ -62,7 +62,7 @@ evidence for the [implementation plan](docs/plans/F7-ImplementationPlan.md).
 
 The existing deferrable 30-minute heartbeat evaluates local task suggestions
 after opt-in. Sentinel applies quiet hours, resource profiles, a notification
-budget and durable duplicate suppression. Room 10 records consent revisions,
+budget and durable duplicate suppression. Room 11 records consent revisions,
 delivery reservations and feedback. Proactive notifications use the existing
 Action Outbox and preserve uncertain outcomes without automatic retry.
 The [F8 validation report](docs/qualification/F8-SoftwareCloseout.md) and

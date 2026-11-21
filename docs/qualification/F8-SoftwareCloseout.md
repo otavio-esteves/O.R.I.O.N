@@ -15,14 +15,31 @@ o perfil de recursos e a saúde do Sentinel.
 | Perfis de recursos | `OrionResourceProfilesTest` cobre os cinco perfis, sinais ausentes e restrição de segundo plano. `OrionMinimumResourceGovernorTest` cobre o veto de inferência com bateria crítica. |
 | Contexto, cooldown, silêncio e orçamento | `OrionProactivityPolicyTest` verifica pontuação, DST, rollback de relógio, cooldown global e por tópico, orçamento e deduplicação. Somente observações minimizadas são coletadas. |
 | Notificação proativa | `OrionSentinelRuntimeTest` cobre opt-in, barreira de heartbeat, perfil restritivo, seleção sem conteúdo sensível, entrega via Android e PendingIntents privados e imutáveis. |
-| Feedback | A entrega confirmada e o evento `SHOWN` compartilham uma transação. Interações são admitidas via ingresso durável. A manutenção registra `IGNORED` e `COMPLETED` ao observar o estado da referência. |
+| Feedback | A entrega confirmada, o feedback `SHOWN` e o evento `NOTIFICATION_POSTED` compartilham uma transação e usam uma vaga no outbox. Interações são admitidas via ingresso durável. A manutenção registra `IGNORED` e `COMPLETED` ao observar o estado da referência. |
 | Sem loop | Uma reserva por tarefa e um cooldown por tópico limitam repetição. `OrionProactiveDeliveryTest` cobre feedback atômico, revogação de consentimento, UNKNOWN e ausência de retry. O cenário `sentinel_delivery` interrompe o processo depois do claim persistente. |
 
-A retenção elimina feedback após 30 dias e conserva a referência de deduplicação
-enquanto a tarefa estiver aberta, com teto de 512 reservas. Uma interrupção
+A retenção elimina feedback após 30 dias. As reservas, limitadas a 512,
+expiram após a retenção quando a tarefa encerra ou sai da janela de sete dias.
+O horário de poda fica persistido. Um rollback do relógio abaixo desse limite
+suspende novas avaliações para impedir que tarefas podadas voltem a gerar alertas. Uma interrupção
 após a reserva pode consumir a oportunidade daquela tarefa. A recuperação
 descarta autorizações expiradas ainda sem claim e preserva efeitos incertos
 para evitar reenvio.
+
+## Correções da auditoria
+
+A manutenção reconcilia a notificação Android por ID e canal a partir do
+feedback `SNOOZED` persistido. A operação de retirada tolera repetição e
+também funciona após uma interrupção entre a gravação e a chamada Android.
+
+Room 11 torna privadas as memórias legadas declaradas pelo usuário e descarta
+o índice FTS derivado em claro. As memórias continuam legíveis na lista com
+seus registros criptografados. Novos cadastros e correções são privados por
+padrão. A inclusão no FTS e no contexto do chat exige seleção explícita e
+integra o payload da confirmação.
+
+O CI obrigatório executa as suítes Android de entrega, retenção, migração,
+FTS e heartbeat, além do SIGKILL do Sentinel e das suítes de chat.
 
 ## Upgrade e evidências
 

@@ -5,7 +5,7 @@ import network.orion.core.commands.Command
 
 /**
  * A request to remember one user-declared personal statement through the Core pipeline.
- * Origin/classification are fixed by schema-v1; callers cannot promote inferred data.
+ * Origin is fixed. Search indexing requires an explicit choice from the user.
  *
  * The issuer retains the same memory ID and idempotency key across retries; a new
  * correlation ID may trace a replay. These IDs are neither action ownership nor
@@ -20,6 +20,7 @@ data class CreateMemory(
     val content: String,
     val idempotencyKey: UUID,
     val correlationId: UUID,
+    val allowSearchIndex: Boolean = false,
 ) : Command<CreateMemoryResult> {
     override fun toString(): String = "CreateMemory(<redacted>)"
 }
@@ -54,6 +55,7 @@ class ValidatedCreateMemory internal constructor(
     val idempotencyKey: UUID,
     val correlationId: UUID,
     val canonicalNormalizedArguments: String,
+    val allowSearchIndex: Boolean,
 ) {
     val argumentSchemaVersion: Int get() = 1
     val normalizedTarget: String get() = "memory/$memoryId"

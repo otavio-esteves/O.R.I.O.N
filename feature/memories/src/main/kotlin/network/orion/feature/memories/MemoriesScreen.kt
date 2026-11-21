@@ -27,6 +27,7 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     var content by remember { mutableStateOf("") }
+    var allowSearchIndex by remember { mutableStateOf(false) }
     var submission by remember { mutableStateOf<CreateMemory?>(null) }
     var rows by remember { mutableStateOf<List<MemorySummary>>(emptyList()) }
     var next by remember { mutableStateOf<UUID?>(null) }
@@ -92,12 +93,13 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
         item {
             OutlinedTextField(value=content,onValueChange={ if (!busy) { content=it; submission=null } },
                 label={ Text("O que você quer lembrar?") },singleLine=true,enabled=!busy,modifier=Modifier.fillMaxWidth())
+            MemoryIndexChoice(allowSearchIndex, !busy) { allowSearchIndex = it; submission = null }
             Button(enabled=!busy && content.isNotBlank(),onClick={
                 focus.clearFocus(); keyboard?.hide()
-                val command=submission ?: CreateMemory(UUID.randomUUID(),content,UUID.randomUUID(),UUID.randomUUID()).also { submission=it }
+                val command=submission ?: CreateMemory(UUID.randomUUID(), content, UUID.randomUUID(), UUID.randomUUID(), allowSearchIndex).also { submission=it }
                 run {
                     message=when (gateway.create(command)) {
-                        CreateMemoryResult.QUEUED -> { content=""; submission=null; "Pedido recebido. Confirme a memória abaixo." }
+                        CreateMemoryResult.QUEUED -> { content=""; submission=null; allowSearchIndex=false; "Pedido recebido. Confirme a memória abaixo." }
                         CreateMemoryResult.REJECTED -> "Revise a informação ou atualize o pedido."
                         CreateMemoryResult.UNAVAILABLE -> "Pedido não recebido. Tente novamente quando o Core estiver pronto."
                         CreateMemoryResult.FORGOTTEN -> { content=""; submission=null; "Esta memória já foi esquecida. Um novo registro precisa de um novo pedido." }
@@ -145,6 +147,9 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
                         MemoryOperation.REJECT_CLAIM -> "Rejeitar esta afirmação inferida?"
                         MemoryOperation.ARCHIVE_CONVERSATION, MemoryOperation.FORGET_CONVERSATION -> error("Conversation action.")
                     })
+                    action.allowSearchIndex?.let { searchable ->
+                        Text(if (searchable) "Disponível na busca e no contexto do chat." else "Memória privada, fora da busca e do contexto do chat.")
+                    }
                     Text(action.content ?: "Conteúdo indisponível ou pedido desatualizado. Descarte este pedido e tente novamente.")
                     if (action.operation==MemoryOperation.DELETE) Text("A informação e suas cópias de processamento serão removidas. O histórico mínimo da operação será preservado.")
                     Button(enabled=!busy && action.content!=null,onClick={ run {
@@ -219,6 +224,9 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
                         OutlinedTextField(value = draft.content, onValueChange = { value ->
                             correction = draft.copy(idempotencyKey = UUID.randomUUID(), content = value)
                         }, label = { Text("Correção") }, enabled = !busy, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        MemoryIndexChoice(draft.allowSearchIndex, !busy) { allowed ->
+                            correction = draft.copy(idempotencyKey = UUID.randomUUID(), allowSearchIndex = allowed)
+                        }
                         Row {
                             TextButton(enabled = !busy && draft.content.isNotBlank(), onClick = { run {
                                 val result = gateway.change(draft)
@@ -295,4 +303,12 @@ private fun MemoryStatusResult.feedback(queued: String): String = when (this) {
     MemoryStatusResult.QUEUED -> queued
     MemoryStatusResult.REJECTED -> "A memória mudou. Atualize e tente novamente."
     MemoryStatusResult.UNAVAILABLE -> "Pedido não recebido. Tente novamente."
+}
+
+@Composable
+private fun MemoryIndexChoice(checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Checkbox(checked = checked, enabled = enabled, onCheckedChange = onChange)
+        Text("Permitir busca e uso no contexto do chat")
+    }
 }

@@ -75,7 +75,7 @@ jobs:
           printf '%s\n' 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-orion-chat-kvm.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Execute only the no-model chat UI suites on the host
+      - name: Execute the chat and F8 Android suites on the host
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 35
@@ -91,7 +91,11 @@ jobs:
           disable-animations: true
           enable-hw-keyboard: true
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader -camera-back none
-          script: python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-chat-ui"
+          script: |
+            set -e
+            python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-chat-ui"
+            python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f8" --suite f8
+            python3 scripts/android/verify-transaction-process-death.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --scenario sentinel_delivery --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-death"
       - name: Remove only this job's AVD
         if: always()
         run: |
@@ -106,6 +110,9 @@ jobs:
           path: |
             ${{ runner.temp }}/orion-chat-ui/summary.json
             ${{ runner.temp }}/orion-chat-ui/junit.xml
+            ${{ runner.temp }}/orion-f8/summary.json
+            ${{ runner.temp }}/orion-f8/junit.xml
+            ${{ runner.temp }}/orion-f8-death/*.json
           if-no-files-found: error
           retention-days: 7
 

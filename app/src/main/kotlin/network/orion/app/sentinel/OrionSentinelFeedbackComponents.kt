@@ -1,7 +1,6 @@
 package network.orion.app.sentinel
 
 import android.app.Activity
-import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -33,14 +32,11 @@ class OrionSentinelFeedbackReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val route = intent.feedbackRoute()?.takeUnless { it.kind == OrionProactivityFeedbackKind.OPENED } ?: return
         val runtime = (context.applicationContext as? OrionApplication)?.mainRuntime ?: return
-        val app = context.applicationContext
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 withTimeout(8_000) {
-                    if (runtime.receiveSentinelFeedback(route.id, route.kind) && route.kind == OrionProactivityFeedbackKind.SNOOZED) {
-                        app.getSystemService(NotificationManager::class.java)?.cancel(route.id.toString(), 0)
-                    }
+                    runtime.receiveSentinelFeedback(route.id, route.kind)
                 }
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled

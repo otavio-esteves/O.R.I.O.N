@@ -18,7 +18,74 @@ SELECTED = {
         'busyControllerDisablesSendWithoutClearingDraftOrDuplicatingAnAdmittedTurn',
     },
 }
-EXPECTED = {(cls, method) for cls, methods in SELECTED.items() for method in methods}
+F8_SELECTED = {
+    'network.orion.app.sentinel.OrionSentinelRuntimeTest': {
+        'heartbeatPostsOneGenericSuggestionAndPersistsFeedback',
+        'quietHoursAndTopicCooldownDoNotReserveOtherTasks',
+        'unacknowledgedSuggestionRecordsIgnoredOnlyOnce',
+        'oneRemainingOutboxSlotCommitsDeliveryAndShown',
+        'committedSnoozeIsReconciledWithoutAnotherCallback',
+        'expiredReservationsReleaseCapacityWithoutAllowingClockRollbackReplay',
+    },
+    'network.orion.app.sentinel.OrionProactiveDeliveryTest': {
+        'exactPolicyBindingCommitsOnePostAndOneFact',
+        'missingOrReplacedConsentCannotAuthorizeAnEffect',
+        'optOutImmediatelyBeforePostingLeavesNoNotification',
+        'ambiguousEffectIsNotRetriedAndCannotPublishShown',
+        'failureToRecordShownRollsBackSuccessAndFinishesUnknown',
+        'expiredUnclaimedDraftIsCancelledWithoutPosting',
+    },
+    'network.orion.app.memories.OrionMemoryKernelTest': {
+        'gatedQueuePersistsAndOnlyPreparesAfterRelease',
+        'actualIngressCommitsConfirmationMemoryEventSuccessAndReplayTogether',
+        'expiredQueuedConsentIsRejectedWithoutRenewingOrConfirming',
+        'capabilityLossRollsBackProcessingAndPreservesOriginalReceipt',
+        'durableOriginSurvivesReopenButFreshFocusedPresenceIsStillRequired',
+        'wrongProducerCannotManufactureUserOrigin',
+        'unreadablePendingRequestCanOnlyBeDiscardedWithFreshPresence',
+        'alteredFingerprintAndOverlongReceiptCannotAuthorizeEffect',
+        'databaseFailureRollsBackEnclosingIngressAndAllowsExplicitSafeReplay',
+        'correctionBindsTheReplacementAndTheOldVersionAndErasesItsCopiesWhenForgotten',
+        'reviewOnlyConfirmsTheSelectedInferredClaimAndKeepsItsOriginAndConfidence',
+        'archivedConversationRequiresExactOptInAndForgetErasesEveryDurableCopy',
+        'indexingRequiresExplicitChoiceBoundToTheConfirmedWrite',
+        'ownedCreationFixesProvenanceAndForgetErasesEntityClaimsAndEveryPersistedContentCopy',
+        'forgottenReplayWithFreshProducerKeyNeverPersistsAnotherCopyOrResurrects',
+        'forgetCancelsAndErasesOtherCreationDraftsForTheExactTargetOnly',
+        'forgetPagesBeyondTenThousandHistoricalActionsWithoutLeavingTargetCiphertext',
+        'pendingProposalLimitRejectsNewWorkButPreservesReplayAndExplicitDismissal',
+        'retainedProposalLimitStillAllowsConfirmationAndForgetOfAnExistingMemory',
+        'erasureFailureRollsBackDeletionClaimRemovalTombstoneAndEarlierCiphertextScrubs',
+        'missingPrivacyTombstoneCannotTurnCorruptTerminalEnvelopesIntoForgottenProof',
+        'enqueueBlockedBehindForgetWriterObservesCommittedTombstoneBeforePersistingAnyCopy',
+        'inferredExistingMemoryCannotBePromotedThroughUserCreateReplayOrShownAsDeclared',
+    },
+    'network.orion.app.memories.OrionMemorySearchIndexTest': {
+        'protectedBytesNeverEnterFtsAndRemovalFollowsSupersessionAndDeletion',
+        'upgradeRemovesLegacyPlaintextWhilePreservingReadablePrivateMemory',
+        'backfillResumesAfterKeyFailureAndReclassificationRemovesPosting',
+        'searchUsesAuthoritativeValidityAndStableRankingAcrossPages',
+        'selectedContextCannotUseAMemoryDeletedAfterTheSearch',
+    },
+    'network.orion.app.scheduling.OrionSchedulerPlatformTest': {
+        'approximateRegistrationCreatesImmutableExplicitIdentityAndCancellationRemovesIt',
+        'replayReplacesSameArtifactWhileStaleCancellationCannotCancelNewGeneration',
+        'exactCapabilityReflectsCurrentPlatformAccessWithoutChangingPermission',
+        'schedulerComponentsArePrivateMainOwnedAndAutomaticWorkInitializerIsAbsent',
+        'repeatedRecoveryKeepsOneDeferrableHalfHourHeartbeat',
+        'recoveredMainOwnsInitializedWorkManager',
+    },
+    'network.orion.app.UpgradePersistenceTest': {
+        'installedUpgradePreservesEncryptedRecordsAndUncertainActions',
+    },
+}
+
+
+def test_identities(selection):
+    return frozenset((cls, method) for cls, methods in selection.items() for method in methods)
+
+
+EXPECTED = test_identities(SELECTED)
 
 
 @dataclass
@@ -28,19 +95,20 @@ class Result:
     failed: set = field(default_factory=set)
     skipped: set = field(default_factory=set)
     errors: list = field(default_factory=list)
+    expected: frozenset = EXPECTED
 
     @property
     def successful(self):
-        return not self.errors and self.started == EXPECTED and self.passed == EXPECTED
+        return not self.errors and self.started == self.expected and self.passed == self.expected
 
     def summary(self):
-        return dict(expected=len(EXPECTED), started=len(self.started), passed=len(self.passed),
+        return dict(expected=len(self.expected), started=len(self.started), passed=len(self.passed),
                     failed=len(self.failed), skipped=len(self.skipped), errors=self.errors,
                     result='PASS' if self.successful else 'FAIL')
 
 
-def parse_instrumentation(output, adb_exit):
-    result = Result()
+def parse_instrumentation(output, adb_exit, expected=EXPECTED):
+    result = Result(expected=expected)
     frame = {}
     active = None
     terminal = set()
@@ -61,9 +129,9 @@ def parse_instrumentation(output, adb_exit):
             identity = frame.get('class'), frame.get('test')
             if final:
                 result.errors.append('STATUS_AFTER_FINAL')
-            if identity not in EXPECTED:
+            if identity not in expected:
                 result.errors.append('UNEXPECTED_TEST')
-            elif frame.get('numtests') != str(len(EXPECTED)):
+            elif frame.get('numtests') != str(len(expected)):
                 result.errors.append('TEST_COUNT_MISMATCH')
             elif code == 1:
                 if active is not None or identity in result.started:
@@ -96,14 +164,14 @@ def parse_instrumentation(output, adb_exit):
         result.errors.append('ADB_FAILED')
     if final != ['-1']:
         result.errors.append('MISSING_OR_INVALID_FINAL_CODE')
-    if frame or active is not None or result.started != EXPECTED or terminal != EXPECTED:
+    if frame or active is not None or result.started != expected or terminal != expected:
         result.errors.append('INCOMPLETE_CASES')
     if result.failed:
         result.errors.append('TEST_FAILURE')
     if result.skipped:
         result.errors.append('TEST_SKIPPED')
     summaries = re.findall(r'^OK \((\d+) tests?\)\s*$', output, re.MULTILINE)
-    if summaries != [str(len(EXPECTED))]:
+    if summaries != [str(len(expected))]:
         result.errors.append('MISSING_OR_INVALID_SUCCESS_SUMMARY')
     return result
 
@@ -113,10 +181,10 @@ def junit_report(result):
     protocol_error = bool(set(result.errors) - {'TEST_FAILURE', 'TEST_SKIPPED', 'MISSING_OR_INVALID_SUCCESS_SUMMARY'})
     if 'MISSING_OR_INVALID_SUCCESS_SUMMARY' in result.errors and not (result.failed or result.skipped):
         protocol_error = True
-    suite = ET.Element('testsuite', name='orion_chat_ui_no_model', tests=str(len(EXPECTED)),
+    suite = ET.Element('testsuite', name='orion_android_no_model', tests=str(len(result.expected)),
                        failures=str(len(result.failed)), skipped=str(len(result.skipped)),
-                       errors=str(len(EXPECTED - result.failed - result.skipped) if protocol_error else 0))
-    for cls, method in sorted(EXPECTED):
+                       errors=str(len(result.expected - result.failed - result.skipped) if protocol_error else 0))
+    for cls, method in sorted(result.expected):
         case = ET.SubElement(suite, 'testcase', classname=cls, name=method)
         if (cls, method) in result.failed:
             ET.SubElement(case, 'failure', message='TEST_FAILURE')

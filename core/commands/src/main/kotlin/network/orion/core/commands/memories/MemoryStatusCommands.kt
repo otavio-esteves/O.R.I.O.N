@@ -31,7 +31,7 @@ data class ForgetMemory(override val memoryId: UUID, override val expectedVersio
 
 data class CorrectMemory(override val memoryId: UUID, override val expectedVersion: Long,
     override val idempotencyKey: UUID, override val correlationId: UUID,
-    val replacementId: UUID, val content: String) : MemoryStatusCommand {
+    val replacementId: UUID, val content: String, val allowSearchIndex: Boolean = false) : MemoryStatusCommand {
     override val operation get() = MemoryStatusOperation.CORRECT
     override fun toString() = "CorrectMemory(<redacted>)"
 }
@@ -107,7 +107,7 @@ object OrionMemoryStatusPreparer {
                 if (command.replacementId == command.memoryId)
                     return MemoryStatusPreparation.Rejected(MemoryStatusRejection.INVALID_REPLACEMENT)
                 val ready = OrionCreateMemoryPreparer.prepare(CreateMemory(command.replacementId, command.content,
-                    command.idempotencyKey, command.correlationId)) as? CreateMemoryPreparation.Ready
+                    command.idempotencyKey, command.correlationId, command.allowSearchIndex)) as? CreateMemoryPreparation.Ready
                     ?: return MemoryStatusPreparation.Rejected(MemoryStatusRejection.INVALID_REPLACEMENT)
                 MemoryStatusPreparation.Ready(ValidatedMemoryStatusChange(command.copy(content = ready.memory.content), ready.memory))
             }

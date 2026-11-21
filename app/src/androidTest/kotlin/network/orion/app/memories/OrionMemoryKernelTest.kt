@@ -268,11 +268,27 @@ class OrionMemoryKernelTest {
             UUID.randomUUID(),expectedVersion=0),key))
         return kernel.pending().single { it.display.operation==MemoryOperation.DELETE }
     }
+    @Test fun indexingRequiresExplicitChoiceBoundToTheConfirmedWrite() {
+        created()
+        assertEquals(0, count("orion_memory_fts"))
+        val id = UUID.randomUUID()
+        val key = UUID.randomUUID()
+        val request = OrionMemoryIngressWire("CREATE", id, key, UUID.randomUUID(), "Marcador indexável",
+            allowSearchIndex = true)
+        assertEquals(MemoryOperationOutcome.QUEUED, kernel.submit(request, key))
+        val pending = kernel.pending().single()
+        assertEquals(true, pending.display.allowSearchIndex)
+        assertEquals(0, count("orion_memory_fts"))
+        assertEquals(MemoryOperationOutcome.APPLIED, kernel.submit(consent(pending), UUID.randomUUID()))
+        assertEquals(Sensitivity.PERSONAL, db.memories().find(id.toString())?.sensitivity)
+        assertEquals(1, count("orion_memory_fts"))
+    }
+
     @Test fun ownedCreationFixesProvenanceAndForgetErasesEntityClaimsAndEveryPersistedContentCopy() {
         val original=created()
         val memory=db.memories().find(command.memoryId.toString())!!
         assertEquals(MemoryOrigin.USER_DECLARED,memory.origin); assertTrue(memory.userConfirmed)
-        assertEquals(Sensitivity.PERSONAL,memory.sensitivity)
+        assertEquals(Sensitivity.SENSITIVE,memory.sensitivity)
         val provenance = kernel.query.get(GetMemories()).items.single().provenance
         assertEquals(memory.origin, provenance.origin)
         assertEquals(memory.confidence, provenance.confidence, 0.0)

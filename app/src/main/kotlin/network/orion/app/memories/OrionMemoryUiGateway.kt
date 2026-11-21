@@ -18,7 +18,8 @@ internal class OrionMemoryUiGateway(private val channel: OrionMemoryAdmissionOwn
         val captured = channel.captureCreateFromUser(command)
         if (captured is OrionMemoryAdmissionResult.Invalid) return CreateMemoryResult.REJECTED
         val memory = (captured as? OrionMemoryAdmissionResult.Admitted)?.request?.memory ?: return CreateMemoryResult.UNAVAILABLE
-        val wire = OrionMemoryIngressWire("CREATE", memory.memoryId, memory.idempotencyKey, memory.correlationId, memory.content)
+        val wire = OrionMemoryIngressWire("CREATE", memory.memoryId, memory.idempotencyKey, memory.correlationId, memory.content,
+            allowSearchIndex = memory.allowSearchIndex)
         return when (send(wire, memory.idempotencyKey)) {
             MemoryOperationOutcome.QUEUED, MemoryOperationOutcome.APPLIED -> CreateMemoryResult.QUEUED
             MemoryOperationOutcome.REJECTED -> CreateMemoryResult.REJECTED
@@ -65,7 +66,7 @@ internal class OrionMemoryUiGateway(private val channel: OrionMemoryAdmissionOwn
             ?: return MemoryOperationOutcome.REJECTED
         val normalized = selected.create?.let { p ->
             if (channel.captureCreateFromUser(CreateMemory(p.memory.memoryId, p.memory.content, p.memory.idempotencyKey,
-                    p.memory.correlationId)) !is OrionMemoryAdmissionResult.Admitted) return MemoryOperationOutcome.UNAVAILABLE
+                    p.memory.correlationId, p.memory.allowSearchIndex)) !is OrionMemoryAdmissionResult.Admitted) return MemoryOperationOutcome.UNAVAILABLE
             OrionCreateMemoryActionStore.normalized(p.actionId, p.memory, p.policyVersion)
         } ?: selected.change?.let { p ->
             val c = p.change
