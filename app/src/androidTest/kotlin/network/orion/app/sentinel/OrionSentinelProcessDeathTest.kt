@@ -105,9 +105,12 @@ class OrionSentinelProcessDeathTest {
                 assertFalse(db.inTransaction())
                 assertFalse(Thread.holdsLock(barrier))
                 assertTrue(permit.allows())
-                Room.databaseBuilder(context, OrionDatabase::class.java, databaseName).build().use { observer ->
+                val observer = Room.databaseBuilder(context, OrionDatabase::class.java, databaseName).build()
+                try {
                     assertEquals(ActionStatus.RUNNING, observer.actions().find(actionId.toString())?.status)
                     assertEquals(taskId.toString(), observer.sentinel().suggestion(actionId.toString())?.taskId)
+                } finally {
+                    observer.close()
                 }
                 invocations++
                 val count = if (marker.isFile) marker.readText().trim().toInt() else 0
