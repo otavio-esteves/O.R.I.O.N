@@ -6,6 +6,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.Callable
 import network.orion.core.commands.memories.*
+import network.orion.core.model.OrionConversationTranscript
 import network.orion.core.model.OrionMemoryProvenance
 import network.orion.core.model.Sensitivity
 import network.orion.core.queries.memories.*
@@ -57,6 +58,19 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
 
     fun find(id: UUID): MemorySummary? = database.memories().find(id.toString())?.takeIf(::visible)
         ?.let { select(it, clock.wallNow()) }
+
+    fun archives(): List<ConversationArchive> = database.memories().conversationArchives(20).map {
+        ConversationArchive(UUID.fromString(it.memoryId), it.version, Instant.ofEpochMilli(it.createdAt))
+    }
+
+    fun archived(request: GetArchivedConversation): OrionConversationTranscript? {
+        val row = database.memories().find(request.id.toString())?.takeIf(::isConversationArchive) ?: return null
+        if (row.version != request.expectedVersion) return null
+        return read(row.contentEnvelope, FieldEncryptionContext("memory/${request.id}", "content", 1)) { clear ->
+            try { OrionConversationTranscript.decode(clear.toString(Charsets.UTF_8)) }
+            catch (_: IllegalArgumentException) { null }
+        }.first
+    }
 
     fun claims(request: GetMemoryClaims): List<MemoryClaimSummary>? = database.runInTransaction(Callable {
         val parent = database.memories().find(request.memoryId.toString())?.takeIf(::visible)

@@ -8,6 +8,11 @@ import androidx.room.Query
 abstract class OrionMemoryDao {
     @Query("SELECT * FROM orion_memories WHERE origin = 'USER_DECLARED' AND userConfirmed = 1 AND sensitivity = 'PERSONAL' AND (:after IS NULL OR memoryId > :after) ORDER BY memoryId LIMIT :limit")
     abstract fun page(after: String?, limit: Int): List<MemoryEntity>
+    @Query("""SELECT * FROM orion_memories WHERE type = 'CONVERSATIONAL' AND sensitivity = 'SENSITIVE'
+        AND origin = 'SYSTEM_DERIVED' AND status = 'ACTIVE'
+        ORDER BY createdAt DESC, memoryId LIMIT :limit""")
+    abstract fun conversationArchives(limit: Int): List<MemoryEntity>
+
     @Query("SELECT * FROM orion_memories WHERE memoryId = :id")
     abstract fun find(id: String): MemoryEntity?
     @Query("SELECT (SELECT count(*) FROM orion_memories) + (SELECT count(*) FROM orion_audit WHERE eventCode = 'MEMORY_FORGOTTEN')")
@@ -28,10 +33,10 @@ abstract class OrionMemoryDao {
     @Query("SELECT count(*) FROM orion_action_requests WHERE skill = 'memory.create' AND idempotencyScope = 'memory.create' AND status IN ('PENDING','NEEDS_CONFIRMATION','CONFIRMED')")
     abstract fun pendingCreationActionCount(): Int
 
-    @Query("SELECT max(actionId) FROM orion_action_requests WHERE skill IN ('memory.create','memory.correct') AND idempotencyScope = skill")
+    @Query("SELECT max(actionId) FROM orion_action_requests WHERE skill IN ('memory.create','memory.correct','conversation.archive') AND idempotencyScope = skill")
     abstract fun lastContentActionId(): String?
 
-    @Query("""SELECT * FROM orion_action_requests WHERE skill IN ('memory.create','memory.correct') AND idempotencyScope = skill
+    @Query("""SELECT * FROM orion_action_requests WHERE skill IN ('memory.create','memory.correct','conversation.archive') AND idempotencyScope = skill
         AND actionId > :after AND actionId <= :through ORDER BY actionId LIMIT :limit""")
     abstract fun contentActionPage(after: String, through: String, limit: Int): List<ActionRequestEntity>
 
@@ -47,7 +52,7 @@ abstract class OrionMemoryDao {
 
     /** Terminal payload retention erasure only; state/hash/key/audit material stays unchanged. */
     @Query("""UPDATE orion_action_requests SET argumentsEnvelope = X'', targetEnvelope = X''
-        WHERE actionId = :id AND version = :version AND skill IN ('memory.create','memory.correct')
+        WHERE actionId = :id AND version = :version AND skill IN ('memory.create','memory.correct','conversation.archive')
         AND idempotencyScope = skill AND status IN ('SUCCEEDED','FAILED','CANCELLED')""")
     abstract fun eraseTerminalContentAction(id: String, version: Long): Int
 

@@ -62,7 +62,7 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
                 MemorySearchState.READY -> if (page.candidateLimitReached) message = "Refine a busca para ver outros resultados."
             }
         }
-        pending = gateway.pending()
+        pending = gateway.pending().filterNot { it.operation.isConversationOperation() }
         reviewedMemory = null
         claims = emptyList()
         selected = selected.intersect(rows.map { it.memoryId }.toSet())
@@ -143,6 +143,7 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
                         MemoryOperation.CORRECT -> "Guardar esta correção?"
                         MemoryOperation.CONFIRM_CLAIM -> "Confirmar esta afirmação inferida?"
                         MemoryOperation.REJECT_CLAIM -> "Rejeitar esta afirmação inferida?"
+                        MemoryOperation.ARCHIVE_CONVERSATION, MemoryOperation.FORGET_CONVERSATION -> error("Conversation action.")
                     })
                     Text(action.content ?: "Conteúdo indisponível ou pedido desatualizado. Descarte este pedido e tente novamente.")
                     if (action.operation==MemoryOperation.DELETE) Text("A informação e suas cópias de processamento serão removidas. O histórico mínimo da operação será preservado.")
@@ -154,6 +155,7 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
                                 MemoryOperation.CORRECT -> "Correção guardada."
                                 MemoryOperation.CONFIRM_CLAIM -> "Afirmação confirmada."
                                 MemoryOperation.REJECT_CLAIM -> "Afirmação rejeitada."
+                                MemoryOperation.ARCHIVE_CONVERSATION, MemoryOperation.FORGET_CONVERSATION -> error("Conversation action.")
                             }
                             MemoryOperationOutcome.QUEUED -> "Confirmação recebida. Atualize para consultar o resultado."
                             MemoryOperationOutcome.REJECTED -> "Pedido desatualizado ou confirmação expirada. Atualize e confirme novamente."
@@ -166,6 +168,7 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
                         MemoryOperation.CORRECT -> "Confirmar correção"
                         MemoryOperation.CONFIRM_CLAIM -> "Confirmar afirmação"
                         MemoryOperation.REJECT_CLAIM -> "Confirmar rejeição"
+                        MemoryOperation.ARCHIVE_CONVERSATION, MemoryOperation.FORGET_CONVERSATION -> error("Conversation action.")
                     }) }
                     TextButton(enabled=!busy,onClick={ run {
                         message=when (gateway.dismiss(action.actionId,action.version)) {

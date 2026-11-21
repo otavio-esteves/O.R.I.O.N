@@ -14,11 +14,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import network.orion.core.orchestrator.chat.*
+import network.orion.core.orchestrator.memories.MemoryGateway
 import network.orion.core.orchestrator.tasks.TaskOperation
 
-/** No saveable input/history: session content stays in transient Activity memory. */
+/** The current draft and live session belong to the Activity. Saved conversations require a separate action. */
 @Composable
-fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null) {
+fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null, memory: MemoryGateway? = null) {
     val state by controller.state.collectAsState()
     var input by remember { mutableStateOf("") }
     var inputError by remember { mutableStateOf<String?>(null) }
@@ -91,6 +92,9 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
                     TextButton(onClick = { controller.dismiss(action.actionId, action.version) }, enabled = !state.busy) { Text("Descartar pedido") }
                 }
             }
+        }
+        if (memory != null) item {
+            ConversationHistory(controller, memory, state.busy, state.turns.any { it.archiveId == null })
         }
         item { Spacer(Modifier.height(16.dp)) }
     }

@@ -12,12 +12,16 @@ object OrionMemoryStatusDescriptors {
     val correct = revision("memory.correct")
     val confirmClaim = revision("memory.claim.confirm")
     val rejectClaim = revision("memory.claim.reject")
+    val archiveConversation = revision("conversation.archive")
+    val forgetConversation = delete.copy(name = "conversation.forget")
 
     fun forName(name: String): SkillDescriptor? = when (name) {
         delete.name -> delete
         correct.name -> correct
         confirmClaim.name -> confirmClaim
         rejectClaim.name -> rejectClaim
+        archiveConversation.name -> archiveConversation
+        forgetConversation.name -> forgetConversation
         else -> null
     }
 

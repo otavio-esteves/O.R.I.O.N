@@ -20,6 +20,20 @@ class OrionChatContextTest {
         assertTrue(prompt.indexOf("Request:") > positions.last())
     }
 
+    @Test fun extractRetainsOnlyEarlierUserSourcesAndArchivedTextStaysLocal() {
+        val original = turn(true, "Memória do início")
+        val archived = OrionChatTurn(UUID.randomUUID(), true, "Conteúdo arquivado", archiveId = UUID.randomUUID())
+        val live = List(12) { turn(it % 2 == 0, "Mensagem atual $it") }
+        val history = listOf(original, archived, turn(false, "Afirmação anterior do assistente")) + live
+        val summary = checkNotNull(OrionSessionSummary.from(history, recentTurns = 12))
+        assertEquals(listOf(original.id), summary.entries.map { it.id })
+        assertEquals(network.orion.core.model.OrionMemoryOrigin.SYSTEM_DERIVED, summary.origin)
+        val prompt = OrionChatContext.build("Continue", history, model())!!.prompt
+        assertTrue(prompt.contains("Memória do início"))
+        assertFalse(prompt.contains("Conteúdo arquivado"))
+        assertFalse(prompt.contains("Afirmação anterior do assistente"))
+    }
+
     @Test fun tightBudgetSelectsNewestTurnsButRendersThemChronologically() {
         val recent = listOf(turn(true, "Correção recente"), turn(false, "Correção recebida"))
         val current = "Use a correção"

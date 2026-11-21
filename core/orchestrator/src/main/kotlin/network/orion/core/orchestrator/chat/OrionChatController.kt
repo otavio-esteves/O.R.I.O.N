@@ -7,13 +7,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import network.orion.core.commands.memories.ArchiveConversation
 import network.orion.core.commands.tasks.*
+import network.orion.core.model.OrionConversationEntry
+import network.orion.core.model.OrionConversationTranscript
+import network.orion.core.model.OrionMemoryOrigin
 import network.orion.core.orchestrator.routing.*
 import network.orion.core.orchestrator.tasks.*
 import network.orion.core.queries.device.*
 import network.orion.core.queries.tasks.GetTasks
 
-class OrionChatTurn(val id: UUID, val user: Boolean, val text: String, val proposal: CreateTask? = null) {
+class OrionChatTurn(val id: UUID, val user: Boolean, val text: String, val proposal: CreateTask? = null,
+    val origin: OrionMemoryOrigin = if (user) OrionMemoryOrigin.USER_DECLARED else OrionMemoryOrigin.SYSTEM_DERIVED,
+    val archiveId: UUID? = null) {
     override fun toString() = "OrionChatTurn(<redacted>)"
 }
 class OrionChatState(val turns: List<OrionChatTurn> = emptyList(), val draft: String = "",
@@ -35,8 +41,9 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
     private var closed = false
     private var inferring = false
     private fun patch(transform: (OrionChatState) -> OrionChatState) = mutable.update(transform)
-    private fun append(user: Boolean, text: String, proposal: CreateTask? = null) = patch {
-        OrionChatState((it.turns + OrionChatTurn(UUID.randomUUID(), user, text, proposal)).takeLast(20), it.draft,
+    private fun append(user: Boolean, text: String, proposal: CreateTask? = null,
+        origin: OrionMemoryOrigin = if (user) OrionMemoryOrigin.USER_DECLARED else OrionMemoryOrigin.SYSTEM_DERIVED) = patch {
+        OrionChatState((it.turns + OrionChatTurn(UUID.randomUUID(), user, text, proposal, origin)).takeLast(20), it.draft,
             it.busy, it.cortex, it.notice, it.pending, it.canRetry)
     }
     private fun status(busy: Boolean = state.value.busy, cortex: String = state.value.cortex,
@@ -97,6 +104,33 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
         launchOperation { dispatch(route, input) }
         return OrionChatAdmission.Accepted
     }
+    fun archiveCurrent(): ArchiveConversation? {
+        val current = state.value
+        if (closed || current.busy) return null
+        val completed = current.turns.filter { it.proposal == null && it.archiveId == null }
+        return try {
+            val transcript = OrionConversationTranscript(completed.map { OrionConversationEntry(it.id, it.origin, it.text) })
+            // Validate the same bound that will apply to the encrypted ingress body before capturing consent.
+            transcript.encode()
+            ArchiveConversation(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), transcript)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+    }
+
+    fun showArchive(id: UUID, transcript: OrionConversationTranscript) {
+        if (closed || state.value.busy) return
+        val archived = transcript.entries.map { OrionChatTurn(it.id, it.origin == OrionMemoryOrigin.USER_DECLARED,
+            it.text, origin = it.origin, archiveId = id) }
+        retryInput = null
+        patch { OrionChatState(archived, "", false, it.cortex, null, it.pending, false) }
+    }
+
+    fun retainAvailableArchives(ids: Set<UUID>) {
+        patch { OrionChatState(it.turns.filter { turn -> turn.archiveId == null || turn.archiveId in ids }, it.draft,
+            it.busy, it.cortex, it.notice, it.pending, it.canRetry) }
+    }
+
     fun retryInference() {
         val input = retryInput ?: return
         if (!state.value.canRetry) return
@@ -109,7 +143,7 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
         launchOperation {
             retryInput = null
             // Remove proposal before admission; an uncertain admission must never be retried as inference.
-            patch { OrionChatState(it.turns.map { t -> if (t.id == turnId) OrionChatTurn(t.id, false, t.text) else t },
+            patch { OrionChatState(it.turns.map { t -> if (t.id == turnId) OrionChatTurn(t.id, false, t.text, origin = t.origin) else t },
                 it.draft, it.busy, it.cortex, it.notice, it.pending, false) }
             submit(command); reload()
         }
@@ -205,8 +239,8 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
         retryInput = null
         status(cortex = "Sob demanda")
         when (response) {
-            is OrionChatResponse.Message -> append(false, response.text)
-            is OrionChatResponse.CreateProposal -> append(false, "Sugestão de tarefa: " + response.command.title, response.command)
+            is OrionChatResponse.Message -> append(false, response.text, origin = OrionMemoryOrigin.LLM_INFERRED)
+            is OrionChatResponse.CreateProposal -> append(false, "Sugestão de tarefa: " + response.command.title, response.command, OrionMemoryOrigin.LLM_INFERRED)
             OrionChatResponse.TaskList -> showTasks()
             OrionChatResponse.Battery -> showBattery()
         }

@@ -48,6 +48,12 @@ internal class OrionMemoryUiGateway(private val channel: OrionMemoryAdmissionOwn
     override suspend fun claims(request: GetMemoryClaims): List<MemoryClaimSummary>? =
         withContext(Dispatchers.IO) { kernel()?.query?.claims(request) }
 
+    override suspend fun archives(): List<ConversationArchive>? =
+        withContext(Dispatchers.IO) { kernel()?.query?.archives() }
+
+    override suspend fun archived(request: GetArchivedConversation) =
+        withContext(Dispatchers.IO) { kernel()?.query?.archived(request) }
+
     override suspend fun pending(): List<MemoryConfirmation> {
         val selected = withContext(Dispatchers.IO) { kernel()?.pending() ?: emptyList() }
         displayed = selected.associateBy { it.display.actionId }

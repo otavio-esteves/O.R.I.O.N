@@ -1,6 +1,8 @@
 package network.orion.data.memory
 
 import java.util.UUID
+import network.orion.core.model.OrionMemoryLifecycle
+import network.orion.core.model.OrionMemoryType
 import network.orion.core.model.Sensitivity
 
 import network.orion.core.actions.*
@@ -24,7 +26,8 @@ class OrionOwnedMemoryStatusStore(private val database: OrionDatabase, encryptio
     private val memories = OrionMemoryStore(database, encryption, clock)
 
     fun matchesExisting(change: ValidatedMemoryStatusChange): Boolean = when (val command = change.command) {
-        is ForgetMemory -> database.memories().find(change.memoryId.toString()) == null &&
+        is ArchiveConversation -> database.memories().find(command.memoryId.toString())?.let(::isConversationArchive) == true
+        is ForgetMemory, is ForgetConversation -> database.memories().find(change.memoryId.toString()) == null &&
             database.memories().deletionCommitted(change.memoryId.toString(), change.expectedVersion + 1) > 0
         is CorrectMemory -> database.memories().find(command.replacementId.toString())?.supersedesId == change.memoryId.toString()
         is ReviewMemoryClaim -> database.records().memoryClaim(change.memoryId.toString(), command.claimId.toString())?.let {
@@ -59,19 +62,24 @@ class OrionOwnedMemoryStatusStore(private val database: OrionDatabase, encryptio
         val confirmation = stored.confirmation ?: return OwnedMemoryStatusResult.NOT_OWNED
         if (ActionConfirmationBinding(clock).validate(expected, confirmation) != ConfirmationBindingResult.VALID_BINDING)
             return OwnedMemoryStatusResult.NOT_OWNED
+        val command = change.command
+        if (command is ArchiveConversation) return archive(command)
         val target = database.memories().find(change.memoryId.toString()) ?: return OwnedMemoryStatusResult.CONFLICT
-        val allowed = if (change.command is ForgetMemory) target.status != MemoryStatus.DELETED else target.status == MemoryStatus.ACTIVE
-        if (target.version != change.expectedVersion || !allowed ||
-            target.origin != MemoryOrigin.USER_DECLARED || !target.userConfirmed || target.sensitivity != Sensitivity.PERSONAL)
-            return OwnedMemoryStatusResult.CONFLICT
-        return when (val command = change.command) {
-            is ForgetMemory -> forget(command)
+        val allowed = when (command) {
+            is ForgetConversation -> isConversationArchive(target)
+            is ForgetMemory -> target.status != MemoryStatus.DELETED && isDeclaredPersonal(target)
+            else -> target.status == MemoryStatus.ACTIVE && isDeclaredPersonal(target)
+        }
+        if (target.version != change.expectedVersion || !allowed) return OwnedMemoryStatusResult.CONFLICT
+        return when (command) {
+            is ForgetMemory, is ForgetConversation -> forget(command)
+            is ArchiveConversation -> error("Archive handled before target lookup.")
             is CorrectMemory -> correct(command, checkNotNull(change.replacement), target)
             is ReviewMemoryClaim -> review(command)
         }
     }
 
-    private fun forget(command: ForgetMemory): OwnedMemoryStatusResult {
+    private fun forget(command: MemoryStatusCommand): OwnedMemoryStatusResult {
         if (memories.delete(command.memoryId, command.expectedVersion, command.correlationId) != ActionMutation.APPLIED)
             return OwnedMemoryStatusResult.CONFLICT
         database.records().appendAudit(AuditEntity(UUID.randomUUID().toString(), command.memoryId.toString(),
@@ -79,6 +87,29 @@ class OrionOwnedMemoryStatusStore(private val database: OrionDatabase, encryptio
             command.correlationId.toString(), preserveUntilReview = true))
         return OwnedMemoryStatusResult.APPLIED
     }
+
+    private fun archive(command: ArchiveConversation): OwnedMemoryStatusResult {
+        val id = command.memoryId.toString()
+        if (database.memories().find(id) != null || database.memories().forgotten(id) != 0 ||
+            database.memories().retainedMemoryCount() >= 10_000 || database.memories().conversationArchives(21).size >= 20)
+            return OwnedMemoryStatusResult.CONFLICT
+        val clear = command.transcript.encode().toByteArray(Charsets.UTF_8)
+        return try {
+            when (val result = memories.create(command.memoryId, clear, Sensitivity.SENSITIVE, MemoryOrigin.SYSTEM_DERIVED,
+                1.0, emptyList(), command.correlationId, lifecycle = OrionMemoryLifecycle(type = OrionMemoryType.CONVERSATIONAL))) {
+                is MemoryWriteResult.Stored -> OwnedMemoryStatusResult.APPLIED
+                is MemoryWriteResult.Rejected -> OwnedMemoryStatusResult.CONFLICT
+                is MemoryWriteResult.Blocked -> if (result.reason in setOf(FieldCryptoFailure.KEY_UNAVAILABLE,
+                    FieldCryptoFailure.KEY_INVALIDATED, FieldCryptoFailure.CRYPTO_UNAVAILABLE)) OwnedMemoryStatusResult.KEY_UNAVAILABLE
+                    else OwnedMemoryStatusResult.UNREADABLE
+            }
+        } finally {
+            clear.fill(0)
+        }
+    }
+
+    private fun isDeclaredPersonal(row: MemoryEntity) =
+        row.origin == MemoryOrigin.USER_DECLARED && row.userConfirmed && row.sensitivity == Sensitivity.PERSONAL
 
     private fun correct(command: CorrectMemory, replacement: ValidatedCreateMemory, target: MemoryEntity): OwnedMemoryStatusResult {
         val id = command.replacementId.toString()

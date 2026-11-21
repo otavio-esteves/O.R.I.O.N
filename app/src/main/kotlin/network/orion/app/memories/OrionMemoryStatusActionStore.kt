@@ -3,6 +3,8 @@ package network.orion.app.memories
 import java.time.Duration
 import java.util.UUID
 import network.orion.core.actions.*
+import network.orion.core.commands.memories.ArchiveConversation
+import network.orion.core.commands.memories.ForgetConversation
 import network.orion.core.commands.memories.ForgetMemory
 import network.orion.core.commands.memories.ValidatedMemoryStatusChange
 import network.orion.core.ingress.StartupBarrier
@@ -132,8 +134,15 @@ internal class OrionMemoryStatusActionStore(
     }
 
     private fun requireOpen(change: ValidatedMemoryStatusChange) {
-        val target = database.memories().find(change.memoryId.toString()) ?: abort(OrionMemoryActionFailure.NOT_FOUND)
-        val allowed = if (change.command is ForgetMemory) target.status != MemoryStatus.DELETED else target.status == MemoryStatus.ACTIVE
+        val target = database.memories().find(change.memoryId.toString())
+        if (change.command is ArchiveConversation) {
+            if (target != null || database.memories().forgotten(change.memoryId.toString()) != 0)
+                abort(OrionMemoryActionFailure.CONFLICT)
+            return
+        }
+        if (target == null) abort(OrionMemoryActionFailure.NOT_FOUND)
+        val deleting = change.command is ForgetMemory || change.command is ForgetConversation
+        val allowed = if (deleting) target.status != MemoryStatus.DELETED else target.status == MemoryStatus.ACTIVE
         if (target.version != change.expectedVersion || !allowed) abort(OrionMemoryActionFailure.CONFLICT)
     }
 

@@ -39,7 +39,7 @@ class OrionMemoryStatusPolicy(private val source: MemoryStatusPolicyContextSourc
         if (context.processRole != OrionProcessRole.MAIN) return denied(MemoryStatusPolicyReason.PROCESS_NOT_MAIN)
         if (context.inputBinding != MemoryStatusPolicyInputBinding.from(change)) return denied(MemoryStatusPolicyReason.INPUT_MISMATCH)
         val descriptor = OrionMemoryStatusDescriptors.forName(change.skillName) ?: return denied(MemoryStatusPolicyReason.UNSUPPORTED_DESCRIPTOR)
-        val deleting = change.operation == MemoryStatusOperation.DELETE
+        val deleting = change.operation in setOf(MemoryStatusOperation.DELETE, MemoryStatusOperation.FORGET_CONVERSATION)
         val authorization = if (deleting) AuthorizationLevel.DESTRUCTIVE else AuthorizationLevel.SAFE_WRITE
         val sideEffect = if (deleting) SideEffectClass.DESTRUCTIVE else SideEffectClass.LOCAL_MUTATION
         if (descriptor.authorizationLevel != authorization || descriptor.sideEffectClass != sideEffect ||

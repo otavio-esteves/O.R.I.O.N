@@ -115,3 +115,7 @@ class OrionMemoryStore(private val database: OrionDatabase, private val encrypti
     private fun event(id: UUID, version: Long, type: String, sensitivity: Sensitivity, at: Long, correlation: UUID) =
         DomainEventOutboxEntity(UUID.randomUUID().toString(), id.toString(), version, type, 1, sensitivity, at, correlation.toString())
 }
+
+internal fun isConversationArchive(row: MemoryEntity): Boolean =
+    row.type == network.orion.core.model.OrionMemoryType.CONVERSATIONAL && row.sensitivity == Sensitivity.SENSITIVE &&
+        row.origin == MemoryOrigin.SYSTEM_DERIVED && row.status == MemoryStatus.ACTIVE
