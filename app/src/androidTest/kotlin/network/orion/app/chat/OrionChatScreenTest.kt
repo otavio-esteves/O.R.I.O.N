@@ -77,6 +77,19 @@ class OrionChatScreenTest {
         assertEquals(1, runBlocking(Dispatchers.IO) { runtime.taskKernel!!.query.get(GetTasks()).items.count { it.title == title } })
         send("Olá, pode conversar?")
         scroll("Cortex: Indisponível")
+        val retry = "Tentar inferência novamente"
+        scroll(retry)
+        compose.onNodeWithText(retry).assertIsEnabled()
+        scroll("Atualizar pedidos")
+        compose.onNodeWithText("Atualizar pedidos").performClick()
+        awaitChatIdle()
+        scroll(retry)
+        compose.onNodeWithText(retry).assertIsEnabled()
+        compose.onNodeWithText("Início", useUnmergedTree = true).performClick()
+        compose.onNodeWithText("Chat", useUnmergedTree = true).performClick()
+        awaitChatIdle()
+        scroll(retry)
+        compose.onNodeWithText(retry).assertIsEnabled()
         send("bateria")
     }
 }

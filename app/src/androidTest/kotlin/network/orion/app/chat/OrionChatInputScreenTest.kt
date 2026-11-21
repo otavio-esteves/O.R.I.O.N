@@ -96,6 +96,31 @@ class OrionChatInputScreenTest {
             edit(rejected); draft(accepted); error(OrionChatInputError.INPUT_TOO_LARGE)
         }
         assertTrue(controller.state.value.turns.isEmpty()); assertEquals(0, configurations)
+
+        val previous = "criar tarefa: comprar pão"
+        edit(previous)
+        edit("á".repeat(2049))
+        scroll("Enviar")
+        compose.onNodeWithText("Enviar").assertIsNotEnabled().performTouchInput { click() }
+        draft(previous)
+        assertTrue(controller.state.value.turns.isEmpty())
+        assertEquals(0, tasks.creates)
+
+        scroll("Usar rascunho anterior")
+        compose.onNodeWithText("Usar rascunho anterior").performClick()
+        draft(previous)
+        assertEquals(0, tasks.creates)
+        send()
+        draft("")
+        assertEquals(1, tasks.creates)
+
+        edit(previous)
+        edit("😀".repeat(1025))
+        edit("bateria")
+        send()
+        draft("")
+        assertEquals(1, batteryReads)
+        assertEquals(1, tasks.creates)
     }
     @Test fun invalidBoundedTextIsNotSilentlyRewrittenOnEditOrRejectedSend() {
         for ((text, reason) in listOf("bateria\n" to OrionChatInputError.INVALID_CHARACTER,

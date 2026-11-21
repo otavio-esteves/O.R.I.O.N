@@ -22,6 +22,7 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
     val state by controller.state.collectAsState()
     var input by remember { mutableStateOf("") }
     var inputError by remember { mutableStateOf<String?>(null) }
+    var oversizedEditRejected by remember { mutableStateOf(false) }
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(controller, recoveryVersion) { controller.refresh() }
@@ -50,22 +51,30 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
                 val error = OrionChatInputPolicy.validate(edited)
                 // Oversized edits preserve the previous bounded draft; no silent truncation.
                 // Other bounded invalid text stays exactly editable and is rejected by send.
-                if (error != OrionChatInputError.INPUT_TOO_LARGE) input = edited
+                oversizedEditRejected = error == OrionChatInputError.INPUT_TOO_LARGE
+                if (!oversizedEditRejected) input = edited
                 inputError = error?.takeUnless { it == OrionChatInputError.EMPTY_INPUT }?.message
             }, label = { Text("Mensagem") }, singleLine = true, isError = inputError != null,
                 supportingText = { inputError?.let { Text(it, Modifier.testTag("orion_chat_input_error")) } },
                 enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("orion_chat_input"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = {
+                Button(onClick = send@{
+                    if (oversizedEditRejected) return@send
                     when (val result = controller.send(input)) {
                         OrionChatAdmission.Accepted -> { input = ""; inputError = null; focus.clearFocus(); keyboard?.hide() }
                         is OrionChatAdmission.Rejected -> inputError = result.reason.message
                         OrionChatAdmission.Busy -> inputError = "Aguarde o envio em andamento."
                         OrionChatAdmission.Closed -> inputError = "Esta sessão foi encerrada. Abra o chat novamente."
                     }
-                }, enabled = !state.busy) { Text("Enviar") }
+                }, enabled = !state.busy && !oversizedEditRejected) { Text("Enviar") }
                 if (state.busy && state.cortex in setOf("Gerando", "Verificando disponibilidade")) TextButton(onClick = controller::cancel) { Text("Cancelar") }
                 if (state.canRetry && !state.busy) TextButton(onClick = controller::retryInference) { Text("Tentar inferência novamente") }
+            }
+            if (oversizedEditRejected && OrionChatInputPolicy.validate(input) == null) {
+                TextButton(enabled = !state.busy, onClick = {
+                    oversizedEditRejected = false
+                    inputError = null
+                }) { Text("Usar rascunho anterior") }
             }
             TextButton(onClick = controller::refresh, enabled = !state.busy) { Text("Atualizar pedidos") }
         }

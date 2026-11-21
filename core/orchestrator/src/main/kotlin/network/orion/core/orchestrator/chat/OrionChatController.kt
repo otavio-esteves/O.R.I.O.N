@@ -47,9 +47,11 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
         val pending = tasks.pending().take(50)
         patch { OrionChatState(it.turns, it.draft, it.busy, it.cortex, it.notice, pending, it.canRetry) }
     }
-    private fun launchOperation(block: suspend () -> Unit) {
+    private fun launchOperation(preserveInferenceFeedback: Boolean = false, block: suspend () -> Unit) {
         if (closed || state.value.busy) return
-        status(busy = true)
+        val previous = state.value
+        val keepRetry = preserveInferenceFeedback && previous.canRetry
+        status(busy = true, notice = previous.notice.takeIf { keepRetry }, retry = keepRetry)
         // Enter real UI admission synchronously before the first suspension, exactly like existing task UI.
         work = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             try { block() }
@@ -101,7 +103,7 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
         launchOperation { infer(input) }
     }
     fun cancel() { if (inferring) { accepting?.set(false); work?.cancel() } }
-    fun refresh() { launchOperation { tasks.processPending(); reload() } }
+    fun refresh() { launchOperation(preserveInferenceFeedback = true) { tasks.processPending(); reload() } }
     fun prepare(turnId: UUID) {
         val command = state.value.turns.singleOrNull { it.id == turnId }?.proposal ?: return
         launchOperation {

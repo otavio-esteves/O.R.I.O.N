@@ -14,6 +14,7 @@ class OrionChatAdmissionTest {
         var creates = 0
         var lists = 0
         var wait: CompletableDeferred<Unit>? = null
+        var refreshWait: CompletableDeferred<Unit>? = null
         var failAfterCreationAdmission = false
         override suspend fun create(command: CreateTask): CreateTaskResult {
             creates++
@@ -25,7 +26,7 @@ class OrionChatAdmissionTest {
         override suspend fun change(command: TaskStatusCommand) = TaskStatusResult.REJECTED
         override suspend fun confirm(actionId: UUID, displayedVersion: Long) = TaskOperationOutcome.REJECTED
         override suspend fun dismiss(actionId: UUID, displayedVersion: Long) = TaskOperationOutcome.REJECTED
-        override suspend fun processPending() = 0
+        override suspend fun processPending(): Int { refreshWait?.await(); return 0 }
     }
     private class Cortex : OrionChatCortex {
         var configurations = 0
@@ -99,5 +100,35 @@ class OrionChatAdmissionTest {
         assertFalse(chat.state.value.canRetry)
         assertNotNull(chat.state.value.notice)
         chat.retryInference(); assertEquals(1, tasks.creates); assertEquals(0, cortex.configurations)
+    }
+
+    @Test fun refreshingPendingRequestsPreservesInferenceFeedbackAndOnlyRetriesInference() = runBlocking {
+        val tasks = Tasks().apply { refreshWait = CompletableDeferred() }
+        val cortex = Cortex()
+        val chat = OrionChatController(this, tasks, DeviceInformationGateway { null }, cortex)
+        assertEquals(OrionChatAdmission.Accepted, chat.send("Ajude a organizar meu dia"))
+        val notice = checkNotNull(chat.state.value.notice)
+
+        chat.refresh()
+        assertTrue(chat.state.value.busy)
+        assertEquals(notice, chat.state.value.notice)
+        chat.retryInference()
+        assertEquals(1, cortex.configurations)
+
+        tasks.refreshWait!!.complete(Unit)
+        yield()
+        assertFalse(chat.state.value.busy)
+        assertEquals(notice, chat.state.value.notice)
+        assertTrue(chat.state.value.canRetry)
+        chat.retryInference()
+        assertEquals(2, cortex.configurations)
+        assertEquals(1, chat.state.value.turns.count { it.user })
+        assertEquals(0, tasks.creates)
+
+        assertEquals(OrionChatAdmission.Accepted, chat.send("criar tarefa: pedido novo"))
+        assertNotNull(chat.state.value.notice)
+        chat.refresh()
+        assertNull(chat.state.value.notice)
+        assertFalse(chat.state.value.canRetry)
     }
 }
