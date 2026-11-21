@@ -138,8 +138,10 @@ internal class OrionSentinelRuntime(
             }
             PREPARE -> {
                 val id = key(ref, PREPARE)
+                val blockedAfter = now.minus(policy.topicCooldown).toEpochMilli()
                 if (payload.source != SOURCE_HEARTBEAT || payload.idempotencyKey != id || dao.reservationCount() >= MAX_RESERVATIONS ||
-                    quietHours.contains(now.atZone(zone()).toLocalTime()) || nextTask(now)?.taskId != ref.toString())
+                    quietHours.contains(now.atZone(zone()).toLocalTime()) || nextTask(now)?.taskId != ref.toString() ||
+                    dao.recent(blockedAfter + 1).isNotEmpty())
                     return LocalIngressDisposition.REJECTED
                 val consentVersion = dao.consent()?.takeIf { it.enabled }?.version
                 if (!delivery.prepare(id, consentVersion)) return LocalIngressDisposition.REJECTED

@@ -272,9 +272,19 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         recover()
         mutex.withLock {
             val runtime = sentinel ?: return@withLock false
-            val applied = runtime.setEnabled(enabled)
-            mutableSentinelEnabled.value = runtime.enabled()
-            applied
+            try {
+                val applied = runtime.setEnabled(enabled)
+                mutableSentinelEnabled.value = runtime.enabled()
+                applied
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (interrupted: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw interrupted
+            } catch (_: Exception) {
+                mutableHealth.publishSubsystemObservations(clock, mapOf(OrionSubsystem.SENTINEL to OrionHealthStatus.DEGRADED))
+                false
+            }
         }
     }
 
@@ -605,8 +615,10 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             val delivered = scheduler.deliverDue()
             val sentinelStatus = try {
                 mutableResourceProfile.value = resourceObserver.observe().policy.profile
-                sentinel?.maintain(origin == OrionMaintenanceOrigin.HEARTBEAT, lastForegroundInteraction)
-                    ?: OrionHealthStatus.UNAVAILABLE
+                sentinel?.let {
+                    it.maintain(origin == OrionMaintenanceOrigin.HEARTBEAT, lastForegroundInteraction)
+                        .also { _ -> mutableSentinelEnabled.value = it.enabled() }
+                } ?: OrionHealthStatus.UNAVAILABLE
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (interrupted: InterruptedException) {
@@ -615,7 +627,6 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             } catch (_: Exception) {
                 OrionHealthStatus.DEGRADED
             }
-            mutableSentinelEnabled.value = sentinel?.enabled()
             val published = scheduler.publishEvents()
             mutableHealth.publishSubsystemObservations(clock, mapOf(
                 OrionSubsystem.SENTINEL to sentinelStatus,
