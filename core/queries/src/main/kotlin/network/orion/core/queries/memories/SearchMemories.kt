@@ -12,7 +12,8 @@ import network.orion.core.queries.Query
 class SearchMemories(text: String, val limit: Int = 20, val after: MemorySearchCursor? = null,
     private val anyTerm: Boolean = false) : Query<MemorySearchPage> {
     val tokens: List<String>
-    val ftsExpression: String get() = tokens.joinToString(if (anyTerm) " OR " else " AND ") { "\"$it\"" }
+    // A space intersects terms in both SQLite FTS4 query parsers.
+    val ftsExpression: String get() = tokens.joinToString(if (anyTerm) " OR " else " ") { "\"$it\"" }
 
     init {
         require(text.length in 1..256 && Charsets.UTF_8.newEncoder().canEncode(text))
