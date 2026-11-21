@@ -14,6 +14,27 @@ class OrionIntentRouterTest {
     private fun input(text: String, source: OrionRoutingSource = OrionRoutingSource.UI_TEXT, final: Boolean = true) =
         OrionRoutingInput(text, inputId, correlation, source, final)
 
+    @Test fun wholeQueryAliasesAcceptOnlyDocumentedCaseSpacingAndTerminalPunctuation() {
+        for (text in listOf("bateria?", "BATERIA", "consultar bateria.", "como está a bateria?", "  como  está a  bateria ?  "))
+            assertTrue("Battery alias", router.route(input(text)) is OrionIntentRoute.BatteryQuery)
+        for (text in listOf("minhas tarefas?", "listar tarefas.", "quais são minhas tarefas?", " VER  TAREFAS . "))
+            assertTrue("Task-list alias", router.route(input(text)) is OrionIntentRoute.TaskList)
+    }
+    @Test fun queryMatchingNeverDeletesNegationQuotesFiltersOrAdditionalIntent() {
+        for (text in listOf("não liste minhas tarefas", "não consulte a bateria", "explique o comando listar tarefas",
+            "listar tarefas e apagar tudo", "quando eu disser bateria, faça outra coisa", "\"bateria\"", "'minhas tarefas'",
+            "tarefas pendentes", "bateria??", "bateria!", "minhas tarefas.?", "listar\u00a0tarefas"))
+            assertTrue("Whole-expression negative", router.route(input(text)) is OrionIntentRoute.CognitiveCandidate)
+    }
+    @Test fun queryPunctuationNeverChangesALiteralTaskTitle() {
+        for (title in listOf("Comprar pão?", "Comprar pão.", "não liste minhas tarefas", "bateria? e apagar tudo")) {
+            val route = router.route(input("criar tarefa: $title")) as OrionIntentRoute.TaskCreation
+            assertEquals(title, route.intent.arguments.title)
+        }
+        for (text in listOf("crie tarefa: pão", "concluir tarefa: pão", "excluir tarefa: pão"))
+            assertTrue(router.route(input(text)) is OrionIntentRoute.CognitiveCandidate)
+    }
+
     @Test fun exactListAliasesProduceOnlyTheExistingReadQuery() {
         for (text in listOf("listar tarefas", "  LISTAR TAREFAS  ", "Ver tarefas", "minhas tarefas")) {
             val route = router.route(input(text)) as OrionIntentRoute.TaskList
@@ -72,6 +93,14 @@ class OrionIntentRouterTest {
         assertEquals(OrionRoutingRejection.INVALID_TASK_ARGUMENTS, route.reason)
         assertEquals(CreateTaskRejection.TITLE_TOO_LARGE, route.taskRejection)
     }
+    @Test fun taskTitleKeepsItsOwnRawUtf8BudgetInsideTheChatBudget() {
+        for ((atLimit, aboveLimit) in listOf("a".repeat(1024) to "a".repeat(1025),
+            "á".repeat(512) to "á".repeat(513), "😀".repeat(256) to "😀".repeat(257))) {
+            assertEquals(atLimit, (router.route(input("criar tarefa:" + atLimit)) as OrionIntentRoute.TaskCreation).intent.arguments.title)
+            assertEquals(CreateTaskRejection.TITLE_TOO_LARGE,
+                (router.route(input("criar tarefa:" + aboveLimit)) as OrionIntentRoute.Rejected).taskRejection)
+        }
+    }
 
     @Test fun routingCannotTrimAwayTheExistingRawTitleAdmissionLimit() {
         val route = router.route(input("criar tarefa:x" + " ".repeat(1024))) as OrionIntentRoute.Rejected
@@ -89,13 +118,13 @@ class OrionIntentRouterTest {
     }
 
     @Test fun nonfinalTextNeverProducesACommandOrCognitiveCandidate() {
-        for (text in listOf("listar tarefas", "bateria", "criar tarefa: Comprar pão", "uma pergunta")) {
+        for (text in listOf("listar tarefas", "bateria", "criar tarefa: Comprar pão", "uma pergunta", "bateria?", "quais são minhas tarefas?")) {
             assertTrue(router.route(input(text, final = false)) is OrionIntentRoute.AwaitingFinalInput)
         }
     }
 
     @Test fun externalContentCannotSelectAnExecutableOrCognitiveCommandRoute() {
-        for (text in listOf("listar tarefas", "bateria", "criar tarefa: Comprar pão", "uma pergunta")) {
+        for (text in listOf("listar tarefas", "bateria", "criar tarefa: Comprar pão", "uma pergunta", "bateria?", "quais são minhas tarefas?")) {
             val route = router.route(input(text, source = OrionRoutingSource.EXTERNAL_CONTENT)) as OrionIntentRoute.Rejected
             assertEquals(OrionRoutingRejection.UNTRUSTED_SOURCE, route.reason)
         }
@@ -136,6 +165,8 @@ class OrionIntentRouterTest {
         try {
             Locale.setDefault(Locale.forLanguageTag("tr-TR"))
             assertTrue(router.route(input("LISTAR TAREFAS")) is OrionIntentRoute.TaskList)
+            assertTrue(router.route(input("COMO ESTÁ A BATERIA?")) is OrionIntentRoute.BatteryQuery)
+            assertTrue(router.route(input("QUAIS SÃO MINHAS TAREFAS?")) is OrionIntentRoute.TaskList)
             val route = router.route(input("CRIAR TAREFA: Iogurte")) as OrionIntentRoute.TaskCreation
             assertEquals("Iogurte", route.intent.arguments.title)
         } finally { Locale.setDefault(previous) }

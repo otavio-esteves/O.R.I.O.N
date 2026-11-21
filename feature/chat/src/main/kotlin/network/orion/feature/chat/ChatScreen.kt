@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import network.orion.core.orchestrator.chat.OrionChatController
+import network.orion.core.orchestrator.chat.*
 import network.orion.core.orchestrator.tasks.TaskOperation
 
 /** No saveable input/history: session content stays in transient Activity memory. */
@@ -21,6 +21,8 @@ import network.orion.core.orchestrator.tasks.TaskOperation
 fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null) {
     val state by controller.state.collectAsState()
     var input by remember { mutableStateOf("") }
+    var inputError by remember { mutableStateOf<String?>(null) }
+    var oversizedEditRejected by remember { mutableStateOf(false) }
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(controller, recoveryVersion) { controller.refresh() }
@@ -43,15 +45,38 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
             }
         }
         if (state.draft.isNotEmpty()) item { Text(state.draft, Modifier.testTag("orion_chat_stream")) }
-        item { state.notice?.let { Text(it) } }
+        item { if (inputError == null) state.notice?.let { Text(it) } }
         item {
-            OutlinedTextField(input, onValueChange = { if (it.length <= 4096) input = it }, label = { Text("Mensagem") },
-                enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("orion_chat_input"), maxLines = 3)
+            OutlinedTextField(input, onValueChange = edit@{ edited ->
+                // Focus/IME updates can repeat the retained value after an edit was refused.
+                if (oversizedEditRejected && edited == input) return@edit
+                val error = OrionChatInputPolicy.validate(edited)
+                // Oversized edits preserve the previous bounded draft; no silent truncation.
+                // Other bounded invalid text stays exactly editable and is rejected by send.
+                oversizedEditRejected = error == OrionChatInputError.INPUT_TOO_LARGE
+                if (!oversizedEditRejected) input = edited
+                inputError = error?.takeUnless { it == OrionChatInputError.EMPTY_INPUT }?.message
+            }, label = { Text("Mensagem") }, singleLine = true, isError = inputError != null,
+                supportingText = { inputError?.let { Text(it, Modifier.testTag("orion_chat_input_error")) } },
+                enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("orion_chat_input"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { val submitted = input; input = ""; focus.clearFocus(); keyboard?.hide(); controller.send(submitted) },
-                    enabled = !state.busy && input.isNotBlank()) { Text("Enviar") }
+                Button(onClick = send@{
+                    if (oversizedEditRejected) return@send
+                    when (val result = controller.send(input)) {
+                        OrionChatAdmission.Accepted -> { input = ""; inputError = null; focus.clearFocus(); keyboard?.hide() }
+                        is OrionChatAdmission.Rejected -> inputError = result.reason.message
+                        OrionChatAdmission.Busy -> inputError = "Aguarde o envio em andamento."
+                        OrionChatAdmission.Closed -> inputError = "Esta sessão foi encerrada. Abra o chat novamente."
+                    }
+                }, enabled = !state.busy && !oversizedEditRejected) { Text("Enviar") }
                 if (state.busy && state.cortex in setOf("Gerando", "Verificando disponibilidade")) TextButton(onClick = controller::cancel) { Text("Cancelar") }
                 if (state.canRetry && !state.busy) TextButton(onClick = controller::retryInference) { Text("Tentar inferência novamente") }
+            }
+            if (oversizedEditRejected && OrionChatInputPolicy.validate(input) == null) {
+                TextButton(enabled = !state.busy, onClick = {
+                    oversizedEditRejected = false
+                    inputError = null
+                }) { Text("Usar rascunho anterior") }
             }
             TextButton(onClick = controller::refresh, enabled = !state.busy) { Text("Atualizar pedidos") }
         }

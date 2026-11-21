@@ -47,9 +47,11 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
         val pending = tasks.pending().take(50)
         patch { OrionChatState(it.turns, it.draft, it.busy, it.cortex, it.notice, pending, it.canRetry) }
     }
-    private fun launchOperation(block: suspend () -> Unit) {
+    private fun launchOperation(preserveInferenceFeedback: Boolean = false, block: suspend () -> Unit) {
         if (closed || state.value.busy) return
-        status(busy = true)
+        val previous = state.value
+        val keepRetry = preserveInferenceFeedback && previous.canRetry
+        status(busy = true, notice = previous.notice.takeIf { keepRetry }, retry = keepRetry)
         // Enter real UI admission synchronously before the first suspension, exactly like existing task UI.
         work = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             try { block() }
@@ -65,18 +67,35 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
             }
         }
     }
-    fun send(text: String) {
-        if (closed || state.value.busy) return
+    fun send(text: String): OrionChatAdmission {
+        if (closed) return OrionChatAdmission.Closed
+        if (state.value.busy) return OrionChatAdmission.Busy
         val input = OrionRoutingInput(text, UUID.randomUUID(), UUID.randomUUID(), OrionRoutingSource.UI_TEXT, true)
         val route = OrionIntentRouter().route(input)
         // Rejected oversized input is never retained in the conversation.
-        if (route is OrionIntentRoute.Rejected || route is OrionIntentRoute.Clarification) {
-            status(notice = "Revise a mensagem (até 4 KiB, sem caracteres de controle).")
-            return
+        val rejection = when (route) {
+            is OrionIntentRoute.Clarification -> when (route.reason) {
+                OrionRoutingClarification.EMPTY_INPUT -> OrionChatInputError.EMPTY_INPUT
+                OrionRoutingClarification.MISSING_TASK_TITLE -> OrionChatInputError.MISSING_TASK_TITLE
+            }
+            is OrionIntentRoute.Rejected -> when (route.reason) {
+                OrionRoutingRejection.INPUT_TOO_LARGE -> OrionChatInputError.INPUT_TOO_LARGE
+                OrionRoutingRejection.INVALID_CHARACTER -> OrionChatInputError.INVALID_CHARACTER
+                OrionRoutingRejection.INVALID_UNICODE -> OrionChatInputError.INVALID_UNICODE
+                else -> if (route.taskRejection == CreateTaskRejection.TITLE_TOO_LARGE)
+                    OrionChatInputError.TASK_TITLE_TOO_LARGE else OrionChatInputError.INVALID_TASK_TITLE
+            }
+            else -> null
+        }
+        if (rejection != null) {
+            // The editor owns input feedback. Rejection must not erase a prior result,
+            // safe inference retry, streaming preview or other conversation state.
+            return OrionChatAdmission.Rejected(rejection)
         }
         retryInput = null
         append(true, text)
         launchOperation { dispatch(route, input) }
+        return OrionChatAdmission.Accepted
     }
     fun retryInference() {
         val input = retryInput ?: return
@@ -84,7 +103,7 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
         launchOperation { infer(input) }
     }
     fun cancel() { if (inferring) { accepting?.set(false); work?.cancel() } }
-    fun refresh() { launchOperation { tasks.processPending(); reload() } }
+    fun refresh() { launchOperation(preserveInferenceFeedback = true) { tasks.processPending(); reload() } }
     fun prepare(turnId: UUID) {
         val command = state.value.turns.singleOrNull { it.id == turnId }?.proposal ?: return
         launchOperation {

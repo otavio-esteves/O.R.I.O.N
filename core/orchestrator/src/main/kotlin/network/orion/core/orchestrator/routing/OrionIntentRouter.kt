@@ -8,6 +8,8 @@ import network.orion.core.commands.tasks.CreateTaskRejection
 import network.orion.core.commands.tasks.OrionCreateTaskPreparer
 import network.orion.core.commands.tasks.ValidatedCreateTask
 import network.orion.core.model.OrionIntent
+import network.orion.core.orchestrator.chat.OrionChatInputPolicy
+import network.orion.core.orchestrator.chat.OrionChatInputError
 import network.orion.core.queries.device.GetDeviceInformation
 import network.orion.core.queries.tasks.GetTasks
 import network.orion.core.skills.metadata.device.OrionDeviceDescriptors
@@ -74,15 +76,24 @@ class OrionIntentRouter {
         fun rejected(reason: OrionRoutingRejection) = OrionIntentRoute.Rejected(reason, input.correlationId)
         if (input.source != OrionRoutingSource.UI_TEXT) return rejected(OrionRoutingRejection.UNTRUSTED_SOURCE)
         if (!input.isFinal) return OrionIntentRoute.AwaitingFinalInput(input.correlationId)
-        inputFailure(input.text)?.let { return rejected(it) }
+        OrionChatInputPolicy.validate(input.text)?.let { failure ->
+            return when (failure) {
+                OrionChatInputError.EMPTY_INPUT -> OrionIntentRoute.Clarification(OrionRoutingClarification.EMPTY_INPUT, input.correlationId)
+                OrionChatInputError.INPUT_TOO_LARGE -> rejected(OrionRoutingRejection.INPUT_TOO_LARGE)
+                OrionChatInputError.INVALID_UNICODE -> rejected(OrionRoutingRejection.INVALID_UNICODE)
+                OrionChatInputError.INVALID_CHARACTER -> rejected(OrionRoutingRejection.INVALID_CHARACTER)
+                else -> error("Raw input policy returned a domain rejection.")
+            }
+        }
         val text = input.text.trim()
         val command = text.lowercase(Locale.ROOT)
         if (text.isEmpty()) return OrionIntentRoute.Clarification(OrionRoutingClarification.EMPTY_INPUT, input.correlationId)
-        if (command == "listar tarefas" || command == "ver tarefas" || command == "minhas tarefas") {
+        val query = queryExpression(command)
+        if (query in TASK_LIST_ALIASES) {
             return OrionIntentRoute.TaskList(OrionIntent("task.list", 1.0, GetTasks(),
                 input.source.name, false, input.correlationId))
         }
-        if (command == "bateria" || command == "consultar bateria") {
+        if (query in BATTERY_ALIASES) {
             return OrionIntentRoute.BatteryQuery(OrionIntent(OrionDeviceDescriptors.battery.name, 1.0,
                 GetDeviceInformation, input.source.name, false, input.correlationId))
         }
@@ -107,36 +118,18 @@ class OrionIntentRouter {
             input.source.name, true, input.correlationId))
     }
 
-    /** Guard raw UTF-16 length and scan bounded Unicode scalars before trim/case-folding/allocation. */
-    private fun inputFailure(text: String): OrionRoutingRejection? {
-        if (text.length > MAX_INPUT_UTF8_BYTES) return OrionRoutingRejection.INPUT_TOO_LARGE
-        var bytes = 0
-        var index = 0
-        while (index < text.length) {
-            val character = text[index]
-            when {
-                character.isHighSurrogate() -> {
-                    if (index + 1 == text.length || !text[index + 1].isLowSurrogate())
-                        return OrionRoutingRejection.INVALID_UNICODE
-                    bytes += 4
-                    index += 2
-                }
-                character.isLowSurrogate() -> return OrionRoutingRejection.INVALID_UNICODE
-                character.isISOControl() || character == '\u2028' || character == '\u2029' ->
-                    return OrionRoutingRejection.INVALID_CHARACTER
-                else -> {
-                    bytes += when {
-                        character.code <= 0x7f -> 1
-                        character.code <= 0x7ff -> 2
-                        else -> 3
-                    }
-                    index++
-                }
-            }
-            if (bytes > MAX_INPUT_UTF8_BYTES) return OrionRoutingRejection.INPUT_TOO_LARGE
-        }
-        return null
+    /** Queries only: whole expression, Locale.ROOT case, runs of ASCII spaces and
+     * at most one terminal '?' or '.', optionally preceded by ASCII spaces.
+     * Never remove quotes, words, negation, filters or punctuation from task arguments.
+     */
+    private fun queryExpression(command: String): String {
+        val expression = if (command.lastOrNull() in setOf('?', '.')) command.dropLast(1).trimEnd(' ') else command
+        return ASCII_SPACES.replace(expression, " ")
     }
-
-    companion object { const val MAX_INPUT_UTF8_BYTES = 4096 }
+    companion object {
+        const val MAX_INPUT_UTF8_BYTES = OrionChatInputPolicy.MAX_UTF8_BYTES
+        private val ASCII_SPACES = Regex(" +")
+        private val TASK_LIST_ALIASES = setOf("listar tarefas", "ver tarefas", "minhas tarefas", "quais são minhas tarefas")
+        private val BATTERY_ALIASES = setOf("bateria", "consultar bateria", "como está a bateria")
+    }
 }
