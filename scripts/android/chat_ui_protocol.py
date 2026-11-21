@@ -105,7 +105,7 @@ def parse_instrumentation(output, adb_exit, expected=EXPECTED):
             if final:
                 result.errors.append('STATUS_AFTER_FINAL')
             if identity not in expected:
-                result.errors.append('UNexpected_TEST')
+                result.errors.append('UNEXPECTED_TEST')
             elif frame.get('numtests') != str(len(expected)):
                 result.errors.append('TEST_COUNT_MISMATCH')
             elif code == 1:
