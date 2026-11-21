@@ -2,6 +2,7 @@ package network.orion.core.queries.memories
 
 import java.util.Collections
 import java.util.UUID
+import network.orion.core.model.OrionMemoryProvenance
 import network.orion.core.queries.Query
 
 /** Stable UUID cursor. A query never drains ingress or changes memory state. */
@@ -13,7 +14,7 @@ enum class MemoryState { ACTIVE, SUPERSEDED, DELETED }
 enum class MemoryContentState { READABLE, UNREADABLE, KEY_UNAVAILABLE }
 
 class MemorySummary(val memoryId: UUID, val content: String?, val state: MemoryState, val version: Long,
-    val contentState: MemoryContentState) {
+    val contentState: MemoryContentState, val provenance: OrionMemoryProvenance) {
     init { require(version >= 0); require((content != null) == (contentState == MemoryContentState.READABLE)) }
     override fun toString() = "MemorySummary(<redacted>)"
 }

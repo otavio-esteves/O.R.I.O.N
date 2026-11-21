@@ -10,6 +10,9 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import network.orion.app.MainActivity
 import network.orion.core.commands.memories.*
+import network.orion.core.model.OrionMemoryOrigin
+import network.orion.core.model.OrionMemoryProvenance
+import network.orion.core.model.Sensitivity
 import network.orion.core.orchestrator.memories.*
 import network.orion.core.queries.memories.*
 import network.orion.feature.memories.MemoriesScreen
@@ -19,6 +22,7 @@ import org.junit.Test
 
 class OrionMemoryScreenTest {
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
+    private val declared = OrionMemoryProvenance(OrionMemoryOrigin.USER_DECLARED, 1.0, true, Sensitivity.PERSONAL)
     @Test fun nativeMemoryFlowRequiresSeparateExactHumanConfirmationBeforeCreateAndForget() {
         val confirms=AtomicInteger()
         var row:MemorySummary?=null
@@ -40,7 +44,7 @@ class OrionMemoryScreenTest {
             override suspend fun confirm(actionId:UUID,displayedVersion:Long):MemoryOperationOutcome {
                 assertEquals(pending!!.actionId,actionId); assertEquals(pending!!.version,displayedVersion)
                 confirms.incrementAndGet()
-                row=if (pending!!.operation==MemoryOperation.CREATE) MemorySummary(request!!.memoryId,request!!.content,MemoryState.ACTIVE,0,MemoryContentState.READABLE) else null
+                row=if (pending!!.operation==MemoryOperation.CREATE) MemorySummary(request!!.memoryId,request!!.content,MemoryState.ACTIVE,0,MemoryContentState.READABLE,declared) else null
                 pending=null
                 return MemoryOperationOutcome.APPLIED
             }
@@ -65,7 +69,7 @@ class OrionMemoryScreenTest {
         val available=mutableStateOf(false)
         val version=mutableStateOf<Instant?>(null)
         val reads=AtomicInteger()
-        val row=MemorySummary(UUID.randomUUID(),"Memória restaurada",MemoryState.ACTIVE,0,MemoryContentState.READABLE)
+        val row=MemorySummary(UUID.randomUUID(),"Memória restaurada",MemoryState.ACTIVE,0,MemoryContentState.READABLE,declared)
         val gateway=object:MemoryGateway {
             override suspend fun list(request:GetMemories):MemoryPage? { reads.incrementAndGet(); return if (available.value) MemoryPage(listOf(row),null) else null }
             override suspend fun pending()=emptyList<MemoryConfirmation>()

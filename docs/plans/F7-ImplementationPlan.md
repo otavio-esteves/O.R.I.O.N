@@ -1,8 +1,8 @@
 # F7 — Plano de implementação de memória inteligente
 
-Status: **PLANEJADO — implementação não iniciada**.
-Pedido do usuário: corrigir os três achados da auditoria de F6 e, depois, planejar F7.
-Este documento é um plano de execução; não declara `MEMORY_ENGINE_READY`.
+**Status.** Implementação iniciada pelo primeiro incremento de
+[ORION-F7-001](../issues/ORION-F7-001.md). O gate `MEMORY_ENGINE_READY`
+permanece aberto.
 
 Autoridade: [Arquitetura V3.2, §§62–77](../../1-orion.md#62-memory-engine),
 [Plano Mestre V1.2, §13](../../2-plano-mestre.md#13-fase-7--intelligent-memory),
@@ -14,18 +14,13 @@ separada no [PR #169](https://github.com/otavio-esteves/O.R.I.O.N/pull/169).
 
 ## 1. Entrada e limites
 
-Antes do primeiro pacote de código de F7:
-
-- concluir a revisão das correções de F6, com regressões JVM/Android e verificações
-  canônicas verdes; cada PR ainda depende de CI obrigatório verde antes de merge;
-- registrar a avaliação de entrada contra o gate cognitivo do Plano Mestre §12.7;
-- manter explícitos os gates físicos, de estabilidade e de produção ainda abertos.
-  O [ADR-0004](../adr/ADR-0004-f6-development-before-physical-qualification.md)
-  permite desenvolvimento de **F6** com qualificação física adiada; não é uma
-  dispensa automática para F7. Se a entrada de software de F7 também precisar
-  antecipar um pré-requisito normativo, registrar a decisão específica antes de
-  iniciar esse desenvolvimento. Este planejamento não faz essa alteração;
-- abrir o pacote limitado correspondente, em branch própria, antes de implementar.
+A revisão local de saída da F6 está registrada no
+[fechamento de software](../qualification/F6-SoftwareCloseout.md), com o gate
+cognitivo do Plano Mestre §12.7 e as regressões JVM/Android.
+[ADR-0005](../adr/ADR-0005-f7-software-entry.md) autoriza a entrada de software
+da F7 com os gates físicos, de estabilidade e de produção ainda abertos.
+Cada pacote tem branch própria e segue sujeito a CI obrigatório verde antes
+do merge.
 
 O plano utiliza a topologia, a autoridade e a persistência já definidas. MAIN
 continua dono de Room, repositórios, política, ingress, Action Outbox e Skills.
@@ -302,10 +297,11 @@ Todos os itens permanecem **ABERTOS** neste planejamento.
 | Visualizar/corrigir/apagar/esquecer | 005 | Fluxos UI/ingress/policy/ActionRequest com confirmação exata |
 | Remoção de índices derivados | 003/005/006/008 | Sem hits/cópias derivados após exclusão; rollback/replay seguros |
 
-## 5. Primeira entrega proposta
+## 5. Primeiro incremento
 
-Começar por **ORION-F7-001**, após a avaliação de entrada: contrato e migração
-pequenos, com testes de upgrade e provenance. Em seguida, uma operação de correção
+**ORION-F7-001** começa pela projeção de proveniência e pela referência
+opcional ao evento de origem na migração de Room 6→7. Validade, expiração e
+transições ainda fazem parte do pacote 001. Em seguida vem a correção
 transacional de 002. A primeira entrega útil de busca resulta de 003 + 004 sobre
 memórias já declaradas pelo usuário; não depende de inferência. Os controles de
 005 precedem a persistência e a geração de resumos de 006.

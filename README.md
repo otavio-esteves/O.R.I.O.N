@@ -39,16 +39,23 @@ The [software-entry validation](docs/qualification/F6-SoftwareEntry-20261118.md)
 records the diagnostic regressions, first router scope, active-module JVM inventory
 and final emulator/R8 checks, separately from physical qualification.
 
-The [F7 implementation plan](docs/plans/F7-ImplementationPlan.md) proposes eight
-bounded packages for intelligent memory, their dependencies and the eleven-item
-exit-gate matrix. It plans the next phase without declaring implementation started,
-extending ADR-0004's scope or closing physical/production qualification.
+The [F6 software closeout](docs/qualification/F6-SoftwareCloseout.md) records the
+final chat regressions and local review of the cognitive gate.
 
 The [F6 chat reliability contract and validation](docs/qualification/F6-ChatReliability-20261120.md)
 documents explicit send admission, draft preservation, shared UTF-8 validation,
 closed Portuguese query aliases, the model-free functional corpus and separate
 qualification-build/UI-execution CI checks. Model quality and physical readiness
 remain separate from these software checks.
+
+## F7 software development
+
+[ADR-0005](docs/adr/ADR-0005-f7-software-entry.md) records the scoped software
+entry decision. The first [provenance increment](docs/issues/ORION-F7-001.md)
+projects provenance from MAIN storage and adds an optional source event
+reference through Room migration 6→7. The
+[F7 implementation plan](docs/plans/F7-ImplementationPlan.md) lists the
+remaining work and exit criteria.
 
 ## Development environments
 

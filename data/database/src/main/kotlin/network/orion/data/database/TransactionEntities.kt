@@ -5,13 +5,14 @@ import androidx.room.ColumnInfo
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import network.orion.core.model.OrionMemoryOrigin
 import network.orion.core.model.Sensitivity
 
 enum class TaskStatus { OPEN, COMPLETED, CANCELLED }
 enum class ReminderStatus { PENDING, FIRED, CANCELLED }
 enum class ReminderPrecision { UNSCHEDULED, EXACT, APPROXIMATE }
 enum class ReminderScheduleMethod { UNSCHEDULED, EXACT_ALARM, INEXACT_ALARM }
-enum class MemoryOrigin { USER_DECLARED, SYSTEM_OBSERVED, SYSTEM_DERIVED, LLM_INFERRED, IMPORTED, EXTERNAL_SOURCE }
+typealias MemoryOrigin = OrionMemoryOrigin
 enum class MemoryStatus { ACTIVE, SUPERSEDED, DELETED }
 
 /** F2 persistence records. Content is encrypted, never indexed; business Skills are deferred to F3. */
@@ -72,6 +73,7 @@ data class MemoryEntity(
     val status: MemoryStatus = MemoryStatus.ACTIVE,
     val supersedesId: String? = null,
     val version: Long = 0,
+    val originEventId: String? = null,
 ) {
     override fun toString(): String = "MemoryEntity(<redacted>)"
 }

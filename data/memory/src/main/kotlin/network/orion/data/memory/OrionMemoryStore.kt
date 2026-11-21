@@ -23,18 +23,20 @@ sealed interface MemoryWriteResult {
 class OrionMemoryStore(private val database: OrionDatabase, private val encryption: OrionFieldEncryption,
     private val clock: WallClock) {
     fun create(id: UUID, content: ByteArray, sensitivity: Sensitivity, origin: MemoryOrigin, confidence: Double,
-        claims: List<MemoryClaimInput>, correlationId: UUID, userConfirmed: Boolean = false): MemoryWriteResult =
-        write(id, content, sensitivity, origin, confidence, claims, correlationId, userConfirmed, null, null)
+        claims: List<MemoryClaimInput>, correlationId: UUID, userConfirmed: Boolean = false,
+        originEventId: UUID? = null): MemoryWriteResult =
+        write(id, content, sensitivity, origin, confidence, claims, correlationId, userConfirmed, originEventId, null, null)
 
     fun supersede(priorId: UUID, expectedVersion: Long, newId: UUID, content: ByteArray, sensitivity: Sensitivity,
         origin: MemoryOrigin, confidence: Double, claims: List<MemoryClaimInput>, correlationId: UUID,
-        userConfirmed: Boolean = false): MemoryWriteResult {
+        userConfirmed: Boolean = false, originEventId: UUID? = null): MemoryWriteResult {
         require(expectedVersion in 0 until Long.MAX_VALUE && priorId != newId)
-        return write(newId, content, sensitivity, origin, confidence, claims, correlationId, userConfirmed, priorId, expectedVersion)
+        return write(newId, content, sensitivity, origin, confidence, claims, correlationId, userConfirmed, originEventId, priorId, expectedVersion)
     }
 
     private fun write(id: UUID, content: ByteArray, sensitivity: Sensitivity, origin: MemoryOrigin, confidence: Double,
-        claims: List<MemoryClaimInput>, correlationId: UUID, userConfirmed: Boolean, priorId: UUID?, version: Long?): MemoryWriteResult {
+        claims: List<MemoryClaimInput>, correlationId: UUID, userConfirmed: Boolean, originEventId: UUID?,
+        priorId: UUID?, version: Long?): MemoryWriteResult {
         require(claims.size <= 100)
         val body = encryption.encrypt(content, context(id))
         if (body is FieldEncryptionResult.Failure) return MemoryWriteResult.Blocked(body.reason)
@@ -49,7 +51,8 @@ class OrionMemoryStore(private val database: OrionDatabase, private val encrypti
                 claim.origin, claim.confidence, claim.userConfirmed, validFrom = at)
         }
         val row = MemoryEntity(id.toString(), FieldEnvelopeCodec.encode((body as FieldEncryptionResult.Encrypted).envelope),
-            sensitivity, origin, confidence, userConfirmed, at, at, supersedesId = priorId?.toString())
+            sensitivity, origin, confidence, userConfirmed, at, at, supersedesId = priorId?.toString(),
+            originEventId = originEventId?.toString())
         val created = event(id, 0, "MEMORY_CREATED", sensitivity, at, correlationId)
         if (priorId == null) {
             database.records().createMemoryWithClaimsAndEvent(row, rows, created)
