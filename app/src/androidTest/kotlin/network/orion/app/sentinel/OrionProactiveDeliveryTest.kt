@@ -60,8 +60,16 @@ class OrionProactiveDeliveryTest {
         db = Room.inMemoryDatabaseBuilder(context, OrionDatabase::class.java).build()
         barrier.releaseAfterRecovery(barrier.beginRecovery(), CoreReadiness.DEGRADED_SAFE)
         val poster = object : OrionNotificationPoster {
-            override fun availability() = NotificationAvailability.AVAILABLE
-            override fun permissionGranted() = true
+            override fun availability(): NotificationAvailability {
+                assertFalse(Thread.holdsLock(barrier))
+                assertFalse(db.inTransaction())
+                return NotificationAvailability.AVAILABLE
+            }
+            override fun permissionGranted(): Boolean {
+                assertFalse(Thread.holdsLock(barrier))
+                assertFalse(db.inTransaction())
+                return true
+            }
             override fun post(actionId: UUID, notification: ValidatedPostNotification,
                 permit: OrionNotificationInvocationPermit): NotificationPostResult {
                 assertFalse(db.inTransaction())
@@ -96,11 +104,28 @@ class OrionProactiveDeliveryTest {
             shown++
             Unit
         }
-        assertEquals(OrionProactiveDeliveryOutcome.POSTED, delivery.deliver(id, { permitted }, recordShown))
+        val matchingConsent: (Long) -> Boolean = { revision ->
+            assertFalse(Thread.holdsLock(barrier))
+            assertFalse(db.inTransaction())
+            permitted && revision == 7L
+        }
+        assertEquals(OrionProactiveDeliveryOutcome.POSTED, delivery.deliver(id, matchingConsent, recordShown))
         assertEquals(OrionProactiveDeliveryOutcome.POSTED, delivery.deliver(id, { permitted }, recordShown))
         assertEquals(1, invocations)
         assertEquals(1, shown)
         assertEquals(1, db.events().count())
+    }
+
+    @Test fun missingOrReplacedConsentCannotAuthorizeAnEffect() {
+        val id = UUID.randomUUID()
+        assertFalse(barrier.whileOpen {
+            db.runInTransaction(Callable { delivery.prepare(id, null) })
+        } == true)
+        assertTrue(prepare(id))
+        assertEquals(OrionProactiveDeliveryOutcome.BLOCKED, delivery.deliver(id, { it == 8L }) {})
+        assertTrue(delivery.discard(id))
+        assertEquals(ActionStatus.CANCELLED, db.actions().find(id.toString())?.status)
+        assertEquals(0, invocations)
     }
 
     @Test fun optOutImmediatelyBeforePostingLeavesNoNotification() {
@@ -154,6 +179,6 @@ class OrionProactiveDeliveryTest {
     }
 
     private fun prepare(id: UUID) = barrier.whileOpen {
-        db.runInTransaction(Callable { delivery.prepare(id) })
+        db.runInTransaction(Callable { delivery.prepare(id, 7) })
     } == true
 }

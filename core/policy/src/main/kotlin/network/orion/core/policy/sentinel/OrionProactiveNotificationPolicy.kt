@@ -1,9 +1,7 @@
 package network.orion.core.policy.sentinel
 
-import network.orion.core.skills.metadata.notifications.OrionProactiveNotificationDescriptor
-
-/** The standing opt-in authorizes only Sentinel's generic, locally generated notification. */
+/** An enabled, persisted consent revision authorizes only the generic Sentinel notification. */
 object OrionProactiveNotificationPolicy {
-    fun allows(optInAndEligible: Boolean, startupOpen: Boolean, source: String): Boolean =
-        optInAndEligible && startupOpen && source == OrionProactiveNotificationDescriptor.SOURCE
+    fun allows(enabledConsentVersion: Long, startupOpen: Boolean): Boolean =
+        startupOpen && enabledConsentVersion >= 0
 }

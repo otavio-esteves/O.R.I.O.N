@@ -70,10 +70,11 @@ internal class OrionProactiveDelivery(
         poster.permissionGranted() && poster.availability() == NotificationAvailability.AVAILABLE
 
     /** Trusted caller has evaluated eligibility and reserved this ID in its admitted ingress transaction. */
-    fun prepare(id: UUID): Boolean {
+    fun prepare(id: UUID, enabledConsentVersion: Long?): Boolean {
         check(db.inTransaction() && Thread.holdsLock(barrier))
-        if (!barrier.isOpen()) return false
-        val expected = normalized(notification(id))
+        val consentVersion = enabledConsentVersion ?: return false
+        if (!OrionProactiveNotificationPolicy.allows(consentVersion, barrier.isOpen())) return false
+        val expected = normalized(notification(id), consentVersion)
         val result = actions.register(expected, idempotency, id.toString(), id, Sensitivity.PERSONAL,
             requiresConfirmation = false)
         if (result.actionId != id) return false
@@ -103,11 +104,14 @@ internal class OrionProactiveDelivery(
         return expired.count { actions.cancel(UUID.fromString(it.actionId), it.version).outcome == ActionStoreOutcome.APPLIED }
     }
 
-    fun deliver(id: UUID, policyAllows: () -> Boolean, onPosted: () -> Unit): OrionProactiveDeliveryOutcome {
+    fun deliver(id: UUID, policyAllows: (consentVersion: Long) -> Boolean, onPosted: () -> Unit): OrionProactiveDeliveryOutcome {
         check(!db.inTransaction() && !Thread.holdsLock(barrier))
         val payload = notification(id)
-        val expected = normalized(payload)
         val stored = (actions.read(id) as? ActionReadResult.Ready)?.action ?: return OrionProactiveDeliveryOutcome.BLOCKED
+        val consentVersion = stored.request.normalizedTarget.takeIf { it.startsWith(CONSENT_TARGET) }
+            ?.removePrefix(CONSENT_TARGET)?.toLongOrNull()?.takeIf { it >= 0 }
+            ?: return OrionProactiveDeliveryOutcome.BLOCKED
+        val expected = normalized(payload, consentVersion)
         val row = db.actions().find(id.toString()) ?: return OrionProactiveDeliveryOutcome.BLOCKED
         if (stored.request != expected || stored.requiresConfirmation || row.idempotencyScope != descriptor.name ||
             row.idempotencyKey != id.toString()) return OrionProactiveDeliveryOutcome.BLOCKED
@@ -119,8 +123,16 @@ internal class OrionProactiveDelivery(
         }
         val receipt = stored.confirmation ?: return OrionProactiveDeliveryOutcome.BLOCKED
         if (db.events().count() >= 10_000) return OrionProactiveDeliveryOutcome.BLOCKED
-        val authority = authority(expected, policyAllows)
-        val execution = OrionActionExecutionStore(db, actions, clock, authority)
+        fun currentlyEligible() = policyAllows(consentVersion) &&
+            OrionProactiveNotificationPolicy.allows(consentVersion, barrier.isOpen())
+        // The claim takes the barrier monitor and Room writer. Sample platform
+        // evidence first, then revalidate the live evidence at invocation.
+        val eligibleAtClaim = currentlyEligible()
+        val availableAtClaim = available()
+        val permissionAtClaim = poster.permissionGranted()
+        val claimAuthority = authority(expected, { eligibleAtClaim }, { availableAtClaim }, { permissionAtClaim })
+        val liveAuthority = authority(expected, ::currentlyEligible, ::available, poster::permissionGranted)
+        val execution = OrionActionExecutionStore(db, actions, clock, claimAuthority)
         val claim = barrier.whileOpen { execution.claim(id, stored.version, "orion_sentinel_main", EXECUTION_LEASE) }
             as? ActionClaimResult.Claimed ?: return OrionProactiveDeliveryOutcome.BLOCKED
         val owner = SkillContext(id, claim.lease.executionId, claim.version)
@@ -129,14 +141,15 @@ internal class OrionProactiveDelivery(
             if (db.inTransaction() || Thread.holdsLock(barrier) || !barrier.isOpen()) return false
             val bound = (actions.read(id) as? ActionReadResult.Ready)?.action ?: return false
             if (bound.request != expected || bound.confirmation != receipt || bound.requiresConfirmation ||
-                ActionExecutionValidation.denyReason(expected, false, authority) != null) return false
+                ActionExecutionValidation.denyReason(expected, false, liveAuthority) != null ||
+                !currentlyEligible()) return false
             val current = db.actions().find(id.toString()) ?: return false
             if (current.status != ActionStatus.RUNNING || current.version != owner.actionVersion ||
                 current.executionId != owner.executionId.toString() || current.claimedBy != claim.lease.claimedBy ||
                 current.leaseBootSessionId != claim.lease.bootSessionId.bootCount ||
                 current.leaseStartedElapsedRealtime != claim.lease.startedElapsedRealtime ||
                 current.leaseExpiresElapsedRealtime != claim.lease.expiresElapsedRealtime) return false
-            return policyAllows() && binding.validate(expected, receipt) == ConfirmationBindingResult.VALID_BINDING &&
+            return binding.validate(expected, receipt) == ConfirmationBindingResult.VALID_BINDING &&
                 claim.lease.statusAt(clock.monotonicNow()) == ActionLeaseStatus.ACTIVE && barrier.isOpen()
         }
         val skill = OrionProactiveNotificationSkill(OrionOwnedNotificationPoster { input, caller ->
@@ -184,23 +197,22 @@ internal class OrionProactiveDelivery(
         }
     }
 
-    private fun authority(expected: NormalizedActionRequest, currentlyEligible: () -> Boolean) =
-        object : ActionExecutionAuthority {
-            override fun startupBarrierOpen() = barrier.isOpen()
-            override fun descriptorFor(skill: String) = descriptor.takeIf { it.name == skill }
-            override fun currentPolicyVersion() = policyVersion
-            override fun policyAllows(request: NormalizedActionRequest) = request == expected &&
-                OrionProactiveNotificationPolicy.allows(currentlyEligible(), barrier.isOpen(), OrionProactiveNotificationDescriptor.SOURCE)
-            override fun capabilityAvailable(capability: Capability) =
-                capability == OrionProactiveNotificationDescriptor.capability && available()
-            override fun permissionGranted(permission: String) =
-                permission == OrionPostNotificationDescriptor.POST_PERMISSION && poster.permissionGranted()
-            override fun userPresent() = false
-        }
+    private fun authority(expected: NormalizedActionRequest, currentlyEligible: () -> Boolean,
+        platformAvailable: () -> Boolean, platformPermissionGranted: () -> Boolean) = object : ActionExecutionAuthority {
+        override fun startupBarrierOpen() = barrier.isOpen()
+        override fun descriptorFor(skill: String) = descriptor.takeIf { it.name == skill }
+        override fun currentPolicyVersion() = policyVersion
+        override fun policyAllows(request: NormalizedActionRequest) = request == expected && currentlyEligible()
+        override fun capabilityAvailable(capability: Capability) =
+            capability == OrionProactiveNotificationDescriptor.capability && platformAvailable()
+        override fun permissionGranted(permission: String) =
+            permission == OrionPostNotificationDescriptor.POST_PERMISSION && platformPermissionGranted()
+        override fun userPresent() = false
+    }
 
-    private fun normalized(payload: ValidatedPostNotification) = NormalizedActionRequest(
+    private fun normalized(payload: ValidatedPostNotification, consentVersion: Long) = NormalizedActionRequest(
         payload.requestId, descriptor.name, payload.canonicalNormalizedArguments,
-        OrionAndroidNotificationPoster.PROACTIVE_CHANNEL, descriptor.authorizationLevel, descriptor.argumentSchemaVersion,
+        CONSENT_TARGET + consentVersion, descriptor.authorizationLevel, descriptor.argumentSchemaVersion,
         descriptor.sideEffectClass, descriptor.recoveryStrategy, descriptor.idempotencyMode, policyVersion,
     )
 
@@ -209,6 +221,7 @@ internal class OrionProactiveDelivery(
             OrionProactiveNotificationDescriptor.BODY, id, id)) as PostNotificationPreparation.Ready).notification
 
     companion object {
+        private const val CONSENT_TARGET = OrionAndroidNotificationPoster.PROACTIVE_CHANNEL + "/consent/"
         private val AUTHORIZATION_LIFETIME = Duration.ofMinutes(5)
         private val EXECUTION_LEASE = Duration.ofSeconds(30)
 
