@@ -2,43 +2,58 @@ package network.orion.data.memory
 
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
+import java.time.Instant
 import java.util.UUID
 import network.orion.core.commands.memories.*
 import network.orion.core.model.OrionMemoryProvenance
 import network.orion.core.queries.memories.*
 import network.orion.core.security.*
+import network.orion.core.time.WallClock
 import network.orion.data.database.OrionDatabase
+import network.orion.data.database.MemoryEntity
 import org.json.JSONObject
 
 /** MAIN-only read adapter. Legacy opaque/corrupt content stays explicitly unreadable. */
-class OrionMemoryQuery(private val database: OrionDatabase, private val encryption: OrionFieldEncryption) : MemoryQuery {
+class OrionMemoryQuery(private val database: OrionDatabase, private val encryption: OrionFieldEncryption,
+    private val clock: WallClock) : MemoryQuery {
     override fun get(request: GetMemories): MemoryPage {
         val rows = database.memories().page(request.after?.toString(), request.limit + 1)
-        val selected = rows.take(request.limit).map(::select)
+        val now = clock.wallNow()
+        val selected = rows.take(request.limit).map { select(it, now) }
         return MemoryPage(selected, if (rows.size > request.limit) selected.last().memoryId else null)
     }
 
-    fun find(id: UUID): MemorySummary? = database.memories().find(id.toString())?.takeIf { it.origin == network.orion.data.database.MemoryOrigin.USER_DECLARED && it.userConfirmed && it.sensitivity == network.orion.core.model.Sensitivity.PERSONAL }?.let(::select)
+    fun find(id: UUID): MemorySummary? = database.memories().find(id.toString())?.takeIf { it.origin == network.orion.data.database.MemoryOrigin.USER_DECLARED && it.userConfirmed && it.sensitivity == network.orion.core.model.Sensitivity.PERSONAL }?.let { select(it, clock.wallNow()) }
 
-    private fun select(row: network.orion.data.database.MemoryEntity): MemorySummary {
-            val id = UUID.fromString(row.memoryId)
-            var state = MemoryContentState.UNREADABLE
-            var content: String? = null
-            val parsed = FieldEnvelopeCodec.decode(row.contentEnvelope)
-            if (parsed is FieldEnvelopeDecodingResult.Decoded) {
-                when (val result = encryption.decrypt(parsed.envelope, FieldEncryptionContext("memory/$id", "content", 1))) {
-                    is FieldDecryptionResult.Plaintext -> {
-                        val clear = result.copyBytes()
-                        try { content = decodeContent(id, clear); if (content != null) state = MemoryContentState.READABLE }
-                        finally { clear.fill(0) }
-                    }
-                    is FieldDecryptionResult.Failure -> if (result.reason in setOf(FieldCryptoFailure.KEY_UNAVAILABLE,
-                        FieldCryptoFailure.KEY_INVALIDATED, FieldCryptoFailure.CRYPTO_UNAVAILABLE)) state = MemoryContentState.KEY_UNAVAILABLE
-                }
+    private fun select(row: MemoryEntity, at: Instant): MemorySummary {
+        val id = UUID.fromString(row.memoryId)
+        val (content, state) = read(row.contentEnvelope, FieldEncryptionContext("memory/$id", "content", 1)) {
+            decodeContent(id, it)
+        }
+        val details = row.detailsEnvelope?.let { read(it, OrionMemoryDetailsCodec.context(id), OrionMemoryDetailsCodec::decode) }
+        val provenance = OrionMemoryProvenance(row.origin, row.confidence, row.userConfirmed, row.sensitivity,
+            row.originEventId?.let(UUID::fromString))
+        val lifecycle = row.lifecycle()
+        return MemorySummary(id, content, lifecycle.stateAt(row.status, at), row.version, state, provenance,
+            lifecycle, details?.first, details?.second)
+    }
+
+    private fun <T : Any> read(envelope: ByteArray, context: FieldEncryptionContext,
+        decode: (ByteArray) -> T?): Pair<T?, MemoryContentState> {
+        val parsed = FieldEnvelopeCodec.decode(envelope) as? FieldEnvelopeDecodingResult.Decoded
+            ?: return null to MemoryContentState.UNREADABLE
+        return when (val result = encryption.decrypt(parsed.envelope, context)) {
+            is FieldDecryptionResult.Plaintext -> {
+                val clear = result.copyBytes()
+                val value = try { decode(clear) } finally { clear.fill(0) }
+                value to if (value == null) MemoryContentState.UNREADABLE else MemoryContentState.READABLE
             }
-            val provenance = OrionMemoryProvenance(row.origin, row.confidence, row.userConfirmed, row.sensitivity,
-                row.originEventId?.let(UUID::fromString))
-            return MemorySummary(id, content, MemoryState.valueOf(row.status.name), row.version, state, provenance)
+            is FieldDecryptionResult.Failure -> null to when (result.reason) {
+                FieldCryptoFailure.KEY_UNAVAILABLE, FieldCryptoFailure.KEY_INVALIDATED,
+                FieldCryptoFailure.CRYPTO_UNAVAILABLE -> MemoryContentState.KEY_UNAVAILABLE
+                else -> MemoryContentState.UNREADABLE
+            }
+        }
     }
 
     private fun decodeContent(id: UUID, bytes: ByteArray): String? {

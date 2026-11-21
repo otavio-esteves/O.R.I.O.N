@@ -42,7 +42,7 @@ class ActionPersistenceTest {
 
     @Test fun freshDatabaseUsesCurrentSchemaAndPreservesTechnicalFormat() {
         database.verifyStructure()
-        assertEquals(7, database.openHelper.readableDatabase.version)
+        assertEquals(8, database.openHelper.readableDatabase.version)
         assertEquals(1, database.metadata().formatVersion())
         assertEquals(1, database.metadata().rowCount())
     }
@@ -61,7 +61,7 @@ class ActionPersistenceTest {
             .addMigrations(*OrionDatabaseMigrations.ALL).build()
         try {
             upgraded.verifyStructure()
-            assertEquals(7, upgraded.openHelper.readableDatabase.version)
+            assertEquals(8, upgraded.openHelper.readableDatabase.version)
             assertNull(upgraded.actions().find(UUID.randomUUID().toString()))
         } finally { upgraded.close() }
     }

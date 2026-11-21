@@ -1,11 +1,16 @@
 package network.orion.data.database
 
+import java.time.Instant
 import androidx.room.Entity
 import androidx.room.ColumnInfo
 import androidx.room.ForeignKey
 import androidx.room.Index
+import androidx.room.Ignore
 import androidx.room.PrimaryKey
+import network.orion.core.model.OrionMemoryLifecycle
 import network.orion.core.model.OrionMemoryOrigin
+import network.orion.core.model.OrionMemoryStatus
+import network.orion.core.model.OrionMemoryType
 import network.orion.core.model.Sensitivity
 
 enum class TaskStatus { OPEN, COMPLETED, CANCELLED }
@@ -13,7 +18,7 @@ enum class ReminderStatus { PENDING, FIRED, CANCELLED }
 enum class ReminderPrecision { UNSCHEDULED, EXACT, APPROXIMATE }
 enum class ReminderScheduleMethod { UNSCHEDULED, EXACT_ALARM, INEXACT_ALARM }
 typealias MemoryOrigin = OrionMemoryOrigin
-enum class MemoryStatus { ACTIVE, SUPERSEDED, DELETED }
+typealias MemoryStatus = OrionMemoryStatus
 
 /** F2 persistence records. Content is encrypted, never indexed; business Skills are deferred to F3. */
 @Entity(tableName = "orion_tasks", indices = [Index(value = ["status", "updatedAt"])])
@@ -74,7 +79,19 @@ data class MemoryEntity(
     val supersedesId: String? = null,
     val version: Long = 0,
     val originEventId: String? = null,
+    val type: OrionMemoryType? = null,
+    val importance: Double? = null,
+    val validFrom: Long? = null,
+    val validUntil: Long? = null,
+    val expiresAt: Long? = null,
+    val detailsEnvelope: ByteArray? = null,
+    val lastAccessedAt: Long? = null,
+    @ColumnInfo(defaultValue = "0") val accessCount: Long = 0,
 ) {
+    @Ignore
+    fun lifecycle(): OrionMemoryLifecycle = OrionMemoryLifecycle(type, importance,
+        validFrom?.let(Instant::ofEpochMilli), validUntil?.let(Instant::ofEpochMilli), expiresAt?.let(Instant::ofEpochMilli))
+
     override fun toString(): String = "MemoryEntity(<redacted>)"
 }
 

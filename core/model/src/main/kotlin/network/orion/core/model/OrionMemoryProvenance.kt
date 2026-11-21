@@ -2,7 +2,12 @@ package network.orion.core.model
 
 import java.util.UUID
 
-enum class OrionMemoryOrigin { USER_DECLARED, SYSTEM_OBSERVED, SYSTEM_DERIVED, LLM_INFERRED, IMPORTED, EXTERNAL_SOURCE }
+enum class OrionMemoryOrigin {
+    USER_DECLARED, SYSTEM_OBSERVED, SYSTEM_DERIVED, LLM_INFERRED, IMPORTED, EXTERNAL_SOURCE;
+
+    val initialStatus: OrionMemoryStatus
+        get() = if (this == LLM_INFERRED) OrionMemoryStatus.CANDIDATE else OrionMemoryStatus.ACTIVE
+}
 
 /** Evidence projected from MAIN storage. Inference provenance is independent of human confirmation. */
 data class OrionMemoryProvenance(

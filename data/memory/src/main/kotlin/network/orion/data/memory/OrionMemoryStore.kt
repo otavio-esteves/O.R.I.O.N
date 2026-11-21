@@ -1,6 +1,8 @@
 package network.orion.data.memory
 
 import java.util.UUID
+import network.orion.core.model.OrionMemoryDetails
+import network.orion.core.model.OrionMemoryLifecycle
 import network.orion.core.model.Sensitivity
 import network.orion.core.security.*
 import network.orion.core.time.WallClock
@@ -24,22 +26,33 @@ class OrionMemoryStore(private val database: OrionDatabase, private val encrypti
     private val clock: WallClock) {
     fun create(id: UUID, content: ByteArray, sensitivity: Sensitivity, origin: MemoryOrigin, confidence: Double,
         claims: List<MemoryClaimInput>, correlationId: UUID, userConfirmed: Boolean = false,
-        originEventId: UUID? = null): MemoryWriteResult =
-        write(id, content, sensitivity, origin, confidence, claims, correlationId, userConfirmed, originEventId, null, null)
+        originEventId: UUID? = null, lifecycle: OrionMemoryLifecycle = OrionMemoryLifecycle(),
+        details: OrionMemoryDetails? = null): MemoryWriteResult =
+        write(id, content, sensitivity, origin, confidence, claims, correlationId, userConfirmed, originEventId,
+            lifecycle, details, null, null)
 
     fun supersede(priorId: UUID, expectedVersion: Long, newId: UUID, content: ByteArray, sensitivity: Sensitivity,
         origin: MemoryOrigin, confidence: Double, claims: List<MemoryClaimInput>, correlationId: UUID,
-        userConfirmed: Boolean = false, originEventId: UUID? = null): MemoryWriteResult {
+        userConfirmed: Boolean = false, originEventId: UUID? = null,
+        lifecycle: OrionMemoryLifecycle = OrionMemoryLifecycle(), details: OrionMemoryDetails? = null): MemoryWriteResult {
         require(expectedVersion in 0 until Long.MAX_VALUE && priorId != newId)
-        return write(newId, content, sensitivity, origin, confidence, claims, correlationId, userConfirmed, originEventId, priorId, expectedVersion)
+        return write(newId, content, sensitivity, origin, confidence, claims, correlationId, userConfirmed, originEventId,
+            lifecycle, details, priorId, expectedVersion)
     }
 
     private fun write(id: UUID, content: ByteArray, sensitivity: Sensitivity, origin: MemoryOrigin, confidence: Double,
         claims: List<MemoryClaimInput>, correlationId: UUID, userConfirmed: Boolean, originEventId: UUID?,
-        priorId: UUID?, version: Long?): MemoryWriteResult {
+        lifecycle: OrionMemoryLifecycle, details: OrionMemoryDetails?, priorId: UUID?, version: Long?): MemoryWriteResult {
         require(claims.size <= 100)
         val body = encryption.encrypt(content, context(id))
         if (body is FieldEncryptionResult.Failure) return MemoryWriteResult.Blocked(body.reason)
+        val detailsEnvelope = details?.let { value ->
+            val clear = OrionMemoryDetailsCodec.encode(value)
+            when (val encrypted = try { encryption.encrypt(clear, OrionMemoryDetailsCodec.context(id)) } finally { clear.fill(0) }) {
+                is FieldEncryptionResult.Failure -> return MemoryWriteResult.Blocked(encrypted.reason)
+                is FieldEncryptionResult.Encrypted -> FieldEnvelopeCodec.encode(encrypted.envelope)
+            }
+        }
         val at = clock.wallNow().toEpochMilli()
         val rows = ArrayList<MemoryClaimEntity>(claims.size)
         for (claim in claims) {
@@ -48,11 +61,13 @@ class OrionMemoryStore(private val database: OrionDatabase, private val encrypti
             if (encrypted is FieldEncryptionResult.Failure) return MemoryWriteResult.Blocked(encrypted.reason)
             rows += MemoryClaimEntity(claim.id.toString(), id.toString(),
                 FieldEnvelopeCodec.encode((encrypted as FieldEncryptionResult.Encrypted).envelope), claim.sensitivity,
-                claim.origin, claim.confidence, claim.userConfirmed, validFrom = at)
+                claim.origin, claim.confidence, claim.userConfirmed, status = claim.origin.initialStatus, validFrom = at)
         }
         val row = MemoryEntity(id.toString(), FieldEnvelopeCodec.encode((body as FieldEncryptionResult.Encrypted).envelope),
-            sensitivity, origin, confidence, userConfirmed, at, at, supersedesId = priorId?.toString(),
-            originEventId = originEventId?.toString())
+            sensitivity, origin, confidence, userConfirmed, at, at, status = origin.initialStatus, supersedesId = priorId?.toString(),
+            originEventId = originEventId?.toString(), type = lifecycle.type, importance = lifecycle.importance,
+            validFrom = lifecycle.validFrom?.toEpochMilli(), validUntil = lifecycle.validUntil?.toEpochMilli(),
+            expiresAt = lifecycle.expiresAt?.toEpochMilli(), detailsEnvelope = detailsEnvelope)
         val created = event(id, 0, "MEMORY_CREATED", sensitivity, at, correlationId)
         if (priorId == null) {
             database.records().createMemoryWithClaimsAndEvent(row, rows, created)

@@ -106,7 +106,7 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
         requireVersion(version)
         val current = memory(id) ?: return ActionMutation.NOT_FOUND
         if (current.version != version || current.status != MemoryStatus.ACTIVE) return ActionMutation.CONFLICT
-        require(replacement.memoryId != id && replacement.supersedesId == id)
+        require(replacement.memoryId != id && replacement.supersedesId == id && replacement.status == MemoryStatus.ACTIVE)
         require(replacement.createdAt >= current.updatedAt)
         require(claims(id).all { claim ->
             claim.status != MemoryStatus.ACTIVE ||
@@ -182,7 +182,10 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
     open fun createMemoryWithClaimsAndEvent(memory: MemoryEntity, claims: List<MemoryClaimEntity>, event: DomainEventOutboxEntity) {
         requireTechnicalUuid(memory.memoryId)
         requireEncryptedContent(memory.contentEnvelope)
-        require(memory.version == 0L && memory.status == MemoryStatus.ACTIVE && memory.createdAt == memory.updatedAt)
+        require(memory.version == 0L && memory.status == memory.origin.initialStatus && memory.createdAt == memory.updatedAt)
+        memory.lifecycle() // Validate the stored timestamp bounds and importance before committing.
+        memory.detailsEnvelope?.let(::requireEncryptedContent)
+        require(memory.accessCount == 0L && memory.lastAccessedAt == null)
         require(memory.supersedesId == null) { "Supersession requires a separate guarded transaction." }
         memory.originEventId?.let { originEventId ->
             requireTechnicalUuid(originEventId)
@@ -192,7 +195,7 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
         require(claims.size <= 100 && claims.map { it.claimId }.distinct().size == claims.size)
         for (claim in claims) {
             requireTechnicalUuid(claim.claimId)
-            require(claim.memoryId == memory.memoryId && claim.version == 0L && claim.status == MemoryStatus.ACTIVE)
+            require(claim.memoryId == memory.memoryId && claim.version == 0L && claim.status == claim.origin.initialStatus)
             require(claim.validUntil == null || claim.validUntil > claim.validFrom)
             requireEncryptedContent(claim.statementEnvelope)
             require(claim.sensitivity.ordinal <= memory.sensitivity.ordinal) { "Memory sensitivity must cover every claim." }
@@ -220,7 +223,9 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
 
     private fun requireConfidence(origin: MemoryOrigin, confidence: Double, confirmed: Boolean) {
         require(confidence.isFinite() && confidence in 0.0..1.0)
-        require(origin != MemoryOrigin.LLM_INFERRED || !confirmed) { "Inferred memory cannot be created confirmed." }
+        require(origin != MemoryOrigin.LLM_INFERRED || !confirmed && confidence <= MAX_INFERRED_CONFIDENCE) {
+            "Inferred memory requires unconfirmed, bounded confidence."
+        }
     }
 
     private fun requireEncryptedContent(bytes: ByteArray) {
@@ -237,5 +242,9 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
         require(event.payloadSensitivity == sensitivity)
         require(event.schemaVersion == 1 && event.status == DomainEventDeliveryStatus.PENDING && event.attemptCount == 0 &&
             event.version == 0L && event.deliveredAt == null && event.nextAttemptAt == at)
+    }
+
+    private companion object {
+        const val MAX_INFERRED_CONFIDENCE = 0.5
     }
 }
