@@ -10,7 +10,9 @@ import java.time.Instant
 import java.util.UUID
 import javax.crypto.spec.SecretKeySpec
 import network.orion.core.commands.memories.*
+import network.orion.core.model.OrionMemoryLifecycle
 import network.orion.core.model.Sensitivity
+import network.orion.core.queries.memories.*
 import network.orion.core.security.*
 import network.orion.core.time.WallClock
 import network.orion.data.database.*
@@ -91,6 +93,34 @@ class OrionMemorySearchIndexTest {
                     arrayOf(ids.first().toString()))
                 assertEquals(listOf("marcadorlegado1"), bodies(db))
             }
+        }
+    }
+
+    @Test fun searchUsesAuthoritativeValidityAndStableRankingAcrossPages() {
+        withRoom { db ->
+            val store = OrionMemoryStore(db, crypto, clock)
+            val search = OrionMemoryQuery(db, crypto, clock)
+            val trace = UUID.randomUUID()
+            val ids = List(3) { UUID.randomUUID() }.sortedBy(UUID::toString)
+            for (id in ids) {
+                val restricted = id == ids.last()
+                assertTrue(store.create(id, canonical(id, "Café forte"), Sensitivity.PERSONAL, MemoryOrigin.USER_DECLARED,
+                    1.0, emptyList(), trace, userConfirmed = true,
+                    lifecycle = OrionMemoryLifecycle(expiresAt = if (restricted) at.plusMillis(10) else null)) is MemoryWriteResult.Stored)
+            }
+            assertEquals(MemorySearchState.BUILDING, search.search(SearchMemories("Café")).state)
+            assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
+            val first = search.search(SearchMemories("cafe forte", limit = 1))
+            assertEquals(ids.first(), first.hits.single().memory.memoryId)
+            at = at.plusMillis(10)
+            val second = search.search(SearchMemories("café forte", limit = 1, after = first.next))
+            assertEquals(ids[1], second.hits.single().memory.memoryId)
+            assertNull(second.next)
+
+            key = FieldKeyResult.Unavailable
+            val blocked = search.search(SearchMemories("café"))
+            assertEquals(MemorySearchState.KEY_UNAVAILABLE, blocked.state)
+            assertTrue(blocked.hits.isEmpty())
         }
     }
 
