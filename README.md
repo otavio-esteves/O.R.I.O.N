@@ -51,11 +51,12 @@ remain separate from these software checks.
 ## F7 software development
 
 [ADR-0005](docs/adr/ADR-0005-f7-software-entry.md) records the scoped software
-entry decision. The first [provenance increment](docs/issues/ORION-F7-001.md)
-projects provenance from MAIN storage and adds an optional source event
-reference through Room migration 6→7. The
-[F7 implementation plan](docs/plans/F7-ImplementationPlan.md) lists the
-remaining work and exit criteria.
+entry decision. The implementation adds Room v9 FTS, deterministic search,
+memory correction and claim review, explicitly confirmed local conversation
+archives, and budgeted memory retrieval for chat. The
+[F7 software closeout](docs/qualification/F7-SoftwareCloseout.md) records the
+evidence for the [implementation plan](docs/plans/F7-ImplementationPlan.md).
+`MEMORY_ENGINE_READY`, physical qualification and stability remain open.
 
 ## Development environments
 
