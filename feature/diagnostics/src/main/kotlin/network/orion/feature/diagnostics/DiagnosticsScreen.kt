@@ -12,7 +12,7 @@ import network.orion.core.ipc.OrionIpcProtocol
 
 @Composable
 fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, taskQueues: TaskQueueDiagnostics? = null, scheduling: OrionSchedulingDiagnostics? = null,
-    platform: OrionPlatformDiagnostics? = null, onRetry: () -> Unit) {
+    platform: OrionPlatformDiagnostics? = null, resourceProfile: String? = null, onRetry: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Saúde do sistema", style = MaterialTheme.typography.headlineSmall)
@@ -23,6 +23,7 @@ fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, ta
         Text("Contrato IPC: ${protocol.protocolMajor}.${protocol.protocolMinor}")
         Text("Última inicialização local: ${report.lastRecovery ?: "não concluída"}")
         Text("Compatibilidade nativa: ${platform?.nativeQualification ?: OrionNativeQualification.UNAVAILABLE}")
+        Text("Perfil de recursos: ${resourceProfile ?: "indisponível"}")
         Text("Classificação do Memory Limiter: " + when (platform?.memoryLimiterClassification) {
             OrionMemoryLimiterClassification.DEDICATED_REASON_AVAILABLE -> "motivo dedicado disponível"
             OrionMemoryLimiterClassification.DESCRIPTION_FALLBACK_ONLY -> "identificação alternativa por descrição"

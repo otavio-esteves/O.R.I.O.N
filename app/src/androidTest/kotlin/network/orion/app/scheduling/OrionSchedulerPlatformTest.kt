@@ -11,11 +11,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.WorkManager
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import network.orion.app.OrionApplication
 import network.orion.scheduler.alarms.*
+import network.orion.scheduler.workers.OrionMaintenanceScheduler
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -100,6 +102,25 @@ class OrionSchedulerPlatformTest {
             assertFalse(it.name, it.metaData?.containsKey("androidx.work.WorkManagerInitializer") == true)
         }
         assertFalse(info.receivers.orEmpty().any { it.name == "androidx.work.impl.diagnostics.DiagnosticsReceiver" })
+    }
+
+    @Test fun repeatedRecoveryKeepsOneDeferrableHalfHourHeartbeat() = runBlocking {
+        val runtime = checkNotNull(app.mainRuntime)
+        withTimeout(30_000) { runtime.health.first { it.core.readiness.isStartupBarrierOpen } }
+        val scheduler = OrionMaintenanceScheduler(app, OrionMaintenanceWorker::class.java)
+        val workManager = WorkManager.getInstance(app)
+
+        fun currentHeartbeat() = workManager.getWorkInfosForUniqueWork(OrionMaintenanceScheduler.HEARTBEAT_NAME)
+            .get(10, TimeUnit.SECONDS).filterNot { it.state.isFinished }.single()
+
+        scheduler.reconcileHeartbeat().result.get(10, TimeUnit.SECONDS)
+        val original = currentHeartbeat()
+        assertEquals(TimeUnit.MINUTES.toMillis(30), checkNotNull(original.periodicityInfo).repeatIntervalMillis)
+
+        scheduler.reconcileHeartbeat().result.get(10, TimeUnit.SECONDS)
+        val repeated = currentHeartbeat()
+        assertEquals(original.id, repeated.id)
+        assertEquals(original.periodicityInfo, repeated.periodicityInfo)
     }
 
     @Test fun recoveredMainOwnsInitializedWorkManager() = runBlocking {

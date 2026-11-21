@@ -36,3 +36,23 @@ Os resultados de CI e a integração de cada pacote são rastreados nos PRs
 [#185](https://github.com/otavio-esteves/O.R.I.O.N/pull/185) e
 [#189](https://github.com/otavio-esteves/O.R.I.O.N/pull/189). O status exigido
 para integração é `docker-build-and-check`.
+
+### Revisão após integração
+
+O [PR #189](https://github.com/otavio-esteves/O.R.I.O.N/pull/189) foi integrado
+à `main` em `8ff4530`. O
+[CI obrigatório](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/44932089340/job/136944866675)
+passou no head `5ad2875`, com build canônico e execução de chat sem modelo.
+Os PRs #185 e #187 foram encerrados após seus commits entrarem pelo #189.
+As oito issues de software da F7 foram encerradas. Os campos `PENDING` do
+JSON registram o estado no momento da execução do candidato `7bc02e3`.
+
+O resumo de sessão é extrativo e executa em MAIN. O cenário de morte de
+`:ai` durante geração de resumo previsto no plano não se aplica a essa
+implementação. A morte de `:ai` durante inferência do chat tem
+[evidência separada na F6](F6-HybridSoftware-20261118.md).
+
+Durante o upgrade da F8, a execução no emulador API 35 revelou uma falha
+intermitente na checagem de integridade FTS4 por conexão somente leitura.
+A correção preserva a checagem original e fixa a conexão gravável durante
+a inspeção. [Evidência da F8](F8-SoftwareCloseout.md#upgrade-e-evidências)

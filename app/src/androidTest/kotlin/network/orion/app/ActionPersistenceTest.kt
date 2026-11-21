@@ -14,6 +14,7 @@ import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import network.orion.core.actions.ActionStatus
 import network.orion.core.model.*
 import network.orion.data.database.*
@@ -42,9 +43,38 @@ class ActionPersistenceTest {
 
     @Test fun freshDatabaseUsesCurrentSchemaAndPreservesTechnicalFormat() {
         database.verifyStructure()
-        assertEquals(9, database.openHelper.readableDatabase.version)
+        assertEquals(10, database.openHelper.readableDatabase.version)
         assertEquals(1, database.metadata().formatVersion())
         assertEquals(1, database.metadata().rowCount())
+    }
+
+    @Test fun structureVerificationWaitsForWritableConnectionWithFtsContent() {
+        database.memoryIndex().insert(OrionMemoryIndexRow(UUID.randomUUID().toString(), "synthetic posting"))
+        val executor = Executors.newFixedThreadPool(2)
+        val writerReady = CountDownLatch(1)
+        val releaseWriter = CountDownLatch(1)
+        val verifierReady = CountDownLatch(1)
+        try {
+            val writer = executor.submit {
+                database.runInTransaction {
+                    writerReady.countDown()
+                    check(releaseWriter.await(10, TimeUnit.SECONDS))
+                }
+            }
+            assertTrue(writerReady.await(5, TimeUnit.SECONDS))
+            val verify = executor.submit {
+                verifierReady.countDown()
+                database.verifyStructure()
+            }
+            assertTrue(verifierReady.await(5, TimeUnit.SECONDS))
+            assertThrows(TimeoutException::class.java) { verify.get(300, TimeUnit.MILLISECONDS) }
+            releaseWriter.countDown()
+            writer.get(5, TimeUnit.SECONDS)
+            verify.get(5, TimeUnit.SECONDS)
+        } finally {
+            releaseWriter.countDown()
+            executor.shutdownNow()
+        }
     }
 
     @Test fun migrationFromDistributedVersionOnePreservesMetadataAndValidatesEveryTable() {
@@ -61,7 +91,7 @@ class ActionPersistenceTest {
             .addMigrations(*OrionDatabaseMigrations.ALL).build()
         try {
             upgraded.verifyStructure()
-            assertEquals(9, upgraded.openHelper.readableDatabase.version)
+            assertEquals(10, upgraded.openHelper.readableDatabase.version)
             assertNull(upgraded.actions().find(UUID.randomUUID().toString()))
         } finally { upgraded.close() }
     }

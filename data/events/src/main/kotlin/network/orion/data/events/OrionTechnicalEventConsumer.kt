@@ -48,7 +48,7 @@ class OrionTechnicalEventConsumer internal constructor(
             "TIMER_CREATED", "TIMER_CANCELLED",
             "MEMORY_CREATED", "MEMORY_DELETED", "MEMORY_SUPERSEDED", "MEMORY_FORGOTTEN",
             "MEMORY_CLAIM_CONFIRMED", "MEMORY_CLAIM_REJECTED",
-            "NOTIFICATION_POSTED",
+            "NOTIFICATION_POSTED", "SENTINEL_CONSENT_CHANGED", "SENTINEL_FEEDBACK_RECORDED",
         )
 
         fun routes(events: OrionEventDao, clock: WallClock): Map<String, List<DurableEventConsumer>> {

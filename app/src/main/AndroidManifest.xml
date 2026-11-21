@@ -17,6 +17,8 @@
             <meta-data android:name="androidx.work.WorkManagerInitializer" tools:node="remove" />
         </provider>
         <receiver android:name=".scheduling.OrionReminderAlarmReceiver" android:exported="false" />
+        <receiver android:name=".sentinel.OrionSentinelFeedbackReceiver" android:exported="false" />
+        <activity android:name=".sentinel.OrionSentinelOpenActivity" android:exported="false" />
         <receiver android:name=".scheduling.OrionReconciliationReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

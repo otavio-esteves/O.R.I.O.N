@@ -21,7 +21,7 @@ typealias MemoryOrigin = OrionMemoryOrigin
 typealias MemoryStatus = OrionMemoryStatus
 
 /** F2 persistence records. Content is encrypted, never indexed; business Skills are deferred to F3. */
-@Entity(tableName = "orion_tasks", indices = [Index(value = ["status", "updatedAt"])])
+@Entity(tableName = "orion_tasks", indices = [Index(value = ["status", "updatedAt"]), Index(value = ["status", "createdAt"])])
 data class TaskEntity(
     @PrimaryKey val taskId: String,
     val contentEnvelope: ByteArray,

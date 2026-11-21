@@ -36,6 +36,10 @@ abstract class OrionActionDao {
     @Query("SELECT * FROM orion_action_requests WHERE status IN ('NEEDS_CONFIRMATION','CONFIRMED') AND skill = 'notification.post' ORDER BY createdAt, actionId LIMIT :limit")
     abstract fun notificationConfirmations(limit: Int): List<ActionRequestEntity>
 
+    @Query("""SELECT * FROM orion_action_requests WHERE skill = 'sentinel.notify' AND status = 'CONFIRMED'
+        AND requiresConfirmation = 0 AND confirmationExpiresAt <= :at ORDER BY confirmationExpiresAt, actionId LIMIT :limit""")
+    abstract fun expiredProactiveActions(at: Long, limit: Int): List<ActionRequestEntity>
+
     @Query("SELECT * FROM orion_action_requests WHERE actionId = :actionId")
     abstract fun find(actionId: String): ActionRequestEntity?
 

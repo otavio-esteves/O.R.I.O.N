@@ -166,12 +166,16 @@ class OrionMinimumResourceGovernor(
             return block(OrionResourceBlock.MEMORY_BUDGET, MemoryRisk.CRITICAL, headroom)
         if (!sample.foreground || sample.importance != OrionProcessImportance.FOREGROUND)
             return block(OrionResourceBlock.BACKGROUND, MemoryRisk.LOW, headroom)
-        if (sample.batteryPercent < plan.minimumBatteryPercent) return block(OrionResourceBlock.BATTERY, MemoryRisk.LOW, headroom)
+        val policy = OrionResourceProfiles.select(sample.batteryPercent, sample.thermalStatus, sample.powerSave,
+            sample.memoryPressure, backgroundRestricted = null)
+        if (policy.profile == OrionResourceProfile.CRITICAL || sample.batteryPercent < plan.minimumBatteryPercent)
+            return block(OrionResourceBlock.BATTERY, MemoryRisk.LOW, headroom)
         if (sample.thermalStatus > plan.maxThermalStatus) return block(OrionResourceBlock.THERMAL, MemoryRisk.LOW, headroom)
         if (sample.powerSave) return block(OrionResourceBlock.POWER_SAVER, MemoryRisk.LOW, headroom)
         if (sample.requestedThreads !in 1..plan.maxThreads || sample.requestedContext !in 1..plan.maxContext ||
             sample.requestedTokens !in 1..plan.maxTokens) return block(OrionResourceBlock.REQUEST_LIMITS, MemoryRisk.LOW, headroom)
-        return OrionResourceDecision(null, plan, MemoryRisk.LOW, headroom, sample.sampledAt, exits)
+        val activePlan = plan.copy(keepAliveMs = policy.limitKeepAlive(plan.keepAliveMs))
+        return OrionResourceDecision(null, activePlan, MemoryRisk.LOW, headroom, sample.sampledAt, exits)
     }
 
     private fun denied(reason: OrionResourceBlock) = OrionResourceDecision(reason, null, MemoryRisk.UNKNOWN, null, null, emptyList())

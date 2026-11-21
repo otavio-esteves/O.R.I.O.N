@@ -89,6 +89,19 @@ class TransactionRecorderContractTest(unittest.TestCase):
         self.assertEqual("SYNTHETIC_DURABLE_MARKER", proof["metadata"]["externalEvidence"])
         self.assertEqual("SEPARATE_PLATFORM_TEST", proof["metadata"]["notificationManagerEvidence"])
 
+    def test_sentinel_scenario_selects_its_fixture_and_unknown_no_retry_proof(self):
+        fixture = "00000000-0000-0000-0000-000000000001"
+        for mode in ("prepare", "verify"):
+            command = RECORDER.instrumentation_command(mode, fixture, "sentinel_delivery")
+            self.assertEqual("network.orion.app.sentinel.OrionSentinelProcessDeathTest",
+                             command[command.index("class") + 1])
+        proof = RECORDER.scenario_proof("sentinel_delivery")
+        self.assertEqual("kill_after_committed_sentinel_claim", proof["killCheck"])
+        self.assertEqual("unknown_sentinel_effect_not_replayed_after_heartbeat", proof["verificationCheck"])
+        self.assertEqual("AFTER_COMMITTED_RUNNING_OUTSIDE_ROOM_TRANSACTION", proof["metadata"]["checkpointBoundary"])
+        self.assertEqual("SYNTHETIC_DURABLE_MARKER", proof["metadata"]["externalEvidence"])
+        self.assertEqual("UNKNOWN_NO_RETRY", proof["metadata"]["recoveryPolicy"])
+
     def test_local_scenarios_preserve_the_legacy_room_rollback_proof_labels(self):
         for scenario in ["generic", "task", "reminder", "timer", "memory"]:
             with self.subTest(scenario=scenario):

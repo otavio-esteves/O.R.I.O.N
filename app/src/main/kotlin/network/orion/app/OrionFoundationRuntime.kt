@@ -35,6 +35,10 @@ import network.orion.app.reminders.*
 import network.orion.app.timers.*
 import network.orion.app.memories.*
 import network.orion.app.notifications.*
+import network.orion.app.resources.OrionAndroidResourceProfileObserver
+import network.orion.app.sentinel.OrionSentinelRuntime
+import network.orion.core.sentinel.OrionProactivityFeedbackKind
+import network.orion.core.resources.OrionResourceProfile
 import network.orion.core.orchestrator.notifications.NotificationAvailability
 import network.orion.core.skills.metadata.notifications.OrionPostNotificationDescriptor
 import network.orion.core.skills.metadata.memories.OrionCreateMemoryDescriptor
@@ -58,6 +62,13 @@ import network.orion.data.repository.OrionPrivatePayloadStore
 class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCoordinator {
     private val app = context.applicationContext
     private val clock = AndroidOrionClock(app.contentResolver)
+    private val resourceObserver = OrionAndroidResourceProfileObserver(app)
+    private var sentinel: OrionSentinelRuntime? = null
+    private val mutableSentinelEnabled = MutableStateFlow<Boolean?>(null)
+    internal val sentinelEnabled = mutableSentinelEnabled.asStateFlow()
+    private val mutableResourceProfile = MutableStateFlow<OrionResourceProfile?>(null)
+    internal val resourceProfile = mutableResourceProfile.asStateFlow()
+    @Volatile private var lastForegroundInteraction: Instant? = null
     private val notificationPoster = OrionAndroidNotificationPoster(app, clock)
     private val reminderPoster = OrionAndroidNotificationPoster(app, clock, OrionAndroidNotificationPoster.REMINDER_CHANNEL)
     private val alarmBackend = AndroidOrionAlarmBackend(app, ComponentName(app, OrionReminderAlarmReceiver::class.java))
@@ -253,6 +264,40 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     @Volatile var configurationFormatVersion: Int? = null
         private set
 
+    internal fun noteForegroundInteraction() {
+        lastForegroundInteraction = clock.wallNow()
+    }
+
+    internal suspend fun setSentinelEnabled(enabled: Boolean): Boolean = withContext(Dispatchers.IO) {
+        recover()
+        mutex.withLock {
+            val runtime = sentinel ?: return@withLock false
+            try {
+                val applied = runtime.setEnabled(enabled)
+                mutableSentinelEnabled.value = runtime.enabled()
+                applied
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (interrupted: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw interrupted
+            } catch (_: Exception) {
+                mutableHealth.publishSubsystemObservations(clock, mapOf(OrionSubsystem.SENTINEL to OrionHealthStatus.DEGRADED))
+                false
+            }
+        }
+    }
+
+    internal suspend fun receiveSentinelFeedback(id: UUID, kind: OrionProactivityFeedbackKind): Boolean =
+        withContext(Dispatchers.IO) {
+            recover()
+            mutex.withLock { sentinel?.receive(id, kind) == true }
+        }
+
+    internal fun noteSentinelOpened(id: UUID) {
+        launchCoreMaintenance { receiveSentinelFeedback(id, OrionProactivityFeedbackKind.OPENED) }
+    }
+
     private fun taskOperationFailed() {
         taskStartupBarrier.beginRecovery()
         taskWriteReady = false
@@ -283,6 +328,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         val ticket = taskStartupBarrier.beginRecovery()
         taskWriteReady = false
         taskStorageReady = false
+        mutableSentinelEnabled.value = null
         taskAdmissions.invalidateAdmissions()
         reminderAdmissions.invalidateAdmissions()
         timerAdmissions.invalidateAdmissions()
@@ -352,6 +398,12 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     memoryAdmissions, { health.value.core.readiness }, { taskStorageReady })
                 notificationKernel = OrionNotificationKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
                     notificationAdmissions, { health.value.core.readiness }, { taskStorageReady }, notificationPoster)
+                val sentinelRuntime = OrionSentinelRuntime(app, db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
+                    { health.value.core.readiness }, { taskStorageReady }, { health.value.core.status },
+                    observeResources = { resourceObserver.observe().also { mutableResourceProfile.value = it.policy.profile } })
+                sentinel = sentinelRuntime
+                mutableSentinelEnabled.value = sentinelRuntime.enabled()
+                states[OrionSubsystem.SENTINEL] = OrionHealthStatus.HEALTHY
                 val delivery = OrionReminderDeliveryPipeline(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
                     { health.value.core.readiness }, { taskStorageReady }, OrionProcessRole.MAIN,
                     { presenceEvidence() == OrionPolicyEvidence.SATISFIED }, reminderPoster,
@@ -419,6 +471,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             states[OrionSubsystem.MEMORY_INDEX] = memoryIndexHealth(memoryKernel?.let { OrionMemoryIndexProgress.BUILDING })
             // Optional inference remains disabled; hardware/system qualification is still pending.
             states[OrionSubsystem.RESOURCES] = OrionHealthStatus.DEGRADED
+            mutableResourceProfile.value = resourceObserver.observe().policy.profile
             governor = UnavailableResourceGovernor(exits)
             check(!governor.canRunInference())
             taskStartupBarrier.completeRecovery(ticket,
@@ -560,8 +613,23 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             }
             val reconciled = scheduler.reconcileRegistrations()
             val delivered = scheduler.deliverDue()
+            val sentinelStatus = try {
+                mutableResourceProfile.value = resourceObserver.observe().policy.profile
+                sentinel?.let {
+                    it.maintain(origin == OrionMaintenanceOrigin.HEARTBEAT, lastForegroundInteraction)
+                        .also { _ -> mutableSentinelEnabled.value = it.enabled() }
+                } ?: OrionHealthStatus.UNAVAILABLE
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (interrupted: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw interrupted
+            } catch (_: Exception) {
+                OrionHealthStatus.DEGRADED
+            }
             val published = scheduler.publishEvents()
             mutableHealth.publishSubsystemObservations(clock, mapOf(
+                OrionSubsystem.SENTINEL to sentinelStatus,
                 OrionSubsystem.MEMORY_INDEX to memoryIndexHealth(memoryIndexProgress),
                 OrionSubsystem.EVENT_OUTBOX to if (published) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED,
                 OrionSubsystem.NOTIFICATIONS to notificationHealth(),
