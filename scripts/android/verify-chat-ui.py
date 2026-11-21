@@ -8,7 +8,7 @@ import re
 import subprocess
 import sys
 
-from chat_ui_protocol import Result, SELECTED, junit_report, parse_instrumentation
+from chat_ui_protocol import F8_SELECTED, Result, SELECTED, junit_report, parse_instrumentation, test_identities
 
 APK_NAMES = {'network.orion': 'app-debug.apk', 'network.orion.test': 'app-debug-androidTest.apk'}
 
@@ -40,9 +40,11 @@ def verify_artifacts(directory):
     return entries
 
 
-def run(adb_path, serial, avd_name, apk_dir, report_dir):
+def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat"):
     report_dir.mkdir(parents=True, exist_ok=True)
-    result = Result()
+    selected = F8_SELECTED if suite == "f8" else SELECTED
+    expected = test_identities(selected)
+    result = Result(expected=expected)
     metadata = {'environment': 'ANDROID_EMULATOR', 'definitiveHardwareEvidence': False}
     installed = []
 
@@ -88,10 +90,12 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir):
             proof = adb('shell', 'sha256sum', location.removeprefix('package:')).split()
             if len(proof) != 2 or proof[0] != hashes[filename]:
                 raise RunnerFailure('INSTALLED_HASH_MISMATCH')
+        if suite == "f8":
+            adb('shell', 'pm', 'grant', 'network.orion', 'android.permission.POST_NOTIFICATIONS')
         response = subprocess.run([str(adb_path), '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
-            '-e', 'class', ','.join(SELECTED), 'network.orion.test/androidx.test.runner.AndroidJUnitRunner'],
+            '-e', 'class', ','.join(selected), 'network.orion.test/androidx.test.runner.AndroidJUnitRunner'],
             capture_output=True, text=True, timeout=300)
-        result = parse_instrumentation(response.stdout + '\n' + response.stderr, response.returncode)
+        result = parse_instrumentation(response.stdout + '\n' + response.stderr, response.returncode, expected)
     except RunnerFailure as failure:
         result.errors.append(str(failure))  # Fixed technical codes only.
     except subprocess.TimeoutExpired:
@@ -121,8 +125,9 @@ def main():
     parser.add_argument('--avd-name', required=True, help='Explicit task-owned AVD, never an arbitrary connected device')
     parser.add_argument('--apk-dir', required=True, type=Path)
     parser.add_argument('--report-dir', required=True, type=Path)
+    parser.add_argument('--suite', choices=('chat', 'f8'), default='chat')
     args = parser.parse_args()
-    return run(args.adb, args.serial, args.avd_name, args.apk_dir, args.report_dir)
+    return run(args.adb, args.serial, args.avd_name, args.apk_dir, args.report_dir, args.suite)
 
 
 if __name__ == '__main__':

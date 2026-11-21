@@ -47,7 +47,7 @@ class OrionMemorySearchIndex(private val database: OrionDatabase, encryption: Or
         check(database.inTransaction())
         if (!eligible(row)) return
         val id = UUID.fromString(row.memoryId)
-        write(row.memoryId, query.decodeContent(id, clearContent))
+        write(row.memoryId, query.decodeContent(id, clearContent, requireIndexConsent = true))
     }
 
     private fun write(id: String, content: String?) {

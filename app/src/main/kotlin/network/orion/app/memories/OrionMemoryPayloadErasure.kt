@@ -42,7 +42,7 @@ internal class OrionMemoryPayloadErasure(private val db: OrionDatabase,
                     val json = JSONObject(args)
                     val memoryId = UUID.fromString(json.getString("memoryId"))
                     val memory = (OrionCreateMemoryPreparer.prepare(CreateMemory(memoryId, json.getString("content"),
-                        key, trace)) as? CreateMemoryPreparation.Ready)?.memory ?: unavailable()
+                        key, trace, json.optBoolean("allowSearchIndex"))) as? CreateMemoryPreparation.Ready)?.memory ?: unavailable()
                     if (stored.request != OrionCreateMemoryActionStore.normalized(stored.request.actionId, memory,
                             stored.request.policyVersion)) unavailable()
                     setOf(memoryId)

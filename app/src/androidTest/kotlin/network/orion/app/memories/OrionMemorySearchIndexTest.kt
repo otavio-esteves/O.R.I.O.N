@@ -46,7 +46,7 @@ class OrionMemorySearchIndexTest {
             val trace = UUID.randomUUID()
             for (level in listOf(Sensitivity.PERSONAL, Sensitivity.SENSITIVE, Sensitivity.SECRET)) {
                 val id = if (level == Sensitivity.PERSONAL) prior else UUID.randomUUID()
-                assertTrue(store.create(id, canonical(id, "marcador${level.name.lowercase()}"), level, MemoryOrigin.USER_DECLARED,
+                assertTrue(store.create(id, canonical(id, "marcador${level.name.lowercase()}", level == Sensitivity.PERSONAL), level, MemoryOrigin.USER_DECLARED,
                     1.0, emptyList(), trace, userConfirmed = true) is MemoryWriteResult.Stored)
             }
             assertEquals(listOf("marcadorpersonal"), bodies(db))
@@ -59,19 +59,43 @@ class OrionMemorySearchIndexTest {
         }
     }
 
-    @Test fun upgradeResumeAndKeyFailureKeepIndexUnavailableUntilItsCursorCompletes() {
+    @Test fun upgradeRemovesLegacyPlaintextWhilePreservingReadablePrivateMemory() {
+        val id = UUID.randomUUID()
+        val payload = canonical(id, "marcadorlegado", false)
+        val encrypted = crypto.encrypt(payload, FieldEncryptionContext("memory/$id", "content", 1))
+            as FieldEncryptionResult.Encrypted
+        migrations.createDatabase(name, 10).use { db ->
+            db.execSQL("""INSERT INTO orion_memories (memoryId,contentEnvelope,sensitivity,origin,confidence,
+                userConfirmed,createdAt,updatedAt,status,version,accessCount)
+                VALUES (?,?,'PERSONAL','USER_DECLARED',1,1,1000,1000,'ACTIVE',0,0)""",
+                arrayOf(id.toString(), FieldEnvelopeCodec.encode(encrypted.envelope)))
+            db.execSQL("INSERT INTO orion_memory_fts (memoryId, body) VALUES (?, 'marcadorlegado')", arrayOf(id.toString()))
+        }
+        migrations.runMigrationsAndValidate(name, 11, true, *OrionDatabaseMigrations.ALL).close()
+        withRoom { db ->
+            assertTrue(bodies(db).isEmpty())
+            assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
+            assertTrue(bodies(db).isEmpty())
+            val memory = checkNotNull(OrionMemoryQuery(db, crypto, clock).find(id))
+            assertEquals("marcadorlegado", memory.content)
+            assertEquals(Sensitivity.SENSITIVE, memory.provenance.sensitivity)
+        }
+    }
+
+    @Test fun backfillResumesAfterKeyFailureAndReclassificationRemovesPosting() {
+        migrations.createDatabase(name, 10).close()
+        migrations.runMigrationsAndValidate(name, 11, true, *OrionDatabaseMigrations.ALL).close()
         val ids = List(2) { UUID.randomUUID() }.sortedBy(UUID::toString)
-        migrations.createDatabase(name, 8).use { db ->
+        withRoom { db ->
             ids.forEachIndexed { number, id ->
-                val body = canonical(id, "marcadorlegado$number")
-                val encrypted = crypto.encrypt(body, FieldEncryptionContext("memory/$id", "content", 1))
-                    as FieldEncryptionResult.Encrypted
-                db.execSQL("""INSERT INTO orion_memories (memoryId,contentEnvelope,sensitivity,origin,confidence,
-                    userConfirmed,createdAt,updatedAt,status,version) VALUES (?,?,'PERSONAL','USER_DECLARED',1,1,1000,1000,'ACTIVE',0)""",
+                val encrypted = crypto.encrypt(canonical(id, "marcadorlegado$number"),
+                    FieldEncryptionContext("memory/$id", "content", 1)) as FieldEncryptionResult.Encrypted
+                db.openHelper.writableDatabase.execSQL("""INSERT INTO orion_memories
+                    (memoryId,contentEnvelope,sensitivity,origin,confidence,userConfirmed,createdAt,updatedAt,status,version,accessCount)
+                    VALUES (?,?,'PERSONAL','USER_DECLARED',1,1,1000,1000,'ACTIVE',0,0)""",
                     arrayOf(id.toString(), FieldEnvelopeCodec.encode(encrypted.envelope)))
             }
         }
-        migrations.runMigrationsAndValidate(name, 9, true, *OrionDatabaseMigrations.ALL).close()
         withRoom { db ->
             assertEquals(OrionMemoryIndexProgress.BUILDING, OrionMemorySearchIndex(db, crypto, clock).backfillBatch(1))
             assertEquals(ids.first().toString(), db.memoryIndex().state()?.cursor)
@@ -147,8 +171,8 @@ class OrionMemorySearchIndexTest {
         try { block(database) } finally { database.close() }
     }
 
-    private fun canonical(id: UUID, content: String): ByteArray = (OrionCreateMemoryPreparer.prepare(
-        CreateMemory(id, content, id, id)) as CreateMemoryPreparation.Ready).memory.canonicalNormalizedArguments.toByteArray()
+    private fun canonical(id: UUID, content: String, allowSearchIndex: Boolean = true): ByteArray = (OrionCreateMemoryPreparer.prepare(
+        CreateMemory(id, content, id, id, allowSearchIndex)) as CreateMemoryPreparation.Ready).memory.canonicalNormalizedArguments.toByteArray()
 
     private fun bodies(db: OrionDatabase): List<String> = db.openHelper.readableDatabase
         .query("SELECT body FROM orion_memory_fts ORDER BY body").use { rows ->

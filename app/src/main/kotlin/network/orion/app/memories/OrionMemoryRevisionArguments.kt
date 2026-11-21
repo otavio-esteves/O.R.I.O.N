@@ -17,7 +17,8 @@ internal fun decodeMemoryRevision(operation: MemoryStatusOperation, arguments: S
         MemoryStatusOperation.ARCHIVE_CONVERSATION -> ArchiveConversation(id, key, trace,
             OrionConversationTranscript.decode(json.getString("transcript")))
         MemoryStatusOperation.CORRECT -> json.getJSONObject("replacement").let { replacement ->
-            CorrectMemory(id, expected, key, trace, UUID.fromString(replacement.getString("memoryId")), replacement.getString("content"))
+            CorrectMemory(id, expected, key, trace, UUID.fromString(replacement.getString("memoryId")), replacement.getString("content"),
+                replacement.optBoolean("allowSearchIndex"))
         }
         MemoryStatusOperation.CONFIRM_CLAIM, MemoryStatusOperation.REJECT_CLAIM ->
             ReviewMemoryClaim(id, expected, key, trace, UUID.fromString(json.getString("claimId")), json.getLong("claimVersion"),

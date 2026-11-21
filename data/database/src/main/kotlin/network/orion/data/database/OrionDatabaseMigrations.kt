@@ -4,7 +4,22 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object OrionDatabaseMigrations {
-    val ALL: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+    val ALL: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+
+    val MIGRATION_10_11: Migration = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE orion_sentinel_consent ADD COLUMN evaluationFloor INTEGER NOT NULL DEFAULT 0")
+            // Previous saves never asked for indexing consent. Keep their encrypted records.
+            db.execSQL("PRAGMA secure_delete=ON")
+            db.execSQL("DROP TRIGGER IF EXISTS orion_remove_ineligible_memory_postings")
+            db.execSQL("DROP TABLE orion_memory_fts")
+            db.execSQL("""UPDATE orion_memories SET sensitivity = 'SENSITIVE'
+                WHERE origin = 'USER_DECLARED' AND sensitivity = 'PERSONAL'""")
+            createMemoryFts(db)
+            db.execSQL("DELETE FROM orion_memory_index_state")
+            db.execSQL(ORION_REMOVE_INELIGIBLE_MEMORY_POSTINGS)
+        }
+    }
 
     val MIGRATION_9_10: Migration = object : Migration(9, 10) {
         override fun migrate(db: SupportSQLiteDatabase) {
@@ -24,12 +39,16 @@ object OrionDatabaseMigrations {
 
     val MIGRATION_8_9: Migration = object : Migration(8, 9) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("""CREATE VIRTUAL TABLE IF NOT EXISTS `orion_memory_fts` USING FTS4(
-                `memoryId` TEXT NOT NULL, `body` TEXT NOT NULL, tokenize=unicode61, notindexed=`memoryId`)""")
+            createMemoryFts(db)
             db.execSQL("""CREATE TABLE IF NOT EXISTS `orion_memory_index_state` (
                 `id` INTEGER NOT NULL, `cursor` TEXT NOT NULL, `ready` INTEGER NOT NULL, PRIMARY KEY(`id`))""")
             db.execSQL(ORION_REMOVE_INELIGIBLE_MEMORY_POSTINGS)
         }
+    }
+
+    private fun createMemoryFts(db: SupportSQLiteDatabase) {
+        db.execSQL("""CREATE VIRTUAL TABLE IF NOT EXISTS `orion_memory_fts` USING FTS4(
+            `memoryId` TEXT NOT NULL, `body` TEXT NOT NULL, tokenize=unicode61, notindexed=`memoryId`)""")
     }
 
     val MIGRATION_7_8: Migration = object : Migration(7, 8) {

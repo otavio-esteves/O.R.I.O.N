@@ -137,7 +137,7 @@ class UpgradePersistenceTest {
                     assertEquals("HEALTHY", health.subsystems.entries.single { it.key.name == "FIELD_KEYS" }.value.name)
                 }
                 assertEquals(properties.getProperty("keyVersion").toInt(), key.version)
-                assertEquals(10, database.openHelper.readableDatabase.version)
+                assertEquals(11, database.openHelper.readableDatabase.version)
                 assertNull(database.sentinel().consent())
                 assertEquals(content, String((taskStore.readContent(ids.getValue("task")) as FieldDecryptionResult.Plaintext).copyBytes()))
                 for (kind in listOf("reminder", "memory")) {

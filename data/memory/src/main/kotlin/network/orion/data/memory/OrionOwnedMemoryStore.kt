@@ -36,7 +36,7 @@ class OrionOwnedMemoryStore(private val database: OrionDatabase, encryption: Ori
     /** Read-only verification before returning a previously committed action result. */
     fun matchesExisting(memory: ValidatedCreateMemory): Boolean {
         val entity = database.memories().find(memory.memoryId.toString()) ?: return false
-        if (entity.origin != MemoryOrigin.USER_DECLARED || !entity.userConfirmed || entity.sensitivity != Sensitivity.PERSONAL || entity.status != MemoryStatus.ACTIVE) return false
+        if (entity.origin != MemoryOrigin.USER_DECLARED || !entity.userConfirmed || entity.sensitivity !in setOf(Sensitivity.PERSONAL, Sensitivity.SENSITIVE) || entity.status != MemoryStatus.ACTIVE) return false
         val read = memories.readContent(memory.memoryId) as? FieldDecryptionResult.Plaintext ?: return false
         val clear = read.copyBytes()
         val expected = memory.canonicalNormalizedArguments.toByteArray(Charsets.UTF_8)
@@ -77,7 +77,7 @@ class OrionOwnedMemoryStore(private val database: OrionDatabase, encryption: Ori
             if (previousRow == null && database.memories().retainedMemoryCount() >= 10_000)
                 return OwnedMemoryWriteResult.MEMORY_ID_CONFLICT
             if (previousRow != null && (previousRow.origin != MemoryOrigin.USER_DECLARED || !previousRow.userConfirmed ||
-                previousRow.sensitivity != Sensitivity.PERSONAL || previousRow.status != MemoryStatus.ACTIVE))
+                previousRow.sensitivity !in setOf(Sensitivity.PERSONAL, Sensitivity.SENSITIVE) || previousRow.status != MemoryStatus.ACTIVE))
                 return OwnedMemoryWriteResult.MEMORY_ID_CONFLICT
             val previous = memories.readContent(memory.memoryId)
             if (previous != null) {
@@ -88,7 +88,8 @@ class OrionOwnedMemoryStore(private val database: OrionDatabase, encryption: Ori
                     if (clear.contentEquals(content)) OwnedMemoryWriteResult.DEDUP else OwnedMemoryWriteResult.MEMORY_ID_CONFLICT
                 } finally { clear.fill(0) }
             }
-            return when (val created = memories.create(memory.memoryId, content, Sensitivity.PERSONAL, MemoryOrigin.USER_DECLARED, 1.0,
+            return when (val created = memories.create(memory.memoryId, content,
+                if (memory.allowSearchIndex) Sensitivity.PERSONAL else Sensitivity.SENSITIVE, MemoryOrigin.USER_DECLARED, 1.0,
                 emptyList(), memory.correlationId, userConfirmed = true)) {
                 is MemoryWriteResult.Stored -> OwnedMemoryWriteResult.CREATED
                 is MemoryWriteResult.Blocked -> if (created.reason == FieldCryptoFailure.KEY_UNAVAILABLE ||

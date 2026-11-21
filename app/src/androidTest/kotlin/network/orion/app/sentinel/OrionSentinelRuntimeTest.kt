@@ -28,6 +28,8 @@ import network.orion.core.time.OrionClock
 import network.orion.data.database.ActionMutation
 import network.orion.data.database.DomainEventOutboxEntity
 import network.orion.data.database.OrionDatabase
+import network.orion.data.database.OrionSentinelFeedback
+import network.orion.data.database.OrionSentinelSuggestion
 import network.orion.data.database.TaskEntity
 import network.orion.data.database.TaskStatus
 import org.junit.After
@@ -143,6 +145,70 @@ class OrionSentinelRuntimeTest {
         repeat(2) { runtime.maintain(true, null) }
         assertEquals(1, db.sentinel().reservationCount())
         assertEquals(setOf("SHOWN", "IGNORED"), db.sentinel().feedback(first.suggestionId).map { it.kind }.toSet())
+    }
+
+    @Test fun oneRemainingOutboxSlotCommitsDeliveryAndShown() {
+        taskOpen(48, Sensitivity.PERSONAL)
+        assertTrue(runtime.setEnabled(true))
+        db.openHelper.writableDatabase.execSQL("""
+            INSERT INTO orion_domain_event_outbox
+                (eventId, aggregateId, aggregateVersion, eventType, schemaVersion, payloadSensitivity,
+                occurredAt, correlationId, status, attemptCount, nextAttemptAt, version)
+            WITH RECURSIVE fixture(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM fixture WHERE id < 9997)
+            SELECT 'fixture-' || id, 'fixture', 0, 'TASK_CREATED', 1, 'PERSONAL',
+                0, 'fixture', 'PENDING', 0, 0, 0 FROM fixture
+        """.trimIndent())
+        assertEquals(9999, db.events().count())
+        assertEquals(OrionHealthStatus.HEALTHY, runtime.maintain(true, null))
+        val id = db.sentinel().recent(0).single().suggestionId
+        posted += id
+        assertTrue(notifications.activeNotifications.any { it.tag == id })
+        assertEquals("SUCCEEDED", db.actions().find(id)?.status?.name)
+        assertEquals("SHOWN", db.sentinel().feedback(id).single().kind)
+        assertEquals(10000, db.events().count())
+    }
+
+    @Test fun committedSnoozeIsReconciledWithoutAnotherCallback() {
+        taskOpen(48, Sensitivity.PERSONAL)
+        assertTrue(runtime.setEnabled(true))
+        assertEquals(OrionHealthStatus.HEALTHY, runtime.maintain(true, null))
+        val id = db.sentinel().recent(0).single().suggestionId
+        posted += id
+        // Persist the fact while deliberately omitting the Android cancellation.
+        db.sentinel().record(OrionSentinelFeedback(id, "SNOOZED", now.toEpochMilli(), 0))
+        assertTrue(notifications.activeNotifications.any { it.tag == id })
+        repeat(2) { runtime.maintain(false, null) }
+        val deadline = android.os.SystemClock.elapsedRealtime() + 1000
+        while (notifications.activeNotifications.any { it.tag == id } &&
+            android.os.SystemClock.elapsedRealtime() < deadline) Thread.sleep(10)
+        assertFalse(notifications.activeNotifications.any { it.tag == id })
+        assertTrue(db.sentinel().wasSnoozed(id))
+    }
+
+    @Test fun expiredReservationsReleaseCapacityWithoutAllowingClockRollbackReplay() {
+        assertTrue(runtime.setEnabled(true))
+        val initial = now
+        val old = now.minus(Duration.ofDays(35))
+        val first = UUID.randomUUID()
+        db.runInTransaction {
+            repeat(512) { index ->
+                val id = if (index == 0) first else UUID.randomUUID()
+                val created = old.minus(Duration.ofDays(2))
+                db.tasks().createWithEvent(TaskEntity(id.toString(), byteArrayOf(1), Sensitivity.PERSONAL,
+                    created.toEpochMilli(), created.toEpochMilli()), taskEvent(id, created, Sensitivity.PERSONAL, "TASK_CREATED", 0))
+                db.sentinel().reserve(OrionSentinelSuggestion(UUID.randomUUID().toString(), id.toString(), old.toEpochMilli()))
+            }
+        }
+        repeat(21) { runtime.maintain(false, null) }
+        assertEquals(0, db.sentinel().reservationCount())
+        assertEquals(initial.toEpochMilli(), db.sentinel().consent()?.evaluationFloor)
+        now = old
+        runtime.maintain(true, null)
+        assertEquals(0, db.sentinel().reservationCount())
+        now = initial
+        taskOpen(48, Sensitivity.PERSONAL)
+        assertEquals(OrionHealthStatus.HEALTHY, runtime.maintain(true, null))
+        posted += db.sentinel().recent(0).single().suggestionId
     }
 
     private fun taskOpen(hoursAgo: Long, sensitivity: Sensitivity): UUID {

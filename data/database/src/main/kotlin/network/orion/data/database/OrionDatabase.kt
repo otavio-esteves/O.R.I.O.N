@@ -33,7 +33,7 @@ interface OrionStorageMetadataDao {
     EventConsumerReceiptEntity::class, IngressEnvelopeEntity::class,
     OrionReminderSeriesEntity::class, OrionReminderOccurrenceEntity::class, ModelRegistryEntity::class,
     OrionMemoryIndexRow::class, OrionMemoryIndexState::class, OrionSentinelConsent::class,
-    OrionSentinelSuggestion::class, OrionSentinelFeedback::class], version = 10, exportSchema = true)
+    OrionSentinelSuggestion::class, OrionSentinelFeedback::class], version = 11, exportSchema = true)
 abstract class OrionDatabase : RoomDatabase() {
     abstract fun models(): OrionModelRegistryDao
     abstract fun metadata(): OrionStorageMetadataDao

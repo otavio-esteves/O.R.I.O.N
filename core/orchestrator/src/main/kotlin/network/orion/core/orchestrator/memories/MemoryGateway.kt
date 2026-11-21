@@ -12,7 +12,8 @@ enum class MemoryOperation { CREATE, DELETE, CORRECT, CONFIRM_CLAIM, REJECT_CLAI
 enum class MemoryOperationOutcome { APPLIED, QUEUED, REJECTED, UNAVAILABLE, FORGOTTEN }
 
 /** Selected immutable display data. IDs/version are references, never confirmation authority. */
-class MemoryConfirmation(val actionId: UUID, val version: Long, val operation: MemoryOperation, val content: String?) {
+class MemoryConfirmation(val actionId: UUID, val version: Long, val operation: MemoryOperation, val content: String?,
+    val allowSearchIndex: Boolean? = null) {
     override fun toString() = "MemoryConfirmation(<redacted>)"
 }
 

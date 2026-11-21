@@ -1,6 +1,8 @@
 package network.orion.app.sentinel
 
+import android.app.NotificationManager
 import android.content.Context
+import network.orion.app.notifications.OrionAndroidNotificationPoster
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalTime
@@ -39,6 +41,7 @@ internal class OrionSentinelRuntime(
     private val delivery: OrionProactiveDelivery = OrionProactiveDelivery(context, db, encryption, clock, barrier),
     private val quietHours: OrionQuietHours = OrionQuietHours(LocalTime.of(22, 0), LocalTime.of(8, 0)),
 ) {
+    private val notificationManager = context.getSystemService(NotificationManager::class.java)
     private val dao = db.sentinel()
     private val policy = OrionProactivityPolicy()
     private val ingress = DurableIngressCoordinator(
@@ -59,11 +62,14 @@ internal class OrionSentinelRuntime(
     fun receive(id: UUID, kind: OrionProactivityFeedbackKind): Boolean {
         if (kind !in interactions || submit(id, kind.name, key(id, kind.name), SOURCE_ANDROID) !in accepted) return false
         ingress.drain(25)
-        return dao.feedback(id.toString()).any { it.kind == kind.name }
+        val recorded = dao.feedback(id.toString()).any { it.kind == kind.name }
+        if (recorded && kind == OrionProactivityFeedbackKind.SNOOZED) reconcileSnoozedNotifications()
+        return recorded
     }
 
     fun maintain(evaluate: Boolean, lastInteraction: Instant?): OrionHealthStatus {
         ingress.drain(25)
+        reconcileSnoozedNotifications()
         delivery.discardExpired()
         val now = clock.wallNow()
         barrier.whileOpen {
@@ -76,13 +82,16 @@ internal class OrionSentinelRuntime(
                 }
                 val before = now.minus(retention).toEpochMilli()
                 dao.pruneFeedback(before)
-                dao.prune(before)
+                if (dao.prune(before, now.minus(candidateLifetime).toEpochMilli()) > 0) {
+                    dao.advanceEvaluationFloor(now.toEpochMilli())
+                }
             }
         }
         if (!enabled()) return OrionHealthStatus.HEALTHY
         val resources = observeResources()
         if (!resources.policy.allowsProactivity || !delivery.available()) return OrionHealthStatus.DEGRADED
         if (!evaluate) return OrionHealthStatus.HEALTHY
+        if (now.toEpochMilli() < (dao.consent()?.evaluationFloor ?: 0)) return OrionHealthStatus.DEGRADED
         if (dao.reservationCount() >= MAX_RESERVATIONS) return OrionHealthStatus.DEGRADED
         val task = nextTask(now) ?: return OrionHealthStatus.HEALTHY
         val id = key(UUID.fromString(task.taskId), PREPARE)
@@ -108,7 +117,9 @@ internal class OrionSentinelRuntime(
         ingress.drain(25)
         val selection = dao.suggestion(id.toString()) ?: return OrionHealthStatus.DEGRADED
         val result = delivery.deliver(id, policyAllows = { version -> stillEligible(selection, version) }, onPosted = {
-            record(selection.suggestionId, OrionProactivityFeedbackKind.SHOWN, clock.wallNow())
+            // NOTIFICATION_POSTED is the durable event for this same fact.
+            check(dao.record(OrionSentinelFeedback(selection.suggestionId, "SHOWN",
+                clock.wallNow().toEpochMilli(), null)) != -1L)
         })
         return when (result) {
             OrionProactiveDeliveryOutcome.POSTED -> OrionHealthStatus.HEALTHY
@@ -132,7 +143,7 @@ internal class OrionSentinelRuntime(
                 val existing = dao.consent()
                 if (existing?.enabled != enabled) {
                     val version = (existing?.version ?: -1) + 1
-                    dao.saveConsent(OrionSentinelConsent(enabled = enabled, version = version))
+                    dao.saveConsent(OrionSentinelConsent(enabled = enabled, version = version, evaluationFloor = existing?.evaluationFloor ?: 0))
                     publish(ref, "SENTINEL_CONSENT_CHANGED", now)
                 }
             }
@@ -141,6 +152,7 @@ internal class OrionSentinelRuntime(
                 val blockedAfter = now.minus(policy.topicCooldown).toEpochMilli()
                 if (payload.source != SOURCE_HEARTBEAT || payload.idempotencyKey != id || dao.reservationCount() >= MAX_RESERVATIONS ||
                     quietHours.contains(now.atZone(zone()).toLocalTime()) || nextTask(now)?.taskId != ref.toString() ||
+                    db.events().count() >= 10_000 ||
                     dao.recent(blockedAfter + 1).isNotEmpty())
                     return LocalIngressDisposition.REJECTED
                 val consentVersion = dao.consent()?.takeIf { it.enabled }?.version
@@ -171,7 +183,7 @@ internal class OrionSentinelRuntime(
     private fun record(id: String, kind: OrionProactivityFeedbackKind, at: Instant): Boolean {
         val feedback = dao.feedback(id)
         val shown = latest(feedback, OrionProactivityFeedbackKind.SHOWN)
-        if (kind != OrionProactivityFeedbackKind.SHOWN && shown == null) return false
+        if (shown == null) return false
         val event = OrionProactivityFeedback.from(kind, at, shown)
         if (dao.record(OrionSentinelFeedback(id, kind.name, at.toEpochMilli(), event.timeToAction?.toMillis())) != -1L) {
             publish(key(UUID.fromString(id), kind.name), "SENTINEL_FEEDBACK_RECORDED", at)
@@ -185,8 +197,22 @@ internal class OrionSentinelRuntime(
             Sensitivity.PERSONAL, at.toEpochMilli(), reference))
     }
 
-    private fun nextTask(now: Instant) = dao.nextOpenTask(
-        now.minus(Duration.ofDays(7)).toEpochMilli(), now.minus(Duration.ofDays(1)).toEpochMilli())
+    /** Reconcile a derived Android artifact from committed feedback. Repeated cancellation is safe. */
+    private fun reconcileSnoozedNotifications() {
+        if (!barrier.isOpen()) return
+        val manager = notificationManager ?: return
+        manager.activeNotifications.filter { entry ->
+            entry.id == 0 && entry.notification.channelId == OrionAndroidNotificationPoster.PROACTIVE_CHANNEL
+        }.forEach { entry ->
+            val tag = entry.tag ?: return@forEach
+            if (dao.wasSnoozed(tag) && barrier.isOpen()) manager.cancel(tag, entry.id)
+        }
+    }
+
+    private fun nextTask(now: Instant): OrionSentinelTask? {
+        if (now.toEpochMilli() < (dao.consent()?.evaluationFloor ?: 0)) return null
+        return dao.nextOpenTask(now.minus(candidateLifetime).toEpochMilli(), now.minus(Duration.ofDays(1)).toEpochMilli())
+    }
 
     private fun submit(reference: UUID, type: String, id: UUID, source: String) = ingress.submit(
         DurableIngressRequest(UUID.randomUUID(), SCOPE, id, source, type, 1, Sensitivity.PERSONAL,
@@ -209,6 +235,7 @@ internal class OrionSentinelRuntime(
         private val accepted = setOf(DurableIngressOutcome.QUEUED, DurableIngressOutcome.DEDUP)
         private val feedbackTimeout = Duration.ofDays(1)
         private val retention = Duration.ofDays(30)
+        private val candidateLifetime = Duration.ofDays(7)
         internal val interactions = setOf(OrionProactivityFeedbackKind.OPENED,
             OrionProactivityFeedbackKind.DISMISSED, OrionProactivityFeedbackKind.SNOOZED)
 

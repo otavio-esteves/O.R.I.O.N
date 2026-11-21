@@ -214,16 +214,17 @@ internal class OrionMemoryKernel(private val db: OrionDatabase, encryption: Orio
             val key = UUID.fromString(row.idempotencyKey); val trace = UUID.fromString(row.correlationId)
             val fp = ActionConfirmationBinding(clock).prepare(stored.request).confirmationFingerprint
             if (row.skill == "memory.create") {
-                val memory = (OrionCreateMemoryPreparer.prepare(CreateMemory(memoryId, args.getString("content"), key, trace))
+                val memory = (OrionCreateMemoryPreparer.prepare(CreateMemory(memoryId, args.getString("content"), key, trace, args.optBoolean("allowSearchIndex")))
                     as? CreateMemoryPreparation.Ready)?.memory ?: return@mapNotNull unreadable()
                 if (stored.request != OrionCreateMemoryActionStore.normalized(id, memory, stored.request.policyVersion)) return@mapNotNull unreadable()
-                OrionMemoryPending(MemoryConfirmation(id, stored.version, MemoryOperation.CREATE, memory.content),
+                OrionMemoryPending(MemoryConfirmation(id, stored.version, MemoryOperation.CREATE, memory.content, memory.allowSearchIndex),
                     create = OrionMemoryActionPreview(memory, id, stored.version, fp, stored.request.policyVersion, stored.status))
             } else {
                 val change = decodeMemoryRevision(kind ?: return@mapNotNull unreadable(),
                     stored.request.canonicalNormalizedArguments, key, trace)
                 if (stored.request != OrionMemoryStatusActionStore.normalized(id, change, stored.request.policyVersion)) return@mapNotNull unreadable()
-                OrionMemoryPending(MemoryConfirmation(id, stored.version, operation, revisionPreview(change)),
+                OrionMemoryPending(MemoryConfirmation(id, stored.version, operation, revisionPreview(change),
+                    change.replacement?.allowSearchIndex),
                     change = OrionMemoryStatusActionPreview(change, id, stored.version, fp, stored.request.policyVersion, stored.status))
             }
         } catch (_: org.json.JSONException) { unreadable() } catch (_: IllegalArgumentException) { unreadable() }

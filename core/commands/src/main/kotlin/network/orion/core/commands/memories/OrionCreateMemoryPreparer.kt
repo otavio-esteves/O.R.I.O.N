@@ -39,10 +39,12 @@ object OrionCreateMemoryPreparer {
                     else -> append(character)
                 }
             }
-            append("\",\"origin\":\"USER_DECLARED\",\"sensitivity\":\"PERSONAL\"}")
+            append("\",\"origin\":\"USER_DECLARED\",\"sensitivity\":\"PERSONAL\"")
+            if (command.allowSearchIndex) append(",\"allowSearchIndex\":true")
+            append('}')
         }
         return CreateMemoryPreparation.Ready(ValidatedCreateMemory(command.memoryId, content,
-            command.idempotencyKey, command.correlationId, arguments))
+            command.idempotencyKey, command.correlationId, arguments, command.allowSearchIndex))
     }
 
     private fun rejected(reason: CreateMemoryRejection) = CreateMemoryPreparation.Rejected(reason)
