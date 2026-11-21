@@ -167,10 +167,12 @@ class UpgradePersistenceTest {
                         assertTrue(it.getInt(1) in 0..5) // Recovery may publish a committed fact, never replay a domain action.
                     }
                 }
-                InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
-                    putString("orion_upgrade_verified_pid", Process.myPid().toString())
-                    putString("orion_upgrade_version", installedVersion().toString())
-                })
+                if (mode == "verify") {
+                    InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
+                        putString("orion_upgrade_verified_pid", Process.myPid().toString())
+                        putString("orion_upgrade_version", installedVersion().toString())
+                    })
+                }
                 cleanup = true
             }
         } finally {

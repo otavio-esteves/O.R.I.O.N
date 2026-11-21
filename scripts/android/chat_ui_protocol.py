@@ -35,6 +35,31 @@ F8_SELECTED = {
         'failureToRecordShownRollsBackSuccessAndFinishesUnknown',
         'expiredUnclaimedDraftIsCancelledWithoutPosting',
     },
+    'network.orion.app.memories.OrionMemoryKernelTest': {
+        'gatedQueuePersistsAndOnlyPreparesAfterRelease',
+        'actualIngressCommitsConfirmationMemoryEventSuccessAndReplayTogether',
+        'expiredQueuedConsentIsRejectedWithoutRenewingOrConfirming',
+        'capabilityLossRollsBackProcessingAndPreservesOriginalReceipt',
+        'durableOriginSurvivesReopenButFreshFocusedPresenceIsStillRequired',
+        'wrongProducerCannotManufactureUserOrigin',
+        'unreadablePendingRequestCanOnlyBeDiscardedWithFreshPresence',
+        'alteredFingerprintAndOverlongReceiptCannotAuthorizeEffect',
+        'databaseFailureRollsBackEnclosingIngressAndAllowsExplicitSafeReplay',
+        'correctionBindsTheReplacementAndTheOldVersionAndErasesItsCopiesWhenForgotten',
+        'reviewOnlyConfirmsTheSelectedInferredClaimAndKeepsItsOriginAndConfidence',
+        'archivedConversationRequiresExactOptInAndForgetErasesEveryDurableCopy',
+        'indexingRequiresExplicitChoiceBoundToTheConfirmedWrite',
+        'ownedCreationFixesProvenanceAndForgetErasesEntityClaimsAndEveryPersistedContentCopy',
+        'forgottenReplayWithFreshProducerKeyNeverPersistsAnotherCopyOrResurrects',
+        'forgetCancelsAndErasesOtherCreationDraftsForTheExactTargetOnly',
+        'forgetPagesBeyondTenThousandHistoricalActionsWithoutLeavingTargetCiphertext',
+        'pendingProposalLimitRejectsNewWorkButPreservesReplayAndExplicitDismissal',
+        'retainedProposalLimitStillAllowsConfirmationAndForgetOfAnExistingMemory',
+        'erasureFailureRollsBackDeletionClaimRemovalTombstoneAndEarlierCiphertextScrubs',
+        'missingPrivacyTombstoneCannotTurnCorruptTerminalEnvelopesIntoForgottenProof',
+        'enqueueBlockedBehindForgetWriterObservesCommittedTombstoneBeforePersistingAnyCopy',
+        'inferredExistingMemoryCannotBePromotedThroughUserCreateReplayOrShownAsDeclared',
+    },
     'network.orion.app.memories.OrionMemorySearchIndexTest': {
         'protectedBytesNeverEnterFtsAndRemovalFollowsSupersessionAndDeletion',
         'upgradeRemovesLegacyPlaintextWhilePreservingReadablePrivateMemory',
@@ -105,7 +130,7 @@ def parse_instrumentation(output, adb_exit, expected=EXPECTED):
             if final:
                 result.errors.append('STATUS_AFTER_FINAL')
             if identity not in expected:
-                result.errors.append('UNexpected_TEST')
+                result.errors.append('UNEXPECTED_TEST')
             elif frame.get('numtests') != str(len(expected)):
                 result.errors.append('TEST_COUNT_MISMATCH')
             elif code == 1:
