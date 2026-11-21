@@ -141,7 +141,9 @@ class OrionMemorySearchIndexTest {
     }
 
     private fun withRoom(block: (OrionDatabase) -> Unit) {
-        val database = Room.databaseBuilder(context, OrionDatabase::class.java, name).build()
+        val database = Room.databaseBuilder(context, OrionDatabase::class.java, name)
+            .addMigrations(*OrionDatabaseMigrations.ALL)
+            .build()
         try { block(database) } finally { database.close() }
     }
 
