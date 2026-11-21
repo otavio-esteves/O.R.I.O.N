@@ -67,6 +67,9 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
         WHERE memoryId = :id AND status = 'ACTIVE'""")
     protected abstract fun supersedeClaims(id: String, at: Long)
 
+    @Query("DELETE FROM orion_memory_fts WHERE memoryId = :id")
+    protected abstract fun removeMemoryIndex(id: String)
+
     @Query("DELETE FROM orion_memories WHERE memoryId = :id AND version = :version")
     protected abstract fun deleteMemory(id: String, version: Long): Int
 
@@ -119,6 +122,7 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
         check(linkSupersession(replacement.memoryId, id) == 1)
         check(supersedeMemory(id, version, replacement.createdAt) == 1)
         supersedeClaims(id, replacement.createdAt)
+        removeMemoryIndex(id)
         insertEvent(priorEvent)
         return ActionMutation.APPLIED
     }
@@ -167,6 +171,7 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
         requireCreationEvent(id, at, "MEMORY_DELETED", current.sensitivity, event, version + 1)
         check(eventCount() < 10_000) { "Durable event capacity reached." }
         if (deleteMemory(id, version) != 1) return ActionMutation.CONFLICT
+        removeMemoryIndex(id)
         insertEvent(event)
         return ActionMutation.APPLIED
     }

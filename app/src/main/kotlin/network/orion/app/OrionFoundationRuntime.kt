@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.os.Build
 import android.os.Process
 import java.util.concurrent.TimeUnit
+import network.orion.data.memory.OrionMemoryIndexProgress
 import network.orion.app.scheduling.*
 import network.orion.app.reminderdelivery.OrionReminderDeliveryPipeline
 import network.orion.scheduler.alarms.*
@@ -405,6 +406,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     notificationPermissionEvidence() != OrionPolicyEvidence.SATISFIED)
                     OrionHealthStatus.DEGRADED else OrionHealthStatus.HEALTHY
             }
+            states[OrionSubsystem.MEMORY_INDEX] = memoryIndexHealth(memoryKernel?.let { OrionMemoryIndexProgress.BUILDING })
             // Optional inference remains disabled; hardware/system qualification is still pending.
             states[OrionSubsystem.RESOURCES] = OrionHealthStatus.DEGRADED
             governor = UnavailableResourceGovernor(exits)
@@ -536,10 +538,21 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 notificationKernel?.ingress?.let { it::drain },
                 reminderDelivery?.let { it::drainUi },
             ))
+            val memoryIndexProgress = try {
+                memoryKernel?.searchIndex?.backfillBatch()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (interrupted: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw interrupted
+            } catch (_: Exception) {
+                OrionMemoryIndexProgress.BLOCKED
+            }
             val reconciled = scheduler.reconcileRegistrations()
             val delivered = scheduler.deliverDue()
             val published = scheduler.publishEvents()
             mutableHealth.publishSubsystemObservations(clock, mapOf(
+                OrionSubsystem.MEMORY_INDEX to memoryIndexHealth(memoryIndexProgress),
                 OrionSubsystem.EVENT_OUTBOX to if (published) OrionHealthStatus.HEALTHY else OrionHealthStatus.DEGRADED,
                 OrionSubsystem.NOTIFICATIONS to notificationHealth(),
                 OrionSubsystem.PERMISSIONS to if (notificationPermissionEvidence() != OrionPolicyEvidence.SATISFIED ||
@@ -551,7 +564,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             // and await a later capability event/heartbeat instead of creating a tight retry loop.
             val outcome = maintenanceOutcome(retentionBatch, retention.policy.batchSize, expiredProposals, expirationBatchSize,
                 ingressNeedsContinuation, reconciled, delivered, published, scheduler.hasDueEvents())
-            maintenanceNeedsContinuation = outcome.needsContinuation
+            maintenanceNeedsContinuation = outcome.needsContinuation || memoryIndexProgress == OrionMemoryIndexProgress.BUILDING
             val healthy = outcome.healthy
             try {
                 Log.i(OrionMaintenanceSnapshot.LOG_TAG, readMaintenanceSnapshot(app, db, clock, origin, healthy, retention.takeReport(),
@@ -637,6 +650,13 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
 
     private fun publish(states: Map<OrionSubsystem, OrionHealthStatus>, lastRecovery: Instant? = null) {
         mutableHealth.value = OrionHealthAggregator.aggregate(states, clock.wallNow(), lastRecovery)
+    }
+
+    private fun memoryIndexHealth(progress: OrionMemoryIndexProgress?): OrionHealthStatus = when (progress) {
+        OrionMemoryIndexProgress.READY -> OrionHealthStatus.HEALTHY
+        OrionMemoryIndexProgress.BUILDING -> OrionHealthStatus.RECOVERING
+        OrionMemoryIndexProgress.BLOCKED -> OrionHealthStatus.DEGRADED
+        null -> OrionHealthStatus.UNAVAILABLE
     }
 
     private fun notificationHealth(): OrionHealthStatus {

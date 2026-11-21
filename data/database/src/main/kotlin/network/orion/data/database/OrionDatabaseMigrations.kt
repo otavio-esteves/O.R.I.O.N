@@ -4,7 +4,17 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object OrionDatabaseMigrations {
-    val ALL: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+    val ALL: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+
+    val MIGRATION_8_9: Migration = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("""CREATE VIRTUAL TABLE IF NOT EXISTS `orion_memory_fts` USING FTS4(
+                `memoryId` TEXT NOT NULL, `body` TEXT NOT NULL, tokenize=unicode61, notindexed=`memoryId`)""")
+            db.execSQL("""CREATE TABLE IF NOT EXISTS `orion_memory_index_state` (
+                `id` INTEGER NOT NULL, `cursor` TEXT NOT NULL, `ready` INTEGER NOT NULL, PRIMARY KEY(`id`))""")
+            db.execSQL(ORION_REMOVE_INELIGIBLE_MEMORY_POSTINGS)
+        }
+    }
 
     val MIGRATION_7_8: Migration = object : Migration(7, 8) {
         override fun migrate(db: SupportSQLiteDatabase) {

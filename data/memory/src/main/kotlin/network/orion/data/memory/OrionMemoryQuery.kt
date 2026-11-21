@@ -56,7 +56,12 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
         }
     }
 
-    private fun decodeContent(id: UUID, bytes: ByteArray): String? {
+    internal fun readIndexContent(row: MemoryEntity): Pair<String?, MemoryContentState> {
+        val id = UUID.fromString(row.memoryId)
+        return read(row.contentEnvelope, FieldEncryptionContext("memory/$id", "content", 1)) { decodeContent(id, it) }
+    }
+
+    internal fun decodeContent(id: UUID, bytes: ByteArray): String? {
         if (bytes.size !in 1..8192) return null
         return try {
             val text = Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
