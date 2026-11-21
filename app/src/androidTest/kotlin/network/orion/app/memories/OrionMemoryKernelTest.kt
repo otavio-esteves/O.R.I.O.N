@@ -171,6 +171,13 @@ class OrionMemoryKernelTest {
         val memory=db.memories().find(command.memoryId.toString())!!
         assertEquals(MemoryOrigin.USER_DECLARED,memory.origin); assertTrue(memory.userConfirmed)
         assertEquals(Sensitivity.PERSONAL,memory.sensitivity)
+        val provenance = kernel.query.get(GetMemories()).items.single().provenance
+        assertEquals(memory.origin, provenance.origin)
+        assertEquals(memory.confidence, provenance.confidence, 0.0)
+        assertEquals(memory.sensitivity, provenance.sensitivity)
+        assertTrue(provenance.userConfirmed)
+        assertFalse(provenance.inferred)
+        assertNull(provenance.originEventId)
         val claim=UUID.randomUUID()
         val statement=(crypto.encrypt(command.content.toByteArray(),FieldEncryptionContext("memory/${command.memoryId}/claim/$claim","statement",1))
             as FieldEncryptionResult.Encrypted).envelope

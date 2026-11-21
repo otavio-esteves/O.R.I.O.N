@@ -92,6 +92,24 @@ class DomainRecordStoreTest {
         assertEquals(4, db.events().count())
     }
 
+    @Test fun originEventReferenceReopensWithUnconfirmedProvenanceAndAuthenticatedContent() {
+        val id = UUID.randomUUID()
+        val causalEvent = UUID.randomUUID()
+        val trace = UUID.randomUUID()
+        assertTrue(memories().create(id, secret.toByteArray(), Sensitivity.SECRET, MemoryOrigin.SYSTEM_DERIVED,
+            0.25, emptyList(), trace, originEventId = causalEvent) is MemoryWriteResult.Stored)
+        db.close()
+        db = open()
+
+        val persisted = checkNotNull(db.records().memory(id.toString()))
+        assertEquals(causalEvent.toString(), persisted.originEventId)
+        assertEquals(MemoryOrigin.SYSTEM_DERIVED, persisted.origin)
+        assertEquals(0.25, persisted.confidence, 0.0)
+        assertFalse(persisted.userConfirmed)
+        assertEquals(secret, plaintext(memories().readContent(id)))
+        assertEquals(1, db.events().count())
+    }
+
     @Test fun memorySupersessionNeverExtendsClaimValidityAndClosesOpenOrFutureBounds() {
         val (prior, originalClaims) = memoryWithClaimValidity(listOf(1000L to 1500L, 1000L to 2500L, 1000L to null))
         val next = UUID.randomUUID()

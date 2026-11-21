@@ -4,6 +4,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.util.UUID
 import network.orion.core.commands.memories.*
+import network.orion.core.model.OrionMemoryProvenance
 import network.orion.core.queries.memories.*
 import network.orion.core.security.*
 import network.orion.data.database.OrionDatabase
@@ -35,7 +36,9 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
                         FieldCryptoFailure.KEY_INVALIDATED, FieldCryptoFailure.CRYPTO_UNAVAILABLE)) state = MemoryContentState.KEY_UNAVAILABLE
                 }
             }
-            return MemorySummary(id, content, MemoryState.valueOf(row.status.name), row.version, state)
+            val provenance = OrionMemoryProvenance(row.origin, row.confidence, row.userConfirmed, row.sensitivity,
+                row.originEventId?.let(UUID::fromString))
+            return MemorySummary(id, content, MemoryState.valueOf(row.status.name), row.version, state, provenance)
     }
 
     private fun decodeContent(id: UUID, bytes: ByteArray): String? {

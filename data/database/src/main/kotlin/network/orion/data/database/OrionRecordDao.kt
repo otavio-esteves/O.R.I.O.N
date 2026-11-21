@@ -184,6 +184,10 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
         requireEncryptedContent(memory.contentEnvelope)
         require(memory.version == 0L && memory.status == MemoryStatus.ACTIVE && memory.createdAt == memory.updatedAt)
         require(memory.supersedesId == null) { "Supersession requires a separate guarded transaction." }
+        memory.originEventId?.let { originEventId ->
+            requireTechnicalUuid(originEventId)
+            require(originEventId != event.eventId) { "Memory origin must precede its creation." }
+        }
         requireConfidence(memory.origin, memory.confidence, memory.userConfirmed)
         require(claims.size <= 100 && claims.map { it.claimId }.distinct().size == claims.size)
         for (claim in claims) {
