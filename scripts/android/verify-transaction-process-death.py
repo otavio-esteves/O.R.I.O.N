@@ -25,6 +25,8 @@ SCENARIOS = {
                      "app/src/androidTest/kotlin/network/orion/app/notifications/OrionNotificationTransactionProcessDeathTest.kt"),
     "reminder_delivery": ("network.orion.app.reminderdelivery.OrionReminderDeliveryProcessDeathTest",
                           "app/src/androidTest/kotlin/network/orion/app/reminderdelivery/OrionReminderDeliveryProcessDeathTest.kt"),
+    "sentinel_delivery": ("network.orion.app.sentinel.OrionSentinelProcessDeathTest",
+                          "app/src/androidTest/kotlin/network/orion/app/sentinel/OrionSentinelProcessDeathTest.kt"),
     "model_file": ("network.orion.app.models.OrionModelImportProcessDeathTest#verifiedFileBeforeRegistryCommitRemainsUnregistered",
                    "app/src/androidTest/kotlin/network/orion/app/models/OrionModelImportProcessDeathTest.kt"),
     "model_registered": ("network.orion.app.models.OrionModelImportProcessDeathTest#importedRegistryBeforeReadyRequiresSelectedValidation",
@@ -57,6 +59,17 @@ def scenario_proof(scenario):
             "metadata": {
                 "checkpointBoundary": "AFTER_IMPORTED_REGISTRY_COMMIT_BEFORE_READY" if registered else "AFTER_VERIFIED_FILE_COMMIT_BEFORE_REGISTRY",
                 "modelEvidence": "SYNTHETIC_TINY_GGUF_NO_INFERENCE",
+            },
+        }
+    if scenario == "sentinel_delivery":
+        return {
+            "killCheck": "kill_after_committed_sentinel_claim",
+            "verificationCheck": "unknown_sentinel_effect_not_replayed_after_heartbeat",
+            "metadata": {
+                "checkpointBoundary": "AFTER_COMMITTED_RUNNING_OUTSIDE_ROOM_TRANSACTION",
+                "externalEvidence": "SYNTHETIC_DURABLE_MARKER",
+                "notificationManagerEvidence": "SEPARATE_PLATFORM_TEST",
+                "recoveryPolicy": "UNKNOWN_NO_RETRY",
             },
         }
     if scenario in ("notification", "reminder_delivery"):
