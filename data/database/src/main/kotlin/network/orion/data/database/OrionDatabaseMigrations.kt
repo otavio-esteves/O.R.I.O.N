@@ -4,7 +4,20 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object OrionDatabaseMigrations {
-    val ALL: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+    val ALL: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+
+    val MIGRATION_7_8: Migration = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE orion_memories ADD COLUMN type TEXT")
+            db.execSQL("ALTER TABLE orion_memories ADD COLUMN importance REAL")
+            db.execSQL("ALTER TABLE orion_memories ADD COLUMN validFrom INTEGER")
+            db.execSQL("ALTER TABLE orion_memories ADD COLUMN validUntil INTEGER")
+            db.execSQL("ALTER TABLE orion_memories ADD COLUMN expiresAt INTEGER")
+            db.execSQL("ALTER TABLE orion_memories ADD COLUMN detailsEnvelope BLOB")
+            db.execSQL("ALTER TABLE orion_memories ADD COLUMN lastAccessedAt INTEGER")
+            db.execSQL("ALTER TABLE orion_memories ADD COLUMN accessCount INTEGER NOT NULL DEFAULT 0")
+        }
+    }
 
     val MIGRATION_6_7: Migration = object : Migration(6, 7) {
         override fun migrate(db: SupportSQLiteDatabase) {

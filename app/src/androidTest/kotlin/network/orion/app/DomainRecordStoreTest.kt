@@ -13,7 +13,14 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.crypto.spec.SecretKeySpec
+import network.orion.core.commands.memories.CreateMemory
+import network.orion.core.commands.memories.CreateMemoryPreparation
+import network.orion.core.commands.memories.OrionCreateMemoryPreparer
+import network.orion.core.model.OrionMemoryDetails
+import network.orion.core.model.OrionMemoryLifecycle
+import network.orion.core.model.OrionMemoryType
 import network.orion.core.model.Sensitivity
+import network.orion.core.queries.memories.MemoryContentState
 import network.orion.core.security.*
 import network.orion.core.time.WallClock
 import network.orion.data.database.*
@@ -110,6 +117,56 @@ class DomainRecordStoreTest {
         assertEquals(1, db.events().count())
     }
 
+    @Test fun memoryLifecycleAndDetailsSurviveReopenAndUseTheInjectedClock() {
+        val id = UUID.randomUUID()
+        val trace = UUID.randomUUID()
+        val ready = OrionCreateMemoryPreparer.prepare(CreateMemory(id, "Planejamento da semana", id, trace))
+            as CreateMemoryPreparation.Ready
+        val lifecycle = OrionMemoryLifecycle(OrionMemoryType.OPERATIONAL, 0.75, now,
+            expiresAt = now.plusSeconds(2))
+        val details = OrionMemoryDetails(source = "agenda local", summary = secret, tags = listOf("semana"))
+        assertTrue(memories().create(id, ready.memory.canonicalNormalizedArguments.toByteArray(), Sensitivity.PERSONAL,
+            MemoryOrigin.USER_DECLARED, 1.0, emptyList(), trace, userConfirmed = true, lifecycle = lifecycle,
+            details = details) is MemoryWriteResult.Stored)
+
+        db.close()
+        db = open()
+        val persisted = checkNotNull(db.records().memory(id.toString()))
+        assertFalse(checkNotNull(persisted.detailsEnvelope).toString(Charsets.ISO_8859_1).contains(secret))
+        val query = OrionMemoryQuery(db, encryption, clock)
+        val active = checkNotNull(query.find(id))
+        assertEquals(MemoryStatus.ACTIVE, active.state)
+        assertEquals(lifecycle, active.lifecycle)
+        assertEquals(details.source, active.details?.source)
+        assertEquals(details.summary, active.details?.summary)
+        assertEquals(details.tags, active.details?.tags)
+        now = now.plusSeconds(2)
+        assertEquals(MemoryStatus.EXPIRED, query.find(id)?.state)
+        assertEquals(0L, db.records().memory(id.toString())?.version)
+        assertEquals(1, db.events().count())
+
+        key = FieldKeyResult.Unavailable
+        val blocked = checkNotNull(query.find(id))
+        assertEquals(MemoryContentState.KEY_UNAVAILABLE, blocked.detailsState)
+        assertNull(blocked.details)
+    }
+
+    @Test fun inferredMemoryAndItsClaimsStartAsUnconfirmedCandidates() {
+        val id = UUID.randomUUID()
+        val claim = MemoryClaimInput(UUID.randomUUID(), byteArrayOf(1), Sensitivity.PERSONAL,
+            MemoryOrigin.LLM_INFERRED, 0.25)
+        assertTrue(memories().create(id, byteArrayOf(2), Sensitivity.PERSONAL, MemoryOrigin.LLM_INFERRED,
+            0.25, listOf(claim), UUID.randomUUID()) is MemoryWriteResult.Stored)
+
+        val stored = checkNotNull(db.records().memory(id.toString()))
+        assertEquals(MemoryStatus.CANDIDATE, stored.status)
+        assertFalse(stored.userConfirmed)
+        val storedClaim = db.records().claims(id.toString()).single()
+        assertEquals(MemoryStatus.CANDIDATE, storedClaim.status)
+        assertFalse(storedClaim.userConfirmed)
+        assertNull(OrionMemoryQuery(db, encryption, clock).find(id))
+    }
+
     @Test fun memorySupersessionNeverExtendsClaimValidityAndClosesOpenOrFutureBounds() {
         val (prior, originalClaims) = memoryWithClaimValidity(listOf(1000L to 1500L, 1000L to 2500L, 1000L to null))
         val next = UUID.randomUUID()
@@ -151,6 +208,10 @@ class DomainRecordStoreTest {
         assertThrows(IllegalArgumentException::class.java) {
             memories().create(id, secret.toByteArray(), Sensitivity.SECRET, MemoryOrigin.LLM_INFERRED, 0.5,
                 emptyList(), UUID.randomUUID(), userConfirmed = true)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            memories().create(id, secret.toByteArray(), Sensitivity.PERSONAL, MemoryOrigin.LLM_INFERRED, 0.75,
+                emptyList(), UUID.randomUUID())
         }
         assertThrows(IllegalArgumentException::class.java) {
             memories().create(id, secret.toByteArray(), Sensitivity.PUBLIC, MemoryOrigin.USER_DECLARED, 1.0,

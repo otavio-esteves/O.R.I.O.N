@@ -25,7 +25,8 @@ class OrionMemoryProvenanceMigrationTest {
         val deleted = UUID.randomUUID().toString()
         val claim = UUID.randomUUID().toString()
         val envelope = byteArrayOf(5, 17, 21)
-        for (previous in 1..6) {
+        val originEventId = UUID.randomUUID().toString()
+        for (previous in 1..7) {
             val name = "orion_memory_provenance_${UUID.randomUUID()}.db"
             try {
                 migrations.createDatabase(name, previous).use { legacy ->
@@ -36,20 +37,23 @@ class OrionMemoryProvenanceMigrationTest {
                             VALUES (?,?,'PERSONAL',?,?,?,1000,2000,?,NULL,?)"""
                         legacy.execSQL(insert, arrayOf(inferred, envelope, "LLM_INFERRED", 0.25, 0, "ACTIVE", 5))
                         legacy.execSQL(insert, arrayOf(deleted, envelope, "USER_DECLARED", 1.0, 1, "DELETED", 8))
+                        if (previous == 7) legacy.execSQL("UPDATE orion_memories SET originEventId = ? WHERE memoryId = ?",
+                            arrayOf(originEventId, inferred))
                         legacy.execSQL("""INSERT INTO orion_memory_claims (claimId,memoryId,statementEnvelope,
                             sensitivity,origin,confidence,userConfirmed,status,validFrom,validUntil,version)
                             VALUES (?,?,?,'PERSONAL','LLM_INFERRED',0.25,0,'ACTIVE',1000,3000,2)""",
                             arrayOf(claim, inferred, envelope))
                     }
                 }
-                migrations.runMigrationsAndValidate(name, 7, true, *OrionDatabaseMigrations.ALL).use { upgraded ->
+                migrations.runMigrationsAndValidate(name, 8, true, *OrionDatabaseMigrations.ALL).use { upgraded ->
                     if (previous < 3) {
                         upgraded.query("SELECT count(*) FROM orion_memories").use { rows ->
                             assertTrue(rows.moveToFirst())
                             assertEquals(0, rows.getInt(0))
                         }
                     } else {
-                        val select = """SELECT contentEnvelope,origin,confidence,userConfirmed,status,version,originEventId
+                        val select = """SELECT contentEnvelope,origin,confidence,userConfirmed,status,version,originEventId,
+                            type,importance,validFrom,validUntil,expiresAt,detailsEnvelope,lastAccessedAt,accessCount
                             FROM orion_memories WHERE memoryId = ?"""
                         upgraded.query(select, arrayOf(inferred)).use { row ->
                             assertTrue(row.moveToFirst())
@@ -59,7 +63,9 @@ class OrionMemoryProvenanceMigrationTest {
                             assertEquals(0, row.getInt(3))
                             assertEquals("ACTIVE", row.getString(4))
                             assertEquals(5L, row.getLong(5))
-                            assertTrue(row.isNull(6))
+                            if (previous == 7) assertEquals(originEventId, row.getString(6)) else assertTrue(row.isNull(6))
+                            for (column in 7..13) assertTrue(row.isNull(column))
+                            assertEquals(0L, row.getLong(14))
                         }
                         upgraded.query(select, arrayOf(deleted)).use { row ->
                             assertTrue(row.moveToFirst())
