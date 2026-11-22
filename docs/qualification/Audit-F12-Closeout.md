@@ -12,7 +12,7 @@ no gate obrigatório. [Código e checks do PR #198](https://github.com/otavio-es
 | Achado | Correção e regressão |
 | --- | --- |
 | A seleção de memória confiava no índice para comprovar a autorização de busca. Uma entrada obsoleta poderia revelar conteúdo em resultados ou no contexto do chat. | Busca e revalidação para chat verificam o opt-in no envelope original. A regressão injeta uma entrada obsoleta e verifica os dois caminhos. |
-| A manutenção de expiração do Sentinel podia cancelar um rascunho durante a recuperação. | A escrita de cancelamento verifica a Startup Barrier sob o lock de admissão e preserva o CAS da ação. A regressão verifica o rascunho fechado durante recuperação e o cancelamento após a liberação. |
+| A manutenção de expiração do Sentinel podia cancelar um rascunho durante a recuperação. | A escrita de cancelamento verifica a Startup Barrier sob o lock de admissão e preserva o CAS da ação. A regressão verifica que a recuperação preserva o rascunho e que o cancelamento ocorre após a liberação. |
 | O ranking inicial da F12 pouco alterava o caso comum de memórias com a mesma confiança e sem importância definida. | Na ordenação adaptativa, a cobertura dos termos precede o desempate. Entre resultados comparáveis, a recência pode reordenar registros com a confiança padrão. Testes cobrem mudança de ordem, cobertura, paginação e retorno à ordenação original ao revogar. |
 
 ## Evidência

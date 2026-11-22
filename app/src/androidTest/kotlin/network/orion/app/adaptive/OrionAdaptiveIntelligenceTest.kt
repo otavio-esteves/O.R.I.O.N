@@ -83,12 +83,15 @@ class OrionAdaptiveIntelligenceTest {
             it.execSQL("INSERT INTO orion_sentinel_consent (id, enabled, version, evaluationFloor) VALUES (1, 1, 7, 100)")
         }
         migration.runMigrationsAndValidate(dbName, 13, true, OrionDatabaseMigrations.MIGRATION_12_13).close()
-        Room.databaseBuilder(context, OrionDatabase::class.java, dbName).build().use { db ->
+        val db = Room.databaseBuilder(context, OrionDatabase::class.java, dbName).build()
+        try {
             val consent = checkNotNull(db.sentinel().consent())
             assertTrue(consent.enabled)
             assertEquals(7L, consent.version)
             assertEquals(100L, consent.evaluationFloor)
             assertNull(consent.personalizationSince)
+        } finally {
+            db.close()
         }
     }
 
@@ -204,7 +207,8 @@ class OrionAdaptiveIntelligenceTest {
     }
 
     private fun withFixture(block: (OrionDatabase, OrionSentinelRuntime, StartupBarrier) -> Unit) {
-        Room.inMemoryDatabaseBuilder(context, OrionDatabase::class.java).build().use { db ->
+        val db = Room.inMemoryDatabaseBuilder(context, OrionDatabase::class.java).build()
+        try {
             val barrier = StartupBarrier()
             barrier.releaseAfterRecovery(barrier.beginRecovery(), CoreReadiness.DEGRADED_SAFE)
             OrionAndroidNotificationPoster(context, clock).initializeChannels()
@@ -214,6 +218,8 @@ class OrionAdaptiveIntelligenceTest {
                     OrionAndroidResourceProfileSnapshot(75, false, 0, false, true, false, profile)
                 })
             block(db, runtime, barrier)
+        } finally {
+            db.close()
         }
     }
 }
