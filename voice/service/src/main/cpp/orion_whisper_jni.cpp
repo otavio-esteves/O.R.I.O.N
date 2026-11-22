@@ -62,6 +62,10 @@ Java_network_orion_voice_service_OrionWhisper_transcribe(
 
         auto parameters = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
         parameters.n_threads = 2;
+        // An eight-second capture fits within 512 encoder positions at 20 ms each.
+        parameters.audio_ctx = 512;
+        parameters.max_tokens = 64;
+        parameters.temperature_inc = 0.0f;
         parameters.language = "pt";
         parameters.no_context = true;
         parameters.no_timestamps = true;

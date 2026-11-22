@@ -2,7 +2,10 @@ package network.orion.voice.service
 
 import android.app.Service
 import android.content.Intent
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.Process
 import android.os.RemoteException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -15,6 +18,7 @@ import network.orion.voice.ipc.*
 
 /** The microphone, VAD, STT and TTS live only in the explicitly bound session process. */
 class OrionVoiceSessionService : Service() {
+    private val watchdog = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val recorder by lazy { OrionVoiceRecorder(this) }
     private val clock by lazy { AndroidOrionClock(contentResolver) }
@@ -93,6 +97,12 @@ class OrionVoiceSessionService : Service() {
             } ?: return session.report(OrionVoiceSessionState.NO_SPEECH)
             val capturedAt = clock.wallNow()
             session.report(OrionVoiceSessionState.TRANSCRIBING)
+            val limit = Runnable {
+                if (session.decoding.get() && android.app.Application.getProcessName() == "$packageName:voice_session") {
+                    Process.killProcess(Process.myPid())
+                }
+            }
+            watchdog.postDelayed(limit, 25_000)
             val text = try {
                 withContext(Dispatchers.IO) {
                     session.decoding.set(true)
@@ -103,7 +113,10 @@ class OrionVoiceSessionService : Service() {
                         finally { raw?.fill(0) }
                     } finally { session.decoding.set(false) }
                 }
-            } finally { pcm.fill(0) }
+            } finally {
+                watchdog.removeCallbacks(limit)
+                pcm.fill(0)
+            }
             if (text.isNullOrBlank()) return session.report(OrionVoiceSessionState.NO_SPEECH)
 
             session.report(OrionVoiceSessionState.WAITING_FOR_CORE)

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 4.0.2)
 project(orion_whisper LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+# Keep the DSP kernels representative in debug APKs, retaining their debug symbols.
+add_compile_options($<$<CONFIG:Debug>:-O2>)
 set_property(GLOBAL PROPERTY JOB_POOLS orion_stt_compile=2 orion_stt_link=1)
 set(CMAKE_JOB_POOL_COMPILE orion_stt_compile)
 set(CMAKE_JOB_POOL_LINK orion_stt_link)

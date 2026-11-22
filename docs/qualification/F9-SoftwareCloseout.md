@@ -3,6 +3,8 @@
 A tela **Ajustes → Voz** instala o modelo local `ggml-tiny-q5_1.bin`, variante
 multilíngue do Whisper tiny. O modelo é validado por tamanho e SHA-256. O
 candidato de software usa whisper.cpp v1.8.7, CPU e dois threads por sessão.
+A decodificação tem contexto e saída limitados. Se o código nativo ultrapassar
+o limite externo, apenas o processo de sessão é encerrado.
 
 O usuário inicia a captura com **Falar** e pode usar **Concluir fala** ou
 **Cancelar**. Cada captura está limitada a oito segundos. O pipeline usa
