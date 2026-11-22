@@ -151,7 +151,7 @@ internal class OrionSentinelRuntime(
                 val id = key(ref, PREPARE)
                 val blockedAfter = now.minus(policy.topicCooldown).toEpochMilli()
                 if (payload.source != SOURCE_HEARTBEAT || payload.idempotencyKey != id || dao.reservationCount() >= MAX_RESERVATIONS ||
-                    quietHours.contains(now.atZone(zone()).toLocalTime()) || nextTask(now)?.taskId != ref.toString() ||
+                    quietHours.contains(now.atZone(zone()).toLocalTime()) || nextTask(now, id)?.taskId != ref.toString() ||
                     db.events().count() >= 10_000 ||
                     dao.recent(blockedAfter + 1).isNotEmpty())
                     return LocalIngressDisposition.REJECTED
@@ -183,7 +183,12 @@ internal class OrionSentinelRuntime(
     private fun record(id: String, kind: OrionProactivityFeedbackKind, at: Instant): Boolean {
         val feedback = dao.feedback(id)
         val shown = latest(feedback, OrionProactivityFeedbackKind.SHOWN)
-        if (shown == null) return false
+        if (shown == null) {
+            // An immutable interaction PendingIntent may survive a crash after notify().
+            // Accept that interaction without resolving the action or inventing SHOWN.
+            if (kind !in interactions || dao.suggestion(id) == null ||
+                db.actions().find(id)?.status !in uncertainDelivery) return false
+        }
         val event = OrionProactivityFeedback.from(kind, at, shown)
         if (dao.record(OrionSentinelFeedback(id, kind.name, at.toEpochMilli(), event.timeToAction?.toMillis())) != -1L) {
             publish(key(UUID.fromString(id), kind.name), "SENTINEL_FEEDBACK_RECORDED", at)
@@ -209,9 +214,24 @@ internal class OrionSentinelRuntime(
         }
     }
 
-    private fun nextTask(now: Instant): OrionSentinelTask? {
+    private fun nextTask(now: Instant, preparing: UUID? = null): OrionSentinelTask? {
         if (now.toEpochMilli() < (dao.consent()?.evaluationFloor ?: 0)) return null
-        return dao.nextOpenTask(now.minus(candidateLifetime).toEpochMilli(), now.minus(Duration.ofDays(1)).toEpochMilli())
+        val oldest = now.minus(candidateLifetime).toEpochMilli()
+        val newest = now.minus(Duration.ofDays(1)).toEpochMilli()
+        var afterTime = oldest
+        var afterId = ""
+        while (true) {
+            val tasks = dao.openTasks(oldest, newest, afterTime, afterId)
+            val last = tasks.lastOrNull() ?: return null
+            val candidate = tasks.firstOrNull { task ->
+                val id = key(UUID.fromString(task.taskId), PREPARE)
+                // Existing ingress owns this stable ID, even if it expired before reserving.
+                id == preparing || db.ingress().findByKey(SCOPE, id.toString()) == null
+            }
+            if (candidate != null) return candidate
+            afterTime = last.createdAt
+            afterId = last.taskId
+        }
     }
 
     private fun submit(reference: UUID, type: String, id: UUID, source: String) = ingress.submit(
@@ -238,6 +258,8 @@ internal class OrionSentinelRuntime(
         private val candidateLifetime = Duration.ofDays(7)
         internal val interactions = setOf(OrionProactivityFeedbackKind.OPENED,
             OrionProactivityFeedbackKind.DISMISSED, OrionProactivityFeedbackKind.SNOOZED)
+        private val uncertainDelivery = setOf(network.orion.core.actions.ActionStatus.RUNNING,
+            network.orion.core.actions.ActionStatus.UNKNOWN, network.orion.core.actions.ActionStatus.MANUAL_REVIEW)
 
         private fun key(id: UUID, operation: String): UUID =
             UUID.nameUUIDFromBytes("orion_sentinel/v1/$operation/$id".toByteArray(Charsets.UTF_8))

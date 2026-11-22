@@ -12,8 +12,11 @@ import java.util.UUID
 import javax.crypto.spec.SecretKeySpec
 import network.orion.app.notifications.OrionAndroidNotificationPoster
 import network.orion.app.resources.OrionAndroidResourceProfileSnapshot
+import network.orion.core.actions.ActionStatus
 import network.orion.core.health.CoreReadiness
 import network.orion.core.health.OrionHealthStatus
+import network.orion.core.ingress.DurableIngressOutcome
+import network.orion.core.ingress.DurableIngressRequest
 import network.orion.core.ingress.StartupBarrier
 import network.orion.core.model.Sensitivity
 import network.orion.core.resources.OrionMemoryPressure
@@ -27,11 +30,15 @@ import network.orion.core.time.MonotonicInstant
 import network.orion.core.time.OrionClock
 import network.orion.data.database.ActionMutation
 import network.orion.data.database.DomainEventOutboxEntity
+import network.orion.data.database.DurableIngressStatus
 import network.orion.data.database.OrionDatabase
 import network.orion.data.database.OrionSentinelFeedback
 import network.orion.data.database.OrionSentinelSuggestion
 import network.orion.data.database.TaskEntity
 import network.orion.data.database.TaskStatus
+import network.orion.data.repository.LocalIngressConsumer
+import network.orion.data.repository.LocalIngressDisposition
+import network.orion.data.repository.OrionDurableIngressStore
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -183,6 +190,47 @@ class OrionSentinelRuntimeTest {
             android.os.SystemClock.elapsedRealtime() < deadline) Thread.sleep(10)
         assertFalse(notifications.activeNotifications.any { it.tag == id })
         assertTrue(db.sentinel().wasSnoozed(id))
+    }
+
+    @Test fun expiredPrepareDoesNotStarveLaterTasks() {
+        val older = taskOpen(60, Sensitivity.PERSONAL)
+        val next = taskOpen(48, Sensitivity.PERSONAL)
+        assertTrue(runtime.setEnabled(true))
+        val key = UUID.nameUUIDFromBytes("orion_sentinel/v1/PREPARE/$older".toByteArray())
+        val id = UUID.randomUUID()
+        val store = OrionDurableIngressStore(db, encryption, clock, barrier,
+            LocalIngressConsumer { LocalIngressDisposition.REJECTED }, "sentinel")
+        assertEquals(DurableIngressOutcome.QUEUED, store.enqueue(
+            DurableIngressRequest(id, "sentinel", key, "orion_heartbeat", "PREPARE", 1, Sensitivity.PERSONAL,
+                true, older, null, 60_000, Duration.ofDays(90).toMillis(), correlationId = key),
+        ))
+        now = now.plusSeconds(61)
+        assertEquals(OrionHealthStatus.HEALTHY, runtime.maintain(true, null))
+        val delivered = db.sentinel().recent(0).single()
+        posted += delivered.suggestionId
+        assertEquals(DurableIngressStatus.EXPIRED, db.ingress().find(id.toString())?.status)
+        assertEquals(next.toString(), delivered.taskId)
+    }
+
+    @Test fun snoozeWorksForVisibleNotificationWhenShownCommitFailed() {
+        taskOpen(48, Sensitivity.PERSONAL)
+        assertTrue(runtime.setEnabled(true))
+        db.openHelper.writableDatabase.execSQL("""
+            CREATE TRIGGER orion_test_reject_shown BEFORE INSERT ON orion_sentinel_feedback
+            WHEN NEW.kind = 'SHOWN' BEGIN SELECT RAISE(ABORT, 'synthetic'); END
+        """.trimIndent())
+        assertEquals(OrionHealthStatus.DEGRADED, runtime.maintain(true, null))
+        val id = db.sentinel().recent(0).single().suggestionId
+        posted += id
+        assertEquals(ActionStatus.UNKNOWN, db.actions().find(id)?.status)
+        assertTrue(notifications.activeNotifications.any { it.tag == id })
+        assertTrue(runtime.receive(UUID.fromString(id), OrionProactivityFeedbackKind.SNOOZED))
+        val stop = android.os.SystemClock.elapsedRealtime() + 1_000
+        while (notifications.activeNotifications.any { it.tag == id } &&
+            android.os.SystemClock.elapsedRealtime() < stop) Thread.sleep(10)
+        assertFalse(notifications.activeNotifications.any { it.tag == id })
+        assertEquals("SNOOZED", db.sentinel().feedback(id).single().kind)
+        assertEquals(ActionStatus.UNKNOWN, db.actions().find(id)?.status)
     }
 
     @Test fun expiredReservationsReleaseCapacityWithoutAllowingClockRollbackReplay() {

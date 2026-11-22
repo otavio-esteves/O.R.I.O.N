@@ -71,7 +71,7 @@ class OrionMemorySearchIndexTest {
                 arrayOf(id.toString(), FieldEnvelopeCodec.encode(encrypted.envelope)))
             db.execSQL("INSERT INTO orion_memory_fts (memoryId, body) VALUES (?, 'marcadorlegado')", arrayOf(id.toString()))
         }
-        migrations.runMigrationsAndValidate(name, 11, true, *OrionDatabaseMigrations.ALL).close()
+        migrations.runMigrationsAndValidate(name, 12, true, *OrionDatabaseMigrations.ALL).close()
         withRoom { db ->
             assertTrue(bodies(db).isEmpty())
             assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
@@ -82,9 +82,52 @@ class OrionMemorySearchIndexTest {
         }
     }
 
+    @Test fun deletingIndexedMemoryRemovesTermsFromPersistedFtsSegments() {
+        val id = UUID.randomUUID()
+        val trace = UUID.randomUUID()
+        val marker = "orionsyntheticdeletedmemory"
+        withRoom { db ->
+            val store = OrionMemoryStore(db, crypto, clock)
+            for ((memory, text) in listOf(id to marker, UUID.randomUUID() to "outra memória")) {
+                assertTrue(store.create(memory, canonical(memory, text), Sensitivity.PERSONAL, MemoryOrigin.USER_DECLARED,
+                    1.0, emptyList(), trace, userConfirmed = true) is MemoryWriteResult.Stored)
+            }
+            assertTrue(segmentOccurrences(db, marker) > 0)
+            assertEquals(ActionMutation.APPLIED, store.delete(id, 0, trace))
+        }
+        withRoom { db ->
+            assertEquals(listOf("outra memória"), bodies(db))
+            assertEquals(0, segmentOccurrences(db, marker))
+        }
+    }
+
+    @Test fun upgradeFromElevenRebuildsOnlyAuthorizedIndexContent() {
+        val marker = "orionsyntheticretainedsegment"
+        val retained = UUID.randomUUID()
+        val payload = canonical(retained, "memória autorizada")
+        val encrypted = crypto.encrypt(payload, FieldEncryptionContext("memory/$retained", "content", 1))
+            as FieldEncryptionResult.Encrypted
+        migrations.createDatabase(name, 11).use { db ->
+            db.execSQL("""INSERT INTO orion_memories (memoryId,contentEnvelope,sensitivity,origin,confidence,
+                userConfirmed,createdAt,updatedAt,status,version,accessCount)
+                VALUES (?,?,'PERSONAL','USER_DECLARED',1,1,1000,1000,'ACTIVE',0,0)""",
+                arrayOf(retained.toString(), FieldEnvelopeCodec.encode(encrypted.envelope)))
+            db.execSQL("INSERT INTO orion_memory_fts (memoryId, body) VALUES ('old', ?)", arrayOf(marker))
+            db.execSQL("INSERT INTO orion_memory_fts (memoryId, body) VALUES (?, 'memória autorizada')", arrayOf(retained.toString()))
+            db.execSQL("DELETE FROM orion_memory_fts WHERE memoryId = 'old'")
+        }
+        migrations.runMigrationsAndValidate(name, 12, true, *OrionDatabaseMigrations.ALL).close()
+        withRoom { db ->
+            assertTrue(bodies(db).isEmpty())
+            assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
+            assertEquals(listOf("memória autorizada"), bodies(db))
+            assertEquals(0, segmentOccurrences(db, marker))
+        }
+    }
+
     @Test fun backfillResumesAfterKeyFailureAndReclassificationRemovesPosting() {
         migrations.createDatabase(name, 10).close()
-        migrations.runMigrationsAndValidate(name, 11, true, *OrionDatabaseMigrations.ALL).close()
+        migrations.runMigrationsAndValidate(name, 12, true, *OrionDatabaseMigrations.ALL).close()
         val ids = List(2) { UUID.randomUUID() }.sortedBy(UUID::toString)
         withRoom { db ->
             ids.forEachIndexed { number, id ->
@@ -178,4 +221,10 @@ class OrionMemorySearchIndexTest {
         .query("SELECT body FROM orion_memory_fts ORDER BY body").use { rows ->
             buildList { while (rows.moveToNext()) add(rows.getString(0)) }
         }
+
+    private fun segmentOccurrences(db: OrionDatabase, marker: String): Int = db.openHelper.readableDatabase.query(
+        """SELECT (SELECT count(*) FROM orion_memory_fts_segdir WHERE instr(root, CAST(? AS blob)) > 0) +
+            (SELECT count(*) FROM orion_memory_fts_segments WHERE instr(block, CAST(? AS blob)) > 0)""",
+        arrayOf(marker, marker),
+    ).use { rows -> check(rows.moveToFirst()); rows.getInt(0) }
 }

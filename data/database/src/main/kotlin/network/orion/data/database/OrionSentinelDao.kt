@@ -62,9 +62,10 @@ interface OrionSentinelDao {
 
     @Query("""SELECT taskId, createdAt FROM orion_tasks t WHERE status = 'OPEN'
         AND sensitivity IN ('PUBLIC', 'PERSONAL') AND createdAt BETWEEN :oldest AND :newest
+        AND (createdAt > :afterTime OR (createdAt = :afterTime AND taskId > :afterId))
         AND NOT EXISTS (SELECT 1 FROM orion_sentinel_suggestions s WHERE s.taskId = t.taskId)
-        ORDER BY createdAt, taskId LIMIT 1""")
-    fun nextOpenTask(oldest: Long, newest: Long): OrionSentinelTask?
+        ORDER BY createdAt, taskId LIMIT 25""")
+    fun openTasks(oldest: Long, newest: Long, afterTime: Long, afterId: String): List<OrionSentinelTask>
 
     @Query("""SELECT COUNT(*) FROM (SELECT 1 FROM orion_reminders
         WHERE status = 'PENDING' AND sensitivity IN ('PUBLIC', 'PERSONAL')
