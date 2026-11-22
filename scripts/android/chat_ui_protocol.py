@@ -93,6 +93,9 @@ F9_SELECTED = {
     'network.orion.app.voice.OrionVoiceIngressTest': {
         'partialNeverEnqueuesAndRecoveryProcessesFinalOnlyOnce',
     },
+    'network.orion.app.voice.OrionVoiceTaskAdmissionTest': {
+        'finalVoiceRequestPreparesButDoesNotExecuteTask',
+    },
     'network.orion.app.voice.OrionVoiceTopologyTest': {
         'voiceComponentsArePrivateAndRolesAreSeparated',
     },

@@ -32,7 +32,8 @@ class OrionVoiceIngressTest {
             override fun currentKey() = key
             override fun keyForVersion(version: Int) = key
         })
-        Room.inMemoryDatabaseBuilder(context, OrionDatabase::class.java).build().use { db ->
+        val db = Room.inMemoryDatabaseBuilder(context, OrionDatabase::class.java).build()
+        try {
             val ingress = OrionVoiceIngress(db, crypto, WallClock { at }, barrier, { readiness }, { true },
                 { 70 }, { 0 }, { proposals++; true })
             val id = UUID.randomUUID()
@@ -64,6 +65,6 @@ class OrionVoiceIngressTest {
             assertTrue(responses.all { it.requiresConfirmation })
             assertEquals(OrionVoiceTerminalState.SUCCEEDED, responses.last().terminalState)
             assertFalse(ingress.cancel(id))
-        }
+        } finally { db.close() }
     }
 }
