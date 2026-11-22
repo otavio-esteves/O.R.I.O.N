@@ -4,6 +4,13 @@ O aplicativo informa **Palavra de ativação desativada (`DISABLED`)** em
 Diagnóstico. O push-to-talk e o assistente do Android continuam disponíveis
 por ação do usuário. O detector experimental permanece fora do APK.
 
+O [PR #197](https://github.com/otavio-esteves/O.R.I.O.N/pull/197) integrou a
+F11 em `94c4a9f`. O [CI obrigatório](https://github.com/otavio-esteves/O.R.I.O.N/actions/runs/45034982695)
+passou com build e benchmark em Docker e a suíte Android em emulador API 35.
+O resultado de software é `DISABLED`, coerente com as recusas observadas
+no ensaio e com o resultado permitido pelo Plano Mestre §17.3.
+O gate físico continua adiado conforme o ADR-0009.
+
 ## Candidato offline
 
 `:voice:wakeword` avalia trechos PCM mono a 16 kHz que já foram segmentados.
