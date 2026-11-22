@@ -33,7 +33,7 @@ interface OrionStorageMetadataDao {
     EventConsumerReceiptEntity::class, IngressEnvelopeEntity::class,
     OrionReminderSeriesEntity::class, OrionReminderOccurrenceEntity::class, ModelRegistryEntity::class,
     OrionMemoryIndexRow::class, OrionMemoryIndexState::class, OrionSentinelConsent::class,
-    OrionSentinelSuggestion::class, OrionSentinelFeedback::class], version = 11, exportSchema = true)
+    OrionSentinelSuggestion::class, OrionSentinelFeedback::class], version = 12, exportSchema = true)
 abstract class OrionDatabase : RoomDatabase() {
     abstract fun models(): OrionModelRegistryDao
     abstract fun metadata(): OrionStorageMetadataDao
@@ -75,7 +75,17 @@ object OrionDatabaseFactory {
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     db.execSQL("INSERT INTO orion_storage_metadata (id, formatVersion) VALUES (1, 1)")
-                    db.execSQL(ORION_REMOVE_INELIGIBLE_MEMORY_POSTINGS)
+                    db.execSQL(ORION_SCRUB_INELIGIBLE_MEMORY_POSTINGS)
+                }
+
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    db.beginTransaction()
+                    try {
+                        enableOrionSecureDelete(db)
+                        db.setTransactionSuccessful()
+                    } finally {
+                        db.endTransaction()
+                    }
                 }
             })
             // Deliberately no destructive fallback or main-thread query permission.

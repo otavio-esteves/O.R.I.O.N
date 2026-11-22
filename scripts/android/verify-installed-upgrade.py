@@ -40,13 +40,16 @@ def main():
     parser.add_argument("--adb", default=shutil.which("adb"))
     parser.add_argument("--previous-apk", type=Path, required=True)
     parser.add_argument("--previous-test-apk", type=Path, required=True)
+    parser.add_argument("--apk-dir", type=Path, help="Directory containing the current debug APK pair.")
     parser.add_argument("--evidence-dir", type=Path, required=True)
     args = parser.parse_args()
     if not args.adb:
         parser.error("Pass host adb with --adb.")
     root = Path(__file__).resolve().parents[2]
-    candidate = root / "app/build/outputs/apk/debug/app-debug.apk"
-    candidate_test = root / "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+    candidate = (args.apk_dir / "app-debug.apk" if args.apk_dir else
+                 root / "app/build/outputs/apk/debug/app-debug.apk")
+    candidate_test = (args.apk_dir / "app-debug-androidTest.apk" if args.apk_dir else
+                      root / "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk")
     artifacts = {"previous": args.previous_apk, "previousTest": args.previous_test_apk,
                  "candidate": candidate, "candidateTest": candidate_test}
     if not all(path.is_file() for path in artifacts.values()):

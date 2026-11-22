@@ -54,3 +54,14 @@ internal const val ORION_REMOVE_INELIGIBLE_MEMORY_POSTINGS = """CREATE TRIGGER I
     BEGIN
         DELETE FROM orion_memory_fts WHERE memoryId = NEW.memoryId;
     END"""
+
+internal const val ORION_COMPACT_MEMORY_POSTINGS =
+    "INSERT INTO orion_memory_fts(orion_memory_fts) VALUES ('optimize')"
+
+internal const val ORION_SCRUB_INELIGIBLE_MEMORY_POSTINGS = """CREATE TRIGGER IF NOT EXISTS orion_remove_ineligible_memory_postings
+    AFTER UPDATE OF sensitivity ON orion_memories
+    WHEN NEW.sensitivity <> 'PERSONAL' AND EXISTS (SELECT 1 FROM orion_memory_fts WHERE memoryId = NEW.memoryId)
+    BEGIN
+        DELETE FROM orion_memory_fts WHERE memoryId = NEW.memoryId;
+        ${ORION_COMPACT_MEMORY_POSTINGS};
+    END"""

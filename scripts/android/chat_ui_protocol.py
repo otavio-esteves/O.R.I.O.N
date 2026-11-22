@@ -25,6 +25,8 @@ F8_SELECTED = {
         'unacknowledgedSuggestionRecordsIgnoredOnlyOnce',
         'oneRemainingOutboxSlotCommitsDeliveryAndShown',
         'committedSnoozeIsReconciledWithoutAnotherCallback',
+        'expiredPrepareDoesNotStarveLaterTasks',
+        'snoozeWorksForVisibleNotificationWhenShownCommitFailed',
         'expiredReservationsReleaseCapacityWithoutAllowingClockRollbackReplay',
     },
     'network.orion.app.sentinel.OrionProactiveDeliveryTest': {
@@ -63,6 +65,8 @@ F8_SELECTED = {
     'network.orion.app.memories.OrionMemorySearchIndexTest': {
         'protectedBytesNeverEnterFtsAndRemovalFollowsSupersessionAndDeletion',
         'upgradeRemovesLegacyPlaintextWhilePreservingReadablePrivateMemory',
+        'deletingIndexedMemoryRemovesTermsFromPersistedFtsSegments',
+        'upgradeFromElevenRebuildsOnlyAuthorizedIndexContent',
         'backfillResumesAfterKeyFailureAndReclassificationRemovesPosting',
         'searchUsesAuthoritativeValidityAndStableRankingAcrossPages',
         'selectedContextCannotUseAMemoryDeletedAfterTheSearch',

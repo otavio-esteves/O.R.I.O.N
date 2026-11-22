@@ -41,6 +41,21 @@ integra o payload da confirmação.
 O CI obrigatório executa as suítes Android de entrega, retenção, migração,
 FTS e heartbeat, além do SIGKILL do Sentinel e das suítes de chat.
 
+### Rodada seguinte de auditoria
+
+Room 12 recria o índice derivado e retoma o backfill a partir das memórias
+criptografadas que têm consentimento de indexação. A remoção e a
+reclassificação compactam o índice FTS4 para retirar os termos dos segmentos
+internos. A regressão confere a tabela de conteúdo e os segmentos depois
+de reabrir o banco. O CI instala o APK Room 11 integrado, grava a fixture
+e aplica o APK candidato com a mesma assinatura de depuração.
+
+O seletor do Sentinel avança para outra tarefa quando um ingresso anterior
+já possui a chave estável da tarefa sem reserva. Interações de
+PendingIntents imutáveis podem ser gravadas para uma entrega incerta. O
+feedback mantém a ausência de `SHOWN` e o estado do ActionRequest. O
+cancelamento da notificação continua idempotente.
+
 ## Upgrade e evidências
 
 As execuções do candidato, incluindo a validação do APK instalado e as hashes

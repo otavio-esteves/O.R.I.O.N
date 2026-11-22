@@ -84,14 +84,14 @@ internal class OrionAndroidNotificationPoster(context:Context,private val clock:
             // Android may enqueue notification registration asynchronously. A bounded
             // observation window proves a matching record; it never repeats notify.
             val start=clock.monotonicNow()
-            for(attempt in 0 until 10) {
+            for(attempt in 0..20) {
                 val age=clock.monotonicNow().elapsedSince(start)?:return NotificationPostResult.UNKNOWN
                 if(age.toMillis()>500)return NotificationPostResult.UNKNOWN
                 val active=service.activeNotifications.singleOrNull { it.tag==actionId.toString()&&it.id==0 }
                 val posted=active?.notification
                 if(posted?.channelId==channelId&&posted.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()==notification.title&&
                     posted.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()==notification.body)return NotificationPostResult.POSTED
-                if(attempt<9)Thread.sleep(25)
+                if(attempt<20)Thread.sleep(25)
             }
             NotificationPostResult.UNKNOWN
         } catch(cancelled:java.util.concurrent.CancellationException) { throw cancelled }

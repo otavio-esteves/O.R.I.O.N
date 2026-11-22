@@ -3,6 +3,7 @@ package network.orion.data.database
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.SkipQueryVerification
 import androidx.room.Transaction
 import java.time.ZoneId
 import network.orion.core.model.Sensitivity
@@ -68,7 +69,15 @@ abstract class OrionRecordDao : OrionReminderSeriesMutationDao() {
     protected abstract fun supersedeClaims(id: String, at: Long)
 
     @Query("DELETE FROM orion_memory_fts WHERE memoryId = :id")
-    protected abstract fun removeMemoryIndex(id: String)
+    protected abstract fun deleteMemoryPosting(id: String): Int
+
+    @SkipQueryVerification
+    @Query(ORION_COMPACT_MEMORY_POSTINGS)
+    protected abstract fun compactMemoryPostings()
+
+    private fun removeMemoryIndex(id: String) {
+        if (deleteMemoryPosting(id) > 0) compactMemoryPostings()
+    }
 
     @Query("DELETE FROM orion_memories WHERE memoryId = :id AND version = :version")
     protected abstract fun deleteMemory(id: String, version: Long): Int

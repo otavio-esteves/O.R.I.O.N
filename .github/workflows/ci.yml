@@ -12,8 +12,12 @@ jobs:
   android-build-and-check:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      COMPOSE_PROJECT_NAME: orion-ci
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Check host ADB harness contract without a device
         run: docker compose run --rm host-harness-check
       - name: Build canonical Android environment
@@ -32,6 +36,29 @@ jobs:
         with:
           name: orion-chat-ui-apks
           path: ${{ runner.temp }}/orion-chat-apks/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Build the last integrated Room 11 APK pair with the same debug key
+        env:
+          ORION_UPGRADE_BASE: 398e46f3ce31c7541b94c01b797b0337bd9cbd18
+        run: |
+          baseline="$RUNNER_TEMP/orion-upgrade-source"
+          git worktree add --detach "$baseline" "$ORION_UPGRADE_BASE"
+          (
+            cd "$baseline"
+            env UID="$(id -u)" GID="$(id -g)" docker compose run --rm \
+              -v "$GITHUB_WORKSPACE/.gradle:/workspace/.gradle" android-build \
+              --project-cache-dir /tmp/orion-baseline-project-cache \
+              :app:assembleDebug :app:assembleDebugAndroidTest --max-workers=2
+          )
+          mkdir -p "$RUNNER_TEMP/orion-upgrade-apks"
+          cp "$baseline/app/build/outputs/apk/debug/app-debug.apk" "$RUNNER_TEMP/orion-upgrade-apks/"
+          cp "$baseline/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" "$RUNNER_TEMP/orion-upgrade-apks/"
+      - name: Retain baseline APKs for the installed upgrade
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: orion-upgrade-apks
+          path: ${{ runner.temp }}/orion-upgrade-apks/
           if-no-files-found: error
           retention-days: 3
       - name: Build scoped minified native qualification artifacts
@@ -66,6 +93,11 @@ jobs:
         with:
           name: orion-chat-ui-apks
           path: ${{ runner.temp }}/orion-chat-apks
+      - name: Download the Docker-built baseline APK pair
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: orion-upgrade-apks
+          path: ${{ runner.temp }}/orion-upgrade-apks
       - name: Initialize an explicit not-run report
         run: |
           mkdir -p "$RUNNER_TEMP/orion-chat-ui"
@@ -95,6 +127,7 @@ jobs:
             set -e
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-chat-ui"
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f8" --suite f8
+            python3 scripts/android/verify-installed-upgrade.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --previous-apk "$RUNNER_TEMP/orion-upgrade-apks/app-debug.apk" --previous-test-apk "$RUNNER_TEMP/orion-upgrade-apks/app-debug-androidTest.apk" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-upgrade"
             python3 scripts/android/verify-transaction-process-death.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --scenario sentinel_delivery --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-death"
       - name: Remove only this job's AVD
         if: always()
@@ -112,6 +145,7 @@ jobs:
             ${{ runner.temp }}/orion-chat-ui/junit.xml
             ${{ runner.temp }}/orion-f8/summary.json
             ${{ runner.temp }}/orion-f8/junit.xml
+            ${{ runner.temp }}/orion-f8-upgrade/installed-upgrade-report.json
             ${{ runner.temp }}/orion-f8-death/*.json
           if-no-files-found: error
           retention-days: 7
