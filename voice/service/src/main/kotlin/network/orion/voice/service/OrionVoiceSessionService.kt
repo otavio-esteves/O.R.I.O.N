@@ -83,12 +83,15 @@ class OrionVoiceSessionService : Service() {
             val model = withContext(Dispatchers.IO) { OrionVoiceModel.verified(this@OrionVoiceSessionService) }
                 ?: return session.report(OrionVoiceSessionState.MODEL_UNAVAILABLE)
             val pcm = try {
-                recorder.capture(session.finishCapture::get) { session.report(OrionVoiceSessionState.LISTENING) }
+                recorder.capture(session.finishCapture::get) {
+                    scope.launch { if (active === session) session.report(OrionVoiceSessionState.LISTENING) }
+                }
             } catch (_: SecurityException) {
                 return session.report(OrionVoiceSessionState.MICROPHONE_UNAVAILABLE)
             } catch (_: IllegalStateException) {
                 return session.report(OrionVoiceSessionState.MICROPHONE_UNAVAILABLE)
             } ?: return session.report(OrionVoiceSessionState.NO_SPEECH)
+            val capturedAt = clock.wallNow()
             session.report(OrionVoiceSessionState.TRANSCRIBING)
             val text = try {
                 withContext(Dispatchers.IO) {
@@ -105,12 +108,14 @@ class OrionVoiceSessionService : Service() {
 
             session.report(OrionVoiceSessionState.WAITING_FOR_CORE)
             val request = VoiceUtteranceRequest(IpcSchemaVersion(1), session.requestId, session.id, text, true,
-                "pt-BR", clock.wallNow(), OrionVoiceSource.PUSH_TO_TALK, 0, UUID.randomUUID())
+                "pt-BR", capturedAt, OrionVoiceSource.PUSH_TO_TALK, 0, UUID.randomUUID())
             val reply = withTimeoutOrNull(15_000) { submitAndWait(core, request) }
                 ?: return session.report(OrionVoiceSessionState.CORE_UNAVAILABLE)
             if (reply.text != null) {
                 session.report(OrionVoiceSessionState.SPEAKING, reply.text, reply.confirm)
-                speakOrionVoiceReply(this, reply.text, session.id.toString())
+                try { speakOrionVoiceReply(this, reply.text, session.id.toString()) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: RuntimeException) { /* The visible response is already available. */ }
             }
             session.report(OrionVoiceSessionState.SUCCEEDED, reply.text, reply.confirm)
         } catch (cancelled: CancellationException) {

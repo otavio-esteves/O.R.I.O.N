@@ -13,7 +13,8 @@ internal suspend fun speakOrionVoiceReply(context: Context, text: String, sessio
     val tts = TextToSpeech(context) { initialized.complete(it) }
     try {
         if (withTimeoutOrNull(2_000) { initialized.await() } != TextToSpeech.SUCCESS) return
-        val voice = tts.voices?.filter { it.locale.language == "pt" && !it.isNetworkConnectionRequired }
+        val voice = tts.voices?.filter { it.locale.language == "pt" && !it.isNetworkConnectionRequired &&
+            TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED !in it.features.orEmpty() }
             ?.sortedByDescending { it.locale.country == "BR" }?.firstOrNull() ?: return
         if (tts.setVoice(voice) != TextToSpeech.SUCCESS) return
         val done = CompletableDeferred<Unit>()

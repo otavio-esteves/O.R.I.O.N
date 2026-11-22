@@ -6,9 +6,13 @@ import android.content.Intent
 import android.content.ServiceConnection
 import java.util.UUID
 import android.os.IBinder
+import android.os.Bundle
 import android.os.RemoteException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -91,6 +95,39 @@ class OrionBoundVoiceCoreClient(context: Context) : VoiceCoreClient {
 
     override suspend fun cancel(requestId: UUID): Boolean =
         invoke { it.cancelVoiceRequest(protocolInfo.protocolMajor, requestId.toString()) } == true
+
+    override fun responses(requestId: UUID) = callbackFlow {
+        val endpoint = remote
+        if (endpoint == null || !endpoint.asBinder().isBinderAlive) {
+            close()
+            return@callbackFlow
+        }
+        val callback = object : IOrionVoiceCallback.Stub() {
+            private var sequence = -1L
+            private var terminal = false
+
+            @Synchronized override fun onResponse(response: Bundle) {
+                val decoded = OrionVoiceWire.readResponse(response) ?: return
+                if (terminal || decoded.requestId != requestId || decoded.sequence <= sequence) return
+                sequence = decoded.sequence
+                terminal = decoded.terminalState != null
+                trySend(decoded)
+                if (terminal) close()
+            }
+        }
+        val death = IBinder.DeathRecipient { close() }
+        try {
+            endpoint.asBinder().linkToDeath(death, 0)
+            if (!endpoint.registerVoiceCallback(protocolInfo.protocolMajor, requestId.toString(), callback)) close()
+        } catch (_: RemoteException) { close() }
+          catch (_: SecurityException) { close() }
+        awaitClose {
+            try { endpoint.unregisterVoiceCallback(callback) } catch (_: RemoteException) { }
+            try { endpoint.asBinder().unlinkToDeath(death, 0) } catch (_: NoSuchElementException) { }
+        }
+    }.flowOn(Dispatchers.IO)
+
+    override suspend fun healthCheck(): Boolean = invoke { it.healthCheck(protocolInfo.protocolMajor) } == true
 
     private suspend fun <T> invoke(call: (IOrionVoiceCoreGateway) -> T): T? = withContext(Dispatchers.IO) {
         operations.withLock {

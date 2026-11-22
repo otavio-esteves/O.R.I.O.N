@@ -88,6 +88,7 @@ F8_SELECTED = {
 F9_SELECTED = {
     'network.orion.app.voice.OrionCoreGatewayServiceTest': {
         'privateMainGatewayNegotiatesAndReportsReadiness',
+        'callbackStreamsOneTerminalResponseForAnAcceptedRequest',
     },
     'network.orion.app.voice.OrionVoiceIngressTest': {
         'partialNeverEnqueuesAndRecoveryProcessesFinalOnlyOnce',

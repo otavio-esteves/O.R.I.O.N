@@ -1,6 +1,8 @@
 package network.orion.voice.ipc
 
 import java.util.UUID
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import network.orion.core.ipc.VoiceCoreResponse
 import network.orion.core.ipc.VoiceUtteranceRequest
 import network.orion.core.ipc.OrionIpcProtocol
@@ -19,6 +21,8 @@ interface VoiceCoreClient {
     suspend fun submitUtterance(request: VoiceUtteranceRequest): OrionVoiceAdmission = OrionVoiceAdmission.CORE_UNAVAILABLE
     suspend fun status(requestId: UUID, afterSequence: Long = -1): VoiceCoreResponse? = null
     suspend fun cancel(requestId: UUID): Boolean = false
+    fun responses(requestId: UUID): Flow<VoiceCoreResponse> = emptyFlow()
+    suspend fun healthCheck(): Boolean = false
     suspend fun disconnect()
 }
 
