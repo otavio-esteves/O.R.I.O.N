@@ -27,6 +27,13 @@ do software e morte de processo. A qualificação no Galaxy S21 deve verificar
 microfone e TTS, cobertura do STT, RAM, latência, consumo e compatibilidade.
 A aprovação definitiva de modelo e parâmetros depende dessas medições.
 
+| Verificação | Evidência de software |
+| --- | --- |
+| IPC e processos | A suíte Android `f9` cobre versão, topologia privada, callbacks, admissão durante recovery e preparação real de tarefa. |
+| Retomada do Core | `verify-voice-process-recovery.py` mata MAIN com `SIGKILL`, confirma que `:voice_session` continua vivo e verifica o bind e a conclusão de uma consulta após a recuperação. O script também mata cada processo de voz e verifica que os outros sobrevivem. |
+| Core independente | A suíte de chat sem modelo verifica o uso por texto com os processos de voz desligados. |
+| VAD e STT | O teste JVM cobre a seleção de fala no PCM. No emulador API 35 x86_64, o teste instrumentado reconheceu a palavra `bateria` numa frase sintética em 12,7 s de decodificação. |
+
 O teste nativo opcional `OrionWhisperInstrumentedTest` usa o modelo com hash
 verificado e uma frase sintética em português. Instale o APK de teste do módulo
 `:voice:service`, copie o modelo para `no_backup/orion_voice_tiny_q5_1.bin` e um
