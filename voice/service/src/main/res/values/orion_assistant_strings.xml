@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="orion_assistant_title">O.R.I.O.N.</string>
+    <string name="orion_assistant_ready">Toque em Falar para iniciar a captura.</string>
+    <string name="orion_assistant_talk">Falar</string>
+    <string name="orion_assistant_finish_capture">Concluir fala</string>
+    <string name="orion_assistant_cancel">Cancelar</string>
+    <string name="orion_assistant_open_app">Abrir O.R.I.O.N.</string>
+    <string name="orion_assistant_open_failed">Não foi possível abrir o app nesta sessão.</string>
+    <string name="orion_assistant_permission">Autorize o microfone em Ajustes → Voz.</string>
+    <string name="orion_assistant_no_model">Instale o modelo local em Ajustes → Voz.</string>
+    <string name="orion_assistant_connecting">Preparando microfone.</string>
+    <string name="orion_assistant_listening">Ouvindo. Diga, por exemplo, “bateria” ou “listar tarefas”.</string>
+    <string name="orion_assistant_transcribing">Transcrevendo no dispositivo.</string>
+    <string name="orion_assistant_waiting">Aguardando o Core.</string>
+    <string name="orion_assistant_cancelled">Sessão cancelada.</string>
+    <string name="orion_assistant_no_speech">Nenhuma fala reconhecida. Tente novamente.</string>
+    <string name="orion_assistant_microphone_unavailable">Microfone indisponível.</string>
+    <string name="orion_assistant_core_unavailable">Core indisponível. Você pode continuar pelo texto.</string>
+    <string name="orion_assistant_failed">Sessão de voz interrompida.</string>
+</resources>

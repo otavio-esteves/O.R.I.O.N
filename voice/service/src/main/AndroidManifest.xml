@@ -9,5 +9,25 @@
     <application>
         <service android:name=".OrionVoiceControlService" android:process=":voice" android:exported="false" />
         <service android:name=".OrionVoiceSessionService" android:process=":voice_session" android:exported="false" />
+        <service
+            android:name=".OrionVoiceInteractionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:process=":voice">
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+            <meta-data android:name="android.voice_interaction" android:resource="@xml/orion_voice_interaction" />
+        </service>
+        <service
+            android:name=".OrionVoiceInteractionSessionService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:process=":voice_session" />
+        <service
+            android:name=".OrionAssistantRecognitionService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:process=":voice_session" />
     </application>
 </manifest>

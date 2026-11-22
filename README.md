@@ -82,6 +82,14 @@ The private MAIN gateway and versioned voice IPC follow the
 [voice validation record](docs/qualification/F9-SoftwareCloseout.md) describes
 the software scope and the remaining physical measurements.
 
+## F10 System Assistant
+
+Open **Ajustes → Configurar assistente no Android** to choose O.R.I.O.N. in
+Android's default app settings. Open the assistant using your device shortcut
+and press **Falar** to start capture. The session uses the local F9 voice model.
+Text and **Ajustes → Voz** remain available when the Android role changes.
+[F10 validation record](docs/qualification/F10-SoftwareCloseout.md)
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,

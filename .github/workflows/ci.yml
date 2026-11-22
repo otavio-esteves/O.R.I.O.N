@@ -107,7 +107,7 @@ jobs:
           printf '%s\n' 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-orion-chat-kvm.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Execute the chat and F8 Android suites on the host
+      - name: Execute Android software and recovery suites on the host
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 35
@@ -128,6 +128,8 @@ jobs:
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-chat-ui"
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f8" --suite f8
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f9" --suite f9
+            python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f10" --suite f10
+            python3 scripts/android/verify-system-assistant.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f10-role"
             python3 scripts/android/verify-installed-upgrade.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --previous-apk "$RUNNER_TEMP/orion-upgrade-apks/app-debug.apk" --previous-test-apk "$RUNNER_TEMP/orion-upgrade-apks/app-debug-androidTest.apk" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-upgrade"
             python3 scripts/android/verify-transaction-process-death.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --scenario sentinel_delivery --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-death"
             python3 scripts/android/verify-voice-process-recovery.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk "$RUNNER_TEMP/orion-chat-apks/app-debug.apk" --report "$RUNNER_TEMP/orion-f9/voice-processes.json"
@@ -152,6 +154,9 @@ jobs:
             ${{ runner.temp }}/orion-f9/summary.json
             ${{ runner.temp }}/orion-f9/junit.xml
             ${{ runner.temp }}/orion-f9/voice-processes.json
+            ${{ runner.temp }}/orion-f10/summary.json
+            ${{ runner.temp }}/orion-f10/junit.xml
+            ${{ runner.temp }}/orion-f10-role/*.json
           if-no-files-found: error
           retention-days: 7
 

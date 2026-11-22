@@ -101,6 +101,14 @@ F9_SELECTED = {
     },
 }
 
+
+F10_SELECTED = {
+    'network.orion.app.voice.OrionSystemAssistantPlatformTest': {
+        'systemAssistantDeclaresOnlyItsRequiredProtectedServices',
+        'coreRespondsWithoutAnAssistantRole',
+    },
+}
+
 def test_identities(selection):
     return frozenset((cls, method) for cls, methods in selection.items() for method in methods)
 
