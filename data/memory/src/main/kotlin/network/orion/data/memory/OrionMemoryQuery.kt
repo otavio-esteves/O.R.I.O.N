@@ -40,7 +40,7 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
         val candidates = index.candidates(request.ftsExpression, now.toEpochMilli(), MAX_CANDIDATES + 1)
         val hits = ArrayList<MemorySearchHit>()
         for (row in candidates.take(MAX_CANDIDATES)) {
-            val memory = select(row, now)
+            val memory = select(row, now, requireSearchConsent = true)
             if (memory.contentState == MemoryContentState.KEY_UNAVAILABLE)
                 return@Callable MemorySearchPage(MemorySearchState.KEY_UNAVAILABLE)
             val content = memory.content ?: continue
@@ -68,7 +68,7 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
             val row = database.memories().find(selected.memoryId.toString())?.takeIf(::visible) ?: return@mapNotNull null
             if (row.sensitivity != Sensitivity.PERSONAL || row.version != selected.version || row.status != MemoryStatus.ACTIVE ||
                 !row.lifecycle().isValidAt(now)) return@mapNotNull null
-            select(row, now).takeIf { it.contentState == MemoryContentState.READABLE }
+            select(row, now, requireSearchConsent = true).takeIf { it.contentState == MemoryContentState.READABLE }
         }
     })
 
@@ -124,10 +124,10 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
         }
     }
 
-    private fun select(row: MemoryEntity, at: Instant): MemorySummary {
+    private fun select(row: MemoryEntity, at: Instant, requireSearchConsent: Boolean = false): MemorySummary {
         val id = UUID.fromString(row.memoryId)
         val (content, state) = read(row.contentEnvelope, FieldEncryptionContext("memory/$id", "content", 1)) {
-            decodeContent(id, it)
+            decodeContent(id, it, requireIndexConsent = requireSearchConsent)
         }
         val details = row.detailsEnvelope?.let { read(it, OrionMemoryDetailsCodec.context(id), OrionMemoryDetailsCodec::decode) }
         val provenance = OrionMemoryProvenance(row.origin, row.confidence, row.userConfirmed, row.sensitivity,

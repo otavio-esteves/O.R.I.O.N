@@ -70,6 +70,7 @@ F8_SELECTED = {
         'backfillResumesAfterKeyFailureAndReclassificationRemovesPosting',
         'searchUsesAuthoritativeValidityAndStableRankingAcrossPages',
         'selectedContextCannotUseAMemoryDeletedAfterTheSearch',
+        'stalePostingWithoutSearchConsentCannotEnterResultsOrChatContext',
     },
     'network.orion.app.scheduling.OrionSchedulerPlatformTest': {
         'approximateRegistrationCreatesImmutableExplicitIdentityAndCancellationRemovesIt',

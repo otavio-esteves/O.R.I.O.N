@@ -214,6 +214,27 @@ class OrionMemorySearchIndexTest {
         try { block(database) } finally { database.close() }
     }
 
+    @Test fun stalePostingWithoutSearchConsentCannotEnterResultsOrChatContext() {
+        withRoom { db ->
+            val store = OrionMemoryStore(db, crypto, clock)
+            val query = OrionMemoryQuery(db, crypto, clock)
+            val id = UUID.randomUUID()
+            val content = "café privado"
+            assertTrue(store.create(id, canonical(id, content, allowSearchIndex = false),
+                Sensitivity.PERSONAL, MemoryOrigin.USER_DECLARED, 1.0, emptyList(), id,
+                userConfirmed = true) is MemoryWriteResult.Stored)
+            assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
+            db.memoryIndex().insert(OrionMemoryIndexRow(id.toString(), content))
+
+            val result = query.search(SearchMemories("café"))
+            assertEquals(MemorySearchState.READY, result.state)
+            assertTrue(result.hits.isEmpty())
+            val privateMemory = checkNotNull(query.find(id))
+            assertEquals(content, privateMemory.content)
+            assertTrue(query.currentContextMemories(listOf(MemorySearchHit(privateMemory, 500))).isEmpty())
+        }
+    }
+
     private fun canonical(id: UUID, content: String, allowSearchIndex: Boolean = true): ByteArray = (OrionCreateMemoryPreparer.prepare(
         CreateMemory(id, content, id, id, allowSearchIndex)) as CreateMemoryPreparation.Ready).memory.canonicalNormalizedArguments.toByteArray()
 
