@@ -56,6 +56,10 @@ class OrionWakeWordSoftwareBenchmarkTest {
         assertTrue(readWave(wav.array()).all { it.toInt() == 7 })
 
         assertThrows(IllegalArgumentException::class.java) { readWave(wav.array().copyOf(wav.capacity() - 1)) }
+        val ordered = wav.array()
+        val dataBeforeFormat = ordered.copyOfRange(0, 12) + ordered.copyOfRange(48, ordered.size) +
+            ordered.copyOfRange(12, 48)
+        assertThrows(IllegalArgumentException::class.java) { readWave(dataBeforeFormat) }
         wav.putShort(22, 2)
         assertThrows(IllegalArgumentException::class.java) { readWave(wav.array()) }
     }
@@ -218,6 +222,7 @@ class OrionWakeWordSoftwareBenchmarkTest {
                     wave.short.toInt() == 2 && wave.short.toInt() == 16) { "WAV must be 16 kHz mono PCM16." }
                 formatFound = true
             } else if (name == DATA) {
+                require(formatFound) { "WAV format must precede PCM data." }
                 require(dataOffset == -1 && size % 2 == 0 &&
                     size / 2 in OrionWakeWordDetector.MIN_SAMPLES..OrionWakeWordDetector.MAX_SAMPLES) {
                     "WAV PCM clip is outside the detector bounds."

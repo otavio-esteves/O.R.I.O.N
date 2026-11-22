@@ -16,7 +16,7 @@ Os testes de software medem acertos, recusas e aceitações indevidas por clipe
 em conjuntos de referência e avaliação distintos. A latência registrada é a
 da chamada de classificação na JVM. O CI retém o resultado agregado. A suíte
 Android verifica o diagnóstico, a ausência do detector no APK, a declaração
-de serviços e as restrições do assistente na tela bloqueada.
+de serviços e os metadados que restringem o assistente na tela bloqueada.
 
 ```sh
 docker compose run --rm android-build :voice:wakeword:testDebugUnitTest
@@ -38,7 +38,15 @@ em 12 positivos e nenhuma falsa aceitação em 23 negativos. Na fala sintética
 em português brasileiro gerada pelo eSpeak NG, o detector aceitou 2 de 8 clipes
 com “Orion” e rejeitou os 12 clipes de outras palavras. As três referências de
 fala foram geradas separadamente dos clipes de avaliação. A mediana da
-classificação dos 20 clipes de fala no JVM foi 3,2 ms.
+classificação dos 20 clipes de fala no JVM foi 2,8 ms no ensaio reproduzível.
+
+O gerador `scripts/benchmark/generate-wakeword-speech.py` recria os 23 WAVs
+do ensaio a partir do eSpeak NG 1.52.0 em modo determinístico. Gere o corpus
+em um diretório novo e use esse diretório em `ORION_WAKE_WORD_PCM_CORPUS`.
+
+```sh
+python3 scripts/benchmark/generate-wakeword-speech.py /tmp/orion-wake-word-corpus
+```
 
 As seis recusas da palavra-alvo indicam sensibilidade às variantes de fala no
 candidato atual. As contagens por clipe e a latência em Docker deixam em aberto
