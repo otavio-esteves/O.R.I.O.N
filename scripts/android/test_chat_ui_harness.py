@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 from chat_ui_protocol import (
-    EXPECTED, F8_SELECTED, F10_SELECTED, F11_SELECTED, F12_SELECTED, SELECTED,
+    EXPECTED, F8_SELECTED, F10_SELECTED, F11_SELECTED, F12_SELECTED, SECURITY_SELECTED, SELECTED,
     junit_report, parse_instrumentation, test_identities,
 )
 
@@ -127,6 +127,15 @@ class ChatUiProtocolTest(unittest.TestCase):
                 self.assertIn(f'--suite {suite}', workflow)
         self.assertIn('verify-system-assistant.py', workflow)
 
+    def test_security_selection_matches_the_keystore_instrumentation(self):
+        root = Path(__file__).resolve().parents[2]
+        for cls, methods in SECURITY_SELECTED.items():
+            source = root / 'core/security/src/androidTest/kotlin' / (cls.replace('.', '/') + '.kt')
+            self.assertEqual(methods, set(re.findall(r'@Test(?:\([^)]*\))?\s+fun (\w+)', source.read_text())))
+        workflow = (root / '.github/workflows/ci.yml').read_text()
+        self.assertIn('--suite security', workflow)
+        self.assertIn('--qualification-release', workflow)
+
 
 class ChatUiRunnerTest(unittest.TestCase):
     def setUp(self):
@@ -135,6 +144,7 @@ class ChatUiRunnerTest(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.apks = self.root / 'apks'
         self.apks.mkdir()
+        self.apk_names = runner.APK_NAMES
         self.hashes = {}
         for name in runner.APK_NAMES.values():
             (self.apks / name).write_bytes(('fixture-' + name).encode())
@@ -172,7 +182,7 @@ class ChatUiRunnerTest(unittest.TestCase):
         elif args[:1] == ['install']: out = 'Performing Streamed Install\nSuccess'
         elif args[:3] == ['shell', 'pm', 'path']: out = 'package:/data/app/~~synthetic/' + args[-1] + '/base.apk'
         elif args[:2] == ['shell', 'sha256sum']:
-            package = args[-1].split('/')[-2]; out = self.hashes[runner.APK_NAMES[package]] + '  base.apk'
+            package = args[-1].split('/')[-2]; out = self.hashes[self.apk_names[package]] + '  base.apk'
         elif args[:3] == ['shell', 'am', 'instrument']: out = transcript()
         elif args[:1] == ['uninstall']: out = 'Success'
         return subprocess.CompletedProcess(command, 0, out, '')
@@ -189,6 +199,27 @@ class ChatUiRunnerTest(unittest.TestCase):
         self.assertIn(','.join(SELECTED), instrument)
         self.assertNotIn('GGUF', str(instrument))
         self.assertEqual('PASS', json.loads((self.root / 'report/summary.json').read_text())['result'])
+
+    def test_qualification_uses_only_its_own_apks_and_test_package(self):
+        self.apk_names = runner.QUALIFICATION_APK_NAMES
+        qualification = self.root / 'qualification'
+        qualification.mkdir()
+        for name in self.apk_names.values():
+            artifact = qualification / name
+            artifact.write_bytes(name.encode())
+            self.hashes[name] = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        (qualification / 'SHA256SUMS').write_text(''.join(
+            f'{self.hashes[name]}  {name}\n' for name in self.apk_names.values()
+        ))
+        with self.assertRaises(runner.RunnerFailure):
+            runner.verify_artifacts(qualification)
+        with patch.object(subprocess, 'run', side_effect=self.fake_adb), patch('builtins.print'):
+            self.assertEqual(0, runner.run(Path('/fixture/adb'), 'emulator-5554', 'OrionChatUiCI',
+                qualification, self.root / 'report', qualification_release=True))
+        instrument = next(call for call in self.calls if call[3:6] == ['shell', 'am', 'instrument'])
+        self.assertEqual('network.orion.qualification.test/androidx.test.runner.AndroidJUnitRunner', instrument[-1])
+        self.assertEqual(set(self.apk_names), {c[-1] for c in self.calls if c[3:4] == ['uninstall']})
+        self.assertEqual('qualificationRelease', json.loads((self.root / 'report/summary.json').read_text())['variant'])
 
     def test_timeout_still_cleans_only_installed_owned_packages(self):
         def timeout(command, **kwargs):

@@ -129,6 +129,15 @@ F12_SELECTED = {
     },
 }
 
+SECURITY_SELECTED = {
+    'network.orion.core.security.AndroidKeystoreLifecycleTest': {
+        'actualKeystoreWrapReopenRotateAndHistoricalFieldRead',
+        'missingWrappingKeyNeverReplacesRegistry',
+        'tamperedRegistryFailsAuthenticationAndCannotBeOverwritten',
+        'atomicInterruptedWriteRestoresCommittedRegistry',
+    },
+}
+
 def test_identities(selection):
     return frozenset((cls, method) for cls, methods in selection.items() for method in methods)
 

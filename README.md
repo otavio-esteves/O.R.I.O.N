@@ -104,6 +104,12 @@ also learns which local time slots have received poor feedback and defers
 suggestions in those slots. The switch starts off and can be turned off at
 any time. [F12 software closeout](docs/qualification/F12-SoftwareCloseout.md)
 
+## F13 final hardening
+
+The [F13 software evidence](docs/qualification/F13-SoftwareCloseout.md)
+tracks the minified Release build, exact artifact symbols and dependency
+inventory, the minified Android chat suite and the remaining Gate I criteria.
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,
