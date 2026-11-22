@@ -59,6 +59,7 @@ visit($_) for @modules;
 # Check the full reachable graph so an intermediary cannot hide a violation.
 sub forbidden {
     my ($source, $target) = @_;
+    return 1 if $source eq ':voice:wakeword' || $target eq ':voice:wakeword';
     return 1 if $source =~ /^:(?:ai|voice):/ && $target =~ /^:data:/;
     return 1 if $source eq ':core:policy' && $target =~ /^:ai:/ && $target ne ':ai:api';
     return 1 if $source =~ /^:data:/ && ($target =~ /^:feature:/ || $target eq ':app');

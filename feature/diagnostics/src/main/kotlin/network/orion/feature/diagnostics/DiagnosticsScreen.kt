@@ -26,6 +26,7 @@ fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, ta
         Text("Compatibilidade nativa: ${platform?.nativeQualification ?: OrionNativeQualification.UNAVAILABLE}")
         Text("Perfil de recursos: ${resourceProfile ?: "indisponível"}")
         if (assistantRole != null) Text("Assistente do sistema: ${assistantRole.name}")
+        Text("Palavra de ativação desativada (DISABLED). Qualificação física adiada.")
         Text("Classificação do Memory Limiter: " + when (platform?.memoryLimiterClassification) {
             OrionMemoryLimiterClassification.DEDICATED_REASON_AVAILABLE -> "motivo dedicado disponível"
             OrionMemoryLimiterClassification.DESCRIPTION_FALLBACK_ONLY -> "identificação alternativa por descrição"

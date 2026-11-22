@@ -13,7 +13,7 @@ my @modules = qw(app core:common core:model core:commands core:queries core:even
     core:recovery core:health core:security core:observability core:ingress
     core:exitinfo core:skills:metadata data:database data:datastore data:repository
     data:tasks data:reminders data:actions data:events data:memory ai:api voice:api
-    voice:ipc skills:api scheduler feature:home feature:diagnostics feature:settings);
+    voice:ipc voice:wakeword skills:api scheduler feature:home feature:diagnostics feature:settings);
 sub write_file {
     my ($path, $text) = @_;
     open my $file, '>', $path or die "$path: $!";
@@ -65,6 +65,12 @@ for my $from ('ai:api', 'voice:api', 'voice:ipc') {
 scenario('transitive voice to database', sub {
     edge('voice:api', 'core:ipc'); edge('core:ipc', 'data:database');
 }, qr/forbidden dependency/);
+scenario('wake word qualification cannot enter the application', sub {
+    edge('app', 'voice:api'); edge('voice:api', 'voice:wakeword');
+}, qr/forbidden dependency on :voice:wakeword/);
+scenario('wake word qualification cannot acquire the Core gateway', sub {
+    edge('voice:wakeword', 'voice:ipc');
+}, qr/:voice:wakeword: forbidden dependency on :voice:ipc/);
 scenario('policy to AI implementation', sub {
     open my $settings, '>>', 'settings.gradle.kts' or die $!;
     print {$settings} "include(\":ai:service\")\n"; close $settings;

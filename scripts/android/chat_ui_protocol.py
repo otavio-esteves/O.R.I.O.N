@@ -109,6 +109,14 @@ F10_SELECTED = {
     },
 }
 
+
+F11_SELECTED = {
+    'network.orion.app.voice.OrionWakeWordPlatformTest': {
+        'diagnosticsReportsWakeWordDisabledWhilePhysicalQualificationIsDeferred',
+        'packagedVoiceComponentsExposeNoHotwordActivationPath',
+    },
+}
+
 def test_identities(selection):
     return frozenset((cls, method) for cls, methods in selection.items() for method in methods)
 
