@@ -38,6 +38,8 @@ abstract class OrionIngressDao {
 
     @Query("""UPDATE orion_ingress_envelopes SET status = :to, updatedAt = :at, version = version + 1
         , attemptCount = attemptCount + CASE WHEN :to = 'PROCESSING' THEN 1 ELSE 0 END
+        , payloadEnvelope = CASE WHEN idempotencyScope = 'orion_voice_v1'
+          AND :to IN ('CONSUMED', 'REJECTED', 'EXPIRED', 'FAILED') THEN X'' ELSE payloadEnvelope END
         WHERE ingressId = :id AND version = :version AND status = :from""")
     protected abstract fun update(id: String, version: Long, from: DurableIngressStatus, to: DurableIngressStatus, at: Long): Int
 
@@ -62,16 +64,35 @@ abstract class OrionIngressDao {
             else IngressRegistration.IDEMPOTENCY_CONFLICT
         }
         if (find(envelope.ingressId) != null) return IngressRegistration.INGRESS_ID_CONFLICT
-        if (count() >= MAX_STORED_ROWS) return IngressRegistration.CAPACITY_EXCEEDED
+        val revocation = envelope.idempotencyScope == "sentinel" && envelope.source == "orion_sentinel_settings" &&
+            envelope.commandType == "RESET_PERSONALIZATION" && envelope.priority == 100
+        val capacity = if (revocation) MAX_STORED_ROWS + 1 else MAX_STORED_ROWS
+        if (count() >= capacity || revocation && hasQueuedPersonalizationRevocation())
+            return IngressRegistration.CAPACITY_EXCEEDED
         insert(envelope)
         return IngressRegistration.INSERTED
     }
 
     /** Cancellation is technical queue state and never changes an authorized ActionRequest. */
-    @Query("""UPDATE orion_ingress_envelopes SET status = 'REJECTED', lastErrorCode = 'VOICE_CANCELLED',
+    @Query("""UPDATE orion_ingress_envelopes SET status = 'REJECTED', lastErrorCode = 'VOICE_CANCELLED', payloadEnvelope = X'',
         updatedAt = :at, version = version + 1 WHERE idempotencyScope = 'orion_voice_v1'
         AND ingressId = :id AND status = 'QUEUED' AND version = :version""")
     abstract fun cancelQueuedVoiceRequest(id: String, version: Long, at: Long): Int
+
+    @Query("""SELECT EXISTS (SELECT 1 FROM orion_ingress_envelopes WHERE idempotencyScope = 'sentinel'
+        AND source = 'orion_sentinel_settings' AND commandType = 'RESET_PERSONALIZATION'
+        AND status = 'QUEUED' AND priority = 100)""")
+    abstract fun hasQueuedPersonalizationRevocation(): Boolean
+
+    @Query("""SELECT EXISTS (SELECT 1 FROM orion_ingress_envelopes WHERE idempotencyScope = 'sentinel'
+        AND source = 'orion_sentinel_settings' AND commandType = 'PERSONALIZE' AND status = 'QUEUED')""")
+    abstract fun hasQueuedPersonalizationOptIn(): Boolean
+
+    /** A newer revocation supersedes personalization settings still waiting in this scope. */
+    @Query("""UPDATE orion_ingress_envelopes SET status = 'REJECTED', updatedAt = :at, version = version + 1
+        WHERE idempotencyScope = 'sentinel' AND source = 'orion_sentinel_settings'
+        AND commandType IN ('PERSONALIZE', 'RESET_PERSONALIZATION') AND status = 'QUEUED'""")
+    abstract fun rejectQueuedPersonalizationSettings(at: Long): Int
 
     /** QUEUED -> PROCESSING does not authorize any effect; drain requires an open startup barrier. */
     @Transaction
