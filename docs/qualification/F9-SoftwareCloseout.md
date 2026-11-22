@@ -27,6 +27,15 @@ do software e morte de processo. A qualificação no Galaxy S21 deve verificar
 microfone e TTS, cobertura do STT, RAM, latência, consumo e compatibilidade.
 A aprovação definitiva de modelo e parâmetros depende dessas medições.
 
+O teste nativo opcional `OrionWhisperInstrumentedTest` usa o modelo com hash
+verificado e uma frase sintética em português. Instale o APK de teste do módulo
+`:voice:service`, copie o modelo para `no_backup/orion_voice_tiny_q5_1.bin` e um
+PCM mono de 16 kHz e 16 bits little-endian da frase “Como está a bateria?” para
+`files/orion_voice_battery.pcm` no sandbox do APK. Passe `-e orion_voice_fixture
+battery` para ativar o teste. O resultado verifica a palavra `bateria` e registra
+o tempo de decodificação. Use áudio sintético para manter dados de voz pessoais
+fora da evidência de teste.
+
 [Plano Mestre §15](../../2-plano-mestre.md#15-fase-9--voice-push-to-talk) ·
 [ADR-0007](../adr/ADR-0007-f9-software-entry.md) ·
 [Modelo publicado](https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-tiny-q5_1.bin)

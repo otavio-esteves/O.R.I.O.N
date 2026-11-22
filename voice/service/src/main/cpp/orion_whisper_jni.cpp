@@ -39,7 +39,7 @@ Java_network_orion_voice_service_OrionWhisper_transcribe(
         JNIEnv *env, jobject, jlong id, jstring model_path, jshortArray pcm) {
     try {
         std::lock_guard<std::mutex> guard(model_lock);
-        Decode decode{id, Clock::now() + std::chrono::seconds(15)};
+        Decode decode{id, Clock::now() + std::chrono::seconds(21)};
         if (id <= 0 || model_path == nullptr || pcm == nullptr || should_abort(&decode)) return nullptr;
         const auto length = env->GetArrayLength(pcm);
         if (length <= 0 || length > max_samples) return nullptr;
@@ -62,8 +62,8 @@ Java_network_orion_voice_service_OrionWhisper_transcribe(
 
         auto parameters = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
         parameters.n_threads = 2;
-        // An eight-second capture fits within 512 encoder positions at 20 ms each.
-        parameters.audio_ctx = 512;
+        // Retain padding beyond the capture length for short Portuguese utterances.
+        parameters.audio_ctx = 768;
         parameters.max_tokens = 64;
         parameters.temperature_inc = 0.0f;
         parameters.language = "pt";
