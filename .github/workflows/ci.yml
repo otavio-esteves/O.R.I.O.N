@@ -24,6 +24,15 @@ jobs:
         run: env UID="$(id -u)" GID="$(id -g)" docker compose build android-build
       - name: Check and assemble application
         run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest :ai:llama:assembleDebugAndroidTest :ai:service:assembleDebugAndroidTest :voice:service:assembleDebugAndroidTest :voice:wakeword:testDebugUnitTest --max-workers=2
+      - name: Verify and stage Release mapping, native symbols, and dependency inventory
+        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build :app:stageReleaseEvidence --max-workers=2
+      - name: Retain the checksummed unsigned Release evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: orion-release-evidence
+          path: app/build/outputs/release-evidence/
+          if-no-files-found: error
+          retention-days: 7
       - name: Retain the offline wake-word software benchmark
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -86,11 +95,27 @@ jobs:
         run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build -PorionQualificationRelease=true -PorionCortexInstrumentedWorkload=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2
       - name: Build minified hybrid chat qualification artifacts without a model
         run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build -PorionQualificationRelease=true -PorionHybridChatQualification=true :app:verifyQualificationNativePackage :app:assembleQualificationReleaseAndroidTest --max-workers=2
+      - name: Stage the minified chat and Keystore APKs
+        run: |
+          mkdir -p "$RUNNER_TEMP/orion-f13-android/minified" "$RUNNER_TEMP/orion-f13-android/security"
+          cp core/security/build/outputs/apk/androidTest/debug/security-debug-androidTest.apk "$RUNNER_TEMP/orion-f13-android/security/"
+          (cd "$RUNNER_TEMP/orion-f13-android/security" && sha256sum security-debug-androidTest.apk > SHA256SUMS)
+          cp app/build/outputs/apk/qualificationRelease/app-qualificationRelease.apk "$RUNNER_TEMP/orion-f13-android/minified/"
+          cp app/build/outputs/apk/androidTest/qualificationRelease/app-qualificationRelease-androidTest.apk "$RUNNER_TEMP/orion-f13-android/minified/"
+          cd "$RUNNER_TEMP/orion-f13-android/minified"
+          sha256sum app-qualificationRelease.apk app-qualificationRelease-androidTest.apk > SHA256SUMS
+      - name: Retain the F13 APKs for host emulator execution
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: orion-f13-android-apks
+          path: ${{ runner.temp }}/orion-f13-android/
+          if-no-files-found: error
+          retention-days: 3
 
   chat-ui-no-model:
     needs: android-build-and-check
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       ORION_CHAT_AVD: orion-chat-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
@@ -105,6 +130,11 @@ jobs:
         with:
           name: orion-upgrade-apks
           path: ${{ runner.temp }}/orion-upgrade-apks
+      - name: Download the Docker-built F13 APKs
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: orion-f13-android-apks
+          path: ${{ runner.temp }}/orion-f13-android
       - name: Initialize an explicit not-run report
         run: |
           mkdir -p "$RUNNER_TEMP/orion-chat-ui"
@@ -133,6 +163,8 @@ jobs:
           script: |
             set -e
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-chat-ui"
+            python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-f13-android/minified" --report-dir "$RUNNER_TEMP/orion-minified-chat-ui" --qualification-release
+            python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-f13-android/security" --report-dir "$RUNNER_TEMP/orion-keystore" --suite security
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f8" --suite f8
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f9" --suite f9
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f10" --suite f10
@@ -156,6 +188,10 @@ jobs:
           path: |
             ${{ runner.temp }}/orion-chat-ui/summary.json
             ${{ runner.temp }}/orion-chat-ui/junit.xml
+            ${{ runner.temp }}/orion-minified-chat-ui/summary.json
+            ${{ runner.temp }}/orion-minified-chat-ui/junit.xml
+            ${{ runner.temp }}/orion-keystore/summary.json
+            ${{ runner.temp }}/orion-keystore/junit.xml
             ${{ runner.temp }}/orion-f8/summary.json
             ${{ runner.temp }}/orion-f8/junit.xml
             ${{ runner.temp }}/orion-f8-upgrade/installed-upgrade-report.json

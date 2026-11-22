@@ -7,22 +7,31 @@ import re
 import subprocess
 import sys
 
-from android_apk_pair import APK_NAMES, RunnerFailure, verify_artifacts
+from android_apk_pair import APK_NAMES, QUALIFICATION_APK_NAMES, SECURITY_APK_NAMES, RunnerFailure, verify_artifacts
 from chat_ui_protocol import (
-    F8_SELECTED, F9_SELECTED, F10_SELECTED, F11_SELECTED, F12_SELECTED, Result, SELECTED,
+    F8_SELECTED, F9_SELECTED, F10_SELECTED, F11_SELECTED, F12_SELECTED, Result, SECURITY_SELECTED, SELECTED,
     junit_report, parse_instrumentation, test_identities,
 )
 
 SUITES = {'chat': SELECTED, 'f8': F8_SELECTED, 'f9': F9_SELECTED,
-          'f10': F10_SELECTED, 'f11': F11_SELECTED, 'f12': F12_SELECTED}
+          'f10': F10_SELECTED, 'f11': F11_SELECTED, 'f12': F12_SELECTED, 'security': SECURITY_SELECTED}
 
 
-def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat"):
+def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat", qualification_release=False):
     report_dir.mkdir(parents=True, exist_ok=True)
     selected = SUITES[suite]
     expected = test_identities(selected)
     result = Result(expected=expected)
-    metadata = {'environment': 'ANDROID_EMULATOR', 'definitiveHardwareEvidence': False}
+    variant = 'qualificationRelease' if qualification_release else 'debug'
+    if qualification_release:
+        apk_names = QUALIFICATION_APK_NAMES
+    elif suite == 'security':
+        apk_names = SECURITY_APK_NAMES
+    else:
+        apk_names = APK_NAMES
+    app_package = next(iter(apk_names))
+    test_package = next(reversed(apk_names))
+    metadata = {'environment': 'ANDROID_EMULATOR', 'definitiveHardwareEvidence': False, 'variant': variant}
     installed = []
 
     def adb(*args, timeout=30):
@@ -34,16 +43,18 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat"):
     try:
         if not re.fullmatch(r'emulator-[0-9]{4,5}', serial) or not re.fullmatch(r'[A-Za-z0-9_-]{1,96}', avd_name):
             raise RunnerFailure('INVALID_EMULATOR_SELECTION')
-        hashes = verify_artifacts(apk_dir)
+        if qualification_release and suite != 'chat':
+            raise RunnerFailure('INVALID_QUALIFICATION_SUITE')
+        hashes = verify_artifacts(apk_dir, apk_names)
         metadata['apkHashes'] = hashes
         if adb('shell', 'getprop', 'ro.kernel.qemu') != '1' or adb('emu', 'avd', 'name').splitlines() != [avd_name, 'OK']:
             raise RunnerFailure('EMULATOR_OWNERSHIP_MISMATCH')
         if adb('shell', 'getprop', 'sys.boot_completed') != '1':
             raise RunnerFailure('EMULATOR_NOT_BOOTED')
-        packages = adb('shell', 'pm', 'list', 'packages', '-u', 'network.orion').splitlines()
+        packages = adb('shell', 'pm', 'list', 'packages', '-u', app_package).splitlines()
         if any(not re.fullmatch(r'package:[A-Za-z0-9_.]+', line) for line in packages):
             raise RunnerFailure('INVALID_PACKAGE_INVENTORY')
-        if any(f'package:{package}' in packages for package in APK_NAMES):
+        if any(f'package:{package}' in packages for package in apk_names):
             raise RunnerFailure('PREEXISTING_PACKAGE')
         for prop, key in [('ro.build.version.sdk', 'api'), ('ro.product.cpu.abi', 'abi'), ('ro.build.fingerprint', 'buildFingerprint')]:
             value = adb('shell', 'getprop', prop)
@@ -56,7 +67,7 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat"):
         adb('shell', 'settings', 'put', 'system', 'screen_off_timeout', '2147483647')
         adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
         adb('shell', 'wm', 'dismiss-keyguard')
-        for package, filename in APK_NAMES.items():
+        for package, filename in apk_names.items():
             # Package Manager -R refuses replacement even if a package appears after preflight.
             if adb('install', '--no-incremental', '-R', '-t', str(apk_dir / filename), timeout=90).splitlines()[-1:] != ['Success']:
                 raise RunnerFailure('INSTALL_FAILED')
@@ -68,9 +79,9 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat"):
             if len(proof) != 2 or proof[0] != hashes[filename]:
                 raise RunnerFailure('INSTALLED_HASH_MISMATCH')
         if suite in {"f8", "f12"}:
-            adb('shell', 'pm', 'grant', 'network.orion', 'android.permission.POST_NOTIFICATIONS')
+            adb('shell', 'pm', 'grant', app_package, 'android.permission.POST_NOTIFICATIONS')
         response = subprocess.run([str(adb_path), '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
-            '-e', 'class', ','.join(selected), 'network.orion.test/androidx.test.runner.AndroidJUnitRunner'],
+            '-e', 'class', ','.join(selected), f'{test_package}/androidx.test.runner.AndroidJUnitRunner'],
             capture_output=True, text=True, timeout=300)
         result = parse_instrumentation(response.stdout + '\n' + response.stderr, response.returncode, expected)
     except RunnerFailure as failure:
@@ -103,8 +114,9 @@ def main():
     parser.add_argument('--apk-dir', required=True, type=Path)
     parser.add_argument('--report-dir', required=True, type=Path)
     parser.add_argument('--suite', choices=tuple(SUITES), default='chat')
+    parser.add_argument('--qualification-release', action='store_true', help='Use the minified no-model chat APK pair')
     args = parser.parse_args()
-    return run(args.adb, args.serial, args.avd_name, args.apk_dir, args.report_dir, args.suite)
+    return run(args.adb, args.serial, args.avd_name, args.apk_dir, args.report_dir, args.suite, args.qualification_release)
 
 
 if __name__ == '__main__':

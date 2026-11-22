@@ -1,3 +1,11 @@
+import javax.xml.XMLConstants
+import javax.xml.parsers.DocumentBuilderFactory
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.maven.MavenModule
+import org.gradle.maven.MavenPomArtifact
+import org.w3c.dom.Element
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -76,7 +84,14 @@ android {
 
     buildTypes {
         debug { ndk { abiFilters += setOf("arm64-v8a", "x86_64") } }
-        release { ndk { abiFilters += "arm64-v8a" } }
+        release {
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            ndk {
+                abiFilters += "arm64-v8a"
+                debugSymbolLevel = "FULL"
+            }
+        }
         create("qualificationRelease") {
             initWith(getByName("release"))
             applicationIdSuffix = ".qualification"
@@ -86,7 +101,6 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             ndk.abiFilters.clear()
             ndk.abiFilters += setOf("arm64-v8a", "x86_64")
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             buildConfigField("boolean", "ORION_CORTEX_SINGLE_ATTEMPT", cortexSingleAttemptEnabled.toString())
             buildConfigField("boolean", "ORION_CORTEX_RUNTIME_CAPTURE", cortexRuntimeCaptureEnabled.toString())
             buildConfigField("boolean", "ORION_CORTEX_INSTRUMENTED_WORKLOAD", cortexInstrumentedWorkloadEnabled.toString())
@@ -153,6 +167,74 @@ android {
         sourceSets.getByName("androidTest").kotlin.directories.clear()
         sourceSets.getByName("androidTest").java.directories.add("src/cortexSingleAttemptAndroidTest/java")
     }
+}
+
+val releaseDependencyReport = layout.buildDirectory.file("reports/orion/release-dependencies.tsv")
+val reportReleaseDependencies = tasks.register("reportReleaseDependencies") {
+    group = "reporting"
+    description = "Records the resolved release runtime modules and declared Maven POM licenses."
+    notCompatibleWithConfigurationCache("Queries Maven POM artifacts for the resolved release graph.")
+    doNotTrackState("Maven POM availability is part of the report.")
+    outputs.file(releaseDependencyReport)
+    doLast {
+        val modules = project.configurations.getByName("releaseRuntimeClasspath").incoming.resolutionResult.allComponents.mapNotNull {
+            it.id as? ModuleComponentIdentifier
+        }.sortedWith(compareBy({ it.group }, { it.module }, { it.version }))
+        check(modules.isNotEmpty()) { "The release dependency graph is empty." }
+        val poms = dependencies.createArtifactResolutionQuery().forComponents(modules)
+            .withArtifacts(MavenModule::class.java, MavenPomArtifact::class.java).execute()
+            .resolvedComponents.associate { component ->
+                component.id to component.getArtifacts(MavenPomArtifact::class.java)
+                    .filterIsInstance<ResolvedArtifactResult>().singleOrNull()?.file
+            }
+        val xml = DocumentBuilderFactory.newInstance().apply {
+            setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+            setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
+        }.newDocumentBuilder()
+        val output = releaseDependencyReport.get().asFile
+        output.parentFile.mkdirs()
+        output.bufferedWriter().use { report ->
+            report.appendLine("dependency\tlicense\tmetadata")
+            for (module in modules) {
+                val pom = poms[module]
+                val declared = pom?.let { xml.parse(it).documentElement.directElements("licenses").singleOrNull() }
+                val names = declared?.directElements("license").orEmpty().mapNotNull { license ->
+                    license.directElements("name").singleOrNull()?.textContent?.trim()?.replace(Regex("\\s+"), " ")
+                        ?.takeIf(String::isNotBlank)
+                }
+                val metadata = when {
+                    pom == null -> "POM_UNAVAILABLE"
+                    names.isEmpty() -> "POM_LICENSE_UNDECLARED"
+                    else -> "MAVEN_POM"
+                }
+                report.appendLine("${module.group}:${module.module}:${module.version}\t${names.joinToString(" | ")}\t$metadata")
+            }
+        }
+    }
+}
+
+fun Element.directElements(name: String): List<Element> =
+    (0 until childNodes.length).mapNotNull { childNodes.item(it) as? Element }.filter { it.tagName == name }
+
+val stageReleaseEvidence = tasks.register<Exec>("stageReleaseEvidence") {
+    group = "verification"
+    description = "Verifies release symbolication and stages checksummed release evidence."
+    dependsOn("assembleRelease", "bundleRelease", reportReleaseDependencies)
+    environment("ORION_NDK_VERSION", libs.versions.ndk.get())
+    val output = layout.buildDirectory.dir("outputs/release-evidence").get().asFile
+    val apk = layout.buildDirectory.file("outputs/apk/release/app-release-unsigned.apk").get().asFile
+    val bundle = layout.buildDirectory.file("outputs/bundle/release/app-release.aab").get().asFile
+    val mapping = layout.buildDirectory.file("outputs/mapping/release/mapping.txt").get().asFile
+    val symbols = layout.buildDirectory.file("outputs/native-debug-symbols/release/native-debug-symbols.zip").get().asFile
+    val script = rootProject.file("scripts/benchmark/stage-release-evidence.sh")
+    inputs.files(script, apk, bundle, mapping, symbols, releaseDependencyReport,
+        rootProject.file("ai/llama/src/main/cpp/CMakeLists.txt"),
+        rootProject.file("voice/service/src/main/cpp/CMakeLists.txt"))
+    outputs.dir(output)
+    workingDir(rootProject.projectDir)
+    commandLine("sh", script, apk, bundle, mapping, symbols, releaseDependencyReport.get().asFile, output)
 }
 
 androidComponents.beforeVariants(androidComponents.selector().withBuildType("qualificationRelease")) {
