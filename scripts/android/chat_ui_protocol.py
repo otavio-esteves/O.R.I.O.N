@@ -70,6 +70,7 @@ F8_SELECTED = {
         'backfillResumesAfterKeyFailureAndReclassificationRemovesPosting',
         'searchUsesAuthoritativeValidityAndStableRankingAcrossPages',
         'selectedContextCannotUseAMemoryDeletedAfterTheSearch',
+        'stalePostingWithoutSearchConsentCannotEnterResultsOrChatContext',
     },
     'network.orion.app.scheduling.OrionSchedulerPlatformTest': {
         'approximateRegistrationCreatesImmutableExplicitIdentityAndCancellationRemovesIt',
@@ -114,6 +115,16 @@ F11_SELECTED = {
     'network.orion.app.voice.OrionWakeWordPlatformTest': {
         'diagnosticsReportsWakeWordDisabledWhilePhysicalQualificationIsDeferred',
         'packagedVoiceComponentsExposeNoHotwordActivationPath',
+    },
+}
+
+F12_SELECTED = {
+    'network.orion.app.adaptive.OrionAdaptiveIntelligenceTest': {
+        'roomTwelveRetainsProactivityConsentAndDefaultsPersonalizationOff',
+        'consentIsGatedAndResetsItsFeedbackWindowAcrossClockRollback',
+        'learnedDeferralDoesNotReserveTaskAndRevocationRestoresBaseline',
+        'rankingPreferenceReordersEligibleMemoriesAndInvalidatesOldCursor',
+        'settingsExposeAnIndependentReversibleOptIn',
     },
 }
 

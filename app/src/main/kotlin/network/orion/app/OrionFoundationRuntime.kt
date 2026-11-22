@@ -69,6 +69,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     private var sentinel: OrionSentinelRuntime? = null
     private val mutableSentinelEnabled = MutableStateFlow<Boolean?>(null)
     internal val sentinelEnabled = mutableSentinelEnabled.asStateFlow()
+    private val mutablePersonalizationEnabled = MutableStateFlow<Boolean?>(null)
+    internal val personalizationEnabled = mutablePersonalizationEnabled.asStateFlow()
     private val mutableResourceProfile = MutableStateFlow<OrionResourceProfile?>(null)
     internal val resourceProfile = mutableResourceProfile.asStateFlow()
     private val mutableAssistantRoleState = MutableStateFlow(OrionAssistantRoleState.UNAVAILABLE)
@@ -307,14 +309,18 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         lastForegroundInteraction = clock.wallNow()
     }
 
-    internal suspend fun setSentinelEnabled(enabled: Boolean): Boolean = withContext(Dispatchers.IO) {
+    internal suspend fun setSentinelEnabled(enabled: Boolean): Boolean =
+        updateSentinelPreference { it.setEnabled(enabled) }
+
+    internal suspend fun setPersonalizationEnabled(enabled: Boolean): Boolean =
+        updateSentinelPreference { it.setPersonalized(enabled) }
+
+    private suspend fun updateSentinelPreference(update: (OrionSentinelRuntime) -> Boolean): Boolean = withContext(Dispatchers.IO) {
         recover()
         mutex.withLock {
             val runtime = sentinel ?: return@withLock false
             try {
-                val applied = runtime.setEnabled(enabled)
-                mutableSentinelEnabled.value = runtime.enabled()
-                applied
+                update(runtime).also { refreshSentinelPreferences(runtime) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (interrupted: InterruptedException) {
@@ -325,6 +331,11 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 false
             }
         }
+    }
+
+    private fun refreshSentinelPreferences(runtime: OrionSentinelRuntime) {
+        mutableSentinelEnabled.value = runtime.enabled()
+        mutablePersonalizationEnabled.value = runtime.personalized()
     }
 
     internal suspend fun receiveSentinelFeedback(id: UUID, kind: OrionProactivityFeedbackKind): Boolean =
@@ -368,6 +379,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         taskWriteReady = false
         taskStorageReady = false
         mutableSentinelEnabled.value = null
+        mutablePersonalizationEnabled.value = null
         taskAdmissions.invalidateAdmissions()
         reminderAdmissions.invalidateAdmissions()
         timerAdmissions.invalidateAdmissions()
@@ -447,7 +459,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     { health.value.core.readiness }, { taskStorageReady }, { health.value.core.status },
                     observeResources = { resourceObserver.observe().also { mutableResourceProfile.value = it.policy.profile } })
                 sentinel = sentinelRuntime
-                mutableSentinelEnabled.value = sentinelRuntime.enabled()
+                refreshSentinelPreferences(sentinelRuntime)
                 states[OrionSubsystem.SENTINEL] = OrionHealthStatus.HEALTHY
                 val delivery = OrionReminderDeliveryPipeline(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
                     { health.value.core.readiness }, { taskStorageReady }, OrionProcessRole.MAIN,
@@ -666,7 +678,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 mutableResourceProfile.value = resourceObserver.observe().policy.profile
                 sentinel?.let {
                     it.maintain(origin == OrionMaintenanceOrigin.HEARTBEAT, lastForegroundInteraction)
-                        .also { _ -> mutableSentinelEnabled.value = it.enabled() }
+                        .also { _ -> refreshSentinelPreferences(it) }
                 } ?: OrionHealthStatus.UNAVAILABLE
             } catch (cancelled: CancellationException) {
                 throw cancelled

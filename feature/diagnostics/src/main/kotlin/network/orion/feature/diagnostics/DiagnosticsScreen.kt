@@ -13,7 +13,7 @@ import network.orion.core.ipc.OrionIpcProtocol
 @Composable
 fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, taskQueues: TaskQueueDiagnostics? = null, scheduling: OrionSchedulingDiagnostics? = null,
     platform: OrionPlatformDiagnostics? = null, resourceProfile: String? = null,
-    assistantRole: OrionAssistantRoleState? = null, onRetry: () -> Unit) {
+    assistantRole: OrionAssistantRoleState? = null, personalizationEnabled: Boolean? = null, onRetry: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Saúde do sistema", style = MaterialTheme.typography.headlineSmall)
@@ -27,6 +27,11 @@ fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, ta
         Text("Perfil de recursos: ${resourceProfile ?: "indisponível"}")
         if (assistantRole != null) Text("Assistente do sistema: ${assistantRole.name}")
         Text("Palavra de ativação desativada (DISABLED). Qualificação física adiada.")
+        Text("Personalização adaptativa: " + when (personalizationEnabled) {
+            true -> "ativada"
+            false -> "desativada"
+            null -> "indisponível"
+        })
         Text("Classificação do Memory Limiter: " + when (platform?.memoryLimiterClassification) {
             OrionMemoryLimiterClassification.DEDICATED_REASON_AVAILABLE -> "motivo dedicado disponível"
             OrionMemoryLimiterClassification.DESCRIPTION_FALLBACK_ONLY -> "identificação alternativa por descrição"

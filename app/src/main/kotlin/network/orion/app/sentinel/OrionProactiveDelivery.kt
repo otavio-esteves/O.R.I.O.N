@@ -100,8 +100,13 @@ internal class OrionProactiveDelivery(
 
     /** Bounded expiry sweep. A matching CAS keeps an action newly claimed by another caller intact. */
     fun discardExpired(): Int {
+        if (!barrier.isOpen()) return 0
         val expired = db.actions().expiredProactiveActions(clock.wallNow().toEpochMilli(), 100)
-        return expired.count { actions.cancel(UUID.fromString(it.actionId), it.version).outcome == ActionStoreOutcome.APPLIED }
+        return expired.count { row ->
+            barrier.whileOpen {
+                actions.cancel(UUID.fromString(row.actionId), row.version).outcome == ActionStoreOutcome.APPLIED
+            } == true
+        }
     }
 
     fun deliver(id: UUID, policyAllows: (consentVersion: Long) -> Boolean, onPosted: () -> Unit): OrionProactiveDeliveryOutcome {

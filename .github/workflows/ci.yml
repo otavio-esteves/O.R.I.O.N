@@ -45,9 +45,9 @@ jobs:
           path: ${{ runner.temp }}/orion-chat-apks/
           if-no-files-found: error
           retention-days: 3
-      - name: Build the last integrated Room 11 APK pair with the same debug key
+      - name: Build the last integrated Room 12 APK pair with the same debug key
         env:
-          ORION_UPGRADE_BASE: 398e46f3ce31c7541b94c01b797b0337bd9cbd18
+          ORION_UPGRADE_BASE: 94c4a9f707e1fe8dc5203a06c832aa6e18846b8d
         run: |
           baseline="$RUNNER_TEMP/orion-upgrade-source"
           git worktree add --detach "$baseline" "$ORION_UPGRADE_BASE"
@@ -137,6 +137,7 @@ jobs:
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f9" --suite f9
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f10" --suite f10
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f11" --suite f11
+            python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f12" --suite f12
             python3 scripts/android/verify-system-assistant.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f10-role"
             python3 scripts/android/verify-installed-upgrade.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --previous-apk "$RUNNER_TEMP/orion-upgrade-apks/app-debug.apk" --previous-test-apk "$RUNNER_TEMP/orion-upgrade-apks/app-debug-androidTest.apk" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-upgrade"
             python3 scripts/android/verify-transaction-process-death.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --scenario sentinel_delivery --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-death"
@@ -167,6 +168,8 @@ jobs:
             ${{ runner.temp }}/orion-f10-role/*.json
             ${{ runner.temp }}/orion-f11/summary.json
             ${{ runner.temp }}/orion-f11/junit.xml
+            ${{ runner.temp }}/orion-f12/summary.json
+            ${{ runner.temp }}/orion-f12/junit.xml
           if-no-files-found: error
           retention-days: 7
 

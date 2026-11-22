@@ -88,6 +88,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 val report by runtime.health.collectAsState()
                 val sentinelEnabled by runtime.sentinelEnabled.collectAsState()
+                val personalizationEnabled by runtime.personalizationEnabled.collectAsState()
                 val resourceProfile by runtime.resourceProfile.collectAsState()
                 val assistantRole by runtime.assistantRoleState.collectAsState()
                 var destination by rememberSaveable { mutableStateOf("Início") }
@@ -166,9 +167,12 @@ class MainActivity : ComponentActivity() {
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
                                 platform = runtime.platformDiagnostics(), resourceProfile = resourceProfile?.name, assistantRole = assistantRole,
+                                personalizationEnabled = personalizationEnabled,
                                 onRetry = { runtime.start() })
                             "Ajustes" -> SettingsScreen(report, sentinelEnabled, onOpenVoice = { destination = "Voz" },
                                 assistantRole = assistantRole, onConfigureAssistant = ::openDefaultAppsSettings,
+                                personalizationEnabled = personalizationEnabled,
+                                onSetPersonalizationEnabled = runtime::setPersonalizationEnabled,
                                 onSetSentinelEnabled = { enabled ->
                                     val applied = runtime.setSentinelEnabled(enabled)
                                     if (applied && enabled && Build.VERSION.SDK_INT >= 33 &&

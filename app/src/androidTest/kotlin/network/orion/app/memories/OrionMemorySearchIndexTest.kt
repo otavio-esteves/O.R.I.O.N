@@ -71,7 +71,7 @@ class OrionMemorySearchIndexTest {
                 arrayOf(id.toString(), FieldEnvelopeCodec.encode(encrypted.envelope)))
             db.execSQL("INSERT INTO orion_memory_fts (memoryId, body) VALUES (?, 'marcadorlegado')", arrayOf(id.toString()))
         }
-        migrations.runMigrationsAndValidate(name, 12, true, *OrionDatabaseMigrations.ALL).close()
+        migrations.runMigrationsAndValidate(name, 13, true, *OrionDatabaseMigrations.ALL).close()
         withRoom { db ->
             assertTrue(bodies(db).isEmpty())
             assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
@@ -116,7 +116,7 @@ class OrionMemorySearchIndexTest {
             db.execSQL("INSERT INTO orion_memory_fts (memoryId, body) VALUES (?, 'memória autorizada')", arrayOf(retained.toString()))
             db.execSQL("DELETE FROM orion_memory_fts WHERE memoryId = 'old'")
         }
-        migrations.runMigrationsAndValidate(name, 12, true, *OrionDatabaseMigrations.ALL).close()
+        migrations.runMigrationsAndValidate(name, 13, true, *OrionDatabaseMigrations.ALL).close()
         withRoom { db ->
             assertTrue(bodies(db).isEmpty())
             assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
@@ -127,7 +127,7 @@ class OrionMemorySearchIndexTest {
 
     @Test fun backfillResumesAfterKeyFailureAndReclassificationRemovesPosting() {
         migrations.createDatabase(name, 10).close()
-        migrations.runMigrationsAndValidate(name, 12, true, *OrionDatabaseMigrations.ALL).close()
+        migrations.runMigrationsAndValidate(name, 13, true, *OrionDatabaseMigrations.ALL).close()
         val ids = List(2) { UUID.randomUUID() }.sortedBy(UUID::toString)
         withRoom { db ->
             ids.forEachIndexed { number, id ->
@@ -212,6 +212,27 @@ class OrionMemorySearchIndexTest {
             .addMigrations(*OrionDatabaseMigrations.ALL)
             .build()
         try { block(database) } finally { database.close() }
+    }
+
+    @Test fun stalePostingWithoutSearchConsentCannotEnterResultsOrChatContext() {
+        withRoom { db ->
+            val store = OrionMemoryStore(db, crypto, clock)
+            val query = OrionMemoryQuery(db, crypto, clock)
+            val id = UUID.randomUUID()
+            val content = "café privado"
+            assertTrue(store.create(id, canonical(id, content, allowSearchIndex = false),
+                Sensitivity.PERSONAL, MemoryOrigin.USER_DECLARED, 1.0, emptyList(), id,
+                userConfirmed = true) is MemoryWriteResult.Stored)
+            assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
+            db.memoryIndex().insert(OrionMemoryIndexRow(id.toString(), content))
+
+            val result = query.search(SearchMemories("café"))
+            assertEquals(MemorySearchState.READY, result.state)
+            assertTrue(result.hits.isEmpty())
+            val privateMemory = checkNotNull(query.find(id))
+            assertEquals(content, privateMemory.content)
+            assertTrue(query.currentContextMemories(listOf(MemorySearchHit(privateMemory, 500))).isEmpty())
+        }
     }
 
     private fun canonical(id: UUID, content: String, allowSearchIndex: Boolean = true): ByteArray = (OrionCreateMemoryPreparer.prepare(

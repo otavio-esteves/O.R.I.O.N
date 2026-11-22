@@ -51,12 +51,21 @@ internal class OrionSentinelRuntime(
 
     fun enabled(): Boolean = dao.consent()?.enabled == true
 
-    fun setEnabled(enabled: Boolean): Boolean {
+    fun personalized(): Boolean = dao.consent()?.personalizationSince != null
+
+    fun setEnabled(enabled: Boolean): Boolean = updatePreference(if (enabled) ENABLE else DISABLE) {
+        this.enabled() == enabled
+    }
+
+    fun setPersonalized(enabled: Boolean): Boolean = updatePreference(
+        if (enabled) PERSONALIZE else RESET_PERSONALIZATION,
+    ) { personalized() == enabled }
+
+    private fun updatePreference(type: String, applied: () -> Boolean): Boolean {
         val id = UUID.randomUUID()
-        val type = if (enabled) ENABLE else DISABLE
         if (submit(id, type, id, SOURCE_SETTINGS) !in accepted) return false
         ingress.drain(25)
-        return this.enabled() == enabled
+        return applied()
     }
 
     fun receive(id: UUID, kind: OrionProactivityFeedbackKind): Boolean {
@@ -113,6 +122,12 @@ internal class OrionSentinelRuntime(
         val history = OrionProactivityHistory(false, last, last,
             lastWindow.count { it.reservedAt > now.minus(policy.notificationWindow).toEpochMilli() }, dismissed, snoozed)
         if (policy.evaluate(context, candidate, history) !is OrionProactivityDecision.Proposal) return OrionHealthStatus.HEALTHY
+        val consentFloor = dao.consent()?.personalizationSince
+        if (consentFloor != null) {
+            val samples = dao.feedbackSamples(consentFloor, now.minus(retention).toEpochMilli(), now.toEpochMilli())
+                .map { Instant.ofEpochMilli(it.shownAt) to OrionProactivityFeedbackKind.valueOf(it.outcome) }
+            if (OrionProactivityHabits.shouldDefer(now, context.zoneId, samples)) return OrionHealthStatus.HEALTHY
+        }
         if (submit(candidate.sourceId, PREPARE, id, SOURCE_HEARTBEAT) !in accepted) return OrionHealthStatus.DEGRADED
         ingress.drain(25)
         val selection = dao.suggestion(id.toString()) ?: return OrionHealthStatus.DEGRADED
@@ -142,9 +157,20 @@ internal class OrionSentinelRuntime(
                 if (payload.source != SOURCE_SETTINGS || payload.idempotencyKey != ref) return LocalIngressDisposition.REJECTED
                 val existing = dao.consent()
                 if (existing?.enabled != enabled) {
-                    val version = (existing?.version ?: -1) + 1
-                    dao.saveConsent(OrionSentinelConsent(enabled = enabled, version = version, evaluationFloor = existing?.evaluationFloor ?: 0))
+                    val consent = existing ?: OrionSentinelConsent(enabled = false, version = -1)
+                    dao.saveConsent(consent.copy(enabled = enabled, version = consent.version + 1))
                     publish(ref, "SENTINEL_CONSENT_CHANGED", now)
+                }
+            }
+            PERSONALIZE, RESET_PERSONALIZATION -> {
+                if (payload.source != SOURCE_SETTINGS || payload.idempotencyKey != ref) return LocalIngressDisposition.REJECTED
+                val consent = dao.consent() ?: OrionSentinelConsent(enabled = false, version = 0)
+                val enabled = payload.commandType == PERSONALIZE
+                if (enabled != (consent.personalizationSince != null)) {
+                    val floor = if (enabled) maxOf(now.toEpochMilli(), dao.latestReservationAt() ?: Long.MIN_VALUE)
+                        else null
+                    dao.saveConsent(consent.copy(personalizationSince = floor))
+                    publish(ref, "SENTINEL_PERSONALIZATION_CHANGED", now)
                 }
             }
             PREPARE -> {
@@ -248,6 +274,8 @@ internal class OrionSentinelRuntime(
         private const val PREPARE = "PREPARE"
         private const val ENABLE = "ENABLE"
         private const val DISABLE = "DISABLE"
+        private const val PERSONALIZE = "PERSONALIZE"
+        private const val RESET_PERSONALIZATION = "RESET_PERSONALIZATION"
         private const val SOURCE_SETTINGS = "orion_sentinel_settings"
         private const val SOURCE_ANDROID = "orion_sentinel_android"
         private const val SOURCE_HEARTBEAT = "orion_heartbeat"

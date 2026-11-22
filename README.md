@@ -96,6 +96,14 @@ Diagnostics reports wake word as `DISABLED` while physical qualification is
 deferred. The offline KWS experiment classifies presegmented PCM outside the
 application. [F11 qualification record](docs/qualification/F11-SoftwareCloseout.md)
 
+## F12 adaptive personalization
+
+**Ajustes → Personalização adaptativa** gives more weight to recent and
+important matches in memory search. When task suggestions are enabled, it
+also learns which local time slots have received poor feedback and defers
+suggestions in those slots. The switch starts off and can be turned off at
+any time. [F12 software closeout](docs/qualification/F12-SoftwareCloseout.md)
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,

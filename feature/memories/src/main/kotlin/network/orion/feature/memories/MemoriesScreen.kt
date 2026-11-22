@@ -59,6 +59,7 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
             when (page?.state) {
                 MemorySearchState.BUILDING -> message = "O índice de memórias está sendo preparado."
                 MemorySearchState.KEY_UNAVAILABLE -> message = "A chave das memórias está indisponível."
+                MemorySearchState.PREFERENCES_CHANGED -> message = "A personalização da busca mudou. Busque novamente."
                 null -> message = "Busca de memórias indisponível."
                 MemorySearchState.READY -> if (page.candidateLimitReached) message = "Refine a busca para ver outros resultados."
             }
@@ -266,7 +267,11 @@ fun MemoriesScreen(gateway: MemoryGateway, recoveryVersion: Instant? = null) {
             TextButton(enabled = !busy, onClick = { run {
                 val query = checkNotNull(activeSearch)
                 val page = gateway.search(SearchMemories(query, after = searchNext))
-                if (page == null || page.state != MemorySearchState.READY) message = "Não foi possível carregar mais resultados."
+                if (page?.state == MemorySearchState.PREFERENCES_CHANGED) {
+                    reload()
+                } else if (page == null || page.state != MemorySearchState.READY) {
+                    message = "Não foi possível carregar mais resultados."
+                }
                 else {
                     rows = (rows + page.hits.map { it.memory }).distinctBy { it.memoryId }
                     searchNext = page.next

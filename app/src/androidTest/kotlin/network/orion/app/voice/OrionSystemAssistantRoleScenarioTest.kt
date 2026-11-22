@@ -5,6 +5,7 @@ import android.app.UiAutomation
 import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.pm.PackageManager
+import android.database.sqlite.SQLiteDatabase
 import android.os.ParcelFileDescriptor
 import android.service.voice.VoiceInteractionService
 import androidx.test.core.app.ActivityScenario
@@ -19,7 +20,6 @@ import kotlinx.coroutines.withTimeout
 import network.orion.app.MainActivity
 import network.orion.app.OrionApplication
 import network.orion.core.health.OrionAssistantRoleState
-import network.orion.data.database.OrionDatabaseFactory
 import network.orion.voice.service.OrionVoiceInteractionService
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -121,13 +121,14 @@ class OrionSystemAssistantRoleScenarioTest {
     }
 
     private suspend fun counts(app: OrionApplication): List<Int> = withContext(Dispatchers.IO) {
-        val db = OrionDatabaseFactory.open(app)
+        // Observe both counts in one statement without opening a second Room writer.
+        val db = SQLiteDatabase.openDatabase(app.getDatabasePath("orion.db").path, null, SQLiteDatabase.OPEN_READONLY)
         try {
-            db.openHelper.readableDatabase.query("""
+            db.rawQuery("""
                 SELECT
                     (SELECT COUNT(*) FROM orion_action_requests),
                     (SELECT COUNT(*) FROM orion_ingress_envelopes WHERE idempotencyScope = 'orion_voice_v1')
-            """.trimIndent()).use { result ->
+            """.trimIndent(), null).use { result ->
                 check(result.moveToFirst())
                 listOf(result.getInt(0), result.getInt(1))
             }

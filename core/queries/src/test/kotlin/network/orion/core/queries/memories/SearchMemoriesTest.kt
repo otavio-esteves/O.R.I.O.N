@@ -39,4 +39,18 @@ class SearchMemoriesTest {
             score("café mais forte", at, 1.0, 1.0))
         assertEquals(score("café forte", at, 0.5, 1.0), score("café forte", at.plusSeconds(60), 0.5, 1.0))
     }
+
+    @Test fun personalizationReordersCloseMatchesWhilePreservingTermCoverage() {
+        val search = checkNotNull(SearchMemories.forChat("café forte"))
+        val now = Instant.parse("2026-11-22T14:00:00Z")
+        val older = now.minusSeconds(30 * 86_400L)
+        fun rank(personalized: Boolean, content: String, updatedAt: Instant, importance: Double, confidence: Double) =
+            OrionMemoryRanking.score(search, content, updatedAt, now, importance, confidence, personalized)
+
+        assertTrue(rank(false, "café forte", older, 0.0, 1.0) > rank(false, "café mais forte", now, 0.0, 1.0))
+        assertTrue(rank(true, "café mais forte", now, 0.0, 1.0) > rank(true, "café forte", older, 0.0, 1.0))
+        assertTrue(rank(false, "café forte", now, 0.0, 1.0) > rank(false, "café forte", now, 0.4, 0.5))
+        assertTrue(rank(true, "café forte", now, 0.4, 0.5) > rank(true, "café forte", now, 0.0, 1.0))
+        assertTrue(rank(true, "café forte", older, 0.0, 0.0) > rank(true, "café café café café", now, 1.0, 1.0))
+    }
 }
