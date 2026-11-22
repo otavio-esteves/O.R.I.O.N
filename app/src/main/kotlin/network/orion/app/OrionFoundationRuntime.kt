@@ -37,6 +37,7 @@ import network.orion.app.memories.*
 import network.orion.app.notifications.*
 import network.orion.app.resources.OrionAndroidResourceProfileObserver
 import network.orion.app.sentinel.OrionSentinelRuntime
+import network.orion.app.voice.OrionAssistantRole
 import network.orion.core.sentinel.OrionProactivityFeedbackKind
 import network.orion.core.resources.OrionResourceProfile
 import network.orion.core.orchestrator.notifications.NotificationAvailability
@@ -70,6 +71,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     internal val sentinelEnabled = mutableSentinelEnabled.asStateFlow()
     private val mutableResourceProfile = MutableStateFlow<OrionResourceProfile?>(null)
     internal val resourceProfile = mutableResourceProfile.asStateFlow()
+    private val mutableAssistantRoleState = MutableStateFlow(OrionAssistantRoleState.UNAVAILABLE)
+    internal val assistantRoleState = mutableAssistantRoleState.asStateFlow()
     @Volatile private var lastForegroundInteraction: Instant? = null
     private val notificationPoster = OrionAndroidNotificationPoster(app, clock)
     private val reminderPoster = OrionAndroidNotificationPoster(app, clock, OrionAndroidNotificationPoster.REMINDER_CHANNEL)
@@ -125,6 +128,10 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     @Volatile internal var notificationKernel: OrionNotificationKernel? = null
         private set
     val capabilities = CapabilityRegistry { capability ->
+        // The UI observation never substitutes for live role and platform checks.
+        if (capability == OrionAssistantRole.capability) {
+            return@CapabilityRegistry OrionAssistantRole.observe(app) == OrionAssistantRoleState.ACTIVE
+        }
         (capability in setOf(OrionCreateTaskDescriptor.WRITE_CAPABILITY, OrionCreateReminderDescriptor.WRITE_CAPABILITY,
             OrionCreateTimerDescriptor.WRITE_CAPABILITY, OrionCreateMemoryDescriptor.WRITE_CAPABILITY) ||
             capability == OrionPostNotificationDescriptor.WRITE_CAPABILITY &&
@@ -269,6 +276,10 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     internal fun refreshVoiceHealth(failure: Boolean = false) {
         val status = if (failure) OrionHealthStatus.DEGRADED else voiceAvailability()
         mutableHealth.publishSubsystemObservations(clock, mapOf(OrionSubsystem.VOICE to status))
+    }
+
+    internal fun refreshAssistantRole() {
+        mutableAssistantRoleState.value = OrionAssistantRole.observe(app)
     }
 
     private fun drainVoiceIngress() {

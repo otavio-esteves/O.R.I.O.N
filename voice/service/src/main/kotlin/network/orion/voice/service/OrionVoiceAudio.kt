@@ -40,7 +40,11 @@ internal object OrionVoiceActivityDetection {
 
 internal class OrionVoiceRecorder(private val context: Context) {
     @SuppressLint("MissingPermission")
-    suspend fun capture(finished: () -> Boolean, listening: () -> Unit): ShortArray? = withContext(Dispatchers.IO) {
+    suspend fun capture(
+        finished: () -> Boolean,
+        requireAuthority: () -> Unit,
+        listening: () -> Unit,
+    ): ShortArray? = withContext(Dispatchers.IO) {
         val rate = OrionVoiceActivityDetection.sampleRate
         val channels = AudioFormat.CHANNEL_IN_MONO
         val encoding = AudioFormat.ENCODING_PCM_16BIT
@@ -55,6 +59,7 @@ internal class OrionVoiceRecorder(private val context: Context) {
         try {
             if (finished()) return@withContext null
             check(recorder.state == AudioRecord.STATE_INITIALIZED)
+            requireAuthority()
             recorder.startRecording()
             check(recorder.recordingState == AudioRecord.RECORDSTATE_RECORDING)
             listening()

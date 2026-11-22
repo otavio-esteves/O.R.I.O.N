@@ -2,6 +2,7 @@ package network.orion.app
 
 import android.os.Bundle
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
@@ -88,6 +89,7 @@ class MainActivity : ComponentActivity() {
                 val report by runtime.health.collectAsState()
                 val sentinelEnabled by runtime.sentinelEnabled.collectAsState()
                 val resourceProfile by runtime.resourceProfile.collectAsState()
+                val assistantRole by runtime.assistantRoleState.collectAsState()
                 var destination by rememberSaveable { mutableStateOf("Início") }
                 LaunchedEffect(tasksNavigation) { if (tasksNavigation > 0) destination = "Tarefas" }
                 var taskQueues by remember { mutableStateOf<network.orion.core.health.TaskQueueDiagnostics?>(null) }
@@ -163,16 +165,18 @@ class MainActivity : ComponentActivity() {
                             "Chat" -> network.orion.feature.chat.ChatScreen(chatController, report.lastRecovery, memories)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
-                                platform = runtime.platformDiagnostics(), resourceProfile = resourceProfile?.name,
+                                platform = runtime.platformDiagnostics(), resourceProfile = resourceProfile?.name, assistantRole = assistantRole,
                                 onRetry = { runtime.start() })
-                            "Ajustes" -> SettingsScreen(report, sentinelEnabled, onOpenVoice = { destination = "Voz" }, onSetSentinelEnabled = { enabled ->
-                                val applied = runtime.setSentinelEnabled(enabled)
-                                if (applied && enabled && Build.VERSION.SDK_INT >= 33 &&
-                                    checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-                                    android.content.pm.PackageManager.PERMISSION_GRANTED
-                                ) notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                applied
-                            })
+                            "Ajustes" -> SettingsScreen(report, sentinelEnabled, onOpenVoice = { destination = "Voz" },
+                                assistantRole = assistantRole, onConfigureAssistant = ::openDefaultAppsSettings,
+                                onSetSentinelEnabled = { enabled ->
+                                    val applied = runtime.setSentinelEnabled(enabled)
+                                    if (applied && enabled && Build.VERSION.SDK_INT >= 33 &&
+                                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                                        android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    ) notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    applied
+                                })
                             else -> HomeScreen(report, onOpenDevice = { destination = "Dispositivo" },
                                 onOpenActivity = { destination = "Atividade" }, onOpenReminders = { destination = "Lembretes" },
                                 onOpenTimers = { destination = "Timers" }, onOpenMemories = { destination = "Memórias" },
@@ -186,8 +190,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        (application as OrionApplication).mainRuntime?.noteForegroundInteraction()
-        (application as OrionApplication).mainRuntime?.refreshVoiceHealth()
+        val runtime = (application as OrionApplication).mainRuntime
+        runtime?.apply {
+            noteForegroundInteraction()
+            refreshVoiceHealth()
+            refreshAssistantRole()
+        }
         deliveryAlerts.onResumed(true)
         deliveryAlerts.onWindowFocus(hasWindowFocus())
         taskChannel.onResumed(true)
@@ -201,7 +209,7 @@ class MainActivity : ComponentActivity() {
         notificationChannel.onResumed(true)
         notificationChannel.onWindowFocus(hasWindowFocus())
         notificationRevision++
-        (application as OrionApplication).mainRuntime?.refreshNotificationHealth()
+        runtime?.refreshNotificationHealth()
     }
 
     override fun onUserInteraction() {
@@ -232,8 +240,22 @@ class MainActivity : ComponentActivity() {
         if (::timerChannel.isInitialized) timerChannel.onWindowFocus(hasFocus)
         if (::memoryChannel.isInitialized) memoryChannel.onWindowFocus(hasFocus)
         if (::notificationChannel.isInitialized) notificationChannel.onWindowFocus(hasFocus)
-        if (hasFocus && ::deliveryAlerts.isInitialized)
-            (application as OrionApplication).mainRuntime?.nudgeUiMaintenance()
+        if (hasFocus && ::deliveryAlerts.isInitialized) {
+            (application as OrionApplication).mainRuntime?.apply {
+                refreshAssistantRole()
+                nudgeUiMaintenance()
+            }
+        }
+    }
+
+    private fun openDefaultAppsSettings(): Boolean = try {
+        // Android's default-app settings own role consent and revocation.
+        startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+        true
+    } catch (_: ActivityNotFoundException) {
+        false
+    } catch (_: SecurityException) {
+        false
     }
 
     override fun onDestroy() {

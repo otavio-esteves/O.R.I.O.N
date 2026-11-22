@@ -1,48 +1,23 @@
 #!/usr/bin/env python3
 """HOST-only, no-model UI runner. Builds stay in Docker; never downloads a GGUF."""
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import re
 import subprocess
 import sys
 
-from chat_ui_protocol import F8_SELECTED, F9_SELECTED, Result, SELECTED, junit_report, parse_instrumentation, test_identities
+from android_apk_pair import APK_NAMES, RunnerFailure, verify_artifacts
+from chat_ui_protocol import (
+    F8_SELECTED, F9_SELECTED, F10_SELECTED, Result, SELECTED, junit_report, parse_instrumentation, test_identities,
+)
 
-APK_NAMES = {'network.orion': 'app-debug.apk', 'network.orion.test': 'app-debug-androidTest.apk'}
-
-
-class RunnerFailure(Exception):
-    pass
-
-
-def verify_artifacts(directory):
-    manifest = directory / 'SHA256SUMS'
-    if manifest.is_symlink() or not manifest.is_file() or manifest.stat().st_size > 512:
-        raise RunnerFailure('ARTIFACT_MANIFEST_INVALID')
-    entries = {}
-    for line in manifest.read_text(encoding='ascii').splitlines():
-        match = re.fullmatch(r'([a-f0-9]{64})  (app-debug(?:-androidTest)?\.apk)', line)
-        if not match or match[2] in entries:
-            raise RunnerFailure('ARTIFACT_MANIFEST_INVALID')
-        entries[match[2]] = match[1]
-    if set(entries) != set(APK_NAMES.values()):
-        raise RunnerFailure('ARTIFACT_MANIFEST_INVALID')
-    for name, expected in entries.items():
-        artifact = directory / name
-        if artifact.is_symlink() or not artifact.is_file():
-            raise RunnerFailure('ARTIFACT_MISSING')
-        with artifact.open('rb') as stream:
-            actual = hashlib.file_digest(stream, 'sha256').hexdigest()
-        if actual != expected:
-            raise RunnerFailure('ARTIFACT_HASH_MISMATCH')
-    return entries
+SUITES = {'chat': SELECTED, 'f8': F8_SELECTED, 'f9': F9_SELECTED, 'f10': F10_SELECTED}
 
 
 def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat"):
     report_dir.mkdir(parents=True, exist_ok=True)
-    selected = {"chat": SELECTED, "f8": F8_SELECTED, "f9": F9_SELECTED}[suite]
+    selected = SUITES[suite]
     expected = test_identities(selected)
     result = Result(expected=expected)
     metadata = {'environment': 'ANDROID_EMULATOR', 'definitiveHardwareEvidence': False}
@@ -125,7 +100,7 @@ def main():
     parser.add_argument('--avd-name', required=True, help='Explicit task-owned AVD, never an arbitrary connected device')
     parser.add_argument('--apk-dir', required=True, type=Path)
     parser.add_argument('--report-dir', required=True, type=Path)
-    parser.add_argument('--suite', choices=('chat', 'f8', 'f9'), default='chat')
+    parser.add_argument('--suite', choices=tuple(SUITES), default='chat')
     args = parser.parse_args()
     return run(args.adb, args.serial, args.avd_name, args.apk_dir, args.report_dir, args.suite)
 

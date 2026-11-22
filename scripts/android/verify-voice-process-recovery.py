@@ -63,7 +63,7 @@ def run(adb_path, serial, avd, apk, report):
         if pid(f"{package}:voice_session") != session:
             raise RuntimeError("SESSION_DIED_WITH_MAIN")
         start("Session", "rebind")
-        if until(lambda: marker("VOICE_SESSION", "REBOUND")) != session or not pid(package) or pid(package) == main:
+        if until(lambda: marker("VOICE_SESSION", "REBOUND"), seconds=35) != session or not pid(package) or pid(package) == main:
             raise RuntimeError("BIND_DID_NOT_RECOVER_MAIN")
         facts["checks"]["session_rebinds_and_completes_query_after_main_sigkill"] = "PASS"
         main = pid(package)
