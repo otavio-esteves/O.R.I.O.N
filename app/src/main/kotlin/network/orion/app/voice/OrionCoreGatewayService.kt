@@ -31,8 +31,14 @@ class OrionCoreGatewayService : Service() {
             for (signal in pump) {
                 do {
                     val ingress = core?.voiceIngress
-                    try { ingress?.drain() } catch (_: IllegalStateException) { /* Wait for Core recovery. */ }
-                    publishCallbacks(ingress)
+                    try {
+                        ingress?.drain()
+                        publishCallbacks(ingress)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: RuntimeException) {
+                        core?.refreshVoiceHealth(failure = true)
+                    }
                     if (callbacks.registeredCallbackCount == 0) break
                     delay(150)
                 } while (isActive)

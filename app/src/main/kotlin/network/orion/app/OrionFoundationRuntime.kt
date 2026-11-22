@@ -271,6 +271,19 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         mutableHealth.publishSubsystemObservations(clock, mapOf(OrionSubsystem.VOICE to status))
     }
 
+    private fun drainVoiceIngress() {
+        try {
+            voiceIngress?.drain()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (interrupted: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw interrupted
+        } catch (_: Exception) {
+            refreshVoiceHealth(failure = true)
+        }
+    }
+
     private fun voiceAvailability(): OrionHealthStatus {
         if (voiceIngress == null) return OrionHealthStatus.UNAVAILABLE
         val permission = app.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
@@ -512,7 +525,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     else taskStartupBarrier.abortRecovery(ticket)
                 })
             // Serialized outside the barrier's publication callback.
-            voiceIngress?.drain()
+            drainVoiceIngress()
             // Recovery's bounded UI drain ran under the admission monitor; hand off committed consent only after release.
             reminderDelivery?.flushAuthorized()
             val event = readyLogEvent(health.value.core.readiness)
@@ -625,7 +638,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 notificationKernel?.ingress?.let { it::drain },
                 reminderDelivery?.let { it::drainUi },
             ))
-            voiceIngress?.drain()
+            drainVoiceIngress()
             val memoryIndexProgress = try {
                 memoryKernel?.searchIndex?.backfillBatch()
             } catch (cancelled: CancellationException) {
