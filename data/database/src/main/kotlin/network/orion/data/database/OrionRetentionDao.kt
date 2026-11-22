@@ -5,11 +5,14 @@ import androidx.room.Query
 import androidx.room.Transaction
 
 /** Per-table batch is bounded; domain user data, UNKNOWN, MANUAL_REVIEW and DEAD_LETTER are preserved. */
-data class RetentionResult(val events: Int, val ingress: Int, val actions: Int, val audit: Int, val technical: Int) {
+data class RetentionResult(
+    val events: Int, val ingress: Int, val actions: Int, val audit: Int, val technical: Int,
+    val voicePayloadsErased: Int = 0,
+) {
     /** A saturated table needs another bounded pass; this never selects unresolved data for retry. */
     fun needsContinuation(batchSize: Int): Boolean {
         require(batchSize in 1..100)
-        return listOf(events, ingress, actions, audit, technical).any { it >= batchSize }
+        return listOf(events, ingress, actions, audit, technical, voicePayloadsErased).any { it >= batchSize }
     }
 }
 
@@ -24,6 +27,12 @@ abstract class OrionRetentionDao {
         SELECT ingressId FROM orion_ingress_envelopes WHERE status IN ('CONSUMED','REJECTED','EXPIRED')
         AND updatedAt < :before AND idempotencyRetainUntil < :now ORDER BY updatedAt, ingressId LIMIT :limit)""")
     protected abstract fun pruneIngress(before: Long, now: Long, limit: Int): Int
+
+    @Query("""UPDATE orion_ingress_envelopes SET payloadEnvelope = X'' WHERE ingressId IN (
+        SELECT ingressId FROM orion_ingress_envelopes WHERE idempotencyScope = 'orion_voice_v1'
+        AND status IN ('CONSUMED', 'REJECTED', 'EXPIRED', 'FAILED') AND length(payloadEnvelope) > 0
+        ORDER BY updatedAt, ingressId LIMIT :limit)""")
+    protected abstract fun eraseTerminalVoicePayloads(limit: Int): Int
 
     @Query("""SELECT actionId FROM orion_action_requests WHERE status IN ('SUCCEEDED','FAILED','CANCELLED')
         AND updatedAt < :before AND idempotencyRetainUntil < :now
@@ -57,6 +66,7 @@ abstract class OrionRetentionDao {
         val actionIds = actionIdsToPrune(actionsBefore, now, batchSize)
         pruneActionAudit(actionIds)
         return RetentionResult(pruneEvents(eventsBefore, batchSize), pruneIngress(ingressBefore, now, batchSize),
-            pruneActions(actionIds), pruneAudit(auditBefore, batchSize), pruneTechnical(technicalBefore, maxTechnicalRows, batchSize))
+            pruneActions(actionIds), pruneAudit(auditBefore, batchSize), pruneTechnical(technicalBefore, maxTechnicalRows, batchSize),
+            eraseTerminalVoicePayloads(batchSize))
     }
 }

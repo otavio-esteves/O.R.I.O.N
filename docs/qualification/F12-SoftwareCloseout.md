@@ -20,6 +20,15 @@ sob demanda a partir do feedback já retido pelo Sentinel. A F12 não grava
 consultas, texto, conteúdo de notificação nem um perfil de hábitos separado.
 O ranking roda depois da seleção de memórias elegíveis pelo índice.
 
+A revogação reserva uma vaga no ingresso e outra no outbox quando o limite
+ordinário de 10.000 registros é atingido. O pedido ainda aguarda a Startup
+Barrier e, ao ser aplicado, descarta opt-ins anteriores que ficaram na fila.
+A atualização da preferência e o evento de revogação são atômicos. A mesma
+revisão elimina o conteúdo de ingressos de voz ao atingir um estado terminal.
+Após perda do cache, MAIN lê a ação já preparada para recuperar a indicação
+de confirmação. A limpeza de registros antigos conserva seus comprovantes.
+[Pacote de trabalho da auditoria](../issues/ORION-AUDIT-F12-002.md)
+
 As decisões de adaptação seguem o [ADR-0010](../adr/ADR-0010-f12-software-entry.md).
 O CI executa os testes do Sentinel, do ranking e da suíte emulador `f12`, além
 da atualização instalada de Room 12→13 com o APK da F11. O [relatório de auditoria](Audit-F12-Closeout.md)

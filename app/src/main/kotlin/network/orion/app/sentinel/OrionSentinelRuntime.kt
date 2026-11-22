@@ -57,9 +57,24 @@ internal class OrionSentinelRuntime(
         this.enabled() == enabled
     }
 
-    fun setPersonalized(enabled: Boolean): Boolean = updatePreference(
-        if (enabled) PERSONALIZE else RESET_PERSONALIZATION,
-    ) { personalized() == enabled }
+    fun setPersonalized(enabled: Boolean): Boolean {
+        val queue = db.ingress()
+        if (enabled) {
+            if (queue.hasQueuedPersonalizationRevocation()) return false
+            return updatePreference(PERSONALIZE) { personalized() }
+        }
+        if (!queue.hasQueuedPersonalizationRevocation()) {
+            if (!personalized() && !queue.hasQueuedPersonalizationOptIn()) return true
+            val id = UUID.randomUUID()
+            if (submit(id, RESET_PERSONALIZATION, id, SOURCE_SETTINGS) !in accepted) return false
+        }
+        drainPersonalizationRevocation()
+        return !queue.hasQueuedPersonalizationRevocation() && !personalized()
+    }
+
+    fun drainPersonalizationRevocation() {
+        if (db.ingress().hasQueuedPersonalizationRevocation()) ingress.drain(1)
+    }
 
     private fun updatePreference(type: String, applied: () -> Boolean): Boolean {
         val id = UUID.randomUUID()
@@ -166,11 +181,13 @@ internal class OrionSentinelRuntime(
                 if (payload.source != SOURCE_SETTINGS || payload.idempotencyKey != ref) return LocalIngressDisposition.REJECTED
                 val consent = dao.consent() ?: OrionSentinelConsent(enabled = false, version = 0)
                 val enabled = payload.commandType == PERSONALIZE
+                if (!enabled) db.ingress().rejectQueuedPersonalizationSettings(now.toEpochMilli())
                 if (enabled != (consent.personalizationSince != null)) {
                     val floor = if (enabled) maxOf(now.toEpochMilli(), dao.latestReservationAt() ?: Long.MIN_VALUE)
                         else null
                     dao.saveConsent(consent.copy(personalizationSince = floor))
-                    publish(ref, "SENTINEL_PERSONALIZATION_CHANGED", now)
+                    publish(ref, if (enabled) "SENTINEL_PERSONALIZATION_CHANGED"
+                        else OrionEventDao.PERSONALIZATION_REVOKED, now)
                 }
             }
             PREPARE -> {
@@ -263,7 +280,7 @@ internal class OrionSentinelRuntime(
     private fun submit(reference: UUID, type: String, id: UUID, source: String) = ingress.submit(
         DurableIngressRequest(UUID.randomUUID(), SCOPE, id, source, type, 1, Sensitivity.PERSONAL,
             true, reference, null, (if (type == PREPARE) Duration.ofMinutes(1) else retention).toMillis(),
-            Duration.ofDays(90).toMillis(), correlationId = id),
+            Duration.ofDays(90).toMillis(), priority = if (type == RESET_PERSONALIZATION) 100 else 0, correlationId = id),
     )
 
     private fun latest(feedback: List<OrionSentinelFeedback>, kind: OrionProactivityFeedbackKind): Instant? =

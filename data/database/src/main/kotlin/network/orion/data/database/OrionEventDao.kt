@@ -29,7 +29,8 @@ abstract class OrionEventDao {
     /** Must be invoked in the same Room transaction as the mutation that produced the fact. */
     @Transaction
     open fun append(event: DomainEventOutboxEntity) {
-        check(count() < 10_000) { "Durable event capacity reached." }
+        val capacity = if (event.eventType == PERSONALIZATION_REVOKED) 10_001 else 10_000
+        check(count() < capacity) { "Durable event capacity reached." }
         requireTechnicalUuid(event.eventId)
         requireTechnicalUuid(event.aggregateId)
         requireTechnicalUuid(event.correlationId)
@@ -101,6 +102,10 @@ abstract class OrionEventDao {
         insertTechnicalEvent(projection)
         insertReceipt(EventConsumerReceiptEntity(eventId, consumerId, projection.occurredAt))
         return EventConsumption.APPLIED
+    }
+
+    companion object {
+        const val PERSONALIZATION_REVOKED = "SENTINEL_PERSONALIZATION_REVOKED"
     }
 }
 

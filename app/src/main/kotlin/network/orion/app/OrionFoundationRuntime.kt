@@ -536,6 +536,10 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 calculateAndPublishHealth = { publish(states, clock.wallNow()); health.value.core.readiness },
                 openIngressAndDrain = {
                     if (taskWriteReady) {
+                        sentinel?.let {
+                            it.drainPersonalizationRevocation()
+                            refreshSentinelPreferences(it)
+                        }
                         taskKernel?.ingress?.drain(25)
                         reminderKernel?.ingress?.drain(25)
                         timerKernel?.ingress?.drain(25)

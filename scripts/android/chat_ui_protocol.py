@@ -123,6 +123,7 @@ F12_SELECTED = {
         'roomTwelveRetainsProactivityConsentAndDefaultsPersonalizationOff',
         'consentIsGatedAndResetsItsFeedbackWindowAcrossClockRollback',
         'learnedDeferralDoesNotReserveTaskAndRevocationRestoresBaseline',
+        'revocationSurvivesBothCapacityLimitsAndSupersedesQueuedOptIn',
         'rankingPreferenceReordersEligibleMemoriesAndInvalidatesOldCursor',
         'settingsExposeAnIndependentReversibleOptIn',
     },

@@ -11,6 +11,7 @@ import network.orion.core.ipc.*
 import network.orion.core.model.Sensitivity
 import network.orion.core.orchestrator.routing.*
 import network.orion.core.security.OrionFieldEncryption
+import network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor
 import network.orion.core.time.WallClock
 import network.orion.data.database.*
 import network.orion.data.repository.*
@@ -79,7 +80,7 @@ internal class OrionVoiceIngress(
     @Synchronized fun responses(id: UUID): List<VoiceCoreResponse> {
         val row = db.ingress().findByKey(SCOPE, id.toString()) ?: return emptyList()
         return when (row.status) {
-            DurableIngressStatus.CONSUMED -> results[id] ?: listOf(terminal(id, OrionVoiceTerminalState.SUCCEEDED))
+            DurableIngressStatus.CONSUMED -> results[id] ?: recoverResponse(id, row.correlationId)
             DurableIngressStatus.REJECTED, DurableIngressStatus.FAILED -> listOf(
                 if (row.lastErrorCode == "VOICE_CANCELLED") terminal(id, OrionVoiceTerminalState.CANCELLED)
                 else terminal(id, OrionVoiceTerminalState.FAILED, error = OrionVoiceErrorCode.INVALID_REQUEST),
@@ -87,6 +88,17 @@ internal class OrionVoiceIngress(
             DurableIngressStatus.EXPIRED -> listOf(terminal(id, OrionVoiceTerminalState.TIMED_OUT))
             else -> listOf(VoiceCoreResponse(SCHEMA, id, 0, OrionVoiceResponseKind.STATUS, null, false, null, null))
         }
+    }
+
+    private fun recoverResponse(id: UUID, correlationId: String): List<VoiceCoreResponse> {
+        // The voice router uses its request ID as the task creation idempotency key.
+        // A committed receipt can be reconstructed without reading or replaying a transcript.
+        val skill = OrionCreateTaskDescriptor.value.name
+        val prepared = db.actions().findByKey(skill, id.toString())?.let {
+            it.skill == skill && it.correlationId == correlationId && it.requiresConfirmation
+        } == true
+        val text = if (prepared) TASK_REVIEW_TEXT else "A resposta anterior ficou indisponível. Você pode repetir a consulta."
+        return success(id, text, prepared)
     }
 
     private fun consume(payload: LocalIngressPayload): LocalIngressDisposition {
@@ -105,7 +117,7 @@ internal class OrionVoiceIngress(
             is OrionIntentRoute.TaskCreation -> {
                 val prepared = prepareTask(route.intent.arguments)
                 if (prepared) {
-                    remember(id, success(id, "Revise e confirme o pedido na tela Tarefas.", true))
+                    remember(id, success(id, TASK_REVIEW_TEXT, true))
                     return LocalIngressDisposition.CONSUMED
                 }
                 "Abra o O.R.I.O.N. e tente novamente."
@@ -160,5 +172,6 @@ internal class OrionVoiceIngress(
         private const val SCOPE = "orion_voice_v1"
         private const val SOURCE = "VOICE_SESSION"
         private const val TYPE = "FinalUtterance"
+        private const val TASK_REVIEW_TEXT = "Revise e confirme o pedido na tela Tarefas."
     }
 }

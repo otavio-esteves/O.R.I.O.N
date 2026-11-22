@@ -46,6 +46,8 @@ import network.orion.data.database.DomainEventOutboxEntity
 import network.orion.data.database.MemoryOrigin
 import network.orion.data.database.OrionDatabase
 import network.orion.data.database.OrionDatabaseMigrations
+import network.orion.data.database.OrionEventDao
+import network.orion.data.database.OrionIngressDao
 import network.orion.data.database.OrionSentinelFeedback
 import network.orion.data.database.OrionSentinelSuggestion
 import network.orion.data.database.TaskEntity
@@ -146,6 +148,66 @@ class OrionAdaptiveIntelligenceTest {
             assertEquals("SHOWN", db.sentinel().feedback(posted.suggestionId).single().kind)
         } finally {
             db.sentinel().recent(0).filter { it.taskId == id }.forEach { notifications.cancel(it.suggestionId, 0) }
+        }
+    }
+
+    @Test fun revocationSurvivesBothCapacityLimitsAndSupersedesQueuedOptIn() = withFixture { db, runtime, barrier ->
+        assertTrue(runtime.setPersonalized(true))
+        val recovery = barrier.beginRecovery()
+        runtime.setPersonalized(true)
+        assertTrue(db.ingress().hasQueuedPersonalizationOptIn())
+        val sqlite = db.openHelper.writableDatabase
+        val capacity = OrionIngressDao.MAX_STORED_ROWS
+        sqlite.execSQL("""
+            WITH RECURSIVE fixture(n) AS (VALUES(1) UNION ALL SELECT n + 1 FROM fixture WHERE n < $capacity)
+            INSERT INTO orion_ingress_envelopes (ingressId,idempotencyScope,idempotencyKey,canonicalPayloadHash,
+                schemaVersion,commandType,source,priority,correlationId,payloadSensitivity,payloadEnvelope,receivedAt,
+                expiresAt,idempotencyRetainUntil,status,version,updatedAt,attemptCount)
+            SELECT printf('ingress-%d',n),'fixture',printf('key-%d',n),'hash',1,'FIXTURE','FIXTURE',0,
+                'fixture','PERSONAL',X'01',1,2,3,'CONSUMED',2,2,1
+            FROM fixture LIMIT (SELECT $capacity - count(*) FROM orion_ingress_envelopes)
+        """.trimIndent())
+        sqlite.execSQL("""
+            WITH RECURSIVE fixture(n) AS (VALUES(1) UNION ALL SELECT n + 1 FROM fixture WHERE n < $capacity)
+            INSERT INTO orion_domain_event_outbox (eventId,aggregateId,aggregateVersion,eventType,schemaVersion,
+                payloadSensitivity,occurredAt,correlationId,status,attemptCount,nextAttemptAt,deliveredAt,version)
+            SELECT printf('event-%d',n),'fixture',0,'FIXTURE',1,'PERSONAL',1,'fixture','DELIVERED',1,1,1,1
+            FROM fixture LIMIT (SELECT $capacity - count(*) FROM orion_domain_event_outbox)
+        """.trimIndent())
+        assertEquals(capacity, db.ingress().count())
+        assertEquals(capacity, db.events().count())
+        repeat(2) { assertFalse(runtime.setPersonalized(false)) }
+        assertTrue(runtime.personalized())
+        assertEquals(capacity + 1, db.ingress().count())
+        assertTrue(db.ingress().hasQueuedPersonalizationRevocation())
+        assertTrue(barrier.releaseAfterRecovery(recovery, CoreReadiness.DEGRADED_SAFE))
+
+        sqlite.execSQL("""CREATE TRIGGER fail_revocation BEFORE INSERT ON orion_domain_event_outbox
+            WHEN NEW.eventType = '${OrionEventDao.PERSONALIZATION_REVOKED}'
+            BEGIN SELECT RAISE(ABORT, 'fixture'); END""")
+        assertThrows(android.database.sqlite.SQLiteConstraintException::class.java) {
+            runtime.drainPersonalizationRevocation()
+        }
+        assertTrue(runtime.personalized())
+        assertTrue(db.ingress().hasQueuedPersonalizationOptIn())
+        assertTrue(db.ingress().hasQueuedPersonalizationRevocation())
+        sqlite.execSQL("DROP TRIGGER fail_revocation")
+
+        assertTrue(runtime.setPersonalized(false))
+        assertFalse(runtime.personalized())
+        assertFalse(db.ingress().hasQueuedPersonalizationOptIn())
+        assertFalse(db.ingress().hasQueuedPersonalizationRevocation())
+        assertTrue(runtime.setPersonalized(false))
+        assertFalse(runtime.setPersonalized(true))
+        assertEquals(capacity + 1, db.ingress().count())
+        assertEquals(capacity + 1, db.events().count())
+        val routes = network.orion.data.events.OrionTechnicalEventConsumer.routes(db.events(), clock)
+        val preferenceEvents = db.events().due(now.toEpochMilli(), 10)
+        assertEquals(setOf("SENTINEL_PERSONALIZATION_CHANGED", OrionEventDao.PERSONALIZATION_REVOKED),
+            preferenceEvents.map { it.eventType }.toSet())
+        preferenceEvents.forEach { event ->
+            assertEquals(network.orion.data.events.DurableDeliveryResult.ACCEPTED,
+                routes.getValue(event.eventType).single().consume(event))
         }
     }
 
