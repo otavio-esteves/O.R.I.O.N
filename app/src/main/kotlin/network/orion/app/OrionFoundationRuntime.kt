@@ -63,6 +63,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     private val app = context.applicationContext
     private val clock = AndroidOrionClock(app.contentResolver)
     private val resourceObserver = OrionAndroidResourceProfileObserver(app)
+    @Volatile internal var voiceIngress: network.orion.app.voice.OrionVoiceIngress? = null
+        private set
     private var sentinel: OrionSentinelRuntime? = null
     private val mutableSentinelEnabled = MutableStateFlow<Boolean?>(null)
     internal val sentinelEnabled = mutableSentinelEnabled.asStateFlow()
@@ -264,6 +266,32 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     @Volatile var configurationFormatVersion: Int? = null
         private set
 
+    internal fun refreshVoiceHealth(failure: Boolean = false) {
+        val status = if (failure) OrionHealthStatus.DEGRADED else voiceAvailability()
+        mutableHealth.publishSubsystemObservations(clock, mapOf(OrionSubsystem.VOICE to status))
+    }
+
+    private fun drainVoiceIngress() {
+        try {
+            voiceIngress?.drain()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (interrupted: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw interrupted
+        } catch (_: Exception) {
+            refreshVoiceHealth(failure = true)
+        }
+    }
+
+    private fun voiceAvailability(): OrionHealthStatus {
+        if (voiceIngress == null) return OrionHealthStatus.UNAVAILABLE
+        val permission = app.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        return if (permission && network.orion.voice.service.OrionVoiceModel.present(app))
+            OrionHealthStatus.HEALTHY else OrionHealthStatus.UNAVAILABLE
+    }
+
     internal fun noteForegroundInteraction() {
         lastForegroundInteraction = clock.wallNow()
     }
@@ -385,11 +413,17 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             recentMemoryLimiterObserved = if (states[OrionSubsystem.EXIT_MONITOR] == OrionHealthStatus.HEALTHY)
                 exits.any { it.kind == network.orion.core.exitinfo.ProcessExitKind.MEMORY_LIMITER } else null
             sampleForceStop(config)
+            voiceIngress = null
             if (keyState == FieldKeyInitialization.READY) {
                 taskStorageReady = true
                 val kernel = OrionTaskKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier, taskAdmissions,
                     { health.value.core.readiness }, { taskStorageReady })
                 taskKernel = kernel // Its ingress remains GATED by the actual barrier.
+                voiceIngress = network.orion.app.voice.OrionVoiceIngress(db, OrionFieldEncryption(keys), clock,
+                    taskStartupBarrier, { health.value.core.readiness }, { taskStorageReady },
+                    { app.getSystemService(android.os.BatteryManager::class.java)
+                        ?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)?.takeIf { it in 0..100 } },
+                    db.tasks()::openVoiceTaskCount, kernel::prepareVoiceTask)
                 reminderKernel = OrionReminderKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
                     reminderAdmissions, { health.value.core.readiness }, { taskStorageReady })
                 timerKernel = OrionTimerKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
@@ -468,6 +502,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     notificationPermissionEvidence() != OrionPolicyEvidence.SATISFIED)
                     OrionHealthStatus.DEGRADED else OrionHealthStatus.HEALTHY
             }
+            states[OrionSubsystem.VOICE] = voiceAvailability()
             states[OrionSubsystem.MEMORY_INDEX] = memoryIndexHealth(memoryKernel?.let { OrionMemoryIndexProgress.BUILDING })
             // Optional inference remains disabled; hardware/system qualification is still pending.
             states[OrionSubsystem.RESOURCES] = OrionHealthStatus.DEGRADED
@@ -489,6 +524,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     }
                     else taskStartupBarrier.abortRecovery(ticket)
                 })
+            // Serialized outside the barrier's publication callback.
+            drainVoiceIngress()
             // Recovery's bounded UI drain ran under the admission monitor; hand off committed consent only after release.
             reminderDelivery?.flushAuthorized()
             val event = readyLogEvent(health.value.core.readiness)
@@ -601,6 +638,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                 notificationKernel?.ingress?.let { it::drain },
                 reminderDelivery?.let { it::drainUi },
             ))
+            drainVoiceIngress()
             val memoryIndexProgress = try {
                 memoryKernel?.searchIndex?.backfillBatch()
             } catch (cancelled: CancellationException) {

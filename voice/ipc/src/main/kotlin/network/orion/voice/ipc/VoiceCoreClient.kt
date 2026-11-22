@@ -1,20 +1,28 @@
 package network.orion.voice.ipc
 
+import java.util.UUID
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import network.orion.core.ipc.VoiceCoreResponse
+import network.orion.core.ipc.VoiceUtteranceRequest
 import network.orion.core.ipc.OrionIpcProtocol
 import network.orion.core.ipc.ProtocolInfo
 
-/** F1 exposes no live transport; operational lifecycle states enter with the voice contract. */
-enum class VoiceCoreConnectionState { UNAVAILABLE }
+enum class VoiceCoreConnectionState { UNAVAILABLE, CONNECTED }
 
 /**
- * Lightweight connection port. This is not the wire protocol or a command API.
- * Future transports must negotiate the existing protocol and enforce payload guards;
- * every mutable voice request still enters the Core's gated versioned ingress.
+ * Private voice transport. The Core owns request admission and all business authority.
  */
 interface VoiceCoreClient {
     val protocolInfo: ProtocolInfo
     val state: VoiceCoreConnectionState
     suspend fun connect(): VoiceCoreConnectionState
+    suspend fun getCoreReadiness(): String?
+    suspend fun submitUtterance(request: VoiceUtteranceRequest): OrionVoiceAdmission = OrionVoiceAdmission.CORE_UNAVAILABLE
+    suspend fun status(requestId: UUID, afterSequence: Long = -1): VoiceCoreResponse? = null
+    suspend fun cancel(requestId: UUID): Boolean = false
+    fun responses(requestId: UUID): Flow<VoiceCoreResponse> = emptyFlow()
+    suspend fun healthCheck(): Boolean = false
     suspend fun disconnect()
 }
 
@@ -22,5 +30,6 @@ class UnavailableVoiceCoreClient : VoiceCoreClient {
     override val protocolInfo: ProtocolInfo = OrionIpcProtocol.CURRENT
     override val state: VoiceCoreConnectionState = VoiceCoreConnectionState.UNAVAILABLE
     override suspend fun connect(): VoiceCoreConnectionState = state
+    override suspend fun getCoreReadiness(): String? = null
     override suspend fun disconnect() = Unit
 }

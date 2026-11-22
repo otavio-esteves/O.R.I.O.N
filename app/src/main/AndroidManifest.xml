@@ -16,6 +16,7 @@
             android:authorities="${applicationId}.androidx-startup" tools:node="merge">
             <meta-data android:name="androidx.work.WorkManagerInitializer" tools:node="remove" />
         </provider>
+        <service android:name=".voice.OrionCoreGatewayService" android:exported="false" />
         <receiver android:name=".scheduling.OrionReminderAlarmReceiver" android:exported="false" />
         <receiver android:name=".sentinel.OrionSentinelFeedbackReceiver" android:exported="false" />
         <activity android:name=".sentinel.OrionSentinelOpenActivity" android:exported="false" />

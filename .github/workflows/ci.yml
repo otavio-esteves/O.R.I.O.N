@@ -11,7 +11,7 @@ permissions:
 jobs:
   android-build-and-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     env:
       COMPOSE_PROJECT_NAME: orion-ci
     steps:
@@ -23,7 +23,7 @@ jobs:
       - name: Build canonical Android environment
         run: env UID="$(id -u)" GID="$(id -g)" docker compose build android-build
       - name: Check and assemble application
-        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest :ai:llama:assembleDebugAndroidTest :ai:service:assembleDebugAndroidTest --max-workers=2
+        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest :ai:llama:assembleDebugAndroidTest :ai:service:assembleDebugAndroidTest :voice:service:assembleDebugAndroidTest --max-workers=2
       - name: Stage the canonical no-model chat APK pair
         run: |
           mkdir -p "$RUNNER_TEMP/orion-chat-apks"
@@ -127,8 +127,10 @@ jobs:
             set -e
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-chat-ui"
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f8" --suite f8
+            python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f9" --suite f9
             python3 scripts/android/verify-installed-upgrade.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --previous-apk "$RUNNER_TEMP/orion-upgrade-apks/app-debug.apk" --previous-test-apk "$RUNNER_TEMP/orion-upgrade-apks/app-debug-androidTest.apk" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-upgrade"
             python3 scripts/android/verify-transaction-process-death.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --scenario sentinel_delivery --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-death"
+            python3 scripts/android/verify-voice-process-recovery.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk "$RUNNER_TEMP/orion-chat-apks/app-debug.apk" --report "$RUNNER_TEMP/orion-f9/voice-processes.json"
       - name: Remove only this job's AVD
         if: always()
         run: |
@@ -147,6 +149,9 @@ jobs:
             ${{ runner.temp }}/orion-f8/junit.xml
             ${{ runner.temp }}/orion-f8-upgrade/installed-upgrade-report.json
             ${{ runner.temp }}/orion-f8-death/*.json
+            ${{ runner.temp }}/orion-f9/summary.json
+            ${{ runner.temp }}/orion-f9/junit.xml
+            ${{ runner.temp }}/orion-f9/voice-processes.json
           if-no-files-found: error
           retention-days: 7
 

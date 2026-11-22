@@ -1,0 +1,37 @@
+cmake_minimum_required(VERSION 4.0.2)
+project(orion_whisper LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+# Keep the DSP kernels representative in debug APKs, retaining their debug symbols.
+add_compile_options($<$<CONFIG:Debug>:-O2>)
+set_property(GLOBAL PROPERTY JOB_POOLS orion_stt_compile=2 orion_stt_link=1)
+set(CMAKE_JOB_POOL_COMPILE orion_stt_compile)
+set(CMAKE_JOB_POOL_LINK orion_stt_link)
+
+include(FetchContent)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+set(WHISPER_CURL OFF CACHE BOOL "" FORCE)
+set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
+set(GGML_BACKEND_DL OFF CACHE BOOL "" FORCE)
+set(GGML_CPU_KLEIDIAI OFF CACHE BOOL "" FORCE)
+set(GGML_RPC OFF CACHE BOOL "" FORCE)
+set(GGML_VULKAN OFF CACHE BOOL "" FORCE)
+set(GGML_OPENCL OFF CACHE BOOL "" FORCE)
+set(GGML_AVX OFF CACHE BOOL "" FORCE)
+set(GGML_AVX2 OFF CACHE BOOL "" FORCE)
+set(GGML_FMA OFF CACHE BOOL "" FORCE)
+set(GGML_F16C OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(whisper
+    URL https://codeload.github.com/ggml-org/whisper.cpp/tar.gz/48f628a84833905ee4a0658ee6d4a5c915ce1997
+    URL_HASH SHA256=17c4189d2ba98fedac681dc76944476217008f2c7268784bd519bf069ca37e3a
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+FetchContent_MakeAvailable(whisper)
+
+add_library(orion_whisper SHARED orion_whisper_jni.cpp)
+target_link_libraries(orion_whisper PRIVATE whisper)
+target_compile_options(orion_whisper PRIVATE -Wall -Wextra -Werror -fvisibility=hidden)
+target_link_options(orion_whisper PRIVATE -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384)

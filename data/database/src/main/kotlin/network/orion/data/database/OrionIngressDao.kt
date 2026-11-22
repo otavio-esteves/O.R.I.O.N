@@ -67,6 +67,12 @@ abstract class OrionIngressDao {
         return IngressRegistration.INSERTED
     }
 
+    /** Cancellation is technical queue state and never changes an authorized ActionRequest. */
+    @Query("""UPDATE orion_ingress_envelopes SET status = 'REJECTED', lastErrorCode = 'VOICE_CANCELLED',
+        updatedAt = :at, version = version + 1 WHERE idempotencyScope = 'orion_voice_v1'
+        AND ingressId = :id AND status = 'QUEUED' AND version = :version""")
+    abstract fun cancelQueuedVoiceRequest(id: String, version: Long, at: Long): Int
+
     /** QUEUED -> PROCESSING does not authorize any effect; drain requires an open startup barrier. */
     @Transaction
     open fun transition(id: String, expectedVersion: Long, to: DurableIngressStatus, at: Long): ActionMutation {

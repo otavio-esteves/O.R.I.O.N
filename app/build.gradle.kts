@@ -178,7 +178,8 @@ dependencies {
     implementation(project(":ai:service"))
     // AGP aligns tests with their target APK. Room's schema serializers require the newer default methods.
     debugImplementation(libs.serialization.test.runtime)
-    debugImplementation(project(":core:ipc"))
+    implementation(project(":voice:ipc"))
+    implementation(project(":voice:service"))
     testImplementation(libs.junit4)
     implementation(project(":core:common"))
     implementation(project(":scheduler"))

@@ -1,0 +1,13 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+    <application>
+        <service android:name=".OrionVoiceControlService" android:process=":voice" android:exported="false" />
+        <service android:name=".OrionVoiceSessionService" android:process=":voice_session" android:exported="false" />
+    </application>
+</manifest>

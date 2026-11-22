@@ -85,6 +85,22 @@ F8_SELECTED = {
 }
 
 
+F9_SELECTED = {
+    'network.orion.app.voice.OrionCoreGatewayServiceTest': {
+        'privateMainGatewayNegotiatesAndReportsReadiness',
+        'callbackStreamsOneTerminalResponseForAnAcceptedRequest',
+    },
+    'network.orion.app.voice.OrionVoiceIngressTest': {
+        'partialNeverEnqueuesAndRecoveryProcessesFinalOnlyOnce',
+    },
+    'network.orion.app.voice.OrionVoiceTaskAdmissionTest': {
+        'finalVoiceRequestPreparesButDoesNotExecuteTask',
+    },
+    'network.orion.app.voice.OrionVoiceTopologyTest': {
+        'voiceComponentsArePrivateAndRolesAreSeparated',
+    },
+}
+
 def test_identities(selection):
     return frozenset((cls, method) for cls, methods in selection.items() for method in methods)
 

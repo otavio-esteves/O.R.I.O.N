@@ -155,6 +155,21 @@ internal class OrionTaskAdmissionOwner(
     /** Recovery revokes every previously sampled UI admission, including lifecycle ABA. */
     @Synchronized fun invalidateAdmissions() { advanceUi() }
 
+    /** Called by MAIN only for a final, authenticated push-to-talk ingress. Preparation grants no confirmation. */
+    @Synchronized fun prepareVoiceTask(task: ValidatedCreateTask): OrionCreateTaskAdmission? {
+        val channel = current ?: return null
+        if (!channel.activeForReplay() || role != OrionProcessRole.MAIN) return null
+        val generation = uiGeneration
+        val binding = CreateTaskPolicyInputBinding.from(task)
+        val admission = UUID.randomUUID()
+        return OrionCreateTaskAdmission(task, CreateTaskPolicyContextSource {
+            synchronized(this@OrionTaskAdmissionOwner) {
+                if (current !== channel || !channel.activeForReplay() || generation != uiGeneration)
+                    CreateTaskPolicyContextRead.Unavailable else observe(admission, binding)
+            }
+        })
+    }
+
     @Synchronized fun replayCreate(origin: OrionVerifiedTaskIngress): OrionCreateTaskAdmission? {
         val channel = current ?: return null
         if (!channel.activeForReplay() || origin.wire.operation != "CREATE") return null

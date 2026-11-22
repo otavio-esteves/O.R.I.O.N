@@ -69,6 +69,19 @@ The [F8 validation report](docs/qualification/F8-SoftwareCloseout.md) and
 [ADR-0006](docs/adr/ADR-0006-f8-software-entry.md) record the acceptance evidence
 and the qualification scope.
 
+## F9 push-to-talk
+
+In **Ajustes → Voz**, select the pinned multilingual `ggml-tiny-q5_1.bin`
+model from local storage and grant microphone access on demand. **Falar**
+starts a bounded capture and **Concluir fala** ends it early. The reply is
+displayed and spoken when an offline Portuguese Android voice is available.
+Task creation requires review and exact confirmation on the Tasks screen.
+
+The private MAIN gateway and versioned voice IPC follow the
+[F9 software entry decision](docs/adr/ADR-0007-f9-software-entry.md). The
+[voice validation record](docs/qualification/F9-SoftwareCloseout.md) describes
+the software scope and the remaining physical measurements.
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,
