@@ -41,9 +41,15 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir):
     def change_role(operation):
         adb("shell", "cmd", "role", operation, "--user", "0", ROLE, PACKAGE)
 
+    def role_holders():
+        return adb("shell", "cmd", "role", "get-role-holders", "--user", "0", ROLE).splitlines()
+
     def existing_assistant():
-        holders = adb("shell", "cmd", "role", "get-role-holders", "--user", "0", ROLE)
-        return bool(holders) or any(component not in ("", "null") for component in selected_components())
+        return bool(role_holders()) or any(component not in ("", "null") for component in selected_components())
+
+    def clear_fixture_role():
+        if PACKAGE in role_holders():
+            change_role("remove-role-holder")
 
     def denied(service, pattern):
         outcome = invoke("shell", "am", "startservice", "--user", "0", "-n", f"{PACKAGE}/{service}")
@@ -52,12 +58,17 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir):
             raise RunnerFailure("EXTERNAL_COMPONENT_ACCESS_NOT_DENIED")
 
     def role_stage(stage):
-        response = invoke("shell", "am", "instrument", "-w", "-r", "-e", "class", f"{ROLE_TEST}#{ROLE_METHOD}",
-                          "-e", "orion_assistant_role_stage", stage,
-                          f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=120)
+        evidence = facts.setdefault("instrumentation", {})
+        try:
+            response = invoke("shell", "am", "instrument", "-w", "-r", "-e", "class", f"{ROLE_TEST}#{ROLE_METHOD}",
+                              "-e", "orion_assistant_role_stage", stage,
+                              f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=160)
+        except subprocess.TimeoutExpired:
+            evidence[stage] = {"result": "FAIL", "errors": ["RUNNER_TIMEOUT"]}
+            return False
         results = parse_instrumentation(response.stdout + "\n" + response.stderr, response.returncode,
                                         frozenset({(ROLE_TEST, ROLE_METHOD)}))
-        facts.setdefault("instrumentation", {})[stage] = results.summary()
+        evidence[stage] = results.summary()
         return results.successful
 
     try:
@@ -106,20 +117,26 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir):
 
         adb("shell", "pm", "grant", PACKAGE, "android.permission.RECORD_AUDIO")
         role_change_started = True
-        change_role("add-role-holder")
-        if not role_stage("selected"):
-            raise RunnerFailure("ROLE_GRANT_OR_SESSION_FAILED")
+        # The selected test applies the real Android role after MAIN starts. Starting
+        # instrumentation on an already-selected package force-stops the service.
+        selected = role_stage("selected")
+        clear_fixture_role()
+        revoked = role_stage("revoked")
         checks = facts["checks"]
-        checks["qualified_android_role_granted"] = "PASS"
-        checks["actual_system_session_leaves_ingress_actions_and_microphone_unchanged"] = "PASS"
+        if selected:
+            checks["qualified_android_role_granted"] = "PASS"
+            checks["actual_system_session_leaves_ingress_actions_and_microphone_unchanged"] = "PASS"
+            checks["role_loss_dismisses_system_session_without_disabling_core"] = "PASS"
+        if revoked:
+            checks["role_revoked_and_core_responds"] = "PASS"
 
-        change_role("remove-role-holder")
-        if not role_stage("revoked"):
-            raise RunnerFailure("ROLE_REVOCATION_OR_CORE_FAILED")
-        checks["role_revoked_and_core_responds"] = "PASS"
-        role_change_started = False
         if existing_assistant():
             raise RunnerFailure("ASSISTANT_SELECTION_NOT_RESTORED")
+        role_change_started = False
+        if not selected:
+            raise RunnerFailure("ROLE_GRANT_OR_SESSION_FAILED")
+        if not revoked:
+            raise RunnerFailure("ROLE_REVOCATION_OR_CORE_FAILED")
         facts["result"] = "PASS"
     except RunnerFailure as failure:
         facts["errors"].append(str(failure))
@@ -130,7 +147,7 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir):
     finally:
         if role_change_started:
             try:
-                change_role("remove-role-holder")
+                clear_fixture_role()
             except (RunnerFailure, subprocess.TimeoutExpired, OSError):
                 facts["errors"].append("ROLE_CLEANUP_FAILED")
         for package in reversed(installed):

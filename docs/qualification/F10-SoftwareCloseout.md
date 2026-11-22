@@ -20,8 +20,9 @@ gateway do Core permanece privado. Consultas de voz usam o ingresso da F9.
 Preparar uma tarefa continua dependendo do canal do app com presença em MAIN.
 
 O teste da seleção em emulador usa um papel real do Android dentro de um AVD
-descartável. O controle de fixture é restrito ao emulador. A aquisição em
-produção segue o fluxo de consentimento de apps padrão fornecido pelo Android.
+descartável. O controle de fixture é restrito ao emulador. A sessão é acionada
+pelo atalho normal do sistema, com o processo MAIN em execução. A aquisição
+em produção segue o fluxo de consentimento de apps padrão do Android.
 
 ## Verificação
 
@@ -31,6 +32,11 @@ produção segue o fluxo de consentimento de apps padrão fornecido pelo Android
 | Seleção, abertura da sessão e revogação no framework | `verify-system-assistant.py` |
 | Core independente e retomada após morte de processo | Suíte de chat sem modelo, suíte F9 e `verify-voice-process-recovery.py` |
 | Segurança da admissão de voz | Testes F9 de transcrição parcial, Startup Barrier, criptografia e confirmação exata para preparar uma tarefa |
+
+O teste manual no emulador API 35 verificou a escolha de O.R.I.O.N. na tela
+de apps padrão, o diálogo de consentimento, a abertura da janela e seu
+fechamento quando o papel foi revogado. MAIN manteve o mesmo PID. O emulador
+API 37 também apresentou a janela de voz pelo atalho nativo de energia.
 
 A qualificação de áudio, tempos, estabilidade e comportamento Samsung/One UI
 segue adiada conforme o ADR-0008.

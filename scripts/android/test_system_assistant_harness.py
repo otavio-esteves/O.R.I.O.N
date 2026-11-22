@@ -67,6 +67,8 @@ class AssistantFixture:
             return self.completed(command)
         if args[:3] == ("shell", "am", "instrument"):
             stage = args[args.index("orion_assistant_role_stage") + 1]
+            if stage == "selected" and not self.selected_passes:
+                self.current_role = "network.orion/.voice.service.OrionVoiceInteractionService"
             frame = ("INSTRUMENTATION_STATUS: class=" + runner.ROLE_TEST + "\n" +
                      "INSTRUMENTATION_STATUS: test=" + runner.ROLE_METHOD + "\n" +
                      "INSTRUMENTATION_STATUS: numtests=1\nINSTRUMENTATION_STATUS: current=1\n")
@@ -133,5 +135,6 @@ class SystemAssistantHarnessTest(unittest.TestCase):
         self.fixture.selected_passes = False
         result, report = self.verify()
         self.assertEqual((1, "ROLE_GRANT_OR_SESSION_FAILED"), (result, report["errors"][0]))
+        self.assertEqual("PASS", report["instrumentation"]["revoked"]["result"])
         self.assertEqual(self.fixture.current_role, "")
         self.assertFalse(self.fixture.installed)
