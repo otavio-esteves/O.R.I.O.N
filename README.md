@@ -90,6 +90,12 @@ and press **Falar** to start capture. The session uses the local F9 voice model.
 Text and **Ajustes → Voz** remain available when the Android role changes.
 [F10 validation record](docs/qualification/F10-SoftwareCloseout.md)
 
+## F11 wake-word qualification
+
+Diagnostics reports wake word as `DISABLED` while physical qualification is
+deferred. The offline KWS experiment classifies presegmented PCM outside the
+application. [F11 qualification record](docs/qualification/F11-SoftwareCloseout.md)
+
 ## Development environments
 
 Docker is the canonical, reproducible environment for build and automation: Gradle,

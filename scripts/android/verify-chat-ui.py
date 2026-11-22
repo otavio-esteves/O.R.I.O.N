@@ -9,10 +9,10 @@ import sys
 
 from android_apk_pair import APK_NAMES, RunnerFailure, verify_artifacts
 from chat_ui_protocol import (
-    F8_SELECTED, F9_SELECTED, F10_SELECTED, Result, SELECTED, junit_report, parse_instrumentation, test_identities,
+    F8_SELECTED, F9_SELECTED, F10_SELECTED, F11_SELECTED, Result, SELECTED, junit_report, parse_instrumentation, test_identities,
 )
 
-SUITES = {'chat': SELECTED, 'f8': F8_SELECTED, 'f9': F9_SELECTED, 'f10': F10_SELECTED}
+SUITES = {'chat': SELECTED, 'f8': F8_SELECTED, 'f9': F9_SELECTED, 'f10': F10_SELECTED, 'f11': F11_SELECTED}
 
 
 def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat"):

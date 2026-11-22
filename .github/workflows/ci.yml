@@ -23,7 +23,14 @@ jobs:
       - name: Build canonical Android environment
         run: env UID="$(id -u)" GID="$(id -g)" docker compose build android-build
       - name: Check and assemble application
-        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest :ai:llama:assembleDebugAndroidTest :ai:service:assembleDebugAndroidTest :voice:service:assembleDebugAndroidTest --max-workers=2
+        run: env UID="$(id -u)" GID="$(id -g)" docker compose run --rm android-build check assembleDebug assembleRelease :app:assembleDebugAndroidTest :core:security:assembleDebugAndroidTest :ai:llama:assembleDebugAndroidTest :ai:service:assembleDebugAndroidTest :voice:service:assembleDebugAndroidTest :voice:wakeword:testDebugUnitTest --max-workers=2
+      - name: Retain the offline wake-word software benchmark
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: orion-f11-wake-word-software
+          path: voice/wakeword/build/test-results/testDebugUnitTest/TEST-network.orion.voice.wakeword.OrionWakeWordSoftwareBenchmarkTest.xml
+          if-no-files-found: error
+          retention-days: 7
       - name: Stage the canonical no-model chat APK pair
         run: |
           mkdir -p "$RUNNER_TEMP/orion-chat-apks"
@@ -129,6 +136,7 @@ jobs:
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f8" --suite f8
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f9" --suite f9
             python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f10" --suite f10
+            python3 scripts/android/verify-chat-ui.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f11" --suite f11
             python3 scripts/android/verify-system-assistant.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --avd-name "$ORION_CHAT_AVD" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --report-dir "$RUNNER_TEMP/orion-f10-role"
             python3 scripts/android/verify-installed-upgrade.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --previous-apk "$RUNNER_TEMP/orion-upgrade-apks/app-debug.apk" --previous-test-apk "$RUNNER_TEMP/orion-upgrade-apks/app-debug-androidTest.apk" --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-upgrade"
             python3 scripts/android/verify-transaction-process-death.py --adb "$ANDROID_HOME/platform-tools/adb" --serial emulator-5554 --environment ANDROID_EMULATOR --scenario sentinel_delivery --apk-dir "$RUNNER_TEMP/orion-chat-apks" --evidence-dir "$RUNNER_TEMP/orion-f8-death"
@@ -157,6 +165,8 @@ jobs:
             ${{ runner.temp }}/orion-f10/summary.json
             ${{ runner.temp }}/orion-f10/junit.xml
             ${{ runner.temp }}/orion-f10-role/*.json
+            ${{ runner.temp }}/orion-f11/summary.json
+            ${{ runner.temp }}/orion-f11/junit.xml
           if-no-files-found: error
           retention-days: 7
 
