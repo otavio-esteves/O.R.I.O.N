@@ -8,7 +8,7 @@ import re
 import subprocess
 import sys
 
-from chat_ui_protocol import F8_SELECTED, Result, SELECTED, junit_report, parse_instrumentation, test_identities
+from chat_ui_protocol import F8_SELECTED, F9_SELECTED, Result, SELECTED, junit_report, parse_instrumentation, test_identities
 
 APK_NAMES = {'network.orion': 'app-debug.apk', 'network.orion.test': 'app-debug-androidTest.apk'}
 
@@ -42,7 +42,7 @@ def verify_artifacts(directory):
 
 def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat"):
     report_dir.mkdir(parents=True, exist_ok=True)
-    selected = F8_SELECTED if suite == "f8" else SELECTED
+    selected = {"chat": SELECTED, "f8": F8_SELECTED, "f9": F9_SELECTED}[suite]
     expected = test_identities(selected)
     result = Result(expected=expected)
     metadata = {'environment': 'ANDROID_EMULATOR', 'definitiveHardwareEvidence': False}
@@ -125,7 +125,7 @@ def main():
     parser.add_argument('--avd-name', required=True, help='Explicit task-owned AVD, never an arbitrary connected device')
     parser.add_argument('--apk-dir', required=True, type=Path)
     parser.add_argument('--report-dir', required=True, type=Path)
-    parser.add_argument('--suite', choices=('chat', 'f8'), default='chat')
+    parser.add_argument('--suite', choices=('chat', 'f8', 'f9'), default='chat')
     args = parser.parse_args()
     return run(args.adb, args.serial, args.avd_name, args.apk_dir, args.report_dir, args.suite)
 

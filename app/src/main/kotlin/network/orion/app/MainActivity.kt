@@ -159,12 +159,13 @@ class MainActivity : ComponentActivity() {
                                 })
                             "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
                             "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
+                            "Voz" -> network.orion.app.voice.OrionPushToTalkScreen(lifecycle, runtime::refreshVoiceHealth) { destination = "Tarefas" }
                             "Chat" -> network.orion.feature.chat.ChatScreen(chatController, report.lastRecovery, memories)
                             "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                             "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
                                 platform = runtime.platformDiagnostics(), resourceProfile = resourceProfile?.name,
                                 onRetry = { runtime.start() })
-                            "Ajustes" -> SettingsScreen(report, sentinelEnabled, onSetSentinelEnabled = { enabled ->
+                            "Ajustes" -> SettingsScreen(report, sentinelEnabled, onOpenVoice = { destination = "Voz" }, onSetSentinelEnabled = { enabled ->
                                 val applied = runtime.setSentinelEnabled(enabled)
                                 if (applied && enabled && Build.VERSION.SDK_INT >= 33 &&
                                     checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
@@ -186,6 +187,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         (application as OrionApplication).mainRuntime?.noteForegroundInteraction()
+        (application as OrionApplication).mainRuntime?.refreshVoiceHealth()
         deliveryAlerts.onResumed(true)
         deliveryAlerts.onWindowFocus(hasWindowFocus())
         taskChannel.onResumed(true)

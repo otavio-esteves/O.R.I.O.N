@@ -95,6 +95,12 @@ internal class OrionTaskKernel(private val db: OrionDatabase, encryption: OrionF
         }
     }
 
+    internal fun prepareVoiceTask(task: ValidatedCreateTask): Boolean {
+        check(db.inTransaction() && Thread.holdsLock(barrier))
+        val admission = owner.prepareVoiceTask(task) ?: return false
+        return create.prepare(admission) is OrionTaskActionResult.Ready
+    }
+
     private fun consume(origin: OrionVerifiedTaskIngress) {
         val wire = origin.wire
         if (wire.operation == "DISMISS") {

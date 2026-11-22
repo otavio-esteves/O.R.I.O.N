@@ -16,7 +16,7 @@ import network.orion.core.skills.metadata.device.OrionDeviceDescriptors
 import network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor
 
 /** Producer metadata only. A source label is never user presence, policy or execution authority. */
-enum class OrionRoutingSource { UI_TEXT, EXTERNAL_CONTENT }
+enum class OrionRoutingSource { UI_TEXT, EXTERNAL_CONTENT, VOICE_FINAL }
 
 /** Retain inputId across replay; a new explicit request gets a new inputId. Never persist raw text here. */
 class OrionRoutingInput(
@@ -74,7 +74,7 @@ sealed interface OrionIntentRoute {
 class OrionIntentRouter {
     fun route(input: OrionRoutingInput): OrionIntentRoute {
         fun rejected(reason: OrionRoutingRejection) = OrionIntentRoute.Rejected(reason, input.correlationId)
-        if (input.source != OrionRoutingSource.UI_TEXT) return rejected(OrionRoutingRejection.UNTRUSTED_SOURCE)
+        if (input.source == OrionRoutingSource.EXTERNAL_CONTENT) return rejected(OrionRoutingRejection.UNTRUSTED_SOURCE)
         if (!input.isFinal) return OrionIntentRoute.AwaitingFinalInput(input.correlationId)
         OrionChatInputPolicy.validate(input.text)?.let { failure ->
             return when (failure) {
@@ -100,12 +100,19 @@ class OrionIntentRouter {
         if (command == "criar tarefa") {
             return OrionIntentRoute.Clarification(OrionRoutingClarification.MISSING_TASK_TITLE, input.correlationId)
         }
-        val colon = input.text.indexOf(':')
-        if (colon >= 0 && input.text.substring(0, colon).trim().lowercase(Locale.ROOT) == "criar tarefa") {
+        val colon = text.indexOf(':')
+        val title = when {
+            colon >= 0 && text.substring(0, colon).trim().lowercase(Locale.ROOT) == "criar tarefa" ->
+                text.substring(colon + 1)
+            input.source == OrionRoutingSource.VOICE_FINAL && command.startsWith("criar tarefa ") ->
+                text.substring("criar tarefa ".length)
+            else -> null
+        }
+        if (title != null) {
             // Domain identity and idempotency key come from this same retained producer request.
             // This is not an ActionRequest identity, an inference ID or an authorization token.
             val prepared = OrionCreateTaskPreparer.prepare(CreateTask(input.inputId,
-                input.text.substring(colon + 1), input.inputId, input.correlationId))
+                title, input.inputId, input.correlationId))
             return when (prepared) {
                 is CreateTaskPreparation.Ready -> OrionIntentRoute.TaskCreation(OrionIntent(
                     OrionCreateTaskDescriptor.value.name, 1.0, prepared.task, input.source.name, false, input.correlationId))

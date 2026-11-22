@@ -1,20 +1,24 @@
 package network.orion.voice.ipc
 
+import java.util.UUID
+import network.orion.core.ipc.VoiceCoreResponse
+import network.orion.core.ipc.VoiceUtteranceRequest
 import network.orion.core.ipc.OrionIpcProtocol
 import network.orion.core.ipc.ProtocolInfo
 
 enum class VoiceCoreConnectionState { UNAVAILABLE, CONNECTED }
 
 /**
- * Lightweight connection and readiness port.
- * Future transports must negotiate the existing protocol and enforce payload guards;
- * every mutable voice request still enters the Core's gated versioned ingress.
+ * Private voice transport. The Core owns request admission and all business authority.
  */
 interface VoiceCoreClient {
     val protocolInfo: ProtocolInfo
     val state: VoiceCoreConnectionState
     suspend fun connect(): VoiceCoreConnectionState
     suspend fun getCoreReadiness(): String?
+    suspend fun submitUtterance(request: VoiceUtteranceRequest): OrionVoiceAdmission = OrionVoiceAdmission.CORE_UNAVAILABLE
+    suspend fun status(requestId: UUID, afterSequence: Long = -1): VoiceCoreResponse? = null
+    suspend fun cancel(requestId: UUID): Boolean = false
     suspend fun disconnect()
 }
 

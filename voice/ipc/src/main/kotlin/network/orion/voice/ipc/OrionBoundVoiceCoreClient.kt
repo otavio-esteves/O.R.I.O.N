@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import java.util.UUID
 import android.os.IBinder
 import android.os.RemoteException
 import kotlinx.coroutines.CompletableDeferred
@@ -15,6 +16,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import network.orion.core.ipc.IpcProtocolNegotiation
 import network.orion.core.ipc.OrionIpcProtocol
 import network.orion.core.ipc.ProtocolInfo
+import network.orion.core.ipc.VoiceUtteranceRequest
 
 class OrionBoundVoiceCoreClient(context: Context) : VoiceCoreClient {
     private val app = context.applicationContext
@@ -75,6 +77,26 @@ class OrionBoundVoiceCoreClient(context: Context) : VoiceCoreClient {
                 releaseBinding()
                 null
             }
+        }
+    }
+
+    override suspend fun submitUtterance(request: VoiceUtteranceRequest): OrionVoiceAdmission =
+        invoke { OrionVoiceAdmission.valueOf(it.submitUtterance(protocolInfo.protocolMajor, OrionVoiceWire.request(request))) }
+            ?: OrionVoiceAdmission.CORE_UNAVAILABLE
+
+    override suspend fun status(requestId: UUID, afterSequence: Long) = invoke {
+        it.getVoiceRequestStatus(protocolInfo.protocolMajor, requestId.toString(), afterSequence)?.let(OrionVoiceWire::readResponse)
+            ?.takeIf { response -> response.requestId == requestId }
+    }
+
+    override suspend fun cancel(requestId: UUID): Boolean =
+        invoke { it.cancelVoiceRequest(protocolInfo.protocolMajor, requestId.toString()) } == true
+
+    private suspend fun <T> invoke(call: (IOrionVoiceCoreGateway) -> T): T? = withContext(Dispatchers.IO) {
+        operations.withLock {
+            try { remote?.let(call) }
+            catch (_: RemoteException) { releaseBinding(); null }
+            catch (_: SecurityException) { releaseBinding(); null }
         }
     }
 

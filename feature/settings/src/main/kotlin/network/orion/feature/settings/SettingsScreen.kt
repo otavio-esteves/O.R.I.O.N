@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(report: OrionHealthReport, sentinelEnabled: Boolean? = null,
+    onOpenVoice: () -> Unit = {},
     onSetSentinelEnabled: suspend (Boolean) -> Boolean = { false }) {
     val scope = rememberCoroutineScope()
     var updating by remember { mutableStateOf(false) }
@@ -35,5 +36,7 @@ fun SettingsScreen(report: OrionHealthReport, sentinelEnabled: Boolean? = null,
         }
         Text("Usa a permissão de notificações do app. Horário silencioso das 22h às 8h.")
         if (updateFailed) Text("Não foi possível atualizar as sugestões.")
+        HorizontalDivider()
+        OutlinedButton(onClick = onOpenVoice) { Text("Voz") }
     }
 }

@@ -4,5 +4,9 @@
         <service android:name=".testing.OrionAiBootstrapProbeService" android:process=":ai" android:exported="false" />
         <service android:name=".testing.OrionVoiceBootstrapProbeService" android:process=":voice" android:exported="false" />
         <service android:name=".testing.OrionVoiceSessionBootstrapProbeService" android:process=":voice_session" android:exported="false" />
+        <activity android:name=".testing.OrionVoiceSessionProbeActivity" android:process=":voice_session"
+            android:exported="true" android:permission="android.permission.DUMP" />
+        <activity android:name=".testing.OrionVoiceControlProbeActivity" android:process=":voice"
+            android:exported="true" android:permission="android.permission.DUMP" />
     </application>
 </manifest>
