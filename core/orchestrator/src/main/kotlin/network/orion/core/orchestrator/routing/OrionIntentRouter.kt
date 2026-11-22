@@ -100,12 +100,12 @@ class OrionIntentRouter {
         if (command == "criar tarefa") {
             return OrionIntentRoute.Clarification(OrionRoutingClarification.MISSING_TASK_TITLE, input.correlationId)
         }
-        val colon = text.indexOf(':')
+        val colon = input.text.indexOf(':')
         val title = when {
-            colon >= 0 && text.substring(0, colon).trim().lowercase(Locale.ROOT) == "criar tarefa" ->
-                text.substring(colon + 1)
+            colon >= 0 && input.text.substring(0, colon).trim().lowercase(Locale.ROOT) == "criar tarefa" ->
+                input.text.substring(colon + 1)
             input.source == OrionRoutingSource.VOICE_FINAL && command.startsWith("criar tarefa ") ->
-                text.substring("criar tarefa ".length)
+                input.text.trimStart().substring("criar tarefa ".length)
             else -> null
         }
         if (title != null) {

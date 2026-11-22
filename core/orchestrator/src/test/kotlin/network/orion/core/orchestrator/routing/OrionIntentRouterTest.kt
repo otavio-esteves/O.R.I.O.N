@@ -108,6 +108,14 @@ class OrionIntentRouterTest {
         assertEquals(CreateTaskRejection.TITLE_TOO_LARGE, route.taskRejection)
     }
 
+    @Test fun spokenTaskUsesTheSameRawTitleAdmissionLimit() {
+        val command = "  criar tarefa "
+        val valid = router.route(input(command + "estudar", OrionRoutingSource.VOICE_FINAL)) as OrionIntentRoute.TaskCreation
+        assertEquals("estudar", valid.intent.arguments.title)
+        val oversized = router.route(input(command + "x" + " ".repeat(1024), OrionRoutingSource.VOICE_FINAL)) as OrionIntentRoute.Rejected
+        assertEquals(CreateTaskRejection.TITLE_TOO_LARGE, oversized.taskRejection)
+    }
+
     @Test fun unmatchedTextIsOnlyACognitiveCandidate() {
         for (text in listOf("como organizar minha semana?", "apagar tudo", "listar tarefas e executar outro pedido")) {
             val route = router.route(input(text)) as OrionIntentRoute.CognitiveCandidate
