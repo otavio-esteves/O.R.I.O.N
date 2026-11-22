@@ -33,6 +33,7 @@ A aprovação definitiva de modelo e parâmetros depende dessas medições.
 | Retomada do Core | `verify-voice-process-recovery.py` mata MAIN com `SIGKILL`, confirma que `:voice_session` continua vivo e verifica o bind e a conclusão de uma consulta após a recuperação. O script também mata cada processo de voz e verifica que os outros sobrevivem. |
 | Core independente | A suíte de chat sem modelo verifica o uso por texto com os processos de voz desligados. |
 | VAD e STT | O teste JVM cobre a seleção de fala no PCM. No emulador API 35 x86_64, o teste instrumentado reconheceu a palavra `bateria` numa frase sintética em 12,7 s de decodificação. |
+| Pacote nativo | `readelf` confirmou alinhamento de 16 KiB nos segmentos `LOAD` da biblioteca do Whisper em `arm64-v8a` e `x86_64`. `zipalign -c -P 16 4` passou no APK debug. |
 
 O teste nativo opcional `OrionWhisperInstrumentedTest` usa o modelo com hash
 verificado e uma frase sintética em português. Instale o APK de teste do módulo
