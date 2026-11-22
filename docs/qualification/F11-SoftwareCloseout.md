@@ -31,6 +31,19 @@ o corpus. `ORION_WAKE_WORD_BENCHMARK_REPORT` permite gravar o JSON agregado
 em um arquivo novo. Use áudio sintético ou material com consentimento e mantenha
 o corpus fora dos artefatos compartilhados.
 
+## Resultado do ensaio de software
+
+No Docker, com limiar `0,24`, a amostra de PCM paramétrico teve 12 acertos
+em 12 positivos e nenhuma falsa aceitação em 23 negativos. Na fala sintética
+em português brasileiro gerada pelo eSpeak NG, o detector aceitou 2 de 8 clipes
+com “Orion” e rejeitou os 12 clipes de outras palavras. As três referências de
+fala foram geradas separadamente dos clipes de avaliação. A mediana da
+classificação dos 20 clipes de fala no JVM foi 3,2 ms.
+
+As seis recusas da palavra-alvo indicam sensibilidade às variantes de fala no
+candidato atual. As contagens por clipe e a latência em Docker deixam em aberto
+o comportamento de uma sessão contínua e a precisão com fala humana.
+
 ## Gate físico adiado
 
 O ensaio no Galaxy S21 deve registrar a versão do Android e da One UI, o
