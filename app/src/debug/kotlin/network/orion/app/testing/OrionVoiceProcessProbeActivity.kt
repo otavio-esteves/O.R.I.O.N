@@ -43,8 +43,9 @@ abstract class OrionVoiceProcessProbeActivity : Activity() {
                 val client = OrionBoundVoiceCoreClient(this@OrionVoiceProcessProbeActivity)
                 try {
                     val completed = withTimeoutOrNull(24_000) {
-                        check(client.connect() == VoiceCoreConnectionState.CONNECTED)
-                        while (client.getCoreReadiness()?.let(CoreReadiness::valueOf)?.isStartupBarrierOpen != true) delay(100)
+                        while (client.connect() != VoiceCoreConnectionState.CONNECTED ||
+                            client.getCoreReadiness()?.let(CoreReadiness::valueOf)?.isStartupBarrierOpen != true
+                        ) delay(150)
                         val request = VoiceUtteranceRequest(IpcSchemaVersion(1), UUID.randomUUID(), fixture, "bateria", true,
                             "pt-BR", AndroidOrionClock(contentResolver).wallNow(), OrionVoiceSource.PUSH_TO_TALK, 0, UUID.randomUUID())
                         check(client.submitUtterance(request) == OrionVoiceAdmission.ACCEPTED)
