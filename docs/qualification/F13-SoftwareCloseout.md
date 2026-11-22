@@ -29,6 +29,19 @@ instalados e exige todos os resultados esperados antes de aprovar o check.
 O mesmo check executa a suíte de Android Keystore, incluindo rotação,
 indisponibilidade da chave, autenticação e escrita interrompida.
 
+## Validação local
+
+A árvore de software de `75cec03` gerou os artefatos Release e de
+qualificação no Docker. As verificações de empacotamento e de 16 KiB
+passaram. O pacote de evidências contém 127 módulos Maven. O POM direto
+de `com.google.guava:listenablefuture:1.0` deixa a licença em branco.
+O POM pai `com.google.guava:guava-parent:26.0-android` declara Apache 2.0.
+O Retrace também recuperou classe, método e linha de um stack trace sintético.
+
+No emulador API 35/x86_64, com páginas de 4 KiB, o chat minificado passou
+9 de 9 casos e o Keystore passou 4 de 4. Os runners sem dispositivo
+passaram 662 testes em Docker.
+
 ## Estado do Gate I
 
 | Obrigação | Evidência ou condição pendente |
