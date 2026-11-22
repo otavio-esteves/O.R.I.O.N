@@ -117,6 +117,16 @@ F11_SELECTED = {
     },
 }
 
+F12_SELECTED = {
+    'network.orion.app.adaptive.OrionAdaptiveIntelligenceTest': {
+        'roomTwelveRetainsProactivityConsentAndDefaultsPersonalizationOff',
+        'consentIsGatedAndResetsItsFeedbackWindowAcrossClockRollback',
+        'learnedDeferralDoesNotReserveTaskAndRevocationRestoresBaseline',
+        'rankingPreferenceReordersEligibleMemoriesAndInvalidatesOldCursor',
+        'settingsExposeAnIndependentReversibleOptIn',
+    },
+}
+
 def test_identities(selection):
     return frozenset((cls, method) for cls, methods in selection.items() for method in methods)
 

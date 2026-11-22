@@ -9,10 +9,12 @@ import sys
 
 from android_apk_pair import APK_NAMES, RunnerFailure, verify_artifacts
 from chat_ui_protocol import (
-    F8_SELECTED, F9_SELECTED, F10_SELECTED, F11_SELECTED, Result, SELECTED, junit_report, parse_instrumentation, test_identities,
+    F8_SELECTED, F9_SELECTED, F10_SELECTED, F11_SELECTED, F12_SELECTED, Result, SELECTED,
+    junit_report, parse_instrumentation, test_identities,
 )
 
-SUITES = {'chat': SELECTED, 'f8': F8_SELECTED, 'f9': F9_SELECTED, 'f10': F10_SELECTED, 'f11': F11_SELECTED}
+SUITES = {'chat': SELECTED, 'f8': F8_SELECTED, 'f9': F9_SELECTED,
+          'f10': F10_SELECTED, 'f11': F11_SELECTED, 'f12': F12_SELECTED}
 
 
 def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat"):
@@ -65,7 +67,7 @@ def run(adb_path, serial, avd_name, apk_dir, report_dir, suite="chat"):
             proof = adb('shell', 'sha256sum', location.removeprefix('package:')).split()
             if len(proof) != 2 or proof[0] != hashes[filename]:
                 raise RunnerFailure('INSTALLED_HASH_MISMATCH')
-        if suite == "f8":
+        if suite in {"f8", "f12"}:
             adb('shell', 'pm', 'grant', 'network.orion', 'android.permission.POST_NOTIFICATIONS')
         response = subprocess.run([str(adb_path), '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
             '-e', 'class', ','.join(selected), 'network.orion.test/androidx.test.runner.AndroidJUnitRunner'],

@@ -71,7 +71,7 @@ class OrionMemorySearchIndexTest {
                 arrayOf(id.toString(), FieldEnvelopeCodec.encode(encrypted.envelope)))
             db.execSQL("INSERT INTO orion_memory_fts (memoryId, body) VALUES (?, 'marcadorlegado')", arrayOf(id.toString()))
         }
-        migrations.runMigrationsAndValidate(name, 12, true, *OrionDatabaseMigrations.ALL).close()
+        migrations.runMigrationsAndValidate(name, 13, true, *OrionDatabaseMigrations.ALL).close()
         withRoom { db ->
             assertTrue(bodies(db).isEmpty())
             assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
@@ -116,7 +116,7 @@ class OrionMemorySearchIndexTest {
             db.execSQL("INSERT INTO orion_memory_fts (memoryId, body) VALUES (?, 'memória autorizada')", arrayOf(retained.toString()))
             db.execSQL("DELETE FROM orion_memory_fts WHERE memoryId = 'old'")
         }
-        migrations.runMigrationsAndValidate(name, 12, true, *OrionDatabaseMigrations.ALL).close()
+        migrations.runMigrationsAndValidate(name, 13, true, *OrionDatabaseMigrations.ALL).close()
         withRoom { db ->
             assertTrue(bodies(db).isEmpty())
             assertEquals(OrionMemoryIndexProgress.READY, OrionMemorySearchIndex(db, crypto, clock).backfillBatch())
@@ -127,7 +127,7 @@ class OrionMemorySearchIndexTest {
 
     @Test fun backfillResumesAfterKeyFailureAndReclassificationRemovesPosting() {
         migrations.createDatabase(name, 10).close()
-        migrations.runMigrationsAndValidate(name, 12, true, *OrionDatabaseMigrations.ALL).close()
+        migrations.runMigrationsAndValidate(name, 13, true, *OrionDatabaseMigrations.ALL).close()
         val ids = List(2) { UUID.randomUUID() }.sortedBy(UUID::toString)
         withRoom { db ->
             ids.forEachIndexed { number, id ->

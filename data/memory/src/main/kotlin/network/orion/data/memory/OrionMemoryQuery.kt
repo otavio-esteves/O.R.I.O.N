@@ -31,8 +31,12 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
     fun search(request: SearchMemories): MemorySearchPage = database.runInTransaction(Callable {
         val index = database.memoryIndex()
         if (index.state()?.ready != true) return@Callable MemorySearchPage(MemorySearchState.BUILDING)
+        val personalized = database.sentinel().consent()?.personalizationSince != null
+        val after = request.after
+        if (after != null && after.personalized != personalized)
+            return@Callable MemorySearchPage(MemorySearchState.PREFERENCES_CHANGED)
         val now = clock.wallNow()
-        val rankedAt = request.after?.rankedAt ?: now
+        val rankedAt = after?.rankedAt ?: now
         val candidates = index.candidates(request.ftsExpression, now.toEpochMilli(), MAX_CANDIDATES + 1)
         val hits = ArrayList<MemorySearchHit>()
         for (row in candidates.take(MAX_CANDIDATES)) {
@@ -41,8 +45,7 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
                 return@Callable MemorySearchPage(MemorySearchState.KEY_UNAVAILABLE)
             val content = memory.content ?: continue
             val score = OrionMemoryRanking.score(request, content, Instant.ofEpochMilli(row.updatedAt), rankedAt,
-                memory.lifecycle.importance, memory.provenance.confidence)
-            val after = request.after
+                memory.lifecycle.importance, memory.provenance.confidence, personalized)
             if (after == null || score < after.score ||
                 score == after.score && row.memoryId > after.memoryId.toString()) {
                 hits += MemorySearchHit(memory, score)
@@ -51,7 +54,7 @@ class OrionMemoryQuery(private val database: OrionDatabase, private val encrypti
         val ordered = hits.sortedWith(compareByDescending<MemorySearchHit> { it.score }.thenBy { it.memory.memoryId.toString() })
         val page = ordered.take(request.limit)
         val next = if (ordered.size > request.limit) page.last().let {
-            MemorySearchCursor(request.ftsExpression, rankedAt, it.score, it.memory.memoryId)
+            MemorySearchCursor(request.ftsExpression, rankedAt, it.score, it.memory.memoryId, personalized)
         } else null
         MemorySearchPage(MemorySearchState.READY, page, next, candidates.size > MAX_CANDIDATES)
     })

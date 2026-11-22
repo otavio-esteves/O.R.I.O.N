@@ -17,6 +17,7 @@ data class OrionSentinelConsent(
     val enabled: Boolean,
     val version: Long,
     @ColumnInfo(defaultValue = "0") val evaluationFloor: Long = 0,
+    val personalizationSince: Long? = null,
 )
 
 /** Only a reference to a task, with no user content or device observations. */
@@ -45,6 +46,8 @@ data class OrionSentinelFeedback(
 )
 
 data class OrionSentinelTask(val taskId: String, val createdAt: Long)
+
+data class OrionSentinelFeedbackSample(val shownAt: Long, val outcome: String)
 
 @Dao
 interface OrionSentinelDao {
@@ -83,6 +86,24 @@ interface OrionSentinelDao {
 
     @Query("SELECT * FROM orion_sentinel_suggestions WHERE reservedAt >= :since ORDER BY reservedAt DESC LIMIT 10")
     fun recent(since: Long): List<OrionSentinelSuggestion>
+
+    @Query("SELECT MAX(reservedAt) FROM orion_sentinel_suggestions")
+    fun latestReservationAt(): Long?
+
+    @Query("""SELECT shown.occurredAt AS shownAt, CASE
+        WHEN MAX(f.kind = 'COMPLETED') THEN 'COMPLETED'
+        WHEN MAX(f.kind = 'DISMISSED') THEN 'DISMISSED'
+        WHEN MAX(f.kind = 'SNOOZED') THEN 'SNOOZED'
+        WHEN MAX(f.kind = 'OPENED') THEN 'OPENED'
+        ELSE 'IGNORED' END AS outcome
+        FROM orion_sentinel_suggestions s
+        JOIN orion_sentinel_feedback shown ON shown.suggestionId = s.suggestionId AND shown.kind = 'SHOWN'
+        JOIN orion_sentinel_feedback f ON f.suggestionId = s.suggestionId
+            AND f.kind IN ('COMPLETED', 'DISMISSED', 'SNOOZED', 'OPENED', 'IGNORED')
+            AND f.occurredAt BETWEEN shown.occurredAt AND :now
+        WHERE s.reservedAt > :consentFloor AND shown.occurredAt BETWEEN :since AND :now
+        GROUP BY s.suggestionId, shown.occurredAt ORDER BY shown.occurredAt DESC, s.suggestionId LIMIT 64""")
+    fun feedbackSamples(consentFloor: Long, since: Long, now: Long): List<OrionSentinelFeedbackSample>
 
     @Query("SELECT * FROM orion_sentinel_feedback WHERE suggestionId = :id")
     fun feedback(id: String): List<OrionSentinelFeedback>

@@ -42,11 +42,12 @@ class SearchMemories(text: String, val limit: Int = 20, val after: MemorySearchC
     }
 }
 
-class MemorySearchCursor(val expression: String, val rankedAt: Instant, val score: Int, val memoryId: UUID) {
+class MemorySearchCursor(val expression: String, val rankedAt: Instant, val score: Int, val memoryId: UUID,
+    val personalized: Boolean = false) {
     override fun toString() = "MemorySearchCursor(<redacted>)"
 }
 
-enum class MemorySearchState { READY, BUILDING, KEY_UNAVAILABLE }
+enum class MemorySearchState { READY, BUILDING, KEY_UNAVAILABLE, PREFERENCES_CHANGED }
 
 class MemorySearchHit(val memory: MemorySummary, val score: Int) {
     override fun toString() = "MemorySearchHit(<redacted>)"
@@ -75,13 +76,17 @@ private fun memorySearchTokens(text: String): List<String> {
 /** Text match dominates the metadata adjustments. Ranking time stays fixed across pages. */
 object OrionMemoryRanking {
     fun score(query: SearchMemories, content: String, updatedAt: Instant, at: Instant,
-        importance: Double?, confidence: Double): Int {
+        importance: Double?, confidence: Double, personalized: Boolean = false): Int {
         val words = memorySearchTokens(content)
         val matches = words.groupingBy { it }.eachCount()
         val frequency = query.tokens.sumOf { (matches[it] ?: 0).coerceAtMost(4) }
         val consecutive = words.windowed(query.tokens.size).any { it == query.tokens }
         val age = Duration.between(updatedAt, at).toDays().coerceIn(0, 30)
-        return frequency * 250 + (if (consecutive) 200 else 0) + (30 - age).toInt() +
-            ((importance ?: 0.0) * 100).toInt() + (confidence * 100).toInt()
+        val textScore = frequency * 250 + if (consecutive) 200 else 0
+        val recency = (30 - age).toInt()
+        val importanceScore = ((importance ?: 0.0) * 100).toInt()
+        val confidenceScore = (confidence * 100).toInt()
+        return if (personalized) textScore * 2 + recency * 3 + importanceScore * 2 + confidenceScore
+        else textScore + recency + importanceScore + confidenceScore
     }
 }

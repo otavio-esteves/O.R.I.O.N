@@ -11,7 +11,10 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
-from chat_ui_protocol import EXPECTED, F8_SELECTED, F10_SELECTED, F11_SELECTED, SELECTED, junit_report, parse_instrumentation, test_identities
+from chat_ui_protocol import (
+    EXPECTED, F8_SELECTED, F10_SELECTED, F11_SELECTED, F12_SELECTED, SELECTED,
+    junit_report, parse_instrumentation, test_identities,
+)
 
 spec = importlib.util.spec_from_file_location('chat_ui_runner', Path(__file__).with_name('verify-chat-ui.py'))
 runner = importlib.util.module_from_spec(spec)
@@ -110,10 +113,10 @@ class ChatUiProtocolTest(unittest.TestCase):
         self.assertIn('test "$ORION_UI_RESULT" = success', workflow)
         self.assertNotIn('continue-on-error', workflow)
 
-    def test_f10_and_f11_selections_and_role_harness_are_required(self):
+    def test_f10_through_f12_selections_and_role_harness_are_required(self):
         root = Path(__file__).resolve().parents[2]
         workflow = (root / '.github/workflows/ci.yml').read_text()
-        for suite, selection in [('f10', F10_SELECTED), ('f11', F11_SELECTED)]:
+        for suite, selection in [('f10', F10_SELECTED), ('f11', F11_SELECTED), ('f12', F12_SELECTED)]:
             with self.subTest(suite=suite):
                 for cls, methods in selection.items():
                     source = root / 'app/src/androidTest/kotlin' / (cls.replace('.', '/') + '.kt')
