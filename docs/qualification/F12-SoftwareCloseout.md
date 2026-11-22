@@ -9,7 +9,7 @@ Diagnóstico mostra a preferência atual.
 | --- | --- |
 | Hábitos | MAIN deriva faixas de quatro horas no fuso atual. Cada faixa precisa de três amostras antes de afetar sugestões. A consulta lê até 64 resultados dos últimos 30 dias. |
 | Peso do feedback | Cada sugestão exibida rende uma amostra. Conclusão soma 3, abertura soma 2, dispensa subtrai 3, adiamento e ausência de resposta subtraem 1. A conclusão prevalece sobre a dispensa, seguida por adiamento, abertura e ausência de resposta. |
-| Ranking | A busca dá mais peso à recência e à importância dos resultados elegíveis. A relevância textual define a ordem entre classes de correspondência. A paginação continua com a mesma regra de ranking ou reinicia quando a preferência muda. |
+| Ranking | A quantidade de termos encontrados define a primeira ordem. A recência e a importância pesam mais entre resultados com a mesma cobertura. A paginação continua com a mesma regra de ranking ou reinicia quando a preferência muda. |
 | Personalização | O usuário controla a preferência de forma independente do consentimento para notificações. O desligamento restaura a busca e as sugestões padrão. Uma nova adesão inicia outra janela de aprendizado. |
 | Proatividade adaptativa | Somente uma sugestão já elegível pode ser adiada. A média da faixa deve ser menor ou igual a menos um. Horário silencioso, orçamento, cooldown, capacidade, permissão e consentimento de notificação continuam aplicáveis. |
 
@@ -22,5 +22,5 @@ O ranking roda depois da seleção de memórias elegíveis pelo índice.
 
 As decisões de adaptação seguem o [ADR-0010](../adr/ADR-0010-f12-software-entry.md).
 O CI executa os testes do Sentinel, do ranking e da suíte emulador `f12`, além
-da atualização instalada de Room 12→13 com o APK da F11. O relatório de auditoria
+da atualização instalada de Room 12→13 com o APK da F11. O [relatório de auditoria](Audit-F12-Closeout.md)
 registra os resultados por ambiente e os gates físicos ainda abertos.

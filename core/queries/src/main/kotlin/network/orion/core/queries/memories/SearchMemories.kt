@@ -82,11 +82,15 @@ object OrionMemoryRanking {
         val frequency = query.tokens.sumOf { (matches[it] ?: 0).coerceAtMost(4) }
         val consecutive = words.windowed(query.tokens.size).any { it == query.tokens }
         val age = Duration.between(updatedAt, at).toDays().coerceIn(0, 30)
-        val textScore = frequency * 250 + if (consecutive) 200 else 0
         val recency = (30 - age).toInt()
         val importanceScore = ((importance ?: 0.0) * 100).toInt()
         val confidenceScore = (confidence * 100).toInt()
-        return if (personalized) textScore * 2 + recency * 3 + importanceScore * 2 + confidenceScore
-        else textScore + recency + importanceScore + confidenceScore
+        if (personalized) {
+            val matchedTerms = query.tokens.count { it in matches }
+            // One more query term outweighs the maximum possible secondary score.
+            return matchedTerms * 10_000 + frequency * 120 + (if (consecutive) 100 else 0) +
+                recency * 5 + importanceScore * 2 + confidenceScore
+        }
+        return frequency * 250 + (if (consecutive) 200 else 0) + recency + importanceScore + confidenceScore
     }
 }

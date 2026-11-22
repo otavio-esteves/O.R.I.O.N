@@ -148,29 +148,29 @@ class OrionAdaptiveIntelligenceTest {
 
     @Test fun rankingPreferenceReordersEligibleMemoriesAndInvalidatesOldCursor() = withFixture { db, runtime, _ ->
         val store = OrionMemoryStore(db, crypto, clock)
-        fun memory(confidence: Double, index: Boolean = true): UUID {
+        fun memory(text: String, index: Boolean = true): UUID {
             val id = UUID.randomUUID()
-            val command = CreateMemory(id, "Prefiro café forte", id, id, index)
+            val command = CreateMemory(id, text, id, id, index)
             val prepared = OrionCreateMemoryPreparer.prepare(command) as CreateMemoryPreparation.Ready
             val content = prepared.memory.canonicalNormalizedArguments.toByteArray()
             assertTrue(store.create(id, content, Sensitivity.PERSONAL, MemoryOrigin.USER_DECLARED,
-                confidence, emptyList(), id, userConfirmed = true) is MemoryWriteResult.Stored)
+                1.0, emptyList(), id, userConfirmed = true) is MemoryWriteResult.Stored)
             return id
         }
         now = midday.minus(Duration.ofDays(30))
-        val older = memory(1.0)
+        val older = memory("Prefiro café forte")
         now = midday
-        val newer = memory(0.5)
-        memory(1.0, index = false)
+        val newer = memory("Quero café bem forte")
+        memory("Prefiro café forte", index = false)
         OrionMemorySearchIndex(db, crypto, clock).backfillBatch()
         val query = OrionMemoryQuery(db, crypto, clock)
-        fun firstPage() = query.search(SearchMemories("café", limit = 1))
+        fun firstPage() = query.search(SearchMemories("café forte", limit = 1))
         assertEquals(older, firstPage().hits.single().memory.memoryId)
         assertTrue(runtime.setPersonalized(true))
         val first = firstPage()
         assertEquals(newer, first.hits.single().memory.memoryId)
         val next = checkNotNull(first.next)
-        val continuation = SearchMemories("café", limit = 1, after = next)
+        val continuation = SearchMemories("café forte", limit = 1, after = next)
         assertEquals(older, query.search(continuation).hits.single().memory.memoryId)
         assertNull(query.search(continuation).next)
         assertTrue(runtime.setPersonalized(false))
