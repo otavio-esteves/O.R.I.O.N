@@ -1,7 +1,15 @@
+import java.security.MessageDigest
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
 import org.w3c.dom.Element
@@ -51,6 +59,46 @@ check(!cortexInstrumentedWorkloadEnabled || qualificationEnabled) { "Instrumente
 check(listOf(physicalBaselineEnabled, cortexReadinessEnabled, exitEvidenceCaptureEnabled, cortexSingleAttemptEnabled,
     cortexRuntimeCaptureEnabled, cortexInstrumentedWorkloadEnabled, hybridChatEnabled).count { it } <= 1) {
     "Qualification measurement modes are mutually exclusive."
+}
+
+// This optional local input makes a test APK usable offline on first launch.
+val voiceModelFile = providers.gradleProperty("orionVoiceModelFile").orNull?.let { file(it) }
+val bundledVoiceModel = voiceModelFile?.let { model ->
+    tasks.register<PrepareOrionDebugVoiceModel>("prepareOrionDebugVoiceModel") {
+        source.set(model)
+        license.set(layout.projectDirectory.file("licenses/whisper-model-MIT.txt"))
+    }
+}
+
+abstract class PrepareOrionDebugVoiceModel : DefaultTask() {
+    @get:InputFile @get:PathSensitive(PathSensitivity.NONE)
+    abstract val source: RegularFileProperty
+
+    @get:InputFile @get:PathSensitive(PathSensitivity.NONE)
+    abstract val license: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val assets: DirectoryProperty
+
+    @TaskAction
+    fun prepare() {
+        val model = source.get().asFile
+        val sha = MessageDigest.getInstance("SHA-256")
+        check(model.length() == 32_152_673L) { "Unexpected ggml-tiny-q5_1.bin size." }
+        model.inputStream().use { input ->
+            val bytes = ByteArray(64 * 1024)
+            while (true) {
+                val count = input.read(bytes)
+                if (count < 0) break
+                sha.update(bytes, 0, count)
+            }
+        }
+        check(sha.digest().joinToString("") { "%02x".format(it) } ==
+            "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7") { "Unexpected ggml-tiny-q5_1.bin SHA-256." }
+        val directory = assets.get().asFile.resolve("orion_voice")
+        model.copyTo(directory.resolve("ggml-tiny-q5_1.bin"), overwrite = true)
+        license.get().asFile.copyTo(directory.resolve("whisper-model-MIT.txt"), overwrite = true)
+    }
 }
 
 android {
@@ -239,6 +287,12 @@ val stageReleaseEvidence = tasks.register<Exec>("stageReleaseEvidence") {
 
 androidComponents.beforeVariants(androidComponents.selector().withBuildType("qualificationRelease")) {
     it.enable = qualificationEnabled
+}
+
+if (bundledVoiceModel != null) {
+    androidComponents.onVariants(androidComponents.selector().withBuildType("debug")) {
+        it.sources.assets?.addGeneratedSourceDirectory(bundledVoiceModel, PrepareOrionDebugVoiceModel::assets)
+    }
 }
 
 if (qualificationEnabled) {

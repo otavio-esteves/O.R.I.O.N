@@ -6,6 +6,17 @@ candidato de software usa whisper.cpp v1.8.7, CPU e dois threads por sessão.
 A decodificação tem contexto e saída limitados. Se o código nativo ultrapassar
 o limite externo, apenas o processo de sessão é encerrado.
 
+Em um APK Debug de teste, a propriedade `orionVoiceModelFile` permite incluir
+essa mesma versão do modelo. O Gradle verifica o arquivo e inclui sua licença
+MIT. Na tela **Voz**, o botão **Instalar modelo local** copia o modelo para o
+armazenamento privado e o verifica novamente. A opção de importar um arquivo
+continua disponível.
+
+```bash
+docker compose run --rm -v "$ORION_MODELS_DIRECTORY:/orion-input:ro" android-build \
+  :app:assembleDebug -PorionVoiceModelFile=/orion-input/ggml-tiny-q5_1.bin
+```
+
 O usuário inicia a captura com **Falar** e pode usar **Concluir fala** ou
 **Cancelar**. Cada captura está limitada a oito segundos. O pipeline usa
 PCM mono de 16 kHz, VAD por energia, STT local e TTS do Android quando há

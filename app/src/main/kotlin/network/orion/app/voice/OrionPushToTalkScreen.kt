@@ -9,12 +9,18 @@ import android.os.Looper
 import android.os.RemoteException
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -35,6 +41,7 @@ internal fun OrionPushToTalkScreen(lifecycle: Lifecycle, voiceHealth: (Boolean) 
     var reply by remember { mutableStateOf<String?>(null) }
     var confirm by remember { mutableStateOf(false) }
     var modelPresent by remember { mutableStateOf(OrionVoiceModel.present(context)) }
+    val modelBundled = remember(context) { OrionVoiceModel.bundled(context) }
     var importing by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     val controller = remember(context) { OrionPushToTalkController(context) { next, text, review ->
@@ -49,15 +56,23 @@ internal fun OrionPushToTalkScreen(lifecycle: Lifecycle, voiceHealth: (Boolean) 
         voiceHealth(false)
         message = if (granted) "Microfone autorizado. Toque em Falar." else "Autorize o microfone para usar a voz."
     }
-    val modelPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
-            importing = true
-            val imported = try { OrionVoiceModel.install(context.applicationContext, uri) }
-                finally { importing = false }
-            modelPresent = OrionVoiceModel.present(context)
-            voiceHealth(false)
-            message = if (imported) "Modelo de voz instalado." else "Selecione o arquivo ggml-tiny-q5_1.bin compatível."
+    fun installModel(install: suspend () -> Boolean) {
+        if (importing) return
+        importing = true
+        message = null
+        scope.launch {
+            try {
+                val imported = install()
+                modelPresent = OrionVoiceModel.present(context)
+                voiceHealth(false)
+                message = if (imported) "Modelo de voz instalado." else "Não foi possível instalar o modelo. Verifique o arquivo e o espaço livre."
+            } finally {
+                importing = false
+            }
         }
+    }
+    val modelPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) installModel { OrionVoiceModel.install(context.applicationContext, uri) }
     }
     DisposableEffect(lifecycle, controller) {
         val observer = LifecycleEventObserver { _, event ->
@@ -75,38 +90,85 @@ internal fun OrionPushToTalkScreen(lifecycle: Lifecycle, voiceHealth: (Boolean) 
         }
     }
     val busy = state?.terminal == false
-    Column(Modifier.fillMaxWidth().padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val recording = state == OrionVoiceSessionState.CONNECTING || state == OrionVoiceSessionState.LISTENING
+    val colors = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+    Column(
+        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         Text("Voz", style = MaterialTheme.typography.headlineSmall)
-        Text("Use a voz para consultar a bateria, contar tarefas abertas ou preparar uma tarefa.")
-        if (!modelPresent) Text("Instale o modelo local ggml-tiny-q5_1.bin para começar.")
-        OutlinedButton(onClick = { modelPicker.launch(arrayOf("*/*")) }, enabled = !busy && !importing) {
-            Text(if (importing) "Verificando modelo" else "Selecionar modelo local")
-        }
-        Button(
-            onClick = {
-                message = null
-                if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                    permission.launch(Manifest.permission.RECORD_AUDIO)
+        Text(
+            "Consulte a bateria, conte as tarefas abertas ou prepare uma nova tarefa.",
+            color = colors.onSurfaceVariant,
+            style = typography.bodyMedium,
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = colors.surfaceContainerLow,
+            shape = MaterialTheme.shapes.medium,
+            border = BorderStroke(1.dp, colors.outlineVariant),
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (modelPresent) {
+                    Text("Processamento no dispositivo", style = typography.labelMedium, color = colors.tertiary)
+                    Button(
+                        onClick = {
+                            message = null
+                            if (recording) {
+                                controller.finishCapture()
+                            } else if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                                permission.launch(Manifest.permission.RECORD_AUDIO)
+                            } else {
+                                reply = null
+                                confirm = false
+                                controller.begin()
+                            }
+                        },
+                        enabled = (!busy || recording) && !importing,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("orion_voice_talk"),
+                        shape = MaterialTheme.shapes.small,
+                    ) { Text(if (recording) "Concluir fala" else if (busy) "Processando" else "Falar") }
+                    if (busy) TextButton(onClick = {
+                        controller.close()
+                        state = OrionVoiceSessionState.CANCELLED
+                    }) { Text("Cancelar") }
                 } else {
-                    reply = null
-                    confirm = false
-                    controller.begin()
+                    Text("Modelo de voz", style = typography.titleMedium)
+                    Text(
+                        if (modelBundled) "Instale o reconhecimento de fala que acompanha este app."
+                        else "Selecione o arquivo ggml-tiny-q5_1.bin para ativar o reconhecimento offline.",
+                        style = typography.bodyMedium,
+                        color = colors.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = {
+                            if (modelBundled) installModel { OrionVoiceModel.installBundled(context.applicationContext) }
+                            else modelPicker.launch(arrayOf("*/*"))
+                        },
+                        enabled = !importing,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("orion_voice_install"),
+                        shape = MaterialTheme.shapes.small,
+                    ) { Text(if (importing) "Verificando modelo" else if (modelBundled) "Instalar modelo local" else "Selecionar modelo local") }
                 }
-            },
-            enabled = modelPresent && !busy && !importing,
-            modifier = Modifier.testTag("orion_voice_talk"),
-        ) { Text("Falar") }
-        if (state in setOf(OrionVoiceSessionState.CONNECTING, OrionVoiceSessionState.LISTENING)) {
-            Button(onClick = controller::finishCapture) { Text("Concluir fala") }
+                val status = message ?: state?.let(::voiceStatus)
+                if (status != null) Text(
+                    status, Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    color = colors.onSurfaceVariant, style = typography.bodyMedium,
+                )
+            }
         }
-        if (busy) TextButton(onClick = {
-            controller.close()
-            state = OrionVoiceSessionState.CANCELLED
-        }) { Text("Cancelar") }
-        val status = message ?: state?.let(::voiceStatus)
-        if (status != null) Text(status)
-        reply?.let { Text(it) }
-        if (confirm) OutlinedButton(onClick = openTasks) { Text("Revisar em Tarefas") }
+        reply?.let { text ->
+            OutlinedCard(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium) {
+                Text(text, Modifier.padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite })
+            }
+        }
+        if (confirm) OutlinedButton(onClick = openTasks, shape = MaterialTheme.shapes.small) { Text("Revisar em Tarefas") }
+        if (modelPresent && !busy) {
+            TextButton(onClick = { modelPicker.launch(arrayOf("*/*")) }, enabled = !importing) {
+                Text("Trocar arquivo do modelo", color = colors.onSurfaceVariant)
+            }
+        }
     }
 }
 
@@ -114,8 +176,9 @@ private fun voiceStatus(state: OrionVoiceSessionState) = when (state) {
     OrionVoiceSessionState.CONNECTING -> "Preparando microfone."
     OrionVoiceSessionState.LISTENING -> "Ouvindo. Diga, por exemplo, “bateria” ou “criar tarefa estudar”."
     OrionVoiceSessionState.TRANSCRIBING -> "Transcrevendo no dispositivo."
-    OrionVoiceSessionState.WAITING_FOR_CORE -> "Aguardando o Core."
-    OrionVoiceSessionState.SPEAKING, OrionVoiceSessionState.SUCCEEDED -> null
+    OrionVoiceSessionState.WAITING_FOR_CORE -> "Buscando a resposta."
+    OrionVoiceSessionState.SPEAKING -> "Respondendo."
+    OrionVoiceSessionState.SUCCEEDED -> null
     OrionVoiceSessionState.CANCELLED -> "Sessão cancelada."
     OrionVoiceSessionState.NO_SPEECH -> "Nenhuma fala reconhecida. Tente novamente."
     OrionVoiceSessionState.MODEL_UNAVAILABLE -> "Modelo de voz indisponível. Selecione um arquivo compatível."

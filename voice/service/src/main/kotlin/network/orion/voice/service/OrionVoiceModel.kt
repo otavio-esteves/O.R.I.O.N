@@ -1,6 +1,7 @@
 package network.orion.voice.service
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.net.Uri
 import java.io.File
 import java.io.InputStream
@@ -14,15 +15,30 @@ import kotlinx.coroutines.withContext
 object OrionVoiceModel {
     private const val modelBytes = 32_152_673L
     private const val modelSha256 = "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7"
+    private const val modelAsset = "orion_voice/ggml-tiny-q5_1.bin"
 
     internal fun path(context: Context) = File(context.noBackupFilesDir, "orion_voice_tiny_q5_1.bin")
     fun present(context: Context) = path(context).length() == modelBytes
 
-    suspend fun install(context: Context, source: Uri): Boolean = withContext(Dispatchers.IO) {
+    fun bundled(context: Context): Boolean = try {
+        context.assets.open(modelAsset, AssetManager.ACCESS_STREAMING).use { true }
+    } catch (_: java.io.IOException) { false }
+
+    suspend fun installBundled(context: Context): Boolean = install(context) {
+        context.assets.open(modelAsset, AssetManager.ACCESS_STREAMING)
+    }
+
+    suspend fun install(context: Context, source: Uri): Boolean = install(context) {
+        context.contentResolver.openInputStream(source)
+    }
+
+    private suspend fun install(context: Context, open: () -> InputStream?): Boolean = withContext(Dispatchers.IO) {
         val target = path(context)
-        val staged = File.createTempFile("orion_voice_", ".part", context.cacheDir)
+        val staged = try { File.createTempFile("orion_voice_", ".part", context.cacheDir) }
+            catch (_: java.io.IOException) { return@withContext false }
+            catch (_: SecurityException) { return@withContext false }
         try {
-            val input = context.contentResolver.openInputStream(source) ?: return@withContext false
+            val input = open() ?: return@withContext false
             val sha256 = input.use { verifiedHash(it, staged) }
             if (sha256 != modelSha256) return@withContext false
             Files.move(staged.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
