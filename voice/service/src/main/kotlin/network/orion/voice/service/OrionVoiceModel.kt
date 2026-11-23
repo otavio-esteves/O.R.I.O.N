@@ -11,48 +11,70 @@ import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Supports the pinned multilingual Whisper tiny candidate. Model bytes stay in app-private storage. */
+/** Allows only the pinned multilingual Whisper models. Model bytes stay in app-private storage. */
 object OrionVoiceModel {
-    private const val modelBytes = 32_152_673L
-    private const val modelSha256 = "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7"
-    private const val modelAsset = "orion_voice/ggml-tiny-q5_1.bin"
+    private enum class Model(val label: String, val bytes: Long, val sha256: String) {
+        SMALL("small", 190_085_487, "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb"),
+        BASE("base", 59_707_625, "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898"),
+        TINY("tiny", 32_152_673, "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7");
 
-    internal fun path(context: Context) = File(context.noBackupFilesDir, "orion_voice_tiny_q5_1.bin")
-    fun present(context: Context) = path(context).length() == modelBytes
-
-    fun bundled(context: Context): Boolean = try {
-        context.assets.open(modelAsset, AssetManager.ACCESS_STREAMING).use { true }
-    } catch (_: java.io.IOException) { false }
-
-    suspend fun installBundled(context: Context): Boolean = install(context) {
-        context.assets.open(modelAsset, AssetManager.ACCESS_STREAMING)
+        val asset get() = "orion_voice/ggml-$label-q5_1.bin"
+        fun path(context: Context) = File(context.noBackupFilesDir, "orion_voice_${label}_q5_1.bin")
+        fun present(context: Context) = path(context).length() == bytes
     }
 
-    suspend fun install(context: Context, source: Uri): Boolean = install(context) {
+    fun present(context: Context) = Model.entries.any { it.present(context) }
+    fun bundled(context: Context) = bundledModel(context) != null
+
+    private fun bundledModel(context: Context): Model? {
+        val assets = context.assets.list("orion_voice").orEmpty()
+        return Model.entries.firstOrNull { it.asset.substringAfterLast('/') in assets }
+    }
+
+    fun bundledUpgradeAvailable(context: Context): Boolean {
+        val bundled = bundledModel(context) ?: return false
+        if (bundled == Model.TINY) return false
+        return Model.entries.take(bundled.ordinal + 1).none { it.present(context) }
+    }
+
+    suspend fun upgradeBundled(context: Context) {
+        if (bundledUpgradeAvailable(context)) installBundled(context)
+    }
+
+    suspend fun installBundled(context: Context): Boolean {
+        val model = bundledModel(context) ?: return false
+        return install(context, model) { context.assets.open(model.asset, AssetManager.ACCESS_STREAMING) }
+    }
+
+    suspend fun install(context: Context, source: Uri): Boolean = install(context, null) {
         context.contentResolver.openInputStream(source)
     }
 
-    private suspend fun install(context: Context, open: () -> InputStream?): Boolean = withContext(Dispatchers.IO) {
-        val target = path(context)
+    private suspend fun install(context: Context, expected: Model?, open: () -> InputStream?): Boolean = withContext(Dispatchers.IO) {
         val staged = try { File.createTempFile("orion_voice_", ".part", context.cacheDir) }
             catch (_: java.io.IOException) { return@withContext false }
             catch (_: SecurityException) { return@withContext false }
         try {
             val input = open() ?: return@withContext false
-            val sha256 = input.use { verifiedHash(it, staged) }
-            if (sha256 != modelSha256) return@withContext false
-            Files.move(staged.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            val hash = input.use { verifiedHash(it, staged, expected?.bytes ?: Model.SMALL.bytes) }
+            val selected = Model.entries.firstOrNull { it.sha256 == hash && it.bytes == staged.length() }
+                ?: return@withContext false
+            if (expected != null && selected != expected) return@withContext false
+            Files.move(staged.toPath(), selected.path(context).toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
             true
         } catch (_: java.io.IOException) { false }
           catch (_: SecurityException) { false }
         finally { staged.delete() }
     }
 
-    internal fun verified(context: Context): File? = path(context).takeIf { model ->
-        model.isFile && model.length() == modelBytes && model.inputStream().use { verifiedHash(it, null) } == modelSha256
+    internal fun verified(context: Context): File? = Model.entries.firstNotNullOfOrNull { model ->
+        val file = model.path(context)
+        file.takeIf {
+            file.isFile && file.length() == model.bytes && file.inputStream().use { verifiedHash(it, null, model.bytes) } == model.sha256
+        }
     }
 
-    private fun verifiedHash(input: InputStream, destination: File?): String? {
+    private fun verifiedHash(input: InputStream, destination: File?, maximumBytes: Long): String? {
         val digest = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(64 * 1024)
         val output = destination?.outputStream()
@@ -62,12 +84,12 @@ object OrionVoiceModel {
                 val count = input.read(buffer)
                 if (count < 0) break
                 bytes += count
-                if (bytes > modelBytes) return null
+                if (bytes > maximumBytes) return null
                 digest.update(buffer, 0, count)
                 output?.write(buffer, 0, count)
             }
             output?.fd?.sync()
-            return if (bytes == modelBytes) digest.digest().joinToString("") { "%02x".format(it) } else null
+            return digest.digest().joinToString("") { "%02x".format(it) }
         } finally { output?.close() }
     }
 }

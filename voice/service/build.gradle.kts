@@ -1,5 +1,23 @@
+import java.security.MessageDigest
+
 plugins {
     alias(libs.plugins.android.library)
+}
+
+val neuralVoiceAar = providers.gradleProperty("orionNeuralVoiceAar").orNull?.let { rootProject.file(it) }
+val neuralApiDir = layout.buildDirectory.dir("orionNeuralVoiceApi")
+val neuralApi = neuralVoiceAar?.let { input ->
+    tasks.register<Copy>("extractOrionNeuralVoiceApi") {
+        from(zipTree(input)) { include("classes.jar") }
+        into(neuralApiDir)
+        doFirst {
+            val hash = MessageDigest.getInstance("SHA-256")
+                .digest(input.readBytes()).joinToString("") { "%02x".format(it) }
+            check(hash == "e65fc8f60714f95649914bdab79d6c98a6bcd71c8417f12e17c44485fee3a610") {
+                "Unexpected Sherpa-ONNX Android runtime SHA-256."
+            }
+        }
+    }
 }
 
 android {
@@ -23,7 +41,12 @@ android {
     }
 }
 
+androidComponents.onVariants { variant ->
+    variant.sources.kotlin!!.addStaticSourceDirectory(if (neuralApi == null) "src/platform/kotlin" else "src/neural/kotlin")
+}
+
 dependencies {
+    if (neuralApi != null) compileOnly(files(neuralApiDir.map { it.file("classes.jar") }).builtBy(neuralApi))
     api(project(":voice:ipc"))
     implementation(project(":core:time"))
     implementation(libs.coroutines.android)

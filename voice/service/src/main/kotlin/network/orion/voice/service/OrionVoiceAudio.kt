@@ -73,6 +73,12 @@ internal class OrionVoiceRecorder(private val context: Context) {
                     if (read == 0) delay(10)
                 }
             }
+            if (finished() && count < raw.size) {
+                requireAuthority()
+                val pending = minOf(raw.size - count, 2 * OrionVoiceActivityDetection.frameSamples)
+                val read = recorder.read(raw, count, pending, AudioRecord.READ_NON_BLOCKING)
+                if (read > 0) count += read
+            }
             OrionVoiceActivityDetection.speech(raw, count)
         } finally {
             try {

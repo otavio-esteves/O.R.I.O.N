@@ -4,7 +4,10 @@ import javax.xml.parsers.DocumentBuilderFactory
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ArchiveOperations
+import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.file.RelativePath
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
@@ -13,6 +16,7 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
 import org.w3c.dom.Element
+import javax.inject.Inject
 
 plugins {
     alias(libs.plugins.android.application)
@@ -78,6 +82,61 @@ val bundledVoiceModel = voiceModelFile?.let { model ->
     }
 }
 
+val neuralVoiceAar = providers.gradleProperty("orionNeuralVoiceAar").orNull?.let { file(it) }
+val neuralVoiceModel = providers.gradleProperty("orionNeuralVoiceModel").orNull?.let { file(it) }
+check((neuralVoiceAar == null) == (neuralVoiceModel == null) && (neuralVoiceAar == null || s21PreviewEnabled)) {
+    "Neural voice requires both pinned inputs and the S21 preview."
+}
+val bundledNeuralVoice = neuralVoiceModel?.let { model ->
+    tasks.register<PrepareOrionNeuralVoice>("prepareOrionNeuralVoice") {
+        archive.set(model)
+        assets.set(layout.buildDirectory.dir("generated/orionNeuralVoice/assets"))
+    }
+}
+
+abstract class PrepareOrionNeuralVoice @Inject constructor(
+    private val archives: ArchiveOperations,
+    private val files: FileSystemOperations,
+) : DefaultTask() {
+    @get:InputFile @get:PathSensitive(PathSensitivity.NONE)
+    abstract val archive: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val assets: DirectoryProperty
+
+    @TaskAction fun prepare() {
+        val input = archive.get().asFile
+        check(OrionVoiceAssetDigest.sha256(input) == "72c347230107ef8a31098ec4d468a605244beef5f1ed00db97efa13518800653") {
+            "Unexpected Kokoro archive SHA-256."
+        }
+        files.sync {
+            from(archives.tarTree(input)) {
+                include("*/model.int8.onnx", "*/voices.bin", "*/tokens.txt", "*/LICENSE", "*/espeak-ng-data/**")
+                includeEmptyDirs = false
+                eachFile {
+                    relativePath = RelativePath(true, "orion_voice", "kokoro", *relativePath.segments.drop(1).toTypedArray())
+                }
+            }
+            into(assets)
+        }
+    }
+}
+
+object OrionVoiceAssetDigest {
+    fun sha256(file: java.io.File): String {
+        val hash = MessageDigest.getInstance("SHA-256")
+        file.inputStream().buffered().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                hash.update(buffer, 0, count)
+            }
+        }
+        return hash.digest().joinToString("") { "%02x".format(it) }
+    }
+}
+
 abstract class PrepareOrionDebugVoiceModel : DefaultTask() {
     @get:InputFile @get:PathSensitive(PathSensitivity.NONE)
     abstract val source: RegularFileProperty
@@ -91,20 +150,16 @@ abstract class PrepareOrionDebugVoiceModel : DefaultTask() {
     @TaskAction
     fun prepare() {
         val model = source.get().asFile
-        val sha = MessageDigest.getInstance("SHA-256")
-        check(model.length() == 32_152_673L) { "Unexpected ggml-tiny-q5_1.bin size." }
-        model.inputStream().use { input ->
-            val bytes = ByteArray(64 * 1024)
-            while (true) {
-                val count = input.read(bytes)
-                if (count < 0) break
-                sha.update(bytes, 0, count)
-            }
+        val (name, expectedHash) = when (model.length()) {
+            32_152_673L -> "ggml-tiny-q5_1.bin" to "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7"
+            59_707_625L -> "ggml-base-q5_1.bin" to "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898"
+            190_085_487L -> "ggml-small-q5_1.bin" to "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb"
+            else -> error("Unexpected multilingual Whisper model size.")
         }
-        check(sha.digest().joinToString("") { "%02x".format(it) } ==
-            "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7") { "Unexpected ggml-tiny-q5_1.bin SHA-256." }
+        check(OrionVoiceAssetDigest.sha256(model) == expectedHash) { "Unexpected $name SHA-256." }
         val directory = assets.get().asFile.resolve("orion_voice")
-        model.copyTo(directory.resolve("ggml-tiny-q5_1.bin"), overwrite = true)
+        directory.deleteRecursively()
+        model.copyTo(directory.resolve(name), overwrite = true)
         license.get().asFile.copyTo(directory.resolve("whisper-model-MIT.txt"), overwrite = true)
     }
 }
@@ -328,6 +383,11 @@ if (bundledVoiceModel != null) {
         }
     }
 }
+if (bundledNeuralVoice != null) {
+    androidComponents.onVariants(androidComponents.selector().withBuildType("s21CortexPreview")) {
+        it.sources.assets?.addGeneratedSourceDirectory(bundledNeuralVoice, PrepareOrionNeuralVoice::assets)
+    }
+}
 
 if (qualificationEnabled) {
     val qualificationApk = layout.buildDirectory.file("outputs/apk/qualificationRelease/app-qualificationRelease.apk").get().asFile
@@ -349,6 +409,7 @@ dependencies {
     // AGP aligns tests with their target APK. Room's schema serializers require the newer default methods.
     debugImplementation(libs.serialization.test.runtime)
     if (s21PreviewEnabled) add("s21CortexPreviewImplementation", libs.serialization.test.runtime)
+    if (neuralVoiceAar != null) add("s21CortexPreviewImplementation", files(neuralVoiceAar))
     implementation(project(":voice:ipc"))
     implementation(project(":voice:service"))
     testImplementation(libs.junit4)

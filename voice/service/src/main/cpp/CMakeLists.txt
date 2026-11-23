@@ -32,6 +32,6 @@ FetchContent_Declare(whisper
 FetchContent_MakeAvailable(whisper)
 
 add_library(orion_whisper SHARED orion_whisper_jni.cpp)
-target_link_libraries(orion_whisper PRIVATE whisper)
+target_link_libraries(orion_whisper PRIVATE whisper log)
 target_compile_options(orion_whisper PRIVATE -Wall -Wextra -Werror -fvisibility=hidden)
 target_link_options(orion_whisper PRIVATE -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384)

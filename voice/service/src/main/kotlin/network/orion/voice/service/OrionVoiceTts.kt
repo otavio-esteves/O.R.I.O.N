@@ -11,7 +11,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** Plays bundled Portuguese replies and uses local Android synthesis for other text. */
-internal suspend fun speakOrionVoiceReply(context: Context, text: String, sessionId: String) {
+internal suspend fun speakOrionPlatformVoiceReply(context: Context, text: String, sessionId: String) {
     if (playOrionBundledVoiceReply(context, text)) return
     val engines = context.packageManager.queryIntentServices(Intent(TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE), 0)
         .map { it.serviceInfo.packageName }.distinct()

@@ -149,7 +149,7 @@ internal fun OrionPushToTalkScreen(
                     Text("Modelo de voz", style = typography.titleMedium)
                     Text(
                         if (modelBundled) "Instale o reconhecimento de fala que acompanha este app."
-                        else "Selecione o arquivo ggml-tiny-q5_1.bin para ativar o reconhecimento offline.",
+                        else "Selecione um modelo Whisper multilíngue compatível para ativar o reconhecimento offline.",
                         style = typography.bodyMedium,
                         color = colors.onSurfaceVariant,
                     )

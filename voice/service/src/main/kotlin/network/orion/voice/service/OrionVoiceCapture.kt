@@ -91,7 +91,10 @@ internal class OrionVoiceCapture(
             requireCaptureAuthority()
             withContext(Dispatchers.IO) { reservation = OrionVoiceMemoryEndpoint.acquireHeavy(context) }
             if (reservation == null) return report(OrionVoiceSessionState.RESOURCE_BUSY)
-            val model = withContext(Dispatchers.IO) { OrionVoiceModel.verified(context) }
+            val model = withContext(Dispatchers.IO) {
+                OrionVoiceModel.upgradeBundled(context)
+                OrionVoiceModel.verified(context)
+            }
                 ?: return report(OrionVoiceSessionState.MODEL_UNAVAILABLE)
             requireCaptureAuthority()
             val pcm = try {

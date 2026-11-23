@@ -1,6 +1,13 @@
 #include <jni.h>
+#include <android/log.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <algorithm>
 #include <atomic>
+#include <cerrno>
 #include <chrono>
+#include <cstdio>
+#include <cstring>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -26,6 +33,44 @@ bool should_abort(void *context) {
 }
 
 void discard_log(enum ggml_log_level, const char *, void *) {}
+
+void filter_synthesis_log(const __android_log_message *message) {
+    if (message->tag != nullptr && std::strcmp(message->tag, "sherpa-onnx") == 0) return;
+    __android_log_logd_logger(message);
+}
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_network_orion_voice_service_OrionTtsNative_beginPrivateSynthesis(JNIEnv *, jobject) {
+    // Sherpa may report an unphonemizable input through both logcat and stderr.
+    __android_log_set_logger(filter_synthesis_log);
+    fflush(stderr);
+    const int saved = dup(STDERR_FILENO);
+    if (saved < 0 && errno != EBADF) return -1;
+    const int discarded = open("/dev/null", O_WRONLY | O_CLOEXEC);
+    if (discarded < 0) {
+        if (saved >= 0) close(saved);
+        return -1;
+    }
+    if (discarded != STDERR_FILENO) {
+        const int redirected = dup2(discarded, STDERR_FILENO);
+        close(discarded);
+        if (redirected < 0) {
+            if (saved >= 0) close(saved);
+            return -1;
+        }
+    }
+    return saved < 0 ? -2 : saved;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_network_orion_voice_service_OrionTtsNative_endPrivateSynthesis(JNIEnv *, jobject, jint saved) {
+    fflush(stderr);
+    if (saved == -2) close(STDERR_FILENO);
+    else if (saved >= 0) {
+        dup2(saved, STDERR_FILENO);
+        close(saved);
+    }
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -62,8 +107,10 @@ Java_network_orion_voice_service_OrionWhisper_transcribe(
 
         auto parameters = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
         parameters.n_threads = 2;
-        // Retain padding beyond the capture length for short Portuguese utterances.
-        parameters.audio_ctx = 768;
+        // Whisper Small needs less encoder work when the context follows the captured audio.
+        // One encoder position covers 320 PCM samples. Keep another 2.4 seconds of padding.
+        parameters.audio_ctx = whisper_model_n_audio_layer(context.get()) == 12
+            ? std::max(320, static_cast<int>(length / 320) + 120) : 768;
         parameters.max_tokens = 64;
         parameters.temperature_inc = 0.0f;
         parameters.language = "pt";
