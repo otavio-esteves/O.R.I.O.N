@@ -418,7 +418,9 @@ sys.path.insert(0,sys.argv[1])
 import f5_heavy_soak_journal as s
 path,digest,stage,marker=sys.argv[2:]
 def stop():
-    Path(marker).write_text(str(os.getpid()))
+    temporary_marker = marker + '.part'
+    Path(temporary_marker).write_text(str(os.getpid()))
+    os.rename(temporary_marker, marker)
     while True: signal.pause()
 replace=s.os.replace
 fsync=s.os.fsync
