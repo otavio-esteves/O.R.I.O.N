@@ -1,6 +1,7 @@
 package network.orion.feature.chat
 
 import java.time.Instant
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import network.orion.core.orchestrator.chat.*
 import network.orion.core.orchestrator.memories.MemoryGateway
 import network.orion.core.orchestrator.tasks.TaskOperation
@@ -27,17 +30,44 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
     var editorVersion by remember { mutableIntStateOf(0) }
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val colors = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
     LaunchedEffect(controller, recoveryVersion) { controller.refresh() }
-    LazyColumn(Modifier.fillMaxSize().imePadding().testTag("orion_chat").semantics { stateDescription = if (state.busy) "Chat processando" else "Chat disponível" }, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        Modifier.fillMaxSize().imePadding().testTag("orion_chat")
+            .semantics { stateDescription = if (state.busy) "Chat processando" else "Chat disponível" },
+        contentPadding = PaddingValues(vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
         item {
-            Text("Chat local", style = MaterialTheme.typography.headlineSmall)
-            Text("Cortex: " + state.cortex, modifier = Modifier.testTag("orion_chat_cortex"))
-            Text("Experimente: minhas tarefas · bateria · criar tarefa: comprar pão")
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Chat local", style = typography.headlineSmall)
+                Surface(
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = colors.surfaceContainerLow,
+                    border = BorderStroke(1.dp, colors.outlineVariant),
+                ) {
+                    Text(
+                        "Cortex: " + state.cortex, modifier = Modifier.testTag("orion_chat_cortex")
+                            .semantics { liveRegion = LiveRegionMode.Polite }.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = typography.labelMedium, color = colors.onSurfaceVariant,
+                    )
+                }
+                if (state.turns.isEmpty()) Text(
+                    "Experimente “minhas tarefas”, “bateria” ou “criar tarefa: comprar pão”.",
+                    color = colors.onSurfaceVariant, style = typography.bodyMedium,
+                )
+            }
         }
         items(state.turns, key = { it.id }) { turn ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (turn.user) "Você" else "O.R.I.O.N.", style = MaterialTheme.typography.labelMedium)
+            Surface(
+                Modifier.fillMaxWidth(),
+                color = if (turn.user) colors.surfaceContainerLow else colors.surface,
+                shape = MaterialTheme.shapes.medium,
+                border = BorderStroke(1.dp, colors.outlineVariant),
+            ) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(if (turn.user) "Você" else "O.R.I.O.N.", style = typography.labelMedium, color = colors.onSurfaceVariant)
                     Text(turn.text)
                     if (turn.proposal != null) {
                         Text("Sugestão do modelo. Aguarda sua revisão e a confirmação do pedido.")
@@ -46,8 +76,11 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
                 }
             }
         }
-        if (state.draft.isNotEmpty()) item { Text(state.draft, Modifier.testTag("orion_chat_stream")) }
-        item { if (inputError == null) state.notice?.let { Text(it) } }
+        if (state.draft.isNotEmpty()) item { Text(state.draft, Modifier.testTag("orion_chat_stream").padding(horizontal = 14.dp)) }
+        val notice = state.notice
+        if (inputError == null && notice != null) item {
+            Text(notice, Modifier.semantics { liveRegion = LiveRegionMode.Polite }, color = colors.onSurfaceVariant)
+        }
         item(key = "editor") {
             val version = editorVersion
             key(version) {
@@ -63,10 +96,11 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
                     if (!oversizedEditRejected) input = edited
                     inputError = error?.takeUnless { it == OrionChatInputError.EMPTY_INPUT }?.message
                 }, label = { Text("Mensagem") }, singleLine = true, isError = inputError != null,
+                    shape = MaterialTheme.shapes.small,
                     supportingText = { inputError?.let { Text(it, Modifier.testTag("orion_chat_input_error")) } },
                     enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("orion_chat_input"))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = send@{
                     if (oversizedEditRejected) return@send
                     when (val result = controller.send(input)) {
@@ -81,7 +115,7 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
                         OrionChatAdmission.Busy -> inputError = "Aguarde o envio em andamento."
                         OrionChatAdmission.Closed -> inputError = "Esta sessão foi encerrada. Abra o chat novamente."
                     }
-                }, enabled = !state.busy && !oversizedEditRejected) { Text("Enviar") }
+                }, enabled = !state.busy && !oversizedEditRejected, shape = MaterialTheme.shapes.small) { Text("Enviar") }
                 if (state.busy && state.cortex in setOf("Gerando", "Verificando disponibilidade")) TextButton(onClick = controller::cancel) { Text("Cancelar") }
                 if (state.canRetry && !state.busy) TextButton(onClick = controller::retryInference) { Text("Tentar inferência novamente") }
             }
@@ -94,7 +128,7 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
             TextButton(onClick = controller::refresh, enabled = !state.busy) { Text("Atualizar pedidos") }
         }
         items(state.pending, key = { "pending/" + it.actionId }) { action ->
-            Card(Modifier.fillMaxWidth().testTag("orion_chat_confirmation")) {
+            OutlinedCard(Modifier.fillMaxWidth().testTag("orion_chat_confirmation"), shape = MaterialTheme.shapes.medium) {
                 Column(Modifier.padding(12.dp)) {
                     Text(when (action.operation) { TaskOperation.CREATE -> "Criar esta tarefa?"; TaskOperation.COMPLETE -> "Concluir esta tarefa?"; TaskOperation.CANCEL -> "Cancelar esta tarefa?" })
                     Text(action.title ?: "Conteúdo indisponível. Atualize o pedido.")

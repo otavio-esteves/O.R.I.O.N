@@ -19,8 +19,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import network.orion.feature.diagnostics.DiagnosticsScreen
 import network.orion.feature.home.HomeScreen
@@ -44,14 +44,6 @@ private val orionHomeShortcuts = listOf(
     "Chat", "Voz", "Tarefas", "Lembretes", "Timers", "Memórias",
     "Notificações", "Dispositivo", "Atividade", "Diagnóstico", "Ajustes",
 )
-private val orionDarkColors = darkColorScheme(
-    primary = Color(0xFFC5DEFF),
-    background = Color.Black,
-    surface = Color.Black,
-    surfaceContainer = Color.Black,
-    surfaceContainerLow = Color.Black,
-)
-
 class MainActivity : ComponentActivity() {
     private lateinit var taskChannel: OrionTaskAdmissionOwner.UiChannel
     private lateinit var reminderChannel: OrionReminderAdmissionOwner.UiChannel
@@ -101,7 +93,7 @@ class MainActivity : ComponentActivity() {
         notificationChannel.onWindowFocus(hasWindowFocus())
         val notifications = runtime.notificationGateway(notificationChannel)
         setContent {
-            MaterialTheme(colorScheme = orionDarkColors) {
+            OrionTheme {
                 val report by runtime.health.collectAsState()
                 val sentinelEnabled by runtime.sentinelEnabled.collectAsState()
                 val personalizationEnabled by runtime.personalizationEnabled.collectAsState()
@@ -132,59 +124,71 @@ class MainActivity : ComponentActivity() {
                     HomeScreen(shortcuts = orionHomeShortcuts, onOpen = { destination = it })
                 } else Scaffold(
                     modifier = Modifier.fillMaxSize().imePadding(),
-                    containerColor = Color.Black,
+                    containerColor = MaterialTheme.colorScheme.background,
                     topBar = {
-                        TextButton(
-                            onClick = { destination = ORION_HOME },
-                            modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp),
-                        ) { Text(ORION_HOME) }
+                        Column(Modifier.statusBarsPadding().fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.widthIn(max = 680.dp).fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp)) {
+                                TextButton(
+                                    onClick = { destination = ORION_HOME },
+                                    modifier = Modifier.align(Alignment.CenterStart),
+                                ) {
+                                    Text("‹", style = MaterialTheme.typography.titleLarge)
+                                    Spacer(Modifier.width(5.dp))
+                                    Text(ORION_HOME)
+                                }
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
                     },
                 ) { padding ->
-                    Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).padding(horizontal = 24.dp)) {
-                        when (destination) {
-                            "Lembretes" -> RemindersScreen(reminders, report.lastRecovery, deliveryAlerts,
-                                onRequestNotificationPermission = {
-                                    if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-                                        android.content.pm.PackageManager.PERMISSION_GRANTED)
-                                        notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    else startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
-                                }, onRequestExactAccess = {
-                                    startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                                        .setData(android.net.Uri.parse("package:$packageName")))
-                                })
-                            "Timers" -> TimersScreen(timers, report.lastRecovery)
-                            "Memórias" -> MemoriesScreen(memories, report.lastRecovery)
-                            "Notificações" -> NotificationsScreen(notifications, report.lastRecovery, notificationRevision,
-                                onRequestPermission = {
-                                    if (Build.VERSION.SDK_INT >= 33) notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    else { notificationRevision++; runtime.refreshNotificationHealth() }
-                                },
-                                onOpenSettings = {
-                                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
-                                })
-                            "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
-                            "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
-                            "Voz" -> network.orion.app.voice.OrionPushToTalkScreen(lifecycle, runtime::refreshVoiceHealth) { destination = "Tarefas" }
-                            "Chat" -> network.orion.feature.chat.ChatScreen(chatController, report.lastRecovery, memories)
-                            "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
-                            "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
-                                platform = runtime.platformDiagnostics(), resourceProfile = resourceProfile?.name, assistantRole = assistantRole,
-                                personalizationEnabled = personalizationEnabled,
-                                onRetry = { runtime.start() })
-                            "Ajustes" -> SettingsScreen(report, sentinelEnabled, onOpenVoice = { destination = "Voz" },
-                                assistantRole = assistantRole, onConfigureAssistant = ::openDefaultAppsSettings,
-                                personalizationEnabled = personalizationEnabled,
-                                onSetPersonalizationEnabled = runtime::setPersonalizationEnabled,
-                                onSetSentinelEnabled = { enabled ->
-                                    val applied = runtime.setSentinelEnabled(enabled)
-                                    if (applied && enabled && Build.VERSION.SDK_INT >= 33 &&
-                                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-                                        android.content.pm.PackageManager.PERMISSION_GRANTED
-                                    ) notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    applied
-                                })
+                    BoxWithConstraints(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
+                        val sidePadding = maxOf(22.dp, (maxWidth - 636.dp) / 2)
+                        Box(Modifier.fillMaxSize().padding(horizontal = sidePadding)) {
+                            when (destination) {
+                                "Lembretes" -> RemindersScreen(reminders, report.lastRecovery, deliveryAlerts,
+                                    onRequestNotificationPermission = {
+                                        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                                            android.content.pm.PackageManager.PERMISSION_GRANTED)
+                                            notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        else startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                                    }, onRequestExactAccess = {
+                                        startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                            .setData(android.net.Uri.parse("package:$packageName")))
+                                    })
+                                "Timers" -> TimersScreen(timers, report.lastRecovery)
+                                "Memórias" -> MemoriesScreen(memories, report.lastRecovery)
+                                "Notificações" -> NotificationsScreen(notifications, report.lastRecovery, notificationRevision,
+                                    onRequestPermission = {
+                                        if (Build.VERSION.SDK_INT >= 33) notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        else { notificationRevision++; runtime.refreshNotificationHealth() }
+                                    },
+                                    onOpenSettings = {
+                                        startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                                    })
+                                "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
+                                "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
+                                "Voz" -> network.orion.app.voice.OrionPushToTalkScreen(lifecycle, runtime::refreshVoiceHealth) { destination = "Tarefas" }
+                                "Chat" -> network.orion.feature.chat.ChatScreen(chatController, report.lastRecovery, memories)
+                                "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
+                                "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
+                                    platform = runtime.platformDiagnostics(), resourceProfile = resourceProfile?.name, assistantRole = assistantRole,
+                                    personalizationEnabled = personalizationEnabled,
+                                    onRetry = { runtime.start() })
+                                "Ajustes" -> SettingsScreen(report, sentinelEnabled, onOpenVoice = { destination = "Voz" },
+                                    assistantRole = assistantRole, onConfigureAssistant = ::openDefaultAppsSettings,
+                                    personalizationEnabled = personalizationEnabled,
+                                    onSetPersonalizationEnabled = runtime::setPersonalizationEnabled,
+                                    onSetSentinelEnabled = { enabled ->
+                                        val applied = runtime.setSentinelEnabled(enabled)
+                                        if (applied && enabled && Build.VERSION.SDK_INT >= 33 &&
+                                            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                                            android.content.pm.PackageManager.PERMISSION_GRANTED
+                                        ) notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        applied
+                                    })
+                            }
                         }
                     }
                 }

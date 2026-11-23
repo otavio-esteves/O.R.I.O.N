@@ -18,7 +18,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -27,13 +29,15 @@ import kotlinx.coroutines.flow.collectLatest
 
 private const val FULL_TURN = 6.2831855f
 private const val TURN_SECONDS = 32f
-private const val FRAME_INTERVAL_MS = 34L
+private const val FRAME_INTERVAL_MS = 30L
 private const val DOT_COUNT = 1_680
 private const val SHADE_COUNT = 16
 private const val SIGNAL_SHADE_COUNT = 4
 private const val SIGNAL_CYCLE_SECONDS = 6.4f
 private const val SIGNAL_STEP_SECONDS = 0.11f
 private const val SIGNAL_LIFETIME_SECONDS = 0.48f
+private const val TOUCH_WAVE_SECONDS = 1.55f
+private const val BREATH_SECONDS = 7.5f
 
 @Composable
 internal fun OrionGlobe(animate: Boolean, pose: OrionGlobePose, modifier: Modifier) {
@@ -45,6 +49,7 @@ internal fun OrionGlobe(animate: Boolean, pose: OrionGlobePose, modifier: Modifi
         // Compose initializes the platform observer on first read, which can write snapshot state.
         val initialScale = motion?.scaleFactor ?: 1f
         snapshotFlow { motion?.scaleFactor ?: initialScale }.collectLatest { durationScale ->
+            pose.configureMotion(durationScale > 0f)
             if (durationScale <= 0f) return@collectLatest
             var previousFrame = withInfiniteAnimationFrameNanos { it }
             while (true) {
@@ -60,7 +65,7 @@ internal fun OrionGlobe(animate: Boolean, pose: OrionGlobePose, modifier: Modifi
     Canvas(modifier) {
         val radius = size.minDimension * 0.49f
         drawIntoCanvas { canvas ->
-            renderer.draw(canvas.nativeCanvas, center, radius, pose.yaw, pose.pitch, pose.signalTime)
+            renderer.draw(canvas.nativeCanvas, center, radius, pose)
         }
     }
 }
@@ -72,15 +77,61 @@ internal class OrionGlobePose {
         private set
     var signalTime by mutableFloatStateOf(0f)
         private set
+    var breathTime by mutableFloatStateOf(0f)
+        private set
+    var touchAge by mutableFloatStateOf(TOUCH_WAVE_SECONDS)
+        private set
+    var touchOrigin = Offset.Zero
+        private set
+    var touchDepth = 1f
+        private set
+    private var spin = 0f
+    private var tilt = 0f
+    private var motionEnabled = true
 
-    fun advance(seconds: Float) {
-        yaw = (yaw + seconds * FULL_TURN / TURN_SECONDS) % FULL_TURN
-        signalTime = (signalTime + seconds) % SIGNAL_CYCLE_SECONDS
+    fun configureMotion(enabled: Boolean) {
+        motionEnabled = enabled
+        if (!enabled) {
+            touchAge = TOUCH_WAVE_SECONDS
+            spin = 0f
+            tilt = 0f
+        }
     }
 
-    fun drag(radians: Offset) {
+    fun advance(seconds: Float) {
+        val dragDecay = exp(-seconds * 6f)
+        val drift = (1f - dragDecay) / 6f
+        yaw = (yaw + seconds * FULL_TURN / TURN_SECONDS + spin * drift) % FULL_TURN
+        pitch = (pitch + tilt * drift).coerceIn(-1.2f, 1.2f)
+        spin *= dragDecay
+        tilt *= dragDecay
+        signalTime = (signalTime + seconds) % SIGNAL_CYCLE_SECONDS
+        breathTime = (breathTime + seconds) % BREATH_SECONDS
+        touchAge = (touchAge + seconds).coerceAtMost(TOUCH_WAVE_SECONDS)
+    }
+
+    fun touch(contact: Offset, radius: Float) {
+        spin = 0f
+        tilt = 0f
+        if (!motionEnabled || radius <= 0f || contact.getDistanceSquared() > radius * radius) return
+        val screen = Offset(contact.x, -contact.y) * (0.9f / radius)
+        // Undo pitch and yaw so the wave stays attached to the dots as the sphere turns.
+        val depth = sqrt(1f - screen.getDistanceSquared())
+        val y = screen.y * cos(pitch) + depth * sin(pitch)
+        val horizontalDepth = depth * cos(pitch) - screen.y * sin(pitch)
+        val x = screen.x * cos(yaw) - horizontalDepth * sin(yaw)
+        touchOrigin = Offset(x, y)
+        touchDepth = horizontalDepth * cos(yaw) + screen.x * sin(yaw)
+        touchAge = 0f
+    }
+
+    fun drag(radians: Offset, seconds: Float) {
         yaw = (yaw + radians.x) % FULL_TURN
         pitch = (pitch + radians.y).coerceIn(-1.2f, 1.2f)
+        if (!motionEnabled) return
+        val blend = (seconds * 22f).coerceAtMost(1f)
+        spin += ((radians.x / seconds).coerceIn(-2.8f, 2.8f) - spin) * blend
+        tilt += ((radians.y / seconds).coerceIn(-2f, 2f) - tilt) * blend
     }
 }
 
@@ -102,12 +153,19 @@ private class OrionGlobeRenderer {
     private val projected = FloatArray(DOT_COUNT * 2)
     private val links = FloatArray(signalPaths.sumOf { (it.points.size - 1) * 4 })
 
-    fun draw(canvas: AndroidCanvas, center: Offset, radius: Float, yaw: Float, pitch: Float, time: Float) {
-        val yawCos = cos(yaw)
-        val yawSin = sin(yaw)
-        val pitchCos = cos(pitch)
-        val pitchSin = sin(pitch)
-        updateSignal(time)
+    fun draw(canvas: AndroidCanvas, center: Offset, radius: Float, pose: OrionGlobePose) {
+        val yawCos = cos(pose.yaw)
+        val yawSin = sin(pose.yaw)
+        val pitchCos = cos(pose.pitch)
+        val pitchSin = sin(pose.pitch)
+        val breath = 1f + 0.012f * sin(FULL_TURN * pose.breathTime / BREATH_SECONDS)
+        val age = pose.touchAge / TOUCH_WAVE_SECONDS
+        val origin = pose.touchOrigin
+        val originDepth = pose.touchDepth
+        val waveRadiusSquared = 2.35f * age * age
+        val waveHalfWidth = 0.10f + 0.33f * age
+        val waveEnvelope = (1f - age) * (1f - age * 0.60f)
+        updateSignal(pose.signalTime)
         usedFloats.fill(0)
         litFront.fill(false)
 
@@ -122,10 +180,18 @@ private class OrionGlobeRenderer {
             val ambient = 0.09f + 0.08f * (1f + depth)
             val facing = ((depth + 0.04f) / 0.25f).coerceIn(0f, 1f)
             val brightness = ambient + facing * (0.30f + 0.64f * light - ambient)
-            val scale = radius / (1.03f - 0.16f * depth)
+            val wave = if (age < 1f) {
+                // Chord distance defines the same ring on the sphere without per-point trig.
+                val chordSquared = 2f - 2f * (point.x * origin.x + point.y * origin.y + point.z * originDepth)
+                val front = (1f - abs(chordSquared - waveRadiusSquared) / waveHalfWidth).coerceAtLeast(0f)
+                val echoRadius = waveRadiusSquared * 0.57f
+                val echo = (1f - abs(chordSquared - echoRadius) / waveHalfWidth).coerceAtLeast(0f)
+                maxOf(front * front, 0.34f * echo * echo) * waveEnvelope
+            } else 0f
+            val scale = radius * (breath + 0.034f * wave) / (1.03f - 0.16f * depth)
             val screenX = center.x + x * scale
             val screenY = center.y - y * scale
-            val energy = signal[index] * facing
+            val energy = maxOf(signal[index], wave) * facing
             val shade = if (depth > 0.07f && energy >= 0.20f) {
                 litFront[index] = true
                 projected[index * 2] = screenX
