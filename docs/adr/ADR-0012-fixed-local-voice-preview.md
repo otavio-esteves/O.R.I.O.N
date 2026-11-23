@@ -36,6 +36,11 @@ de “por que”. Tiny e Base reconheceram seis cada. No mesmo aparelho, o Small
 usou de 6,8 a 8,4 segundos por trecho com o contexto reduzido e de 16,2 a 18,1
 segundos com 768 posições. A evidência tem escopo de desenvolvimento.
 
+O Whisper Small também recebe a grafia fixa “Orion” como contexto de
+transcrição. Um ensaio de software preservou esse nome numa saudação sintética
+em áudio limpo e com ruído. O detector de atividade considera o ruído da própria
+gravação e guarda uma margem de áudio nas extremidades da fala.
+
 O build da prévia recebe `orionVoiceModelFile` com `ggml-small-q5_1.bin`,
 `orionNeuralVoiceModel` com `kokoro-int8-multi-lang-v1_0.tar.bz2` e
 `orionNeuralVoiceAar` com `sherpa-onnx-static-link-onnxruntime-1.12.33.aar`.

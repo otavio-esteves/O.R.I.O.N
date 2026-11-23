@@ -109,8 +109,9 @@ Java_network_orion_voice_service_OrionWhisper_transcribe(
         parameters.n_threads = 2;
         // Whisper Small needs less encoder work when the context follows the captured audio.
         // One encoder position covers 320 PCM samples. Keep another 2.4 seconds of padding.
-        parameters.audio_ctx = whisper_model_n_audio_layer(context.get()) == 12
-            ? std::max(320, static_cast<int>(length / 320) + 120) : 768;
+        const bool small_model = whisper_model_n_audio_layer(context.get()) == 12;
+        parameters.audio_ctx = small_model ? std::max(320, static_cast<int>(length / 320) + 120) : 768;
+        if (small_model) parameters.initial_prompt = "Orion";
         parameters.max_tokens = 64;
         parameters.temperature_inc = 0.0f;
         parameters.language = "pt";
