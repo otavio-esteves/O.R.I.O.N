@@ -1,5 +1,6 @@
 package network.orion.app.chat
 
+import network.orion.app.openOrionDestination
 import java.util.UUID
 import androidx.compose.ui.test.*
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -36,7 +37,7 @@ class OrionChatScreenTest {
     }
     @Test fun rejectedTaskDraftRemainsEditableAndCanBeCorrected() {
         compose.waitUntil(30_000) { runtime.taskStartupBarrier.isOpen() && compose.activity.hasWindowFocus() }
-        compose.onNodeWithText("Chat", useUnmergedTree = true).performClick()
+        compose.openOrionDestination("Chat")
         awaitChatIdle()
         scroll("Mensagem")
         compose.onNodeWithTag("orion_chat_input").performTextReplacement("criar tarefa:")
@@ -59,7 +60,7 @@ class OrionChatScreenTest {
     }
     @Test fun actualChatFastPathsAndDurableExactConfirmationWorkWithoutCortex() {
         compose.waitUntil(30_000) { runtime.taskStartupBarrier.isOpen() && compose.activity.hasWindowFocus() }
-        compose.onNodeWithText("Chat", useUnmergedTree = true).performClick()
+        compose.openOrionDestination("Chat")
         compose.waitForIdle()
         val title = "Chat F6 " + UUID.randomUUID()
         send("bateria")
@@ -86,7 +87,7 @@ class OrionChatScreenTest {
         scroll(retry)
         compose.onNodeWithText(retry).assertIsEnabled()
         compose.onNodeWithText("Início", useUnmergedTree = true).performClick()
-        compose.onNodeWithText("Chat", useUnmergedTree = true).performClick()
+        compose.openOrionDestination("Chat")
         awaitChatIdle()
         scroll(retry)
         compose.onNodeWithText(retry).assertIsEnabled()

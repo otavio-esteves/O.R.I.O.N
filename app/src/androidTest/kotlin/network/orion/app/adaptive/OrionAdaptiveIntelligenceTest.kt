@@ -1,5 +1,6 @@
 package network.orion.app.adaptive
 
+import network.orion.app.openOrionDestination
 import android.app.NotificationManager
 import android.content.Context
 import androidx.compose.ui.test.assertIsOff
@@ -247,13 +248,13 @@ class OrionAdaptiveIntelligenceTest {
         val label = "Personalização adaptativa"
         val enabled = hasText(label) and isEnabled()
         ActivityScenario.launch(MainActivity::class.java).use {
-            compose.onNodeWithText("Ajustes", useUnmergedTree = true).performClick()
+            compose.openOrionDestination("Ajustes")
             compose.waitUntil(15_000) { compose.onAllNodes(enabled).fetchSemanticsNodes().size == 1 }
             compose.onNode(enabled).performScrollTo().assertIsOff().performClick()
             compose.waitUntil(15_000) { compose.onAllNodes(enabled and isOn()).fetchSemanticsNodes().size == 1 }
-            compose.onNodeWithText("Diagnóstico", useUnmergedTree = true).performClick()
+            compose.openOrionDestination("Diagnóstico")
             compose.onNodeWithText("$label: ativada").performScrollTo()
-            compose.onNodeWithText("Ajustes", useUnmergedTree = true).performClick()
+            compose.openOrionDestination("Ajustes")
             compose.onNode(enabled).performScrollTo().performClick()
             compose.waitUntil(15_000) { compose.onAllNodes(enabled and isOn()).fetchSemanticsNodes().isEmpty() &&
                 compose.onAllNodes(enabled).fetchSemanticsNodes().size == 1 }

@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
 import androidx.activity.enableEdgeToEdge
@@ -18,10 +20,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.style.TextOverflow
 import network.orion.feature.diagnostics.DiagnosticsScreen
 import network.orion.feature.home.HomeScreen
 import network.orion.feature.tasks.TasksScreen
@@ -38,6 +38,19 @@ import network.orion.feature.memories.MemoriesScreen
 import network.orion.app.notifications.OrionNotificationAdmissionOwner
 import network.orion.app.sentinel.OrionSentinelOpenActivity
 import network.orion.feature.notifications.NotificationsScreen
+
+private const val ORION_HOME = "Início"
+private val orionHomeShortcuts = listOf(
+    "Chat", "Voz", "Tarefas", "Lembretes", "Timers", "Memórias",
+    "Notificações", "Dispositivo", "Atividade", "Diagnóstico", "Ajustes",
+)
+private val orionDarkColors = darkColorScheme(
+    primary = Color(0xFFC5DEFF),
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceContainer = Color.Black,
+    surfaceContainerLow = Color.Black,
+)
 
 class MainActivity : ComponentActivity() {
     private lateinit var taskChannel: OrionTaskAdmissionOwner.UiChannel
@@ -56,7 +69,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK),
+        )
         val runtime = checkNotNull((application as OrionApplication).mainRuntime)
         if (intent.getBooleanExtra(OrionSentinelOpenActivity.OPEN_TASKS, false)) {
             intent.removeExtra(OrionSentinelOpenActivity.OPEN_TASKS)
@@ -85,14 +101,15 @@ class MainActivity : ComponentActivity() {
         notificationChannel.onWindowFocus(hasWindowFocus())
         val notifications = runtime.notificationGateway(notificationChannel)
         setContent {
-            MaterialTheme {
+            MaterialTheme(colorScheme = orionDarkColors) {
                 val report by runtime.health.collectAsState()
                 val sentinelEnabled by runtime.sentinelEnabled.collectAsState()
                 val personalizationEnabled by runtime.personalizationEnabled.collectAsState()
                 val resourceProfile by runtime.resourceProfile.collectAsState()
                 val assistantRole by runtime.assistantRoleState.collectAsState()
-                var destination by rememberSaveable { mutableStateOf("Início") }
+                var destination by rememberSaveable { mutableStateOf(ORION_HOME) }
                 LaunchedEffect(tasksNavigation) { if (tasksNavigation > 0) destination = "Tarefas" }
+                BackHandler(enabled = destination != ORION_HOME) { destination = ORION_HOME }
                 var taskQueues by remember { mutableStateOf<network.orion.core.health.TaskQueueDiagnostics?>(null) }
                 var schedulingDiagnostics by remember { mutableStateOf<network.orion.core.health.OrionSchedulingDiagnostics?>(null) }
                 val diagnosticsReader = remember(runtime) {
@@ -111,29 +128,16 @@ class MainActivity : ComponentActivity() {
                         taskQueues = it.queues
                     }
                 }
-                Scaffold(
+                if (destination == ORION_HOME) {
+                    HomeScreen(shortcuts = orionHomeShortcuts, onOpen = { destination = it })
+                } else Scaffold(
                     modifier = Modifier.fillMaxSize().imePadding(),
+                    containerColor = Color.Black,
                     topBar = {
-                        Column(Modifier.statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp)) {
-                            Text("O.R.I.O.N.", style = MaterialTheme.typography.headlineMedium)
-                            Text("Operational Reasoning & Intelligent Orchestration Network",
-                                style = MaterialTheme.typography.labelSmall)
-                        }
-                    },
-                    bottomBar = {
-                        Surface(tonalElevation = 3.dp) {
-                            Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(8.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly) {
-                                for (label in listOf("Início", "Chat", "Tarefas", "Diagnóstico", "Ajustes")) {
-                                    TextButton(onClick = { destination = label }, modifier = Modifier.weight(1f).semantics { selected = destination == label },
-                                        contentPadding = PaddingValues(0.dp)) {
-                                        Text(label, style = MaterialTheme.typography.labelMedium,
-                                            maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
-                                            color = if (destination == label) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                                    }
-                                }
-                            }
-                        }
+                        TextButton(
+                            onClick = { destination = ORION_HOME },
+                            modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp),
+                        ) { Text(ORION_HOME) }
                     },
                 ) { padding ->
                     Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).padding(horizontal = 24.dp)) {
@@ -181,10 +185,6 @@ class MainActivity : ComponentActivity() {
                                     ) notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     applied
                                 })
-                            else -> HomeScreen(report, onOpenDevice = { destination = "Dispositivo" },
-                                onOpenActivity = { destination = "Atividade" }, onOpenReminders = { destination = "Lembretes" },
-                                onOpenTimers = { destination = "Timers" }, onOpenMemories = { destination = "Memórias" },
-                                onOpenNotifications = { destination = "Notificações" })
                         }
                     }
                 }

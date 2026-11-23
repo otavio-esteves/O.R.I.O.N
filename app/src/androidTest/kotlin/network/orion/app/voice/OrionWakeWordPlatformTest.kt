@@ -1,5 +1,6 @@
 package network.orion.app.voice
 
+import network.orion.app.openOrionDestination
 import android.Manifest
 import android.content.ComponentName
 import android.content.Context
@@ -33,7 +34,7 @@ class OrionWakeWordPlatformTest {
 
     @Test fun diagnosticsReportsWakeWordDisabledWhilePhysicalQualificationIsDeferred() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            compose.onNodeWithText("Diagnóstico", useUnmergedTree = true).performClick()
+            compose.openOrionDestination("Diagnóstico")
             compose.onNodeWithText("Palavra de ativação desativada (DISABLED). Qualificação física adiada.")
                 .performScrollTo().assertIsDisplayed()
         }

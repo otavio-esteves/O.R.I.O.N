@@ -1,5 +1,6 @@
 package network.orion.app.tasks
 
+import network.orion.app.openOrionDestination
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
@@ -72,7 +73,7 @@ class OrionTaskScreenTest {
         compose.waitUntil(30_000) {
             checkNotNull((compose.activity.application as OrionApplication).mainRuntime).taskStartupBarrier.isOpen()
         }
-        compose.onNodeWithText("Tarefas", useUnmergedTree = true).performClick()
+        compose.openOrionDestination("Tarefas")
         val first = "Revisão UI ${java.util.UUID.randomUUID()}"
         val second = "Cancelar UI ${java.util.UUID.randomUUID()}"
         type(first)
