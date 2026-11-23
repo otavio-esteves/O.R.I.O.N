@@ -50,6 +50,14 @@ object OrionStructuredResponse {
         }
     } catch (_: IllegalArgumentException) { null } catch (_: IllegalStateException) { null }
 
+    /** Unstructured chat text is display-only and cannot be interpreted as a tool, even if it resembles JSON. */
+    fun plainTextMessage(raw: String, request: String): OrionChatResponse.Message? = try {
+        require(raw.length <= MAX_OUTPUT_BYTES && raw.toByteArray(Charsets.UTF_8).size <= MAX_OUTPUT_BYTES)
+        val text = Reader(quote(raw.trim())).string()
+        require(text.isNotBlank() && !text.removeSurrounding("\"").equals(request.trim(), ignoreCase = true))
+        OrionChatResponse.Message(text)
+    } catch (_: IllegalArgumentException) { null } catch (_: IllegalStateException) { null }
+
     /** Preview is display-only and discarded on any failed terminal. Tools never stream into execution. */
     fun messagePreview(raw: String): String? = try {
         val r = Reader(raw)

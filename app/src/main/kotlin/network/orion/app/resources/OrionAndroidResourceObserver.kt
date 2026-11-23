@@ -35,6 +35,7 @@ internal class OrionAndroidResourceObserver(
     private val clock: OrionClock,
     private val auxiliaryMemory: () -> OrionAppMemoryEvidence? = { null },
     private val maximumMemoryAgeMillis: Long,
+    private val cachedAiRssLimitKiB: Long? = null,
 ) {
     private val app = context.applicationContext
     private val mainName = app.packageName
@@ -71,8 +72,16 @@ internal class OrionAndroidResourceObserver(
         val sanitized = if (truncated) null else boundedExits?.map { exit ->
             OrionProcessExitClassifier.classify(exit.reason, Instant.ofEpochMilli(exit.timestamp), exit.description, dedicatedReason)
         }
-        val aiExits = if (truncated) null else boundedExits?.filter { it.processName == aiName }?.map { exit ->
-            OrionProcessExitClassifier.classify(exit.reason, Instant.ofEpochMilli(exit.timestamp), exit.description, dedicatedReason)
+        val aiRecords = if (truncated) null else boundedExits?.filter { it.processName == aiName }
+        val aiExitHistory = aiRecords?.let { records ->
+            val signals = records.map { exit -> OrionProcessExitClassifier.classify(exit.reason,
+                Instant.ofEpochMilli(exit.timestamp), exit.description, dedicatedReason) }
+            val cached = cachedAiRssLimitKiB?.let { limit ->
+                records.zip(signals).mapNotNull { (exit, signal) ->
+                    signal.takeIf { isCachedLowMemoryExit(exit.reason, exit.importance, exit.rss, exit.pss, limit) }
+                }.toSet()
+            }.orEmpty()
+            OrionAiExitHistory(sampledAt, signals, cached)
         }
         val importance = when (state?.importance) {
             ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND -> OrionProcessImportance.FOREGROUND
@@ -94,7 +103,7 @@ internal class OrionAndroidResourceObserver(
             if (system == null) add(OrionResourceObservationLimitation.SYSTEM_MEMORY_UNAVAILABLE)
             if (state == null) add(OrionResourceObservationLimitation.PROCESS_STATE_UNAVAILABLE)
         }
-        return OrionAndroidResourceSnapshot(observation, aiExits?.let { OrionAiExitHistory(sampledAt, it) }, mainPss, limitations)
+        return OrionAndroidResourceSnapshot(observation, aiExitHistory, mainPss, limitations)
     }
 
     private fun <T> read(source: () -> T?): T? = try { source() }
@@ -104,3 +113,8 @@ internal class OrionAndroidResourceObserver(
 
     companion object { private const val MAX_EXITS = 64 }
 }
+
+/** RSS is only the last platform sample. A small cached process still requires cooldown and fresh admission. */
+internal fun isCachedLowMemoryExit(reason: Int, importance: Int, rssKiB: Long, pssKiB: Long, limitKiB: Long): Boolean =
+    reason == ApplicationExitInfo.REASON_LOW_MEMORY &&
+        importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED && rssKiB in 1..limitKiB && pssKiB in 0..rssKiB

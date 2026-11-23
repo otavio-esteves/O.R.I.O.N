@@ -212,6 +212,7 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
             status(cortex = "Contexto excedido", notice = "Pedido não cabe no orçamento seguro de contexto.", retry = true); return
         }
         status(cortex = "Gerando")
+        val plainText = model.promptStyle == OrionChatPromptStyle.PLAIN_TEXT
         val gate = AtomicBoolean(true); accepting = gate
         val buffer = StringBuilder()
         val terminal = try {
@@ -221,7 +222,9 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
                         require(delta.length.toLong() + buffer.length <= OrionStructuredResponse.MAX_OUTPUT_BYTES) { "output bound" }
                         buffer.append(delta)
                         require(buffer.toString().toByteArray(Charsets.UTF_8).size <= OrionStructuredResponse.MAX_OUTPUT_BYTES) { "output bound" }
-                        val preview = OrionStructuredResponse.messagePreview(buffer.toString()).orEmpty()
+                        val raw = buffer.toString()
+                        val preview = if (plainText) OrionStructuredResponse.plainTextMessage(raw, input.text)?.text.orEmpty()
+                            else OrionStructuredResponse.messagePreview(raw).orEmpty()
                         patch { OrionChatState(it.turns, preview, it.busy, it.cortex, it.notice, it.pending, false) }
                     }
                 }
@@ -237,7 +240,9 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
             }, notice = "Resposta descartada. Nenhuma ferramenta foi executada. Você pode tentar uma nova inferência.", retry = true)
             return
         }
-        val response = OrionStructuredResponse.parse(synchronized(buffer) { buffer.toString() }, input.inputId, input.correlationId)
+        val raw = synchronized(buffer) { buffer.toString() }
+        val response = if (plainText) OrionStructuredResponse.plainTextMessage(raw, input.text)
+            else OrionStructuredResponse.parse(raw, input.inputId, input.correlationId)
         if (response == null) {
             status(cortex = "Resposta inválida", notice = "Saída inválida descartada. Nenhuma ferramenta foi executada.", retry = true); return
         }

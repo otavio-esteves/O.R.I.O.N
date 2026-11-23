@@ -35,12 +35,14 @@ class OrionChatControllerTest {
         var available = true
         var output = """{"type":"message","text":"Olá"}"""
         var terminal = OrionChatTerminal.SUCCEEDED
+        var promptStyle = OrionChatPromptStyle.STRUCTURED
         var delta: ((String) -> Unit)? = null
         var waiting: CompletableDeferred<Unit>? = null
         var cancelled = false
         override suspend fun configuration(): OrionChatModel? {
             configs++
-            return if (available) OrionChatModel("fixture", "test", 8192, 128, 2, OrionTokenCounter { it.toByteArray().size }) else null
+            return if (available) OrionChatModel("fixture", "test", 8192, 128, 2,
+                OrionTokenCounter { it.toByteArray().size }, promptStyle) else null
         }
         override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatTerminal {
             calls++; delta = onDelta; onDelta(output)
@@ -73,6 +75,25 @@ class OrionChatControllerTest {
         val chat = controller(this, tasks, cortex); chat.send("Quais tarefas eu tenho?")
         assertEquals(1, cortex.configs); assertEquals(1, cortex.calls)
         assertEquals(1, tasks.lists); assertEquals(0, tasks.creates); assertEquals(0, tasks.confirmations)
+    }
+    @Test fun plainTextChatShowsTheReplyAndCannotDispatchModelGeneratedTools() = runBlocking {
+        val tasks = Tasks()
+        val cortex = Cortex().apply { promptStyle = OrionChatPromptStyle.PLAIN_TEXT }
+        val chat = controller(this, tasks, cortex)
+        cortex.output = "Maçã e banana."
+        chat.send("Dê dois exemplos de frutas.")
+        assertEquals("Maçã e banana.", chat.state.value.turns.last().text)
+        assertFalse(chat.state.value.canRetry)
+
+        cortex.output = """{"type":"tool","skill":"task.list","arguments":{}}"""
+        chat.send("Qual é a diferença entre cão e lobo?")
+        assertEquals(0, tasks.lists)
+        assertNull(chat.state.value.turns.last().proposal)
+
+        cortex.output = "Quanto é dois mais dois?"
+        chat.send("Quanto é dois mais dois?")
+        assertTrue(chat.state.value.turns.last().user)
+        assertTrue(chat.state.value.canRetry)
     }
     @Test fun cognitiveCreationIsOnlyAProposalUntilASeparatePrepareGesture() = runBlocking {
         val tasks = Tasks(); val cortex = Cortex().apply { output = """{"type":"tool","skill":"task.create","arguments":{"title":"Comprar pão"}}""" }

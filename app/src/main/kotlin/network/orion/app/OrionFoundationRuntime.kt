@@ -427,6 +427,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             // a deferrable JobScheduler/WorkManager opportunity after cold startup.
             requestReconciliation()
             provisionPreviewModel()
+            if (OrionS21CortexPreview.enabled) cortexRuntime()?.observePreviewExitHistory()
         }
     }
 

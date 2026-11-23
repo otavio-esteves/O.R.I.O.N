@@ -3,6 +3,7 @@ package network.orion.app.chat
 import network.orion.ai.api.*
 import network.orion.app.ai.OrionCortexRuntimeOwner
 import network.orion.app.ai.OrionCortexRunResult
+import network.orion.app.ai.S21_CORTEX_PREVIEW_TIER
 import network.orion.core.context.OrionTokenCounter
 import network.orion.core.orchestrator.chat.*
 import network.orion.core.resources.OrionInferenceResourcePlan
@@ -21,8 +22,9 @@ internal interface OrionChatInferenceRuntime {
  */
 internal fun qwenChatModel(plan: OrionInferenceResourcePlan): OrionChatModel? {
     if (plan.model.modelId != QWEN_MODEL_ID || plan.maxContext <= 1) return null
+    val promptStyle = if (plan.tier == S21_CORTEX_PREVIEW_TIER) OrionChatPromptStyle.PLAIN_TEXT else OrionChatPromptStyle.STRUCTURED
     return OrionChatModel(plan.model.modelId, plan.tier, plan.maxContext, minOf(plan.maxTokens, 256), plan.maxThreads,
-        OrionTokenCounter { prompt -> ("\n" + prompt).toByteArray(Charsets.UTF_8).size + 2 })
+        OrionTokenCounter { prompt -> ("\n" + prompt).toByteArray(Charsets.UTF_8).size + 2 }, promptStyle)
 }
 internal const val QWEN_MODEL_ID = "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db"
 
@@ -46,7 +48,7 @@ internal class OrionChatCortexAdapter(private val clock: OrionClock,
         val current = selected.configuration() ?: return OrionChatTerminal.UNAVAILABLE
         if (current.modelId != model.modelId || current.resourceProfile != model.resourceProfile ||
             current.maxContextTokens != model.maxContextTokens || current.reservedOutputTokens != model.reservedOutputTokens ||
-            current.threads != model.threads) return OrionChatTerminal.UNAVAILABLE
+            current.threads != model.threads || current.promptStyle != model.promptStyle) return OrionChatTerminal.UNAVAILABLE
         val request = OrionInferenceRequest(selected.newRequestId(), 1, model.modelId, prompt, "", model.reservedOutputTokens,
             0.0, OrionInferencePriority.INTERACTIVE, clock.monotonicNow().deadlineAfter(120_000), correlationId)
         return selected.run(request, model) { chunks -> chunks.forEach { chunk ->

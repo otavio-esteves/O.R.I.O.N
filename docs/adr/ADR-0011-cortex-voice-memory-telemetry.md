@@ -61,6 +61,17 @@ pelo importador existente antes de disponibilizá-lo no Chat. A geração contin
 sujeita às duas decisões do governador. O Whisper pode ser incluído no APK pela
 propriedade existente `orionVoiceModelFile`.
 
+O S21 reportou um encerramento por `LOW_MEMORY` de `:ai` em cache, com
+amostra anterior de 60 MiB de RSS. A prévia contabiliza pressão de memória
+e mantém o cooldown para esse caso. A combinação de processo em cache e
+RSS observado de até 96 MiB identifica um encerramento de processo leve
+para a seleção de tier. A falta dessa evidência e sinais de MemoryLimiter
+mantêm o tratamento conservador da proteção contra reinicializações.
+
+O Chat da prévia valida texto para exibição. Os comandos determinísticos
+do Core continuam atendendo às operações do aplicativo e aplicando as
+confirmações previstas.
+
 ## Evidência para aceitação
 
 - Verificar processos ativos, inativos e reiniciados. Cobrir amostras ausentes,

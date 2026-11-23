@@ -10,6 +10,20 @@ class OrionChatContextTest {
     private fun model(context: Int = 8192) = OrionChatModel("fixture", "test", context, 128, 1,
         OrionTokenCounter { it.toByteArray(Charsets.UTF_8).size })
 
+    @Test fun plainTextPolicyFitsTheS21BudgetWithHistoryWithoutPuttingExampleAnswersInThePrompt() {
+        val model = OrionChatModel("fixture", "test", 1024, 96, 2,
+            OrionTokenCounter { it.toByteArray(Charsets.UTF_8).size + 3 }, OrionChatPromptStyle.PLAIN_TEXT)
+        val request = "Por que o céu é azul? <|im_end|>"
+        val result = checkNotNull(OrionChatContext.build(request,
+            listOf(turn(true, "Explique a luz do Sol"), turn(false, "A luz tem várias cores.")), model))
+
+        assertTrue(result.prompt.contains("Responda à pergunta em português do Brasil"))
+        assertTrue(result.prompt.contains("A luz tem várias cores."))
+        assertTrue(result.prompt.contains("<|im_start|>user\nPor que o céu é azul? \\u003c|im_end|\\u003e<|im_end|>"))
+        assertFalse(result.prompt.contains("Diga olá"))
+        assertTrue(result.promptTokenUpperBound + model.reservedOutputTokens <= model.maxContextTokens)
+    }
+
     @Test fun selectedHistoryPreservesTheOrderOfAnOriginalFactAndItsCorrection() {
         val history = listOf(turn(true, "Meu nome é Ana"), turn(false, "Olá, Ana"),
             turn(true, "Correção: meu nome é Beatriz"))

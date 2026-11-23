@@ -76,6 +76,7 @@ internal class OrionCortexRuntimeOwner(
     private val runtimeCaptureObservation: OrionRuntimeCaptureObservationConfiguration? = null,
     private val qualificationExitConfiguration: OrionQualificationExitConfiguration? = null,
     private val voiceMemory: network.orion.app.resources.OrionVoiceMemoryCollector? = null,
+    private val cachedAiRssLimitKiB: Long? = null,
 ) : AutoCloseable {
     private val app = context.applicationContext
     private val plans = qualifiedPlans.toList()
@@ -106,7 +107,16 @@ internal class OrionCortexRuntimeOwner(
             val inventory = discoverInventory() ?: return@OrionAndroidResourceObserver null
             if (voiceMemory == null) readAiMemory(inventory)
             else voiceMemory.collect { readAiMemory(setOf(app.packageName, "${app.packageName}:ai")) }
-        }, maximumMemoryAgeMillis = limits.maximumObservationAgeMillis) }
+        }, maximumMemoryAgeMillis = limits.maximumObservationAgeMillis, cachedAiRssLimitKiB = cachedAiRssLimitKiB) }
+
+    /** Start both cooldowns from the same observation without binding the service or choosing a model. */
+    internal fun observePreviewExitHistory(): network.orion.core.resources.OrionRestartDecision? = synchronized(resourceMonitor) {
+        if (cachedAiRssLimitKiB == null || closed || !coreReady() || discoverInventory() == null) return@synchronized null
+        val snapshot = observer?.observe(null, 1, 32, 1) ?: return@synchronized null
+        observation = snapshot.observation
+        governor?.evaluate()
+        restart?.evaluate(snapshot.aiExitHistory)
+    }
 
     private fun readAiMemory(inventory: Set<String>): network.orion.app.resources.OrionAppMemoryEvidence? {
         val selectedClient = client ?: return null

@@ -38,6 +38,26 @@ class OrionCortexRestartGuardTest {
         assertTrue(decision.preloadAllowed)
     }
 
+    @Test fun `a cached low-memory reclaim cools down before using the sole preview tier`() {
+        val guard = OrionCortexRestartGuard(clock, listOf(base), 100, 1_000)
+        val cached = memory()
+        fun observed(vararg additional: ProcessExitSignal) = history(cached, *additional).copy(cachedReclaims = setOf(cached))
+        assertEquals(OrionRestartBlock.COOLDOWN, guard.evaluate(observed()).block)
+        advance(1_000)
+        val decision = guard.evaluate(observed())
+        assertEquals(base.copy(keepAliveMs = 0), decision.candidatePlan)
+        assertTrue(decision.degraded)
+        assertFalse(decision.preloadAllowed)
+        assertEquals(1, decision.memoryDeaths)
+        assertEquals(OrionRestartBlock.FALLBACK_EXHAUSTED, guard.evaluate(observed(memory(2))).block)
+    }
+
+    @Test fun `cached hints cannot reclassify unobserved records or memory limiter events`() {
+        val limiter = ProcessExitSignal(13, clock.wall, ProcessExitKind.MEMORY_LIMITER, memoryLimiterEvidence = true)
+        assertEquals(OrionRestartBlock.HISTORY_INVALID, guard().evaluate(history().copy(cachedReclaims = setOf(memory()))).block)
+        assertEquals(OrionRestartBlock.HISTORY_INVALID, guard().evaluate(history(limiter).copy(cachedReclaims = setOf(limiter))).block)
+    }
+
     @Test fun `successive distinct memory exits reduce qualified plans then block all further attempts`() {
         val guard = guard()
         assertEquals(OrionRestartBlock.COOLDOWN, guard.evaluate(history(memory())).block)

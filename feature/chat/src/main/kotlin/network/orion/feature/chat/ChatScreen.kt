@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -29,14 +30,25 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
     var inputError by remember { mutableStateOf<String?>(null) }
     var oversizedEditRejected by remember { mutableStateOf(false) }
     var editorVersion by remember { mutableIntStateOf(0) }
+    val listState = rememberLazyListState()
+    var revealResult by remember { mutableStateOf(false) }
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
     LaunchedEffect(controller, recoveryVersion) { controller.refresh() }
+    LaunchedEffect(revealResult, state.busy, state.turns.lastOrNull()?.id, state.notice) {
+        if (revealResult && !state.busy) {
+            val turnsStart = if (modelSetup == null) 1 else 2
+            val latest = if (state.notice != null) state.turns.size else state.turns.lastIndex.coerceAtLeast(0)
+            listState.scrollToItem(turnsStart + latest)
+            revealResult = false
+        }
+    }
     LazyColumn(
         Modifier.fillMaxSize().imePadding().testTag("orion_chat")
             .semantics { stateDescription = if (state.busy) "Chat processando" else "Chat disponível" },
+        state = listState,
         contentPadding = PaddingValues(vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -107,6 +119,7 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
                     if (oversizedEditRejected) return@send
                     when (val result = controller.send(input)) {
                         OrionChatAdmission.Accepted -> {
+                            revealResult = true
                             editorVersion++
                             input = ""
                             inputError = null
@@ -119,7 +132,10 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
                     }
                 }, enabled = !state.busy && !oversizedEditRejected, shape = MaterialTheme.shapes.small) { Text("Enviar") }
                 if (state.busy && state.cortex in setOf("Gerando", "Verificando disponibilidade")) TextButton(onClick = controller::cancel) { Text("Cancelar") }
-                if (state.canRetry && !state.busy) TextButton(onClick = controller::retryInference) { Text("Tentar inferência novamente") }
+                if (state.canRetry && !state.busy) TextButton(onClick = {
+                    revealResult = true
+                    controller.retryInference()
+                }) { Text("Tentar inferência novamente") }
             }
             if (oversizedEditRejected && OrionChatInputPolicy.validate(input) == null) {
                 TextButton(enabled = !state.busy, onClick = {
