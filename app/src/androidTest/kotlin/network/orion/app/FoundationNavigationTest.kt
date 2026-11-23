@@ -20,6 +20,7 @@ class FoundationNavigationTest {
             swipeUp(startY = height * 0.80f, endY = height * 0.25f)
         }
         compose.onNodeWithTag("orion_options").assertIsDisplayed()
+        compose.onNodeWithTag("orion_globe").assertDoesNotExist()
         compose.onNodeWithText("Diagnóstico").performScrollTo().performClick()
         compose.onNodeWithText("Core: DEGRADED_SAFE").assertExists()
         compose.onNodeWithText("Contrato IPC: 1.0").assertExists()
