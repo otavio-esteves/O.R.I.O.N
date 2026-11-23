@@ -31,7 +31,7 @@ val qualificationEnabled = qualificationFlag == "true"
 val s21CortexSmokeFlag = providers.gradleProperty("orionS21CortexSmoke").orElse("false").get()
 check(s21CortexSmokeFlag in setOf("true", "false")) { "orionS21CortexSmoke must be true or false." }
 val s21CortexSmokeEnabled = s21CortexSmokeFlag == "true"
-check(!s21CortexSmokeEnabled || !qualificationEnabled) { "Build the S21 smoke test as a separate Debug APK." }
+check(!s21CortexSmokeEnabled || !qualificationEnabled) { "Build the S21 smoke test separately from qualificationRelease." }
 val hybridChatFlag = providers.gradleProperty("orionHybridChatQualification").orElse("false").get()
 check(hybridChatFlag in setOf("true", "false")) { "orionHybridChatQualification must be true or false." }
 val hybridChatEnabled = hybridChatFlag == "true"
@@ -135,9 +135,16 @@ android {
     }
 
     buildTypes {
-        debug {
-            ndk { abiFilters += setOf("arm64-v8a", "x86_64") }
-            if (s21CortexSmokeEnabled) applicationIdSuffix = ".cortexlab"
+        debug { ndk { abiFilters += setOf("arm64-v8a", "x86_64") } }
+        if (s21CortexSmokeEnabled) {
+            create("s21CortexLab") {
+                initWith(getByName("debug"))
+                applicationIdSuffix = ".cortexlab"
+                // Match the optimized native libraries used for S21 calibration.
+                matchingFallbacks += "release"
+                ndk.abiFilters.clear()
+                ndk.abiFilters += "arm64-v8a"
+            }
         }
         release {
             isMinifyEnabled = true
@@ -169,6 +176,7 @@ android {
     }
 
     sourceSets.getByName("androidTest").assets.directories.add("$rootDir/data/database/schemas")
+    if (s21CortexSmokeEnabled) testBuildType = "s21CortexLab"
     if (qualificationEnabled) {
         testBuildType = "qualificationRelease"
         sourceSets.getByName("androidTest").java.directories.clear()
