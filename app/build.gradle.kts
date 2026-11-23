@@ -28,6 +28,10 @@ val nativeQualificationStatus = nativeStatusMatches.single().groupValues[1]
 val qualificationFlag = providers.gradleProperty("orionQualificationRelease").orElse("false").get()
 check(qualificationFlag in setOf("true", "false")) { "orionQualificationRelease must be true or false." }
 val qualificationEnabled = qualificationFlag == "true"
+val s21CortexSmokeFlag = providers.gradleProperty("orionS21CortexSmoke").orElse("false").get()
+check(s21CortexSmokeFlag in setOf("true", "false")) { "orionS21CortexSmoke must be true or false." }
+val s21CortexSmokeEnabled = s21CortexSmokeFlag == "true"
+check(!s21CortexSmokeEnabled || !qualificationEnabled) { "Build the S21 smoke test as a separate Debug APK." }
 val hybridChatFlag = providers.gradleProperty("orionHybridChatQualification").orElse("false").get()
 check(hybridChatFlag in setOf("true", "false")) { "orionHybridChatQualification must be true or false." }
 val hybridChatEnabled = hybridChatFlag == "true"
@@ -131,7 +135,10 @@ android {
     }
 
     buildTypes {
-        debug { ndk { abiFilters += setOf("arm64-v8a", "x86_64") } }
+        debug {
+            ndk { abiFilters += setOf("arm64-v8a", "x86_64") }
+            if (s21CortexSmokeEnabled) applicationIdSuffix = ".cortexlab"
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
