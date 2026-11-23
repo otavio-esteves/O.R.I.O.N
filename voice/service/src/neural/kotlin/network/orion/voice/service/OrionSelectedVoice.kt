@@ -28,6 +28,9 @@ import kotlin.math.roundToInt
 private const val KOKORO_ASSETS = "orion_voice/kokoro"
 private const val ORION_SPEAKER = 43 // pm_alex, the locutor used for the bundled Portuguese replies.
 private const val SAMPLE_RATE = 24_000
+private val markup = Regex("[*`_#]+")
+private val whitespace = Regex("\\s+")
+private val bullet = Regex("^[-•]\\s+")
 
 internal object OrionTtsNative {
     init { System.loadLibrary("orion_whisper") }
@@ -37,15 +40,19 @@ internal object OrionTtsNative {
 
 @Suppress("UNUSED_PARAMETER")
 internal suspend fun speakOrionVoiceReply(context: Context, text: String, sessionId: String) {
-    if (playOrionBundledVoiceReply(context, text)) return
-    val spokenText = text.replace(Regex("[*`_#]+"), "").replace(Regex("\\s+"), " ").trim()
+    val spokenText = text.lineSequence().map { line ->
+        line.replace(markup, "").trim().replaceFirst(bullet, "").replace(whitespace, " ")
+    }.filter { it.any(Char::isLetterOrDigit) }.joinToString(" ") { phrase ->
+        if (phrase.last() in ".!?:;…") phrase else "$phrase."
+    }.let { if (it.startsWith("Bateria em ")) "A bateria está em " + it.removePrefix("Bateria em ") else it }
     if (spokenText.isEmpty()) return
     val bounded = if (spokenText.length <= 600) spokenText else spokenText.take(600).substringBeforeLast(' ', spokenText.take(600))
     val pcm = try { synthesizeOrionKokoro(context, bounded) }
     catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
     catch (_: Exception) { null }
     catch (_: LinkageError) { null }
-    if (pcm != null) try { playSpeech(pcm) } finally { pcm.fill(0) }
+    if (pcm == null) playOrionBundledVoiceReply(context, text)
+    else try { playSpeech(pcm) } finally { pcm.fill(0) }
 }
 
 internal suspend fun synthesizeOrionKokoro(context: Context, text: String): ShortArray? = withContext(Dispatchers.IO) {
@@ -55,38 +62,42 @@ internal suspend fun synthesizeOrionKokoro(context: Context, text: String): Shor
         if (Application.getProcessName() == "${context.packageName}:voice_session") Process.killProcess(Process.myPid())
     }
     watchdog.postDelayed(abort, 25_000)
-    var savedStderr = -1
     try {
-        val pronunciation = installPronunciationData(context)
         val owner = currentCoroutineContext()
         owner.ensureActive()
-        savedStderr = OrionTtsNative.beginPrivateSynthesis()
-        if (savedStderr == -1) return@withContext null
+        val pcm = renderOrionKokoro(context, text)
+        if (!owner.isActive) pcm?.fill(0)
+        owner.ensureActive()
+        pcm
+    } finally {
+        watchdog.removeCallbacks(abort)
+        reservation.close()
+    }
+}
+
+private fun renderOrionKokoro(context: Context, text: String): ShortArray? {
+    val pronunciation = installPronunciationData(context)
+    val savedStderr = OrionTtsNative.beginPrivateSynthesis()
+    if (savedStderr == -1) return null
+    try {
         val engine = OfflineTts(context.assets, OfflineTtsConfig(model = OfflineTtsModelConfig(
             kokoro = OfflineTtsKokoroModelConfig(
                 model = "$KOKORO_ASSETS/model.int8.onnx", voices = "$KOKORO_ASSETS/voices.bin",
                 tokens = "$KOKORO_ASSETS/tokens.txt", dataDir = pronunciation.absolutePath, lang = "pt-br",
             ), numThreads = 2,
-        ), silenceScale = 0.8f))
+        ), silenceScale = 0.9f))
         try {
-            if (engine.numSpeakers() <= ORION_SPEAKER) return@withContext null
-            var defectiveChunk = false
-            val audio = engine.generateWithCallback(text, sid = ORION_SPEAKER, speed = 1.02f) { chunk ->
-                defectiveChunk = defectiveChunk || !validSpeech(chunk)
-                chunk.fill(0f)
-                if (owner.isActive && !defectiveChunk) 1 else 0
-            }
+            if (engine.numSpeakers() <= ORION_SPEAKER) return null
+            // The pinned JNI callback requires a descriptor that Kotlin lambdas do not expose.
+            val audio = engine.generate(text, sid = ORION_SPEAKER, speed = 0.96f)
             val samples = audio.samples
             try {
-                owner.ensureActive()
-                if (defectiveChunk || audio.sampleRate != SAMPLE_RATE || !validSpeech(samples)) return@withContext null
-                ShortArray(samples.size) { (samples[it].coerceIn(-1f, 1f) * Short.MAX_VALUE).roundToInt().toShort() }
+                if (audio.sampleRate != SAMPLE_RATE || !validSpeech(samples)) return null
+                return ShortArray(samples.size) { (samples[it].coerceIn(-1f, 1f) * Short.MAX_VALUE).roundToInt().toShort() }
             } finally { samples.fill(0f) }
         } finally { engine.release() }
     } finally {
-        if (savedStderr != -1) OrionTtsNative.endPrivateSynthesis(savedStderr)
-        watchdog.removeCallbacks(abort)
-        reservation.close()
+        OrionTtsNative.endPrivateSynthesis(savedStderr)
     }
 }
 

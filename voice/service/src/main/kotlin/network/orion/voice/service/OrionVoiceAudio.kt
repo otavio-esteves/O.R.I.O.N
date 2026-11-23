@@ -18,22 +18,27 @@ internal object OrionVoiceActivityDetection {
     /** Trim around speech and require at least 120 ms of voiced frames. Input is bounded mono PCM. */
     fun speech(input: ShortArray, size: Int): ShortArray? {
         require(size in 0..input.size && size <= maxSamples)
+        val levels = IntArray(size / frameSamples) { frame ->
+            val start = frame * frameSamples
+            var magnitude = 0
+            for (index in start until start + frameSamples) magnitude += abs(input[index].toInt())
+            magnitude / frameSamples
+        }
+        if (levels.size < 6) return null
+        val noiseFloor = levels.sortedArray()[levels.size / 5]
+        val threshold = maxOf(48, noiseFloor + maxOf(32, noiseFloor / 2))
         var first = -1
         var last = 0
         var voicedFrames = 0
-        var offset = 0
-        while (offset + frameSamples <= size) {
-            var magnitude = 0
-            for (index in offset until offset + frameSamples) magnitude += abs(input[index].toInt())
-            if (magnitude >= 256 * frameSamples) {
-                if (first < 0) first = offset
-                last = offset + frameSamples
+        for (frame in levels.indices) {
+            if (levels[frame] >= threshold) {
+                if (first < 0) first = frame * frameSamples
+                last = (frame + 1) * frameSamples
                 voicedFrames++
             }
-            offset += frameSamples
         }
         if (voicedFrames < 6) return null
-        val padding = sampleRate / 5
+        val padding = 2 * sampleRate / 5
         return input.copyOfRange((first - padding).coerceAtLeast(0), (last + padding).coerceAtMost(size))
     }
 }

@@ -20,6 +20,13 @@ o arquivo do modelo e o AAR por SHA-256. A adaptação filtra o diagnóstico
 nativo do Sherpa e redireciona o `stderr` durante a síntese, pois o runtime
 pode incluir o texto de entrada em erros de fonetização.
 
+A reprodução usa síntese da frase inteira com o locutor `pm_alex`. As frases
+prontas gravadas com o mesmo locutor atendem às respostas conhecidas quando
+a síntese não retorna áudio. A chamada Kotlin usa a geração síncrona do
+Sherpa. O callback da versão fixada causou `NoSuchMethodError` na JNI e
+encerrou a sessão de voz no S21. O teste instrumentado usa os assets do APK,
+gera uma resposta sintética em português e envia o PCM ao `AudioTrack`.
+
 A escolha de Whisper e dos parâmetros de decodificação continua regida pela
 seção 83. A prévia valida os pesos por tamanho e SHA-256 e mede a transcrição
 em português no Galaxy S21. O APK da rodada inclui Whisper Small multilíngue

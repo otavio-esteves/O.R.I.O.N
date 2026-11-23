@@ -9,7 +9,7 @@
     <string name="orion_assistant_open_failed">Não foi possível abrir o app nesta sessão.</string>
     <string name="orion_assistant_permission">Autorize o microfone em Ajustes → Voz.</string>
     <string name="orion_assistant_no_model">Instale o modelo local em Ajustes → Voz.</string>
-    <string name="orion_assistant_connecting">Preparando microfone.</string>
+    <string name="orion_assistant_connecting">Aguarde o microfone ficar pronto para falar.</string>
     <string name="orion_assistant_listening">Ouvindo. Diga, por exemplo, “bateria” ou “listar tarefas”.</string>
     <string name="orion_assistant_transcribing">Transcrevendo no dispositivo.</string>
     <string name="orion_assistant_waiting">Aguardando o Core.</string>

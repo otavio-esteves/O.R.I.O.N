@@ -186,7 +186,7 @@ internal class OrionVoiceInteractionSession(context: Context) : VoiceInteraction
         val microphone = hasMicrophone()
         val permission = hasRecordingPermission()
         ui.talk.isEnabled = active && capture == null && modelReady && microphone && permission
-        ui.finish.visibility = if (busy && (state == OrionVoiceSessionState.CONNECTING || state == OrionVoiceSessionState.LISTENING))
+        ui.finish.visibility = if (busy && state == OrionVoiceSessionState.LISTENING)
             View.VISIBLE else View.GONE
         ui.cancel.visibility = if (busy) View.VISIBLE else View.GONE
         ui.open.isEnabled = active

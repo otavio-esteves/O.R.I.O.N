@@ -100,7 +100,7 @@ internal fun OrionPushToTalkScreen(
         }
     }
     val busy = state?.terminal == false
-    val recording = state == OrionVoiceSessionState.CONNECTING || state == OrionVoiceSessionState.LISTENING
+    val recording = state == OrionVoiceSessionState.LISTENING
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
     Column(
@@ -140,7 +140,12 @@ internal fun OrionPushToTalkScreen(
                         enabled = (!busy || recording) && !importing,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("orion_voice_talk"),
                         shape = MaterialTheme.shapes.small,
-                    ) { Text(if (recording) "Concluir fala" else if (busy) "Processando" else "Falar") }
+                    ) { Text(when {
+                        recording -> "Concluir fala"
+                        state == OrionVoiceSessionState.CONNECTING -> "Preparando"
+                        busy -> "Processando"
+                        else -> "Falar"
+                    }) }
                     if (busy) TextButton(onClick = {
                         controller.close()
                         state = OrionVoiceSessionState.CANCELLED
@@ -192,7 +197,7 @@ internal fun OrionPushToTalkScreen(
 }
 
 private fun voiceStatus(state: OrionVoiceSessionState) = when (state) {
-    OrionVoiceSessionState.CONNECTING -> "Preparando microfone."
+    OrionVoiceSessionState.CONNECTING -> "Aguarde o microfone ficar pronto para falar."
     OrionVoiceSessionState.LISTENING -> "Ouvindo. Diga, por exemplo, “bateria” ou “criar tarefa estudar”."
     OrionVoiceSessionState.TRANSCRIBING -> "Transcrevendo no dispositivo."
     OrionVoiceSessionState.WAITING_FOR_CORE -> "Buscando a resposta."

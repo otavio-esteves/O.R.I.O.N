@@ -91,11 +91,6 @@ internal class OrionVoiceCapture(
             requireCaptureAuthority()
             withContext(Dispatchers.IO) { reservation = OrionVoiceMemoryEndpoint.acquireHeavy(context) }
             if (reservation == null) return report(OrionVoiceSessionState.RESOURCE_BUSY)
-            val model = withContext(Dispatchers.IO) {
-                OrionVoiceModel.upgradeBundled(context)
-                OrionVoiceModel.verified(context)
-            }
-                ?: return report(OrionVoiceSessionState.MODEL_UNAVAILABLE)
             requireCaptureAuthority()
             val pcm = try {
                 OrionVoiceRecorder(context).capture(finishRequested::get, ::requireCaptureAuthority) {
@@ -115,11 +110,16 @@ internal class OrionVoiceCapture(
                     Process.killProcess(Process.myPid())
                 }
             }
-            watchdog.postDelayed(limit, 25_000)
             val text = try {
+                requireCaptureAuthority()
+                val model = withContext(Dispatchers.IO) {
+                    OrionVoiceModel.upgradeBundled(context)
+                    OrionVoiceModel.verified(context)
+                } ?: return report(OrionVoiceSessionState.MODEL_UNAVAILABLE)
                 requireCaptureAuthority()
                 withContext(Dispatchers.IO) {
                     decoding.set(true)
+                    watchdog.postDelayed(limit, 25_000)
                     try {
                         currentCoroutineContext().ensureActive()
                         val raw = OrionWhisper.transcribe(operation, model.absolutePath, pcm)
