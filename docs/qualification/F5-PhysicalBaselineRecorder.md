@@ -63,6 +63,13 @@ already installed qualification APK pair before collection, then rechecks them
 after collection. Installation/provisioning remains a separate reviewed procedure;
 the recorder never installs, grants permissions, pushes files or changes settings.
 
+The qualification APK declares MAIN, `:ai`, `:voice` and `:voice_session`. The
+recorder accepts an unloaded sample only when the qualification UID's running
+process inventory matches MAIN and the pinned `:ai` PID. A running voice
+process or a missing process observation invalidates the sample. The Android
+process-list API identifies running processes at each sampling boundary. PSS
+comes from each of the two sampled processes.
+
 ## Collect only after a physical target is available
 
 Do not run now without an allocated physical target and the exact baseline pair

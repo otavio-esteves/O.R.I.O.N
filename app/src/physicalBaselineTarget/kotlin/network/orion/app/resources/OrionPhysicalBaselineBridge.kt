@@ -1,5 +1,6 @@
 package network.orion.app.resources
 
+import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
@@ -11,7 +12,6 @@ import android.os.ResultReceiver
 import java.util.Locale
 import network.orion.ai.api.IOrionCortex
 import network.orion.ai.api.OrionCortexWire
-import network.orion.app.ai.supportedCortexInventory
 import network.orion.core.resources.OrionMemoryPressure
 import network.orion.core.resources.OrionProcessImportance
 import network.orion.core.time.AndroidOrionClock
@@ -30,7 +30,11 @@ object OrionPhysicalBaselineBridge {
         require(samples in 1..10 && intervalMillis in 100..1_000) { "ARGUMENTS_REJECTED" }
         require(context.packageName == TARGET && Application.getProcessName() == TARGET) { "TARGET_IDENTITY_REJECTED" }
         requirePhysicalBuild()
-        inventory(context)
+        validateDeclaredProcesses(context)
+        val running = runningProcesses(context)
+        check(running[TARGET] == Process.myPid() && running.keys.all { it == TARGET || it == "$TARGET:ai" }) {
+            "PROCESS_INVENTORY_UNAVAILABLE"
+        }
     }
 
     /** Also protects direct reflection calls: a rejected build cannot emit a physical receipt. */
@@ -42,16 +46,34 @@ object OrionPhysicalBaselineBridge {
     }
 
     @Suppress("DEPRECATION")
-    private fun inventory(context: Context): Set<String> {
+    private fun validateDeclaredProcesses(context: Context) {
         val info = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_ACTIVITIES or
             PackageManager.GET_SERVICES or PackageManager.GET_RECEIVERS or PackageManager.GET_PROVIDERS or
             PackageManager.MATCH_DISABLED_COMPONENTS)
         val components = sequenceOf(info.activities?.asSequence(), info.services?.asSequence(),
             info.receivers?.asSequence(), info.providers?.asSequence()).filterNotNull().flatten()
             .take(257).map { it.processName }.toList()
-        return checkNotNull(supportedCortexInventory(context.packageName, info.applicationInfo?.processName, components)) {
+        val declared = components.map {
+            when {
+                it == null -> TARGET
+                it.startsWith(':') -> TARGET + it
+                else -> it
+            }
+        }.toSet() + TARGET
+        check(components.size <= 256 && info.applicationInfo?.processName == TARGET &&
+            declared == setOf(TARGET, "$TARGET:ai", "$TARGET:voice", "$TARGET:voice_session")) {
             "PROCESS_INVENTORY_UNAVAILABLE"
         }
+    }
+
+    // Diagnostic-only inventory. No cross-process PSS comes from ActivityManager.
+    private fun runningProcesses(context: Context): Map<String, Int> {
+        val manager = checkNotNull(context.getSystemService(ActivityManager::class.java))
+        val owned = checkNotNull(manager.runningAppProcesses).filter { it.uid == Process.myUid() }
+        check(owned.size in 1..4 && owned.all { it.pid > 0 && TARGET in it.pkgList })
+        val active = owned.associate { it.processName to it.pid }
+        check(active.size == owned.size && active.values.toSet().size == owned.size)
+        return active
     }
 
     @JvmStatic fun collect(context: Context, binder: IBinder, samples: Int, intervalMillis: Int,
@@ -61,7 +83,7 @@ object OrionPhysicalBaselineBridge {
         return try {
             val clock = AndroidOrionClock(context.contentResolver)
             val initialBoot = checkNotNull(clock.monotonicNow().bootSessionId)
-            val names = inventory(context)
+            val names = setOf(TARGET, "$TARGET:ai")
             val telemetry = OrionCortexMemoryTelemetry(context.packageName, clock, MAXIMUM_AGE_MILLIS)
             val service = checkNotNull(IOrionCortex.Stub.asInterface(binder))
             val protocol = service.getProtocolInfo()
@@ -80,6 +102,8 @@ object OrionPhysicalBaselineBridge {
                     !OrionCortexWire.boolean(receipt, "nativeValidationCompleted"))
                 val pid = OrionCortexWire.int(receipt, "pid")
                 check(pid != Process.myPid() && (aiPid == null || aiPid == pid))
+                // A running voice process invalidates this two-process unloaded baseline.
+                check(runningProcesses(context) == mapOf(TARGET to Process.myPid(), "$TARGET:ai" to pid))
                 checkNotNull(telemetry.read(receipt, aiPid, names, true))
                 aiPid = pid
                 return receipt
@@ -89,7 +113,7 @@ object OrionPhysicalBaselineBridge {
             val observer = OrionAndroidResourceObserver(context, clock,
                 auxiliaryMemory = {
                     val receipt = idleReceipt().also { observedAi = it }
-                    telemetry.read(receipt, aiPid, inventory(context), true)
+                    telemetry.read(receipt, aiPid, names, true)
                 }, maximumMemoryAgeMillis = MAXIMUM_AGE_MILLIS)
             repeat(samples) { index ->
                 if (Thread.currentThread().isInterrupted) throw InterruptedException()
