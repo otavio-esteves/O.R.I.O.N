@@ -5,6 +5,7 @@ import android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
 import android.app.ApplicationExitInfo.REASON_LOW_MEMORY
 import android.app.ApplicationExitInfo.REASON_OTHER
 import android.content.ComponentCallbacks2
+import network.orion.app.ai.S21_CACHED_AI_RSS_LIMIT_KIB
 import network.orion.core.resources.OrionMemoryPressure
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -14,8 +15,9 @@ import org.junit.Test
 @Suppress("DEPRECATION")
 class OrionAndroidMemoryPressureTest {
     @Test fun onlySmallCachedLowMemorySamplesAreReclaims() {
-        val limit = 96 * 1024L
-        val observedRss = 60 * 1024L
+        val limit = S21_CACHED_AI_RSS_LIMIT_KIB
+        val observedRss = 209 * 1024L
+        assertTrue(isCachedLowMemoryExit(REASON_LOW_MEMORY, IMPORTANCE_CACHED, 60 * 1024L, 0, limit))
         assertTrue(isCachedLowMemoryExit(REASON_LOW_MEMORY, IMPORTANCE_CACHED, observedRss, 0, limit))
         assertFalse(isCachedLowMemoryExit(REASON_LOW_MEMORY, IMPORTANCE_FOREGROUND, observedRss, 0, limit))
         assertFalse(isCachedLowMemoryExit(REASON_LOW_MEMORY, IMPORTANCE_CACHED, 0, 0, limit))

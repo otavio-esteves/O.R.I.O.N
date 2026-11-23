@@ -23,6 +23,8 @@ import network.orion.data.repository.models.OrionModelImportCoordinator
 
 internal enum class OrionS21ModelStatus { CHECKING, READY, MISSING, REJECTED }
 internal const val S21_CORTEX_PREVIEW_TIER = "S21_DEVELOPMENT_PREVIEW"
+// A cached worker after model unload was reclaimed at 209 MiB RSS on the pinned firmware.
+internal const val S21_CACHED_AI_RSS_LIMIT_KIB = 224 * 1024L
 
 /** Opt-in local build for one measured firmware. The normal build uses no candidate profile. */
 internal object OrionS21CortexPreview {
@@ -68,8 +70,6 @@ internal object OrionS21CortexPreview {
     // Allows light role startup after the inventory fence. The kernel reservation
     // prevents Whisper and Cortex from owning their native workspaces together.
     private const val VOICE_STARTUP_RESERVE_BYTES = 256 * MIB
-    // The S21 reported a cached :ai exit with 60 MiB RSS and no PSS sample.
-    private const val CACHED_AI_RSS_LIMIT_KIB = 96 * 1024L
     private val plan = OrionInferenceResourcePlan(
         InferenceModelProfile(QWEN_MODEL_ID, 544 * MIB), S21_CORTEX_PREVIEW_TIER,
         2, 1024, 96, 0, 1_152 * MIB, 1_792 * MIB, 1_024 * MIB, 6, PowerManager.THERMAL_STATUS_LIGHT,
@@ -80,6 +80,6 @@ internal object OrionS21CortexPreview {
         if (!enabled) null else OrionCortexRuntimeOwner(app, importer, db, clock,
             qualifiedPlans = listOf(plan), timing = timing, coreReady = ready,
             resourceFacts = resourceFacts,
-            cachedAiRssLimitKiB = CACHED_AI_RSS_LIMIT_KIB,
+            cachedAiRssLimitKiB = S21_CACHED_AI_RSS_LIMIT_KIB,
             voiceMemory = OrionVoiceMemoryCollector(app, clock, VOICE_STARTUP_RESERVE_BYTES))
 }

@@ -61,12 +61,13 @@ pelo importador existente antes de disponibilizá-lo no Chat. A geração contin
 sujeita às duas decisões do governador. O Whisper pode ser incluído no APK pela
 propriedade existente `orionVoiceModelFile`.
 
-O S21 reportou um encerramento por `LOW_MEMORY` de `:ai` em cache, com
-amostra anterior de 60 MiB de RSS. A prévia contabiliza pressão de memória
-e mantém o cooldown para esse caso. A combinação de processo em cache e
-RSS observado de até 96 MiB identifica um encerramento de processo leve
-para a seleção de tier. A falta dessa evidência e sinais de MemoryLimiter
-mantêm o tratamento conservador da proteção contra reinicializações.
+O S21 reportou encerramentos por `LOW_MEMORY` de `:ai` em cache, com amostras
+de 60 MiB e 209 MiB de RSS. O segundo ocorreu após a resposta e o descarregamento
+do modelo. A prévia contabiliza a pressão de memória e mantém o cooldown nesses
+casos. O limite de 224 MiB de RSS para processos em cache cobre o tamanho
+observado do trabalhador sem modelo no firmware da prévia. A falta dessa
+evidência e sinais de MemoryLimiter mantêm o tratamento conservador da
+proteção contra reinicializações.
 
 Quando um encerramento registrado abre uma pausa de proteção temporária, uma
 pergunta explícita da prévia pode aguardar até uma janela de cooldown antes de
