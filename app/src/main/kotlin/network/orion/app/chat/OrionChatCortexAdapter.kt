@@ -12,6 +12,7 @@ import network.orion.core.time.OrionClock
 /** Internal technical port: test fixtures may use the existing client without configuring product profiles. */
 internal interface OrionChatInferenceRuntime {
     fun configuration(): OrionChatModel?
+    suspend fun awaitReadyForGeneration() = Unit
     fun newRequestId(): String
     suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatTerminal
 }
@@ -31,6 +32,7 @@ internal const val QWEN_MODEL_ID = "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f
 internal class OrionOwnedChatRuntime(private val owner: OrionCortexRuntimeOwner,
     private val observeResult: (OrionCortexRunResult) -> Unit = {}) : OrionChatInferenceRuntime {
     override fun configuration() = owner.chatResourcePlan()?.let(::qwenChatModel)
+    override suspend fun awaitReadyForGeneration() = owner.awaitPreviewExitCooldown()
     override fun newRequestId() = owner.newRequestId()
     override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatTerminal =
         when (val result = owner.run(model.modelId, request, model.maxContextTokens, model.threads, onChunks).also(observeResult)) {
@@ -45,6 +47,7 @@ internal class OrionChatCortexAdapter(private val clock: OrionClock,
     override suspend fun configuration() = runtime()?.configuration()
     override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatTerminal {
         val selected = runtime() ?: return OrionChatTerminal.UNAVAILABLE
+        selected.awaitReadyForGeneration()
         val current = selected.configuration() ?: return OrionChatTerminal.UNAVAILABLE
         if (current.modelId != model.modelId || current.resourceProfile != model.resourceProfile ||
             current.maxContextTokens != model.maxContextTokens || current.reservedOutputTokens != model.reservedOutputTokens ||

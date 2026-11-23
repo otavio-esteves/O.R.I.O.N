@@ -6,12 +6,16 @@ import android.os.PowerManager
 import android.system.Os
 import android.system.OsConstants
 import java.security.MessageDigest
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import network.orion.app.BuildConfig
 import network.orion.app.chat.QWEN_MODEL_ID
 import network.orion.app.resources.OrionCortexResourceFactBuffer
 import network.orion.app.resources.OrionVoiceMemoryCollector
 import network.orion.core.resources.InferenceModelProfile
 import network.orion.core.resources.OrionInferenceResourcePlan
+import network.orion.core.resources.OrionResourceBlock
+import network.orion.core.resources.OrionRestartBlock
 import network.orion.core.time.OrionClock
 import network.orion.data.database.OrionDatabase
 import network.orion.data.repository.models.OrionExpectedModelFile
@@ -37,6 +41,29 @@ internal object OrionS21CortexPreview {
 
     val expectedModel = OrionExpectedModelFile(QWEN_MODEL_ID, 491_400_032L)
     val resourceFacts by lazy { OrionCortexResourceFactBuffer(12) }
+    private val mutableNotice = MutableStateFlow<String?>(null)
+    val notice = mutableNotice.asStateFlow()
+
+    fun reportRestart(block: OrionRestartBlock?) {
+        if (block == null) return
+        mutableNotice.value = when (block) {
+            OrionRestartBlock.COOLDOWN -> "Cortex em pausa de proteção. Aguardando para gerar a resposta."
+            OrionRestartBlock.FALLBACK_EXHAUSTED -> "O perfil local foi suspenso após pressão de memória."
+            else -> "O Cortex aguarda dados confiáveis de reinício."
+        }
+    }
+
+    fun reportResource(block: OrionResourceBlock?) {
+        mutableNotice.value = when (block) {
+            null -> null
+            OrionResourceBlock.BACKGROUND -> "Mantenha o O.R.I.O.N. em primeiro plano durante a resposta."
+            OrionResourceBlock.THERMAL -> "O aparelho está quente demais para gerar uma resposta agora."
+            OrionResourceBlock.BATTERY, OrionResourceBlock.POWER_SAVER -> "A política de bateria pausou a geração local."
+            OrionResourceBlock.MEMORY_PRESSURE, OrionResourceBlock.MEMORY_BUDGET -> "O Cortex aguarda mais memória livre no aparelho."
+            OrionResourceBlock.MEMORY_EXIT, OrionResourceBlock.RESOURCE_EXIT -> "O Cortex está em pausa de proteção."
+            else -> "O Cortex aguarda uma medição confiável dos recursos do aparelho."
+        }
+    }
     private val timing = OrionCortexResourceTiming(2_000, 60_000)
     // Allows light role startup after the inventory fence. The kernel reservation
     // prevents Whisper and Cortex from owning their native workspaces together.

@@ -6,10 +6,12 @@ import android.content.pm.PackageManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import network.orion.ai.api.OrionInferenceLifecycle
 import network.orion.ai.api.OrionInferenceChunk
 import network.orion.ai.api.OrionInferenceRequest
@@ -22,7 +24,9 @@ import network.orion.app.resources.recordRestartFact
 import network.orion.core.resources.OrionCortexRestartGuard
 import network.orion.core.resources.OrionInferenceResourcePlan
 import network.orion.core.resources.OrionMinimumResourceGovernor
+import network.orion.core.resources.OrionResourceBlock
 import network.orion.core.resources.OrionResourceObservation
+import network.orion.core.resources.OrionRestartBlock
 import network.orion.core.time.OrionClock
 import network.orion.data.database.ModelRegistryEntity
 import network.orion.data.database.OrionDatabase
@@ -110,12 +114,26 @@ internal class OrionCortexRuntimeOwner(
         }, maximumMemoryAgeMillis = limits.maximumObservationAgeMillis, cachedAiRssLimitKiB = cachedAiRssLimitKiB) }
 
     /** Start both cooldowns from the same observation without binding the service or choosing a model. */
-    internal fun observePreviewExitHistory(): network.orion.core.resources.OrionRestartDecision? = synchronized(resourceMonitor) {
-        if (cachedAiRssLimitKiB == null || closed || !coreReady() || discoverInventory() == null) return@synchronized null
-        val snapshot = observer?.observe(null, 1, 32, 1) ?: return@synchronized null
+    internal fun observePreviewExitHistory(): Boolean = synchronized(resourceMonitor) {
+        if (cachedAiRssLimitKiB == null || closed || !coreReady() || discoverInventory() == null) return@synchronized false
+        val snapshot = observer?.observe(null, 1, 32, 1) ?: return@synchronized false
         observation = snapshot.observation
-        governor?.evaluate()
-        restart?.evaluate(snapshot.aiExitHistory)
+        val resource = governor?.evaluate()?.block
+        val restartBlock = restart?.evaluate(snapshot.aiExitHistory)?.block
+        if (restartBlock != null) OrionS21CortexPreview.reportRestart(restartBlock)
+        val governorCooling = resource == OrionResourceBlock.MEMORY_EXIT || resource == OrionResourceBlock.RESOURCE_EXIT
+        if (restartBlock == null && governorCooling) OrionS21CortexPreview.reportResource(resource)
+        restartBlock == OrionRestartBlock.COOLDOWN || (restartBlock == null && governorCooling)
+    }
+
+    /** Wait once, before assigning an inference deadline. Admission still takes fresh decisions. */
+    internal suspend fun awaitPreviewExitCooldown() {
+        if (cachedAiRssLimitKiB == null || timing == null) return
+        withContext(Dispatchers.IO) {
+            withTimeoutOrNull(timing.memoryExitCooldownMillis + 1_000) {
+                while (observePreviewExitHistory()) delay(1_000)
+            }
+        }
     }
 
     private fun readAiMemory(inventory: Set<String>): network.orion.app.resources.OrionAppMemoryEvidence? {
@@ -346,6 +364,7 @@ internal class OrionCortexRuntimeOwner(
                             } else null
                             observation = snapshot?.observation
                             val decision = checkNotNull(governor).evaluate()
+                            if (cachedAiRssLimitKiB != null) OrionS21CortexPreview.reportResource(decision.block)
                             if (cycleCallback != null) cycleObservations.isolatedCycle(cycleCallback.token) {
                                 it.governor(cycleCallback, cycleClient?.cycleEndpoint(cycleCallback), snapshot, decision)
                             }
@@ -360,6 +379,7 @@ internal class OrionCortexRuntimeOwner(
                             val snapshot = if (coreReady() && discoverInventory() != null)
                                 observer?.observe(null, 1, 32, 1) else null
                             val decision = guard.evaluate(snapshot?.aiExitHistory)
+                            if (cachedAiRssLimitKiB != null) OrionS21CortexPreview.reportRestart(decision.block)
                             if (cycleCallback != null) cycleObservations.isolatedCycle(cycleCallback.token) {
                                 it.restart(cycleCallback, cycleClient?.cycleEndpoint(cycleCallback), snapshot, decision)
                             }

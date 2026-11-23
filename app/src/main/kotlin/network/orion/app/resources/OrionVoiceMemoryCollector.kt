@@ -28,7 +28,10 @@ internal class OrionVoiceMemoryCollector(
 
     init { require(startupReserveBytes > 0) }
 
-    fun collect(ai: () -> OrionAppMemoryEvidence?): OrionAppMemoryEvidence? {
+    /** One fresh retry can reconcile a voice process that starts or exits during the first sample. */
+    fun collect(ai: () -> OrionAppMemoryEvidence?): OrionAppMemoryEvidence? = collectOnce(ai) ?: collectOnce(ai)
+
+    private fun collectOnce(ai: () -> OrionAppMemoryEvidence?): OrionAppMemoryEvidence? {
         val before = presence() ?: return null
         val aiEvidence = ai() ?: return null
         val queries = before.mapNotNull { (role, state) ->

@@ -11,9 +11,10 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class OrionChatCortexAdapterTest {
+    private var elapsedMillis = 1_000L
     private val clock = object : OrionClock {
         override fun wallNow() = Instant.EPOCH
-        override fun monotonicNow() = MonotonicInstant(BootSessionId(1), 1000)
+        override fun monotonicNow() = MonotonicInstant(BootSessionId(1), elapsedMillis)
     }
     private fun plan(id: String = QWEN_MODEL_ID) = OrionInferenceResourcePlan(InferenceModelProfile(id, 100),
         "test-only", 2, 4096, 128, 0, 1000, 2000, 100, 20, 2)
@@ -22,7 +23,15 @@ class OrionChatCortexAdapterTest {
         val model = qwenChatModel(plan())!!
         val runtime = object : OrionChatInferenceRuntime {
             var ids = 0
-            override fun newRequestId() = "issued-" + ++ids
+            var waits = 0
+            override suspend fun awaitReadyForGeneration() {
+                waits++
+                elapsedMillis += 60_000
+            }
+            override fun newRequestId(): String {
+                assertEquals(ids + 1, waits)
+                return "issued-" + ++ids
+            }
             override fun configuration() = model
             override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatTerminal {
                 requests.add(request); onChunks(listOf(OrionInferenceChunk(request.requestId, 1, 0, "hello")))
@@ -34,6 +43,8 @@ class OrionChatCortexAdapterTest {
         assertEquals(listOf("issued-1", "issued-2"), requests.map { it.requestId })
         assertTrue(requests.all { it.context.isEmpty() && it.temperature == 0.0 && it.maxTokens == 128 })
         assertEquals(MonotonicDeadlineStatus.ACTIVE, requests.first().deadline.statusAt(clock.monotonicNow()))
+        assertEquals(MonotonicDeadlineStatus.ACTIVE, requests.last().deadline.statusAt(
+            MonotonicInstant(BootSessionId(1), elapsedMillis + 119_999)))
         assertEquals(MonotonicDeadlineStatus.INVALID_REFERENCE, requests.first().deadline.statusAt(MonotonicInstant(BootSessionId(2), 1001)))
     }
     @Test fun unknownModelHasNoTokenizerAndChangedConfigurationCannotRun() = runBlocking {

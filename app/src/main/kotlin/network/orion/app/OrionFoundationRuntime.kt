@@ -355,6 +355,24 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         }
     }
 
+    private suspend fun answerVoiceQuestion(question: String, correlationId: UUID): String? {
+        if (!OrionS21CortexPreview.enabled) return null
+        val owner = cortexRuntime() ?: return null
+        val adapter = network.orion.app.chat.OrionChatCortexAdapter(clock) {
+            network.orion.app.chat.OrionOwnedChatRuntime(owner, ::recordPreviewInference)
+        }
+        val model = adapter.configuration() ?: return null
+        if (model.promptStyle != network.orion.core.orchestrator.chat.OrionChatPromptStyle.PLAIN_TEXT) return null
+        val prompt = network.orion.core.orchestrator.chat.OrionChatContext.build(question, emptyList(), model)?.prompt ?: return null
+        val output = StringBuilder()
+        val result = adapter.generate(model, prompt, correlationId.toString()) { delta ->
+            require(output.length + delta.length <= 4_096)
+            output.append(delta)
+        }
+        if (result != network.orion.core.orchestrator.chat.OrionChatTerminal.SUCCEEDED) return null
+        return network.orion.core.orchestrator.chat.OrionStructuredResponse.plainTextMessage(output.toString(), question)?.text
+    }
+
     private fun voiceAvailability(): OrionHealthStatus {
         if (voiceIngress == null) return OrionHealthStatus.UNAVAILABLE
         val permission = app.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
@@ -496,6 +514,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             recentMemoryLimiterObserved = if (states[OrionSubsystem.EXIT_MONITOR] == OrionHealthStatus.HEALTHY)
                 exits.any { it.kind == network.orion.core.exitinfo.ProcessExitKind.MEMORY_LIMITER } else null
             sampleForceStop(config)
+            voiceIngress?.closeConversation()
             voiceIngress = null
             if (keyState == FieldKeyInitialization.READY) {
                 taskStorageReady = true
@@ -506,7 +525,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     taskStartupBarrier, { health.value.core.readiness }, { taskStorageReady },
                     { app.getSystemService(android.os.BatteryManager::class.java)
                         ?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)?.takeIf { it in 0..100 } },
-                    db.tasks()::openVoiceTaskCount, kernel::prepareVoiceTask)
+                    db.tasks()::openVoiceTaskCount, kernel::prepareVoiceTask,
+                    conversationScope = scope.takeIf { OrionS21CortexPreview.enabled }, answerQuestion = ::answerVoiceQuestion)
                 reminderKernel = OrionReminderKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
                     reminderAdmissions, { health.value.core.readiness }, { taskStorageReady })
                 timerKernel = OrionTimerKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,

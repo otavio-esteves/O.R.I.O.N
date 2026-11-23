@@ -93,7 +93,7 @@ class OrionIntentRouter {
             return OrionIntentRoute.TaskList(OrionIntent("task.list", 1.0, GetTasks(),
                 input.source.name, false, input.correlationId))
         }
-        if (query in BATTERY_ALIASES) {
+        if (query in BATTERY_ALIASES || input.source == OrionRoutingSource.VOICE_FINAL && query in SPOKEN_BATTERY_ALIASES) {
             return OrionIntentRoute.BatteryQuery(OrionIntent(OrionDeviceDescriptors.battery.name, 1.0,
                 GetDeviceInformation, input.source.name, false, input.correlationId))
         }
@@ -138,5 +138,10 @@ class OrionIntentRouter {
         private val ASCII_SPACES = Regex(" +")
         private val TASK_LIST_ALIASES = setOf("listar tarefas", "ver tarefas", "minhas tarefas", "quais são minhas tarefas")
         private val BATTERY_ALIASES = setOf("bateria", "consultar bateria", "como está a bateria")
+        private val SPOKEN_BATTERY_ALIASES = setOf("a bateria", "como tá a bateria", "como está bateria",
+            "qual a bateria", "qual é a bateria", "qual a carga da bateria", "qual é a carga da bateria",
+            "qual é o nível da bateria", "qual o nível da bateria", "qual a porcentagem da bateria",
+            "qual é a porcentagem da bateria", "quanto de bateria", "quanto de bateria eu tenho",
+            "quanto tem de bateria", "quanto resta de bateria", "quanto está a bateria")
     }
 }

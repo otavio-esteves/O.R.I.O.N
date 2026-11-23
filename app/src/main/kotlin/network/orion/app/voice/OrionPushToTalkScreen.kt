@@ -26,6 +26,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import java.util.UUID
 import kotlinx.coroutines.launch
+import network.orion.app.ai.OrionS21CortexPreview
 import network.orion.core.ipc.OrionIpcProtocol
 import network.orion.voice.ipc.IOrionPushToTalk
 import network.orion.voice.ipc.IOrionPushToTalkCallback
@@ -44,6 +45,7 @@ internal fun OrionPushToTalkScreen(lifecycle: Lifecycle, voiceHealth: (Boolean) 
     val modelBundled = remember(context) { OrionVoiceModel.bundled(context) }
     var importing by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    val cortexNotice by OrionS21CortexPreview.notice.collectAsState()
     val controller = remember(context) { OrionPushToTalkController(context) { next, text, review ->
         state = next
         reply = text ?: reply
@@ -99,7 +101,9 @@ internal fun OrionPushToTalkScreen(lifecycle: Lifecycle, voiceHealth: (Boolean) 
     ) {
         Text("Voz", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Consulte a bateria, conte as tarefas abertas ou prepare uma nova tarefa.",
+            if (OrionS21CortexPreview.enabled)
+                "Faça uma pergunta ou peça para consultar a bateria e suas tarefas."
+            else "Consulte a bateria, conte as tarefas abertas ou prepare uma nova tarefa.",
             color = colors.onSurfaceVariant,
             style = typography.bodyMedium,
         )
@@ -151,7 +155,8 @@ internal fun OrionPushToTalkScreen(lifecycle: Lifecycle, voiceHealth: (Boolean) 
                         shape = MaterialTheme.shapes.small,
                     ) { Text(if (importing) "Verificando modelo" else if (modelBundled) "Instalar modelo local" else "Selecionar modelo local") }
                 }
-                val status = message ?: state?.let(::voiceStatus)
+                val status = message ?: cortexNotice.takeIf { state == OrionVoiceSessionState.WAITING_FOR_CORE }
+                    ?: state?.let(::voiceStatus)
                 if (status != null) Text(
                     status, Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     color = colors.onSurfaceVariant, style = typography.bodyMedium,

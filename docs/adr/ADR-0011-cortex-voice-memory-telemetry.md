@@ -46,7 +46,7 @@ usa Binder com versão, desafio e identidade da instância.
 
 O trabalhador que carrega o modelo mantém uma reserva exclusiva de trabalho
 nativo até o descarregamento ou a morte do processo. O Whisper usa a mesma
-reserva durante a sessão ativa. A prévia do S21 acrescenta uma margem
+reserva durante a captura e a transcrição. A prévia do S21 acrescenta uma margem
 explícita para a inicialização leve de voz depois da amostragem. Essa margem
 faz parte do orçamento agregado e reduz a memória livre considerada pelo
 governador.
@@ -68,9 +68,20 @@ RSS observado de até 96 MiB identifica um encerramento de processo leve
 para a seleção de tier. A falta dessa evidência e sinais de MemoryLimiter
 mantêm o tratamento conservador da proteção contra reinicializações.
 
+Quando um encerramento registrado abre uma pausa de proteção temporária, uma
+pergunta explícita da prévia pode aguardar até uma janela de cooldown antes de
+iniciar a inferência. As novas medições e decisões de recursos continuam
+obrigatórias. Um bloqueio que persiste é mostrado na interface.
+
 O Chat da prévia valida texto para exibição. Os comandos determinísticos
 do Core continuam atendendo às operações do aplicativo e aplicando as
 confirmações previstas.
+
+Uma pergunta livre enviada pelo modo Voz na prévia também pode usar o Cortex.
+O ingresso existente valida e consome a transcrição final antes da inferência.
+A sessão em memória permite somente uma resposta textual, com cancelamento e
+sem reinferência em replay ou recuperação. A transcrição libera a reserva
+nativa antes de o Cortex pedir sua própria autorização de recursos.
 
 ## Evidência para aceitação
 

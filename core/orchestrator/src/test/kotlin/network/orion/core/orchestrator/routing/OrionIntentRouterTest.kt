@@ -58,6 +58,16 @@ class OrionIntentRouterTest {
         }
     }
 
+    @Test fun spokenBatteryAliasesRemainWholeReadOnlyExpressions() {
+        for (phrase in listOf("Como tá a bateria?", "Qual a carga da bateria?", "Quanto tem de bateria?")) {
+            val route = router.route(input(phrase, source = OrionRoutingSource.VOICE_FINAL)) as OrionIntentRoute.BatteryQuery
+            assertSame(GetDeviceInformation, route.intent.arguments)
+            assertFalse(route.intent.requiresCortex)
+        }
+        assertTrue(router.route(input("Qual a carga da bateria do carro?", source = OrionRoutingSource.VOICE_FINAL))
+            is OrionIntentRoute.CognitiveCandidate)
+    }
+
     @Test fun creationReusesTheTaskSchemaAndPreservesSuppliedIdentities() {
         val route = router.route(input(" CRIAR TAREFA :  Cafe\u0301 e Leite  ")) as OrionIntentRoute.TaskCreation
         val task = route.intent.arguments

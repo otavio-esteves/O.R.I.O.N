@@ -127,13 +127,16 @@ internal class OrionVoiceCapture(
             } finally {
                 watchdog.removeCallbacks(limit)
                 pcm.fill(0)
+                reservation?.close()
+                reservation = null
             }
             if (text.isNullOrBlank()) return report(OrionVoiceSessionState.NO_SPEECH)
             requireCaptureAuthority()
             report(OrionVoiceSessionState.WAITING_FOR_CORE)
             val request = VoiceUtteranceRequest(IpcSchemaVersion(1), requestId, id, text, true,
                 "pt-BR", capturedAt, OrionVoiceSource.PUSH_TO_TALK, 0, UUID.randomUUID())
-            val reply = withTimeoutOrNull(15_000) { submitAndWait(core, request) }
+            // Includes the foreground preview's exit cooldown and the full Cortex request deadline.
+            val reply = withTimeoutOrNull(190_000) { submitAndWait(core, request) }
                 ?: return report(OrionVoiceSessionState.CORE_UNAVAILABLE)
             requireCaptureAuthority()
             if (reply.text != null) {
@@ -170,9 +173,10 @@ internal class OrionVoiceCapture(
         var submitted = false
         var sequence = -1L
         var text: String? = null
-        val started = TimeSource.Monotonic.markNow()
+        val admissionStarted = TimeSource.Monotonic.markNow()
         while (currentCoroutineContext().isActive) {
             requireCaptureAuthority()
+            if (!submitted && admissionStarted.elapsedNow().inWholeMilliseconds >= 14_000) return null
             if (core.state != VoiceCoreConnectionState.CONNECTED &&
                 core.connect() != VoiceCoreConnectionState.CONNECTED) {
                 delay(150)
@@ -197,8 +201,7 @@ internal class OrionVoiceCapture(
                 response.terminalState?.let { return if (it == OrionVoiceTerminalState.SUCCEEDED)
                     Reply(text, response.requiresConfirmation) else null }
             } else {
-                if (started.elapsedNow().inWholeMilliseconds >= 14_000) return null
-                delay(100)
+                delay(250)
             }
         }
         return null
