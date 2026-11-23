@@ -73,8 +73,9 @@ and the qualification scope.
 
 In **Ajustes → Voz**, select the pinned multilingual `ggml-tiny-q5_1.bin`
 model from local storage and grant microphone access on demand. **Falar**
-starts a bounded capture and **Concluir fala** ends it early. The reply is
-displayed and spoken when an offline Portuguese Android voice is available.
+starts a bounded capture and **Concluir fala** ends it early. The app displays
+the reply and plays bundled Brazilian Portuguese audio for common responses.
+Other replies use an installed offline Portuguese Android voice when available.
 Task creation requires review and exact confirmation on the Tasks screen.
 
 The private MAIN gateway and versioned voice IPC follow the

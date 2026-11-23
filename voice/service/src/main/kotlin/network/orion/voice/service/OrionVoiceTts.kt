@@ -7,8 +7,10 @@ import android.speech.tts.UtteranceProgressListener
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Uses a locally installed Portuguese voice and leaves the text visible when audio is unavailable. */
+/** Plays bundled Portuguese replies and uses local Android synthesis for other text. */
 internal suspend fun speakOrionVoiceReply(context: Context, text: String, sessionId: String) {
+    if (playOrionBundledVoiceReply(context, text)) return
+
     val initialized = CompletableDeferred<Int>()
     val tts = TextToSpeech(context) { initialized.complete(it) }
     try {

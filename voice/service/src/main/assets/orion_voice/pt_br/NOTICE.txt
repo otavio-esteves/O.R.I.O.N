@@ -1,0 +1,15 @@
+O.R.I.O.N. Portuguese (Brazil) speech clips
+
+Rendered from Kokoro-82M v1.0 by hexgrad, voice pm_alex (speaker 43).
+Model and license: https://huggingface.co/hexgrad/Kokoro-82M
+Kokoro-82M is distributed under the Apache License, Version 2.0.
+See orion_licenses/kokoro-82m-Apache-2.0.txt.
+
+Rendering used the Sherpa-ONNX 1.12.33 CPU toolchain and the Kokoro
+multilingual v1.0 export with the pt-br language setting. The original
+renders were edited and encoded as mono MP3 for O.R.I.O.N. The model and
+toolchain are used to produce these audio files.
+
+https://github.com/k2-fsa/sherpa-onnx/releases/tag/v1.12.33
+https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_0.tar.bz2
+Export SHA-256: 60703707bc05ccd48d60e1eb723f38b07d6e474795a0b6a588d7220400e0f7a4
