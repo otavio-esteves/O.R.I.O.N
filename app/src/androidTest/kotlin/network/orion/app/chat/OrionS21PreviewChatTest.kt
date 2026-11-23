@@ -12,6 +12,7 @@ import network.orion.app.OrionApplication
 import network.orion.app.ai.OrionCortexRunResult
 import network.orion.app.ai.OrionS21CortexPreview
 import network.orion.app.ai.OrionS21ModelStatus
+import network.orion.app.resources.OrionCortexResourceFact
 import network.orion.core.orchestrator.chat.OrionChatContext
 import network.orion.core.orchestrator.chat.OrionChatResponse
 import network.orion.core.orchestrator.chat.OrionChatTerminal
@@ -47,19 +48,29 @@ class OrionS21PreviewChatTest {
                 val correlation = UUID.randomUUID()
                 val output = StringBuffer()
                 val terminal = adapter.generate(model, prompt, correlation.toString()) { output.append(it) }
+                val facts = OrionS21CortexPreview.resourceFacts.drain().facts
+                val decisions = facts.filterIsInstance<OrionCortexResourceFact.Governor>()
                 check(terminal == OrionChatTerminal.SUCCEEDED) {
                     val reason = when (val result = observed) {
                         is OrionCortexRunResult.Unavailable -> result.reason
                         is OrionCortexRunResult.Completed -> result.status.failure
                         null -> null
                     }
-                    "Chat terminal=$terminal, reason=$reason"
+                    val restart = facts.filterIsInstance<OrionCortexResourceFact.Restart>().lastOrNull()?.decision?.block
+                    val last = decisions.lastOrNull()
+                    val snapshot = last?.snapshot
+                    "Chat terminal=$terminal, reason=$reason, restart=$restart, resource=${last?.decision?.block}, " +
+                        "thermal=${snapshot?.thermalStatus}, battery=${snapshot?.batteryPercent}, " +
+                        "foreground=${snapshot?.foreground}, pressure=${snapshot?.memoryPressure}, " +
+                        "headroom=${last?.decision?.estimatedHeadroomBytes}, limitations=${snapshot?.limitations}"
                 }
+                check(decisions.count { it.decision.allowedAsReported } >= 2)
                 val reply = OrionStructuredResponse.parse(output.toString(), UUID.randomUUID(), correlation)
                 check(reply is OrionChatResponse.Message && reply.text.contains("olá", ignoreCase = true))
                 instrumentation.sendStatus(0, Bundle().apply {
                     putString("environment", "PHYSICAL_DEVICE")
                     putBoolean("validatedReply", true)
+                    putInt("resourcePermits", decisions.count { it.decision.allowedAsReported })
                 })
             }
         }
