@@ -164,7 +164,7 @@ private fun OrionOptions(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("O.R.I.O.N.", style = MaterialTheme.typography.headlineSmall)
+        Text("O.R.I.O.N.", color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(6.dp))
         if (featured.isNotEmpty()) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
