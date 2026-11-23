@@ -12,6 +12,11 @@ resposta no formato do chat. A configuração usou CPU, dois threads e contexto
 de 1.024 tokens. O maior PSS entre as amostras foi de 545.521 KiB. A medição
 isolada caracteriza o candidato para novas medições no app.
 
+No APK de laboratório com a biblioteca otimizada, o MAIN e o `:ai`
+somaram 792.570.880 bytes de PSS após o carregamento. Esse valor inclui a
+sobrecarga do aplicativo e orienta o limite do diagnóstico com os dois
+processos. A medição ainda precisa incluir a voz para um perfil de produção.
+
 ## Proposta
 
 Adicionar uma capacidade privada e versionada de telemetria de memória nos

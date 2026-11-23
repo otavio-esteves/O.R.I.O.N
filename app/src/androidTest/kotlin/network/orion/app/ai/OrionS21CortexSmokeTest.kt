@@ -195,9 +195,10 @@ class OrionS21CortexSmokeTest {
 
         // Diagnostic scope only. This build measured up to 545521 KiB PSS with a 1024-token
         // context, two threads and a 32-token output cap, at thermal status 0 and 14–16% battery.
-        // Keep a second conservative model allowance for the pre-generation decision.
+        // The optimized APK measured 792570880 bytes of aggregate PSS before generation.
+        // Its measured PSS plus a second model allowance rounds up to 1344 MiB.
         // The one-turn diagnostic uses the Core's existing critical-battery boundary (5%).
         val plan = OrionInferenceResourcePlan(InferenceModelProfile(QWEN_MODEL_ID, 544 * MIB),
-            "S21_DIAGNOSTIC_ONLY", 2, 1024, 32, 0, 1_152 * MIB, 1_280 * MIB, 1_024 * MIB, 6, 0)
+            "S21_DIAGNOSTIC_ONLY", 2, 1024, 32, 0, 1_152 * MIB, 1_344 * MIB, 1_024 * MIB, 6, 0)
     }
 }
