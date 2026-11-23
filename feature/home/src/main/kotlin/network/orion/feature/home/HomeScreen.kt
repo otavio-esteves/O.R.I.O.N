@@ -77,7 +77,7 @@ fun HomeScreen(shortcuts: List<String>, onOpen: (String) -> Unit) {
                     onDragEnd = {
                         draggingGlobe = false
                         if (abs(travel.y) >= threshold && abs(travel.y) > abs(travel.x)) {
-                            optionsVisible = travel.y < 0f
+                            optionsVisible = !optionsVisible && travel.y < 0f
                         }
                     },
                 ) { change, delta ->
@@ -139,10 +139,11 @@ private fun OrionOptions(
     onOpen: (String) -> Unit,
     modifier: Modifier,
 ) {
+    val scroll = rememberScrollState()
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scroll, enabled = scroll.maxValue > 0)
             .padding(horizontal = 28.dp)
             .testTag("orion_options")
             .semantics { paneTitle = "Opções" },

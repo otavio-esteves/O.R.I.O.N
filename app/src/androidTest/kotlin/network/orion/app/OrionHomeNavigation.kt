@@ -2,6 +2,7 @@ package network.orion.app
 
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -13,5 +14,7 @@ internal fun ComposeTestRule.openOrionDestination(label: String) {
         onNodeWithText("Início").performClick()
     }
     onNodeWithTag("orion_globe").performClick()
-    onNode(hasText(label) and hasClickAction()).performScrollTo().performClick()
+    val option = onNode(hasText(label) and hasClickAction())
+    if (!option.isDisplayed()) option.performScrollTo()
+    option.performClick()
 }

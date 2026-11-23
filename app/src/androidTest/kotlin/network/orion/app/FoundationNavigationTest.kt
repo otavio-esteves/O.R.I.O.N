@@ -31,6 +31,14 @@ class FoundationNavigationTest {
             (options.top.value + options.bottom.value) / 2,
             1f,
         )
+        compose.onNodeWithTag("orion_options").performTouchInput { swipeUp() }
+        compose.onNodeWithTag("orion_globe").assertIsDisplayed()
+        compose.onNodeWithTag("orion_options").assertDoesNotExist()
+        compose.onNodeWithTag("orion_globe").performClick()
+        compose.onNodeWithTag("orion_options").performTouchInput { swipeDown() }
+        compose.onNodeWithTag("orion_globe").assertIsDisplayed()
+        compose.onNodeWithTag("orion_options").assertDoesNotExist()
+        compose.onNodeWithTag("orion_globe").performClick()
         compose.onNodeWithText("Voltar").performClick()
         compose.onNodeWithTag("orion_globe").assertIsDisplayed()
         compose.openOrionDestination("Diagnóstico")
