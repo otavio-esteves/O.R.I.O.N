@@ -4,6 +4,8 @@ import android.app.Application
 import network.orion.core.common.process.OrionProcessBootstrapper
 import network.orion.core.common.process.OrionProcessInitializer
 import network.orion.core.common.process.OrionProcessRole
+import network.orion.voice.ipc.OrionVoiceProcess
+import network.orion.voice.service.OrionVoiceMemoryEndpoint
 
 class OrionApplication : Application() {
     lateinit var processRole: OrionProcessRole
@@ -37,8 +39,12 @@ class OrionApplication : Application() {
                 runtime.start()
             },
             OrionProcessRole.AI to OrionProcessInitializer { },
-            OrionProcessRole.VOICE_CONTROL to OrionProcessInitializer { },
-            OrionProcessRole.VOICE_SESSION to OrionProcessInitializer { },
+            OrionProcessRole.VOICE_CONTROL to OrionProcessInitializer {
+                OrionVoiceMemoryEndpoint.initialize(this, OrionVoiceProcess.CONTROL)
+            },
+            OrionProcessRole.VOICE_SESSION to OrionProcessInitializer {
+                OrionVoiceMemoryEndpoint.initialize(this, OrionVoiceProcess.SESSION)
+            },
         )).bootstrap(processRole)
     }
 }

@@ -18,4 +18,5 @@
     <string name="orion_assistant_microphone_unavailable">Microfone indisponível.</string>
     <string name="orion_assistant_core_unavailable">Core indisponível. Você pode continuar pelo texto.</string>
     <string name="orion_assistant_failed">Sessão de voz interrompida.</string>
+    <string name="orion_assistant_resource_busy">O processamento local está ocupado. Tente novamente em instantes.</string>
 </resources>

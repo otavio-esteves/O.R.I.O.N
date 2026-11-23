@@ -182,6 +182,7 @@ private fun voiceStatus(state: OrionVoiceSessionState) = when (state) {
     OrionVoiceSessionState.CANCELLED -> "Sessão cancelada."
     OrionVoiceSessionState.NO_SPEECH -> "Nenhuma fala reconhecida. Tente novamente."
     OrionVoiceSessionState.MODEL_UNAVAILABLE -> "Modelo de voz indisponível. Selecione um arquivo compatível."
+    OrionVoiceSessionState.RESOURCE_BUSY -> "O processamento local está ocupado. Tente falar novamente em instantes."
     OrionVoiceSessionState.MICROPHONE_UNAVAILABLE -> "Microfone indisponível."
     OrionVoiceSessionState.CORE_UNAVAILABLE -> "Core indisponível. Você pode continuar pelo texto."
     OrionVoiceSessionState.FAILED -> "Sessão de voz interrompida."

@@ -1,6 +1,6 @@
 # ADR-0011 — Memória dos processos de voz na admissão do Cortex
 
-**Status** · Proposto
+**Status** · Aceito pelo usuário para implementação e testes no S21
 
 O inventário do Cortex instalado aceita MAIN e `:ai`. O manifesto também
 declara `:voice` e `:voice_session`. Enquanto o MAIN não puder contabilizar
@@ -17,13 +17,13 @@ somaram 792.570.880 bytes de PSS após o carregamento. Esse valor inclui a
 sobrecarga do aplicativo e orienta o limite do diagnóstico com os dois
 processos. A medição ainda precisa incluir a voz para um perfil de produção.
 
-## Proposta
+## Decisão
 
 Adicionar uma capacidade privada e versionada de telemetria de memória nos
 processos de voz. Cada processo mede o próprio PSS, incluindo memória nativa,
 e retorna somente a identidade do processo, PID, sessão de boot, instante
-monotônico e bytes medidos. O MAIN valida o UID e o componente da conexão
-Binder e rejeita amostras vencidas ou de uma instância anterior.
+monotônico e bytes medidos. O MAIN valida o UID, o PID e a identidade da
+instância no retorno Binder e rejeita amostras vencidas.
 
 O MAIN mantém a autoridade sobre o inventário e o `ResourceGovernor`. Antes
 de autorizar o carregamento ou a geração, ele valida as amostras de todos os
@@ -38,6 +38,28 @@ conservadora para essa transição ou coordenar a admissão do trabalho pesado
 nos dois subsistemas. O orçamento agregado e a decisão de inferência continuam no
 MAIN. A capacidade de telemetria não concede autoridade para usar o microfone,
 criar sessões, executar Skills ou alterar estado.
+
+Os processos de voz mantêm um registro técnico com uma trava liberada pelo
+kernel na morte do processo. O MAIN confere esse registro antes e depois das
+amostras. A consulta usa um receiver registrado no processo ativo e o retorno
+usa Binder com versão, desafio e identidade da instância.
+
+O trabalhador que carrega o modelo mantém uma reserva exclusiva de trabalho
+nativo até o descarregamento ou a morte do processo. O Whisper usa a mesma
+reserva durante a sessão ativa. A prévia do S21 acrescenta uma margem
+explícita para a inicialização leve de voz depois da amostragem. Essa margem
+faz parte do orçamento agregado e reduz a memória livre considerada pelo
+governador.
+
+## Prévia local no S21
+
+O build `s21CortexPreview` é habilitado por `-PorionS21CortexPreview=true` e
+preserva o identificador do app para atualizar a instalação de desenvolvimento.
+O perfil candidato só é usado no firmware, ABI e tamanho de página medidos.
+O processo principal verifica o Qwen provisionado no diretório privado do app
+pelo importador existente antes de disponibilizá-lo no Chat. A geração continua
+sujeita às duas decisões do governador. O Whisper pode ser incluído no APK pela
+propriedade existente `orionVoiceModelFile`.
 
 ## Evidência para aceitação
 

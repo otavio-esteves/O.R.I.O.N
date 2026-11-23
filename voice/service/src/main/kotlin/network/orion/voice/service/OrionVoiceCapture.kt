@@ -86,8 +86,11 @@ internal class OrionVoiceCapture(
             report(OrionVoiceSessionState.FAILED)
             return
         }
+        var reservation: java.io.Closeable? = null
         try {
             requireCaptureAuthority()
+            withContext(Dispatchers.IO) { reservation = OrionVoiceMemoryEndpoint.acquireHeavy(context) }
+            if (reservation == null) return report(OrionVoiceSessionState.RESOURCE_BUSY)
             val model = withContext(Dispatchers.IO) { OrionVoiceModel.verified(context) }
                 ?: return report(OrionVoiceSessionState.MODEL_UNAVAILABLE)
             requireCaptureAuthority()
@@ -155,6 +158,7 @@ internal class OrionVoiceCapture(
                     } finally { core.disconnect() }
                 }
             } finally {
+                reservation?.close()
                 captureLock.unlock()
             }
         }

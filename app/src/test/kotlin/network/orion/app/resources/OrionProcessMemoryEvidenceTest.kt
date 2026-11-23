@@ -26,6 +26,12 @@ class OrionProcessMemoryEvidenceTest {
         assertEquals(OrionMemoryTotals(200, 1000), totals(snapshot))
     }
 
+    @Test fun `startup reserve counts towards the app budget while preserving the AI reading`() {
+        assertEquals(OrionMemoryTotals(200, 750, 150), totals(evidence().copy(reservedBytes = 150)))
+        missing(totals(evidence().copy(reservedBytes = -1)))
+        missing(totals(evidence().copy(reservedBytes = Long.MAX_VALUE)))
+    }
+
     @Test fun `absent telemetry main or ai never becomes a fabricated zero`() {
         missing(totals(null))
         missing(totals(main = null))

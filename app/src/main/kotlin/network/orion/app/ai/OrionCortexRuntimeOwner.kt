@@ -75,6 +75,7 @@ internal class OrionCortexRuntimeOwner(
     private val singleAttemptTemplate: OrionCortexAttemptTemplate? = null,
     private val runtimeCaptureObservation: OrionRuntimeCaptureObservationConfiguration? = null,
     private val qualificationExitConfiguration: OrionQualificationExitConfiguration? = null,
+    private val voiceMemory: network.orion.app.resources.OrionVoiceMemoryCollector? = null,
 ) : AutoCloseable {
     private val app = context.applicationContext
     private val plans = qualifiedPlans.toList()
@@ -103,17 +104,19 @@ internal class OrionCortexRuntimeOwner(
     private val observer = timing?.let { limits -> OrionAndroidResourceObserver(app, clock,
         auxiliaryMemory = {
             val inventory = discoverInventory() ?: return@OrionAndroidResourceObserver null
-            val selectedClient = client ?: return@OrionAndroidResourceObserver null
-            val captureWindow = selectedClient.runtimeHealthWindow()
-            val receipt = selectedClient.currentMemoryTelemetry() ?: return@OrionAndroidResourceObserver null
-            // Reuse exactly the original parse/validation/Clock read; capture consumes only its typed result.
-            telemetry?.let { adapter ->
-                val originalPid = receipt.getInt("pid")
-                val evidence = adapter.read(receipt, originalPid, inventory, true)
-                selectedClient.runtimeMemoryValidated(captureWindow, originalPid, evidence?.sampledAt)
-                evidence
-            }
+            if (voiceMemory == null) readAiMemory(inventory)
+            else voiceMemory.collect { readAiMemory(setOf(app.packageName, "${app.packageName}:ai")) }
         }, maximumMemoryAgeMillis = limits.maximumObservationAgeMillis) }
+
+    private fun readAiMemory(inventory: Set<String>): network.orion.app.resources.OrionAppMemoryEvidence? {
+        val selectedClient = client ?: return null
+        val captureWindow = selectedClient.runtimeHealthWindow()
+        val receipt = selectedClient.currentMemoryTelemetry() ?: return null
+        val pid = receipt.getInt("pid")
+        val evidence = telemetry?.read(receipt, pid, inventory, true)
+        selectedClient.runtimeMemoryValidated(captureWindow, pid, evidence?.sampledAt)
+        return evidence
+    }
 
     init {
         require(Application.getProcessName() == app.packageName) { "Cortex runtime belongs to MAIN." }
@@ -407,7 +410,8 @@ internal class OrionCortexRuntimeOwner(
         val components = sequenceOf(info.activities?.asSequence(), info.services?.asSequence(),
             info.receivers?.asSequence(), info.providers?.asSequence()).filterNotNull().flatten()
             .take(257).map { it.processName }.toList()
-        supportedCortexInventory(app.packageName, info.applicationInfo?.processName, components)
+        declaredCortexInventory(app.packageName, info.applicationInfo?.processName, components,
+            includeVoice = voiceMemory != null)
     } catch (_: Exception) { null }
 
     override fun close() {
@@ -428,10 +432,16 @@ internal fun profileMatchesReadyModel(plan: OrionInferenceResourcePlan, model: M
 }
 
 /** Null component process inherits the trusted application default; unknown inventories deny. */
-internal fun supportedCortexInventory(mainName: String, applicationProcess: String?, components: List<String?>): Set<String>? {
+internal fun supportedCortexInventory(mainName: String, applicationProcess: String?, components: List<String?>): Set<String>? =
+    declaredCortexInventory(mainName, applicationProcess, components, includeVoice = false)
+
+internal fun declaredCortexInventory(mainName: String, applicationProcess: String?,
+    components: List<String?>, includeVoice: Boolean): Set<String>? {
     if (mainName.isBlank() || ':' in mainName || applicationProcess != mainName) return null
     val bounded = components.take(257)
     if (bounded.size > 256) return null
     val names = bounded.map { name -> if (name == null) mainName else if (name.startsWith(':')) mainName + name else name }.toSet() + mainName
-    return names.takeIf { it == setOf(mainName, "$mainName:ai") }
+    val base = setOf(mainName, "$mainName:ai")
+    val expected = if (includeVoice) base + setOf("$mainName:voice", "$mainName:voice_session") else base
+    return names.takeIf { it == expected }
 }

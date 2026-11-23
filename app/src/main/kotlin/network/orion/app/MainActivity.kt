@@ -77,7 +77,7 @@ class MainActivity : ComponentActivity() {
         val chatController = network.orion.core.orchestrator.chat.OrionChatController(
             lifecycleScope, tasks, runtime.deviceGateway,
             network.orion.app.chat.OrionChatCortexAdapter(network.orion.core.time.AndroidOrionClock(contentResolver)) {
-                runtime.cortexRuntime()?.let { network.orion.app.chat.OrionOwnedChatRuntime(it) }
+                runtime.cortexRuntime()?.let { network.orion.app.chat.OrionOwnedChatRuntime(it, runtime::recordPreviewInference) }
             }, network.orion.core.orchestrator.chat.OrionChatMemorySource(runtime::chatMemories)).also { chat = it }
         reminderChannel = runtime.reminderAdmissions.openUiChannel()
         reminderChannel.onWindowFocus(hasWindowFocus())
@@ -170,7 +170,12 @@ class MainActivity : ComponentActivity() {
                                 "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
                                 "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
                                 "Voz" -> network.orion.app.voice.OrionPushToTalkScreen(lifecycle, runtime::refreshVoiceHealth) { destination = "Tarefas" }
-                                "Chat" -> network.orion.feature.chat.ChatScreen(chatController, report.lastRecovery, memories)
+                                "Chat" -> {
+                                    val modelSetup: (@Composable () -> Unit)? = if (network.orion.app.ai.OrionS21CortexPreview.enabled) {
+                                        { network.orion.app.ai.OrionCortexModelSetup(runtime) }
+                                    } else null
+                                    network.orion.feature.chat.ChatScreen(chatController, report.lastRecovery, memories, modelSetup)
+                                }
                                 "Tarefas" -> TasksScreen(tasks, report.lastRecovery)
                                 "Diagnóstico" -> DiagnosticsScreen(report, runtime.databaseSchemaVersion, taskQueues, schedulingDiagnostics,
                                     platform = runtime.platformDiagnostics(), resourceProfile = resourceProfile?.name, assistantRole = assistantRole,

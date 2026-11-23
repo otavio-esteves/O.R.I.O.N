@@ -38,6 +38,7 @@ androidComponents.beforeVariants(androidComponents.selector().withBuildType("qua
 dependencies {
     implementation(project(":ai:api"))
     implementation(project(":ai:llama"))
+    implementation(project(":core:ipc"))
     implementation(project(":core:time"))
     testImplementation(libs.junit4)
     androidTestImplementation(libs.androidx.test.runner)

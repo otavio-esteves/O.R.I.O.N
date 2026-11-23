@@ -27,7 +27,7 @@ internal data class OrionAndroidResourceSnapshot(val observation: OrionResourceO
 
 /**
  * MAIN-only observation boundary. No launch, polling, model selection or authority.
- * Complete fresh auxiliary PSS must arrive from the future IPC telemetry owner;
+ * Complete fresh auxiliary PSS comes from each process through private IPC;
  * ActivityManager's rate-limited cross-process samples cannot establish freshness.
  */
 internal class OrionAndroidResourceObserver(
@@ -82,7 +82,8 @@ internal class OrionAndroidResourceObserver(
         val pressure = classifyAndroidMemoryPressure(system?.lowMemory, state?.lastTrimLevel)
         val observation = OrionResourceObservation(sampledAt, qualifiedPlan?.model, battery, thermal,
             state?.let { importance == OrionProcessImportance.FOREGROUND }, importance, saver, pressure,
-            totals.aiBytes, totals.aggregateBytes, system?.availMem?.takeIf { it >= 0 }, sanitized,
+            totals.aiBytes, totals.aggregateBytes,
+            system?.availMem?.takeIf { it >= 0 }?.let { (it - totals.reservedBytes).coerceAtLeast(0) }, sanitized,
             requestedThreads, requestedContext, requestedTokens)
         val limitations = buildSet {
             if (totals.aggregateBytes == null) add(OrionResourceObservationLimitation.MEMORY_TELEMETRY_UNAVAILABLE)

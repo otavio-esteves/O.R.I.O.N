@@ -49,7 +49,8 @@ class PhysicalBaselineSourceContractTest(unittest.TestCase):
 
     def test_direct_bridge_entry_revalidates_physical_build_before_any_receipt(self):
         validation = self.bridge.split("@JvmStatic fun validate(", 1)[1].split("@Suppress", 1)[0]
-        self.assertLess(validation.index("requirePhysicalBuild()"), validation.index("inventory(context)"))
+        self.assertLess(validation.index("requirePhysicalBuild()"), validation.index("validateDeclaredProcesses(context)"))
+        self.assertLess(validation.index("requirePhysicalBuild()"), validation.index("runningProcesses(context)"))
         self.assertIn('System.getProperty("os.arch") == "aarch64"', validation)
         self.assertIn('"PHYSICAL_ENVIRONMENT_REJECTED"', validation)
         collection = self.bridge.split("@JvmStatic fun collect(", 1)[1]

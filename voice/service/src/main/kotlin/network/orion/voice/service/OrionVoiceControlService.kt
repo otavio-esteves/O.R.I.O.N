@@ -17,7 +17,7 @@ internal fun requireVoiceAppCaller() {
 
 enum class OrionVoiceSessionState(val terminal: Boolean = false) {
     CONNECTING, LISTENING, TRANSCRIBING, WAITING_FOR_CORE, SPEAKING,
-    SUCCEEDED(true), CANCELLED(true), NO_SPEECH(true), MODEL_UNAVAILABLE(true),
+    SUCCEEDED(true), CANCELLED(true), NO_SPEECH(true), MODEL_UNAVAILABLE(true), RESOURCE_BUSY(true),
     MICROPHONE_UNAVAILABLE(true), CORE_UNAVAILABLE(true), FAILED(true),
 }
 

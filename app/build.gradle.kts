@@ -32,6 +32,10 @@ val s21CortexSmokeFlag = providers.gradleProperty("orionS21CortexSmoke").orElse(
 check(s21CortexSmokeFlag in setOf("true", "false")) { "orionS21CortexSmoke must be true or false." }
 val s21CortexSmokeEnabled = s21CortexSmokeFlag == "true"
 check(!s21CortexSmokeEnabled || !qualificationEnabled) { "Build the S21 smoke test separately from qualificationRelease." }
+val s21PreviewFlag = providers.gradleProperty("orionS21CortexPreview").orElse("false").get()
+check(s21PreviewFlag in setOf("true", "false")) { "orionS21CortexPreview must be true or false." }
+val s21PreviewEnabled = s21PreviewFlag == "true"
+check(!s21PreviewEnabled || !qualificationEnabled && !s21CortexSmokeEnabled) { "Build the S21 preview separately." }
 val hybridChatFlag = providers.gradleProperty("orionHybridChatQualification").orElse("false").get()
 check(hybridChatFlag in setOf("true", "false")) { "orionHybridChatQualification must be true or false." }
 val hybridChatEnabled = hybridChatFlag == "true"
@@ -112,6 +116,7 @@ android {
 
     defaultConfig {
         applicationId = "network.orion"
+        if (s21PreviewEnabled) testApplicationId = "network.orion.s21preview.test"
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
         testInstrumentationRunner = when {
@@ -132,10 +137,20 @@ android {
         buildConfigField("boolean", "ORION_CORTEX_SINGLE_ATTEMPT", "false")
         buildConfigField("boolean", "ORION_CORTEX_RUNTIME_CAPTURE", "false")
         buildConfigField("boolean", "ORION_CORTEX_INSTRUMENTED_WORKLOAD", "false")
+        buildConfigField("boolean", "ORION_S21_CORTEX_PREVIEW", "false")
     }
 
     buildTypes {
         debug { ndk { abiFilters += setOf("arm64-v8a", "x86_64") } }
+        if (s21PreviewEnabled) {
+            create("s21CortexPreview") {
+                initWith(getByName("debug"))
+                matchingFallbacks += "release"
+                ndk.abiFilters.clear()
+                ndk.abiFilters += "arm64-v8a"
+                buildConfigField("boolean", "ORION_S21_CORTEX_PREVIEW", "true")
+            }
+        }
         if (s21CortexSmokeEnabled) {
             create("s21CortexLab") {
                 initWith(getByName("debug"))
@@ -177,6 +192,7 @@ android {
 
     sourceSets.getByName("androidTest").assets.directories.add("$rootDir/data/database/schemas")
     if (s21CortexSmokeEnabled) testBuildType = "s21CortexLab"
+    if (s21PreviewEnabled) testBuildType = "s21CortexPreview"
     if (qualificationEnabled) {
         testBuildType = "qualificationRelease"
         sourceSets.getByName("androidTest").java.directories.clear()
@@ -305,8 +321,11 @@ androidComponents.beforeVariants(androidComponents.selector().withBuildType("qua
 }
 
 if (bundledVoiceModel != null) {
-    androidComponents.onVariants(androidComponents.selector().withBuildType("debug")) {
-        it.sources.assets?.addGeneratedSourceDirectory(bundledVoiceModel, PrepareOrionDebugVoiceModel::assets)
+    val voiceModelBuildTypes = if (s21PreviewEnabled) listOf("debug", "s21CortexPreview") else listOf("debug")
+    for (buildType in voiceModelBuildTypes) {
+        androidComponents.onVariants(androidComponents.selector().withBuildType(buildType)) {
+            it.sources.assets?.addGeneratedSourceDirectory(bundledVoiceModel, PrepareOrionDebugVoiceModel::assets)
+        }
     }
 }
 
@@ -329,6 +348,7 @@ dependencies {
     implementation(project(":ai:service"))
     // AGP aligns tests with their target APK. Room's schema serializers require the newer default methods.
     debugImplementation(libs.serialization.test.runtime)
+    if (s21PreviewEnabled) add("s21CortexPreviewImplementation", libs.serialization.test.runtime)
     implementation(project(":voice:ipc"))
     implementation(project(":voice:service"))
     testImplementation(libs.junit4)

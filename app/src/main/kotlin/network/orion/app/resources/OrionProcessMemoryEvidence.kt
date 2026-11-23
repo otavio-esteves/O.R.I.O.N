@@ -8,9 +8,9 @@ internal data class OrionProcessMemoryReading(val processName: String, val sampl
 
 /** Trusted MAIN/IPC owner attests complete inventory, including all configured auxiliary processes. */
 internal data class OrionAppMemoryEvidence(val sampledAt: MonotonicInstant, val complete: Boolean,
-    val processNames: Set<String>, val readings: List<OrionProcessMemoryReading>)
+    val processNames: Set<String>, val readings: List<OrionProcessMemoryReading>, val reservedBytes: Long = 0)
 
-internal data class OrionMemoryTotals(val aiBytes: Long?, val aggregateBytes: Long?)
+internal data class OrionMemoryTotals(val aiBytes: Long?, val aggregateBytes: Long?, val reservedBytes: Long = 0)
 
 /** Pure bounded aggregation; any missing/stale/incomplete accounting fails closed. */
 internal fun aggregateProcessMemory(evidence: OrionAppMemoryEvidence?, main: OrionProcessMemoryReading?,
@@ -37,7 +37,9 @@ internal fun aggregateProcessMemory(evidence: OrionAppMemoryEvidence?, main: Ori
         total += bytes
         if (reading.processName == aiName) ai = bytes
     }
-    return OrionMemoryTotals(ai, total)
+    val reserve = evidence.reservedBytes
+    if (reserve < 0 || total > Long.MAX_VALUE - reserve) return missing
+    return OrionMemoryTotals(ai, total + reserve, reserve)
 }
 
 private const val MAX_PROCESSES = 16

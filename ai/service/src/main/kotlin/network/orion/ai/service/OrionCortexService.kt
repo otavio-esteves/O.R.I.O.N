@@ -1,5 +1,8 @@
 package network.orion.ai.service
 
+import java.io.Closeable
+import network.orion.core.ipc.OrionHeavyWorkReservation
+
 import android.app.Application
 import android.app.Service
 import android.content.Intent
@@ -51,6 +54,7 @@ class OrionCortexService : Service() {
     private var loadedId: String? = null
     private var loadedContextTokens: Int? = null
     private var modelFd: ParcelFileDescriptor? = null
+    private var nativeReservation: Closeable? = null
     @Volatile private var closing = false
     private var unloading = false
     @Volatile private var nativeValidationCompleted = false
@@ -152,6 +156,8 @@ class OrionCortexService : Service() {
                             ensureActive(request)
                             require(hash(owned, size, request) == hash)
                             ensureActive(request)
+                            check(nativeReservation == null)
+                            nativeReservation = checkNotNull(OrionHeavyWorkReservation.tryAcquire(this@OrionCortexService))
                             val native = runtime ?: OrionLlamaRuntime().also { runtime = it }
                             ensureActive(request)
                             val path = "/proc/self/fd/${owned.fd}"
@@ -169,7 +175,9 @@ class OrionCortexService : Service() {
                                 } }
                             }
                         } finally {
-                            if (!retained) { try { runtime?.unload() } finally { owned.close() } }
+                            if (!retained) {
+                                try { unloadNative() } finally { owned.close() }
+                            }
                         }
                     } }
                     accepted(request)
@@ -274,7 +282,7 @@ class OrionCortexService : Service() {
                     unloading = true
                     val cleanup = watchdog.beginWork(armed = true)
                     worker.execute {
-                        try { runtime?.unload() }
+                        try { unloadNative() }
                         finally {
                             try { synchronized(lock) { modelFd?.close(); modelFd = null; unloading = false } }
                             finally { watchdog.finishWork(cleanup) }
@@ -449,6 +457,16 @@ class OrionCortexService : Service() {
     }
     private fun accepted(request: Request) = reply("ACCEPTED") { putString("requestId", request.id) }
 
+    private fun unloadNative() {
+        runtime?.unload()
+        releaseNativeReservation()
+    }
+
+    private fun releaseNativeReservation() {
+        nativeReservation?.close()
+        nativeReservation = null
+    }
+
     private fun reply(status: String, extra: Bundle.() -> Unit = {}): Bundle = OrionCortexWire.reply(status).apply {
         extra(); OrionCortexWire.requireEnvelope(this, REPLY_KEYS)
     }
@@ -476,6 +494,7 @@ class OrionCortexService : Service() {
             worker.execute {
                 try {
                     runtime?.close(); runtime = null
+                    releaseNativeReservation()
                     synchronized(lock) { modelFd?.close(); modelFd = null; loadedId = null; loadedContextTokens = null }
                 } finally { watchdog.finishWork(cleanup) }
             }

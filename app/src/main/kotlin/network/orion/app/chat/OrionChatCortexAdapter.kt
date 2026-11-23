@@ -26,11 +26,12 @@ internal fun qwenChatModel(plan: OrionInferenceResourcePlan): OrionChatModel? {
 }
 internal const val QWEN_MODEL_ID = "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db"
 
-internal class OrionOwnedChatRuntime(private val owner: OrionCortexRuntimeOwner) : OrionChatInferenceRuntime {
+internal class OrionOwnedChatRuntime(private val owner: OrionCortexRuntimeOwner,
+    private val observeResult: (OrionCortexRunResult) -> Unit = {}) : OrionChatInferenceRuntime {
     override fun configuration() = owner.chatResourcePlan()?.let(::qwenChatModel)
     override fun newRequestId() = owner.newRequestId()
     override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatTerminal =
-        when (val result = owner.run(model.modelId, request, model.maxContextTokens, model.threads, onChunks)) {
+        when (val result = owner.run(model.modelId, request, model.maxContextTokens, model.threads, onChunks).also(observeResult)) {
             is OrionCortexRunResult.Unavailable -> OrionChatTerminal.UNAVAILABLE
             is OrionCortexRunResult.Completed -> result.status.terminal.chatTerminal()
         }

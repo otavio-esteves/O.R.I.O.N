@@ -22,7 +22,8 @@ import network.orion.core.orchestrator.tasks.TaskOperation
 
 /** The current draft and live session belong to the Activity. Saved conversations require a separate action. */
 @Composable
-fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null, memory: MemoryGateway? = null) {
+fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null, memory: MemoryGateway? = null,
+    modelSetup: (@Composable () -> Unit)? = null) {
     val state by controller.state.collectAsState()
     var input by remember { mutableStateOf("") }
     var inputError by remember { mutableStateOf<String?>(null) }
@@ -59,6 +60,7 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
                 )
             }
         }
+        if (modelSetup != null) item(key = "modelSetup") { modelSetup() }
         items(state.turns, key = { it.id }) { turn ->
             Surface(
                 Modifier.fillMaxWidth(),

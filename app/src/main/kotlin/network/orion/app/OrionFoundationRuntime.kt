@@ -36,6 +36,10 @@ import network.orion.app.timers.*
 import network.orion.app.memories.*
 import network.orion.app.notifications.*
 import network.orion.app.resources.OrionAndroidResourceProfileObserver
+import network.orion.app.ai.OrionS21CortexPreview
+import network.orion.app.ai.OrionS21ModelStatus
+import network.orion.app.ai.OrionCortexRunResult
+import network.orion.ai.api.OrionInferenceTerminal
 import network.orion.app.sentinel.OrionSentinelRuntime
 import network.orion.app.voice.OrionAssistantRole
 import network.orion.core.sentinel.OrionProactivityFeedbackKind
@@ -55,6 +59,8 @@ import network.orion.core.resources.UnavailableResourceGovernor
 import network.orion.core.security.*
 import network.orion.core.time.AndroidOrionClock
 import network.orion.data.database.OrionDatabase
+import network.orion.data.repository.models.OrionModelImportCoordinator
+import network.orion.data.repository.models.OrionModelImportResult
 import network.orion.data.database.OrionDatabaseFactory
 import network.orion.data.datastore.OrionPreferencesStore
 import network.orion.data.repository.OrionPrivatePayloadStore
@@ -73,6 +79,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     internal val personalizationEnabled = mutablePersonalizationEnabled.asStateFlow()
     private val mutableResourceProfile = MutableStateFlow<OrionResourceProfile?>(null)
     internal val resourceProfile = mutableResourceProfile.asStateFlow()
+    private val mutablePreviewModel = MutableStateFlow(OrionS21ModelStatus.CHECKING)
+    internal val previewModel = mutablePreviewModel.asStateFlow()
     private val mutableAssistantRoleState = MutableStateFlow(OrionAssistantRoleState.UNAVAILABLE)
     internal val assistantRoleState = mutableAssistantRoleState.asStateFlow()
     @Volatile private var lastForegroundInteraction: Instant? = null
@@ -248,14 +256,64 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         synchronized(cortexOwnershipLock) {
             if (!taskStartupBarrier.isOpen() || !health.value.core.readiness.isStartupBarrierOpen) return@synchronized null
             val db = database ?: return@synchronized null
-            cortexOwner ?: network.orion.app.ai.OrionCortexRuntimeOwner(app,
-                network.orion.data.repository.models.OrionModelImportCoordinator.open(app, db, clock,
-                    maximumModelBytes = 4L * 1024 * 1024 * 1024, reserveBytes = 512L * 1024 * 1024),
-                db, clock, coreReady = { taskStartupBarrier.isOpen() && health.value.core.readiness.isStartupBarrierOpen },
-                cycleObservations = cortexCycleObserver, resourceFacts = cortexQualificationResourceFacts)
-                .also { cortexOwner = it }
+            cortexOwner ?: run {
+                val importer = newCortexImporter(db)
+                val ready = { taskStartupBarrier.isOpen() && health.value.core.readiness.isStartupBarrierOpen }
+                OrionS21CortexPreview.createOwner(app, importer, db, clock, ready)
+                    ?: network.orion.app.ai.OrionCortexRuntimeOwner(app, importer, db, clock, coreReady = ready,
+                        cycleObservations = cortexCycleObserver, resourceFacts = cortexQualificationResourceFacts)
+            }.also { cortexOwner = it }
         }
     }
+
+    /** Trusted development provisioning reads one fixed, app-private build input. */
+    private suspend fun provisionPreviewModel() {
+        if (!OrionS21CortexPreview.enabled || !taskStartupBarrier.isOpen()) return
+        val db = database ?: return
+        val current = currentCoroutineContext()
+        val previous = mutablePreviewModel.value
+        mutablePreviewModel.value = OrionS21ModelStatus.CHECKING
+        try {
+            val expected = OrionS21CortexPreview.expectedModel
+            val staged = java.io.File(app.filesDir, "orion_preview_model.gguf")
+            val row = db.models().find(expected.sha256)
+            mutablePreviewModel.value = when {
+                row?.status == "READY" && row.sizeBytes == expected.sizeBytes -> OrionS21ModelStatus.READY
+                !staged.isFile -> OrionS21ModelStatus.MISSING
+                else -> {
+                    val importer = newCortexImporter(db)
+                    importer.recoverSelected(expected.sha256, current::ensureActive)
+                    if (importer.importModel(expected, staged::inputStream, current::ensureActive) is OrionModelImportResult.Ready) {
+                        staged.delete()
+                        OrionS21ModelStatus.READY
+                    } else OrionS21ModelStatus.REJECTED
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            mutablePreviewModel.value = previous
+            throw cancelled
+        } catch (_: Exception) {
+            mutablePreviewModel.value = OrionS21ModelStatus.REJECTED
+        }
+        val status = when (mutablePreviewModel.value) {
+            OrionS21ModelStatus.READY -> OrionHealthStatus.HEALTHY
+            OrionS21ModelStatus.REJECTED -> OrionHealthStatus.DEGRADED
+            else -> OrionHealthStatus.UNAVAILABLE
+        }
+        mutableHealth.publishSubsystemObservations(clock, mapOf(OrionSubsystem.CORTEX to status))
+    }
+
+    internal fun recordPreviewInference(result: OrionCortexRunResult) {
+        if (!OrionS21CortexPreview.enabled || mutablePreviewModel.value != OrionS21ModelStatus.READY) return
+        val terminal = (result as? OrionCortexRunResult.Completed)?.status?.terminal
+        if (terminal == OrionInferenceTerminal.CANCELLED) return
+        val status = if (terminal == OrionInferenceTerminal.SUCCEEDED) OrionHealthStatus.HEALTHY
+            else OrionHealthStatus.DEGRADED
+        mutableHealth.publishSubsystemObservations(clock, mapOf(OrionSubsystem.CORTEX to status))
+    }
+
+    private fun newCortexImporter(db: OrionDatabase) = OrionModelImportCoordinator.open(app, db, clock,
+        maximumModelBytes = 4L * 1024 * 1024 * 1024, reserveBytes = 512L * 1024 * 1024)
 
     /** Explicit qualification-only aggregate query; ordinary graphs expose no new business surface. */
     internal fun instrumentedWorkloadQueues(): network.orion.app.ai.OrionInstrumentedQueueCounts? {
@@ -368,6 +426,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
             // Recovery returns before delivery. Due confirmed work cannot wait for
             // a deferrable JobScheduler/WorkManager opportunity after cold startup.
             requestReconciliation()
+            provisionPreviewModel()
         }
     }
 

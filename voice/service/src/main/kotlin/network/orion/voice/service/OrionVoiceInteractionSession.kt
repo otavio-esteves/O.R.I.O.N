@@ -207,6 +207,7 @@ internal class OrionVoiceInteractionSession(context: Context) : VoiceInteraction
             OrionVoiceSessionState.MICROPHONE_UNAVAILABLE -> R.string.orion_assistant_microphone_unavailable
             OrionVoiceSessionState.CORE_UNAVAILABLE -> R.string.orion_assistant_core_unavailable
             OrionVoiceSessionState.FAILED -> R.string.orion_assistant_failed
+            OrionVoiceSessionState.RESOURCE_BUSY -> R.string.orion_assistant_resource_busy
             OrionVoiceSessionState.SPEAKING, OrionVoiceSessionState.SUCCEEDED -> null
         }
         ui.status.text = statusId?.let { context.getString(it) }

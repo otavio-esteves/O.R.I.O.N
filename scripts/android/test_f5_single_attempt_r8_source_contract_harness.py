@@ -52,7 +52,14 @@ class SingleAttemptR8SourceContractTest(unittest.TestCase):
         self.assertIn("OrionCortexCycleObserver(1)", graph)
         self.assertIn("catch (_: Throwable) { null }", graph)
         self.assertEqual(1, graph.count("OrionCortexRuntimeOwner("))
-        self.assertIn("cortexOwner ?: network.orion.app.ai.OrionCortexRuntimeOwner", graph)
+        self.assertIn("cortexOwner ?: run {", graph)
+        self.assertIn("}.also { cortexOwner = it }", graph)
+        self.assertIn('check(!s21PreviewEnabled || !qualificationEnabled && !s21CortexSmokeEnabled)', self.build)
+        default = self.build.split("defaultConfig {", 1)[1].split("buildTypes {", 1)[0]
+        self.assertIn('buildConfigField("boolean", "ORION_S21_CORTEX_PREVIEW", "false")', default)
+        preview = (ROOT / "app/src/main/kotlin/network/orion/app/ai/OrionS21CortexPreview.kt").read_text()
+        self.assertIn("if (!BuildConfig.ORION_S21_CORTEX_PREVIEW", preview)
+        self.assertIn("if (!enabled) null else OrionCortexRuntimeOwner", preview)
         self.assertIn("cycleObservations = cortexCycleObserver", graph)
         for token in ("qualifiedPlans =", "timing =", "attemptTemplate =", "OrionCortexAttemptTemplate("):
             self.assertNotIn(token, graph)
