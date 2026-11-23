@@ -7,8 +7,10 @@ import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.MotionDurationScale
@@ -30,14 +32,15 @@ private const val DOT_COUNT = 1_680
 private const val SHADE_COUNT = 16
 
 @Composable
-internal fun OrionGlobe(animate: Boolean, modifier: Modifier) {
-    val angle = remember { mutableFloatStateOf(0f) }
+internal fun OrionGlobe(animate: Boolean, pose: OrionGlobePose, modifier: Modifier) {
     val renderer = remember { OrionGlobeRenderer() }
 
-    LaunchedEffect(animate) {
+    LaunchedEffect(animate, pose) {
         if (!animate) return@LaunchedEffect
         val motion = coroutineContext[MotionDurationScale]
-        snapshotFlow { motion?.scaleFactor ?: 1f }.collectLatest { durationScale ->
+        // Compose initializes the platform observer on first read, which can write snapshot state.
+        val initialScale = motion?.scaleFactor ?: 1f
+        snapshotFlow { motion?.scaleFactor ?: initialScale }.collectLatest { durationScale ->
             if (durationScale <= 0f) return@collectLatest
             var previousFrame = withInfiniteAnimationFrameNanos { it }
             while (true) {
@@ -45,7 +48,7 @@ internal fun OrionGlobe(animate: Boolean, modifier: Modifier) {
                 val frame = withInfiniteAnimationFrameNanos { it }
                 val elapsedSeconds = (frame - previousFrame).coerceAtMost(100_000_000L) / 1_000_000_000f
                 val step = elapsedSeconds * FULL_TURN / TURN_SECONDS / durationScale
-                angle.floatValue = (angle.floatValue + step) % FULL_TURN
+                pose.rotate(step)
                 previousFrame = frame
             }
         }
@@ -53,7 +56,23 @@ internal fun OrionGlobe(animate: Boolean, modifier: Modifier) {
 
     Canvas(modifier) {
         val radius = size.minDimension * 0.49f
-        drawIntoCanvas { canvas -> renderer.draw(canvas.nativeCanvas, center, radius, angle.floatValue) }
+        drawIntoCanvas { canvas -> renderer.draw(canvas.nativeCanvas, center, radius, pose.yaw, pose.pitch) }
+    }
+}
+
+internal class OrionGlobePose {
+    var yaw by mutableFloatStateOf(0f)
+        private set
+    var pitch by mutableFloatStateOf(0f)
+        private set
+
+    fun rotate(radians: Float) {
+        yaw = (yaw + radians) % FULL_TURN
+    }
+
+    fun drag(radians: Offset) {
+        rotate(radians.x)
+        pitch = (pitch + radians.y).coerceIn(-1.2f, 1.2f)
     }
 }
 
@@ -66,16 +85,20 @@ private class OrionGlobeRenderer {
         AndroidColor.rgb(gray, gray, gray)
     }
 
-    fun draw(canvas: AndroidCanvas, center: Offset, radius: Float, angle: Float) {
-        val cosine = cos(angle)
-        val sine = sin(angle)
+    fun draw(canvas: AndroidCanvas, center: Offset, radius: Float, yaw: Float, pitch: Float) {
+        val yawCos = cos(yaw)
+        val yawSin = sin(yaw)
+        val pitchCos = cos(pitch)
+        val pitchSin = sin(pitch)
         usedFloats.fill(0)
 
         // Group the projected dots by brightness so Canvas draws each shade in one batch.
         for (point in sphere) {
-            val x = point.x * cosine + point.z * sine
-            val depth = point.z * cosine - point.x * sine
-            val light = (-0.26f * x + 0.44f * point.y + 0.86f * depth).coerceIn(0f, 1f)
+            val x = point.x * yawCos + point.z * yawSin
+            val horizontalDepth = point.z * yawCos - point.x * yawSin
+            val y = point.y * pitchCos - horizontalDepth * pitchSin
+            val depth = horizontalDepth * pitchCos + point.y * pitchSin
+            val light = (-0.26f * x + 0.44f * y + 0.86f * depth).coerceIn(0f, 1f)
             val ambient = 0.09f + 0.08f * (1f + depth)
             val facing = ((depth + 0.04f) / 0.25f).coerceIn(0f, 1f)
             val brightness = ambient + facing * (0.30f + 0.64f * light - ambient)
@@ -85,7 +108,7 @@ private class OrionGlobeRenderer {
 
             val offset = usedFloats[shade]
             coordinates[shade][offset] = center.x + x * scale
-            coordinates[shade][offset + 1] = center.y - point.y * scale
+            coordinates[shade][offset + 1] = center.y - y * scale
             usedFloats[shade] = offset + 2
         }
 

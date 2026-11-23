@@ -8,35 +8,38 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -46,10 +49,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 
 @Composable
 fun HomeScreen(shortcuts: List<String>, onOpen: (String) -> Unit) {
     var optionsVisible by rememberSaveable { mutableStateOf(false) }
+    val pose = remember { OrionGlobePose() }
+    var draggingGlobe by remember { mutableStateOf(false) }
     val windowFocused = LocalWindowInfo.current.isWindowFocused
     BackHandler(enabled = optionsVisible) { optionsVisible = false }
 
@@ -58,32 +64,40 @@ fun HomeScreen(shortcuts: List<String>, onOpen: (String) -> Unit) {
             .fillMaxSize()
             .background(Color.Black)
             .testTag("orion_home")
-            .pointerInput(Unit) {
+            .pointerInput(pose) {
                 val threshold = 36.dp.toPx()
-                var travel = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { travel = 0f },
+                val radiansPerPixel = 1f / 110.dp.toPx()
+                var travel = Offset.Zero
+                detectDragGestures(
+                    onDragStart = {
+                        travel = Offset.Zero
+                        draggingGlobe = !optionsVisible
+                    },
+                    onDragCancel = { draggingGlobe = false },
                     onDragEnd = {
-                        if (travel <= -threshold) optionsVisible = true
-                        if (travel >= threshold) optionsVisible = false
+                        draggingGlobe = false
+                        if (abs(travel.y) >= threshold && abs(travel.y) > abs(travel.x)) {
+                            optionsVisible = travel.y < 0f
+                        }
                     },
-                    onVerticalDrag = { change, dragAmount ->
-                        change.consume()
-                        travel += dragAmount
-                    },
-                )
+                ) { change, delta ->
+                    change.consume()
+                    travel += delta
+                    if (draggingGlobe) pose.drag(delta * radiansPerPixel)
+                }
             },
         contentAlignment = Alignment.Center,
     ) {
         val diameter = minOf(maxWidth * 0.73f, maxHeight * 0.73f, 320.dp)
-        val optionsHeight = maxHeight * 0.9f
+        val optionsHeight = maxHeight * 0.86f
         AnimatedVisibility(
             visible = !optionsVisible,
             enter = fadeIn(tween(145)),
             exit = fadeOut(tween(110)),
         ) {
             OrionGlobe(
-                animate = windowFocused && !optionsVisible,
+                animate = windowFocused && !optionsVisible && !draggingGlobe,
+                pose = pose,
                 modifier = Modifier
                     .size(diameter)
                     .testTag("orion_globe")
@@ -100,9 +114,10 @@ fun HomeScreen(shortcuts: List<String>, onOpen: (String) -> Unit) {
 
         AnimatedVisibility(
             visible = optionsVisible,
-            modifier = Modifier.align(Alignment.BottomCenter).widthIn(max = 560.dp),
-            enter = slideInVertically(tween(195, easing = FastOutSlowInEasing)) { it / 5 } + fadeIn(tween(145)),
-            exit = slideOutVertically(tween(140)) { it / 8 } + fadeOut(tween(110)),
+            modifier = Modifier.align(Alignment.Center).widthIn(max = 430.dp),
+            enter = fadeIn(tween(145, delayMillis = 35)) +
+                slideInVertically(tween(185, easing = FastOutSlowInEasing)) { it / 16 },
+            exit = fadeOut(tween(105)) + slideOutVertically(tween(130)) { it / 20 },
         ) {
             OrionOptions(
                 shortcuts = shortcuts,
@@ -125,39 +140,38 @@ private fun OrionOptions(
     modifier: Modifier,
 ) {
     Column(
-        modifier
+        modifier = modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 28.dp)
             .testTag("orion_options")
             .semantics { paneTitle = "Opções" },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(9.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .clickable(role = Role.Button, onClick = onDismiss)
-                .semantics { contentDescription = "Fechar opções" },
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(Modifier.size(width = 36.dp, height = 4.dp)
-                .background(MaterialTheme.colorScheme.onSurfaceVariant, CircleShape))
-        }
-        Column(
-            modifier = Modifier
-                .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            shortcuts.chunked(2).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { label ->
-                        TextButton(onClick = { onOpen(label) }, modifier = Modifier.weight(1f)) {
-                            Text(label, color = MaterialTheme.colorScheme.onSurface)
-                        }
+        for (row in shortcuts.chunked(2)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                if (row.size == 1) Spacer(Modifier.weight(0.5f))
+                for (label in row) {
+                    OutlinedButton(
+                        onClick = { onOpen(label) },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, Color(0xFF303030)),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                    ) {
+                        Text(label, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
+                if (row.size == 1) Spacer(Modifier.weight(0.5f))
             }
+        }
+        TextButton(onClick = onDismiss) {
+            Text(
+                "Voltar",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium,
+            )
         }
     }
 }

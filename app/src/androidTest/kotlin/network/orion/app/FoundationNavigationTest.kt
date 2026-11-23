@@ -16,12 +16,24 @@ class FoundationNavigationTest {
         compose.onNodeWithTag("orion_globe").assertIsDisplayed()
         compose.onNodeWithTag("orion_options").assertDoesNotExist()
         compose.onNodeWithText("Diagnóstico").assertDoesNotExist()
+        compose.onNodeWithTag("orion_home").performTouchInput { swipeRight() }
+        compose.onNodeWithTag("orion_globe").assertIsDisplayed()
+        compose.onNodeWithTag("orion_options").assertDoesNotExist()
         compose.onNodeWithTag("orion_home").performTouchInput {
             swipeUp(startY = height * 0.80f, endY = height * 0.25f)
         }
         compose.onNodeWithTag("orion_options").assertIsDisplayed()
         compose.onNodeWithTag("orion_globe").assertDoesNotExist()
-        compose.onNodeWithText("Diagnóstico").performScrollTo().performClick()
+        val home = compose.onNodeWithTag("orion_home").getUnclippedBoundsInRoot()
+        val options = compose.onNodeWithTag("orion_options").getUnclippedBoundsInRoot()
+        org.junit.Assert.assertEquals(
+            (home.top.value + home.bottom.value) / 2,
+            (options.top.value + options.bottom.value) / 2,
+            1f,
+        )
+        compose.onNodeWithText("Voltar").performClick()
+        compose.onNodeWithTag("orion_globe").assertIsDisplayed()
+        compose.openOrionDestination("Diagnóstico")
         compose.onNodeWithText("Core: DEGRADED_SAFE").assertExists()
         compose.onNodeWithText("Contrato IPC: 1.0").assertExists()
         compose.activityRule.scenario.recreate()
