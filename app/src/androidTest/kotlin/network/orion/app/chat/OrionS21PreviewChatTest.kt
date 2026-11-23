@@ -14,6 +14,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -100,9 +101,15 @@ class OrionS21PreviewChatTest {
                 val bindings = mutableListOf<ServiceConnection>()
                 suspend fun voiceReply(text: String): String = withTimeout(190_000) {
                     val id = UUID.randomUUID()
-                    val request = VoiceUtteranceRequest(IpcSchemaVersion(1), id, UUID.randomUUID(), text,
+                    val session = UUID.randomUUID()
+                    val transcript = MutableStateFlow<String?>(null)
+                    val request = VoiceUtteranceRequest(IpcSchemaVersion(1), id, session, text,
                         true, "pt-BR", clock.wallNow(), OrionVoiceSource.PUSH_TO_TALK, 0, UUID.randomUUID())
-                    check(client.submitUtterance(request) == OrionVoiceAdmission.ACCEPTED)
+                    runtime.voiceTranscriptPreview.watch(session, transcript)
+                    try {
+                        check(client.submitUtterance(request) == OrionVoiceAdmission.ACCEPTED)
+                        check(transcript.value == text)
+                    } finally { runtime.voiceTranscriptPreview.stop(session) }
                     var sequence = -1L
                     var reply: String? = null
                     while (true) {

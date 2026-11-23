@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import java.util.UUID
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import network.orion.app.ai.OrionS21CortexPreview
 import network.orion.core.ipc.OrionIpcProtocol
@@ -35,7 +37,12 @@ import network.orion.voice.service.OrionVoiceModel
 import network.orion.voice.service.OrionVoiceSessionState
 
 @Composable
-internal fun OrionPushToTalkScreen(lifecycle: Lifecycle, voiceHealth: (Boolean) -> Unit, openTasks: () -> Unit) {
+internal fun OrionPushToTalkScreen(
+    lifecycle: Lifecycle,
+    transcriptPreview: OrionVoiceTranscriptPreview,
+    voiceHealth: (Boolean) -> Unit,
+    openTasks: () -> Unit,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var state by remember { mutableStateOf<OrionVoiceSessionState?>(null) }
@@ -46,7 +53,7 @@ internal fun OrionPushToTalkScreen(lifecycle: Lifecycle, voiceHealth: (Boolean) 
     var importing by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     val cortexNotice by OrionS21CortexPreview.notice.collectAsState()
-    val controller = remember(context) { OrionPushToTalkController(context) { next, text, review ->
+    val controller = remember(context, transcriptPreview) { OrionPushToTalkController(context, transcriptPreview) { next, text, review ->
         state = next
         reply = text ?: reply
         confirm = review || confirm
@@ -54,6 +61,7 @@ internal fun OrionPushToTalkScreen(lifecycle: Lifecycle, voiceHealth: (Boolean) 
                 OrionVoiceSessionState.CORE_UNAVAILABLE, OrionVoiceSessionState.FAILED)) voiceHealth(true)
         if (next == OrionVoiceSessionState.SUCCEEDED) voiceHealth(false)
     } }
+    val transcript by controller.transcript.collectAsState()
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         voiceHealth(false)
         message = if (granted) "Microfone autorizado. Toque em Falar." else "Autorize o microfone para usar a voz."
@@ -163,6 +171,12 @@ internal fun OrionPushToTalkScreen(lifecycle: Lifecycle, voiceHealth: (Boolean) 
                 )
             }
         }
+        transcript?.let { text ->
+            Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Transcrição", color = colors.onSurfaceVariant, style = typography.labelMedium)
+                Text(text, style = typography.bodyMedium)
+            }
+        }
         reply?.let { text ->
             OutlinedCard(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium) {
                 Text(text, Modifier.padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite })
@@ -196,16 +210,21 @@ private fun voiceStatus(state: OrionVoiceSessionState) = when (state) {
 /** An Activity owns exactly one foreground control-plane binding. */
 private class OrionPushToTalkController(
     context: Context,
+    private val transcriptPreview: OrionVoiceTranscriptPreview,
     private val report: (OrionVoiceSessionState, String?, Boolean) -> Unit,
 ) {
     private val app = context.applicationContext
     private val handler = Handler(Looper.getMainLooper())
+    private val mutableTranscript = MutableStateFlow<String?>(null)
+    val transcript = mutableTranscript.asStateFlow()
     private var active: Session? = null
 
     fun begin() {
         if (active != null) return
-        val session = Session(UUID.randomUUID().toString())
+        val session = Session(UUID.randomUUID())
         active = session
+        mutableTranscript.value = null
+        transcriptPreview.watch(session.sessionId, mutableTranscript)
         report(OrionVoiceSessionState.CONNECTING, null, false)
         session.bound = try {
             app.bindService(Intent(app, OrionVoiceControlService::class.java), session, Context.BIND_AUTO_CREATE)
@@ -220,9 +239,13 @@ private class OrionPushToTalkController(
         try { session.remote?.finishCapture(MAJOR, session.id) } catch (_: RemoteException) { session.fail() }
     }
 
-    fun close() { active?.release() }
+    fun close() {
+        active?.release()
+        mutableTranscript.value = null
+    }
 
-    private inner class Session(val id: String) : ServiceConnection {
+    private inner class Session(val sessionId: UUID) : ServiceConnection {
+        val id = sessionId.toString()
         var remote: IOrionPushToTalk? = null
         var bound = false
         var finish = false
@@ -256,6 +279,7 @@ private class OrionPushToTalkController(
         fun release() {
             if (active !== this) return
             active = null
+            transcriptPreview.stop(sessionId)
             try { remote?.cancel(MAJOR, id) } catch (_: RemoteException) { }
             if (bound) app.unbindService(this)
         }

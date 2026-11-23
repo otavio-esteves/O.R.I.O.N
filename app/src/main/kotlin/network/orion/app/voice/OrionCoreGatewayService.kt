@@ -63,7 +63,9 @@ class OrionCoreGatewayService : Service() {
             enforceAppCaller()
             if (!compatible(protocolMajor)) return OrionVoiceAdmission.PROTOCOL_MISMATCH.name
             val decoded = OrionVoiceWire.readRequest(request) ?: return OrionVoiceAdmission.REJECTED_INVALID.name
-            val result = core?.voiceIngress?.submit(decoded) ?: OrionVoiceAdmission.CORE_UNAVAILABLE
+            val runtime = core
+            runtime?.voiceTranscriptPreview?.publish(decoded)
+            val result = runtime?.voiceIngress?.submit(decoded) ?: OrionVoiceAdmission.CORE_UNAVAILABLE
             if (result in setOf(OrionVoiceAdmission.ACCEPTED, OrionVoiceAdmission.QUEUED_DURING_RECOVERY))
                 pump.trySend(Unit)
             return result.name

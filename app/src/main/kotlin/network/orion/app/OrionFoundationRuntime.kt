@@ -42,6 +42,7 @@ import network.orion.app.ai.OrionCortexRunResult
 import network.orion.ai.api.OrionInferenceTerminal
 import network.orion.app.sentinel.OrionSentinelRuntime
 import network.orion.app.voice.OrionAssistantRole
+import network.orion.app.voice.OrionVoiceTranscriptPreview
 import network.orion.core.sentinel.OrionProactivityFeedbackKind
 import network.orion.core.resources.OrionResourceProfile
 import network.orion.core.orchestrator.notifications.NotificationAvailability
@@ -72,6 +73,7 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
     private val resourceObserver = OrionAndroidResourceProfileObserver(app)
     @Volatile internal var voiceIngress: network.orion.app.voice.OrionVoiceIngress? = null
         private set
+    internal val voiceTranscriptPreview = OrionVoiceTranscriptPreview()
     private var sentinel: OrionSentinelRuntime? = null
     private val mutableSentinelEnabled = MutableStateFlow<Boolean?>(null)
     internal val sentinelEnabled = mutableSentinelEnabled.asStateFlow()
