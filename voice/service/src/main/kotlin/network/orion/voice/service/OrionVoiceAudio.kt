@@ -14,6 +14,8 @@ internal object OrionVoiceActivityDetection {
     const val sampleRate = 16_000
     const val maxSamples = 8 * sampleRate
     const val frameSamples = sampleRate / 50
+    private const val minVoicedFrames = 6
+    private const val minFrameLevel = 48
 
     /** Trim around speech and require at least 120 ms of voiced frames. Input is bounded mono PCM. */
     fun speech(input: ShortArray, size: Int): ShortArray? {
@@ -24,9 +26,10 @@ internal object OrionVoiceActivityDetection {
             for (index in start until start + frameSamples) magnitude += abs(input[index].toInt())
             magnitude / frameSamples
         }
-        if (levels.size < 6) return null
-        val noiseFloor = levels.sortedArray()[levels.size / 5]
-        val threshold = maxOf(48, noiseFloor + maxOf(32, noiseFloor / 2))
+        if (levels.size < minVoicedFrames) return null
+        val orderedLevels = levels.sortedArray()
+        val noiseFloor = orderedLevels[levels.size / 5]
+        val threshold = maxOf(minFrameLevel, noiseFloor + maxOf(32, noiseFloor / 2))
         var first = -1
         var last = 0
         var voicedFrames = 0
@@ -37,9 +40,34 @@ internal object OrionVoiceActivityDetection {
                 voicedFrames++
             }
         }
-        if (voicedFrames < 6) return null
+        if (voicedFrames < minVoicedFrames) {
+            // A tight cut can set the noise floor from speech itself. Keep the capture
+            // when its envelope varies and consecutive frames have voiced frequencies.
+            val upperLevel = orderedLevels[levels.size * 4 / 5]
+            val minVariation = maxOf(8, noiseFloor / 8)
+            if (noiseFloor < minFrameLevel || upperLevel - noiseFloor < minVariation) return null
+            return if (hasSustainedVoicing(input, levels)) input.copyOf(size) else null
+        }
         val padding = 2 * sampleRate / 5
         return input.copyOfRange((first - padding).coerceAtLeast(0), (last + padding).coerceAtMost(size))
+    }
+
+    private fun hasSustainedVoicing(input: ShortArray, levels: IntArray): Boolean {
+        var voicedRun = 0
+        for (frame in levels.indices) {
+            val start = frame * frameSamples
+            var negative = input[start] < 0
+            var crossings = 0
+            for (index in start + 1 until start + frameSamples) {
+                val nextNegative = input[index] < 0
+                if (negative != nextNegative) crossings++
+                negative = nextNegative
+            }
+            // This band excludes mains hum and rapid sign changes from wideband noise.
+            voicedRun = if (levels[frame] >= minFrameLevel && crossings in 3..40) voicedRun + 1 else 0
+            if (voicedRun >= minVoicedFrames) return true
+        }
+        return false
     }
 }
 
