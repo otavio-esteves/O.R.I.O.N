@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 from chat_ui_protocol import (
-    EXPECTED, F8_SELECTED, F10_SELECTED, F11_SELECTED, F12_SELECTED, SECURITY_SELECTED, SELECTED,
+    EXPECTED, F8_SELECTED, F9_SELECTED, F10_SELECTED, F11_SELECTED, F12_SELECTED, SECURITY_SELECTED, SELECTED,
     junit_report, parse_instrumentation, test_identities,
 )
 
@@ -93,14 +93,18 @@ class ChatUiProtocolTest(unittest.TestCase):
             self.assertEqual(expected, set(re.findall(r'@Test(?:\([^)]*\))?\s+fun (\w+)', source.read_text())))
         self.assertNotIn('OrionChatRealModelTest', ','.join(SELECTED))
 
-    def test_f8_selection_matches_android_sources_and_rejects_missing_cases(self):
+    def test_f8_and_f9_selections_match_android_sources_and_reject_missing_cases(self):
         root = Path(__file__).resolve().parents[2] / 'app/src/androidTest/kotlin'
-        for cls, methods in F8_SELECTED.items():
-            source = root / (cls.replace('.', '/') + '.kt')
-            self.assertEqual(methods, set(re.findall(r'@Test(?:\([^)]*\))?\s+fun (\w+)', source.read_text())))
-        expected = test_identities(F8_SELECTED)
-        self.assertTrue(parse_instrumentation(transcript(expected=expected), 0, expected).successful)
-        self.assertFalse(parse_instrumentation(transcript(sorted(expected)[:-1], expected=expected), 0, expected).successful)
+        for suite, selection in [('f8', F8_SELECTED), ('f9', F9_SELECTED)]:
+            with self.subTest(suite=suite):
+                for cls, methods in selection.items():
+                    source = root / (cls.replace('.', '/') + '.kt')
+                    observed = set(re.findall(r'@Test(?:\([^)]*\))?\s+fun (\w+)', source.read_text()))
+                    self.assertEqual(methods, observed, cls)
+                expected = test_identities(selection)
+                self.assertTrue(parse_instrumentation(transcript(expected=expected), 0, expected).successful)
+                missing = transcript(sorted(expected)[:-1], expected=expected)
+                self.assertFalse(parse_instrumentation(missing, 0, expected).successful)
 
     def test_ci_explicitly_builds_hybrid_probe_and_executes_model_free_suite(self):
         workflow = (Path(__file__).resolve().parents[2] / '.github/workflows/ci.yml').read_text()

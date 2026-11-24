@@ -92,6 +92,7 @@ F9_SELECTED = {
         'callbackStreamsOneTerminalResponseForAnAcceptedRequest',
     },
     'network.orion.app.voice.OrionVoiceIngressTest': {
+        'liveCognitiveRequestRunsAfterCommitAndCancellationPreventsAReply',
         'partialNeverEnqueuesAndRecoveryProcessesFinalOnlyOnce',
     },
     'network.orion.app.voice.OrionVoiceTaskAdmissionTest': {
