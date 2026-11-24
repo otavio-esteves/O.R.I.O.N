@@ -41,7 +41,8 @@ fun ChatScreen(controller: OrionChatController, recoveryVersion: Instant? = null
         if (revealResult && !state.busy) {
             val turnsStart = if (modelSetup == null) 1 else 2
             val latest = if (state.notice != null) state.turns.size else state.turns.lastIndex.coerceAtLeast(0)
-            listState.scrollToItem(turnsStart + latest)
+            // The chat may be recomposed during measurement. Reveal the result on the next layout pass.
+            listState.requestScrollToItem(turnsStart + latest)
             revealResult = false
         }
     }
