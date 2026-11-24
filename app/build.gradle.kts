@@ -82,7 +82,7 @@ val bundledVoiceModel = voiceModelFile?.let { model ->
     }
 }
 
-val neuralVoiceAar = providers.gradleProperty("orionNeuralVoiceAar").orNull?.let { file(it) }
+val neuralVoiceAar = providers.gradleProperty("orionNeuralVoiceAar").orNull?.let { rootProject.file(it) }
 val neuralVoiceModel = providers.gradleProperty("orionNeuralVoiceModel").orNull?.let { file(it) }
 check((neuralVoiceAar == null) == (neuralVoiceModel == null) && (neuralVoiceAar == null || s21PreviewEnabled)) {
     "Neural voice requires both pinned inputs and the S21 preview."

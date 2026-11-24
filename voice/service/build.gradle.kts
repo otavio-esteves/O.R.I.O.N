@@ -5,9 +5,11 @@ plugins {
 }
 
 val neuralVoiceAar = providers.gradleProperty("orionNeuralVoiceAar").orNull?.let { rootProject.file(it) }
+val previewBuildType = "s21CortexPreview"
 val neuralApiDir = layout.buildDirectory.dir("orionNeuralVoiceApi")
 val neuralApi = neuralVoiceAar?.let { input ->
     tasks.register<Copy>("extractOrionNeuralVoiceApi") {
+        inputs.file(input).withPathSensitivity(PathSensitivity.NONE)
         from(zipTree(input)) { include("classes.jar") }
         into(neuralApiDir)
         doFirst {
@@ -38,15 +40,24 @@ android {
     buildTypes {
         debug { ndk { abiFilters += setOf("arm64-v8a", "x86_64") } }
         release { ndk { abiFilters += "arm64-v8a" } }
+        if (neuralApi != null) {
+            create(previewBuildType) {
+                initWith(getByName("release"))
+                matchingFallbacks += "release"
+            }
+        }
     }
 }
 
 androidComponents.onVariants { variant ->
-    variant.sources.kotlin!!.addStaticSourceDirectory(if (neuralApi == null) "src/platform/kotlin" else "src/neural/kotlin")
+    val ttsSource = if (variant.buildType == previewBuildType) "src/neural/kotlin" else "src/platform/kotlin"
+    variant.sources.kotlin!!.addStaticSourceDirectory(ttsSource)
 }
 
 dependencies {
-    if (neuralApi != null) compileOnly(files(neuralApiDir.map { it.file("classes.jar") }).builtBy(neuralApi))
+    if (neuralApi != null) {
+        add("${previewBuildType}CompileOnly", files(neuralApiDir.map { it.file("classes.jar") }).builtBy(neuralApi))
+    }
     api(project(":voice:ipc"))
     implementation(project(":core:time"))
     implementation(libs.coroutines.android)
