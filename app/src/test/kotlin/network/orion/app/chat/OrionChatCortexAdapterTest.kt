@@ -3,7 +3,13 @@ package network.orion.app.chat
 import java.time.Instant
 import kotlinx.coroutines.runBlocking
 import network.orion.ai.api.OrionInferenceChunk
+import network.orion.ai.api.OrionInferenceFailure
 import network.orion.ai.api.OrionInferenceRequest
+import network.orion.ai.api.OrionInferenceStage
+import network.orion.ai.api.OrionInferenceStatus
+import network.orion.ai.api.OrionInferenceTerminal
+import network.orion.app.ai.OrionCortexAdmissionBlock
+import network.orion.app.ai.OrionCortexRunResult
 import network.orion.core.orchestrator.chat.*
 import network.orion.core.resources.*
 import network.orion.core.time.*
@@ -33,13 +39,13 @@ class OrionChatCortexAdapterTest {
                 return "issued-" + ++ids
             }
             override fun configuration() = model
-            override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatTerminal {
+            override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatGeneration {
                 requests.add(request); onChunks(listOf(OrionInferenceChunk(request.requestId, 1, 0, "hello")))
-                return OrionChatTerminal.SUCCEEDED
+                return OrionChatGeneration(OrionChatTerminal.SUCCEEDED)
             }
         }
         val adapter = OrionChatCortexAdapter(clock) { runtime }
-        repeat(2) { assertEquals(OrionChatTerminal.SUCCEEDED, adapter.generate(model, "prompt", "correlation") { assertEquals("hello", it) }) }
+        repeat(2) { assertEquals(OrionChatTerminal.SUCCEEDED, adapter.generate(model, "prompt", "correlation") { assertEquals("hello", it) }.terminal) }
         assertEquals(listOf("issued-1", "issued-2"), requests.map { it.requestId })
         assertTrue(requests.all { it.context.isEmpty() && it.temperature == 0.0 && it.maxTokens == 128 })
         assertEquals(MonotonicDeadlineStatus.ACTIVE, requests.first().deadline.statusAt(clock.monotonicNow()))
@@ -54,9 +60,23 @@ class OrionChatCortexAdapterTest {
         val runtime = object : OrionChatInferenceRuntime {
             override fun configuration() = changed
             override fun newRequestId(): String = error("Must not issue after configuration mismatch")
-            override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatTerminal = error("Must not infer")
+            override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatGeneration = error("Must not infer")
         }
-        assertEquals(OrionChatTerminal.UNAVAILABLE, OrionChatCortexAdapter(clock) { runtime }.generate(original, "hi", "corr") {})
+        assertEquals(OrionChatTerminal.UNAVAILABLE, OrionChatCortexAdapter(clock) { runtime }.generate(original, "hi", "corr") {}.terminal)
+    }
+
+    @Test fun admissionRefusalIsDistinguishedFromATransportFailure() {
+        val failed = OrionInferenceStatus(OrionInferenceStage.TERMINAL, OrionInferenceTerminal.FAILED,
+            OrionInferenceFailure.TRANSPORT_FAILURE)
+        val resource = OrionCortexRunResult.Completed(failed,
+            OrionCortexAdmissionBlock.Resources(OrionResourceBlock.BATTERY)).chatGeneration()
+        assertEquals(OrionChatBlock.BATTERY, resource.block)
+        assertEquals(OrionChatBlock.BATTERY.message, resource.failureMessage)
+
+        val restart = OrionCortexRunResult.Completed(failed,
+            OrionCortexAdmissionBlock.Restart(OrionRestartBlock.FALLBACK_EXHAUSTED)).chatGeneration()
+        assertEquals(OrionChatBlock.FALLBACK_EXHAUSTED, restart.block)
+        assertNull(OrionCortexRunResult.Completed(failed).chatGeneration().block)
     }
     @Test fun constrainedChatProfileKeepsMandatoryRequestAndDropsWholeOptionalHistory() {
         val model = qwenChatModel(plan().copy(maxContext = 1024))!!

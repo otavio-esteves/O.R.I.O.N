@@ -99,6 +99,7 @@ class OrionCortexClientTest {
         val inferenceStarted = CompletableDeferred<Unit>()
         val readinessObserved = CompletableDeferred<Unit>()
         var autoComplete = true
+        var responseChunks = 1
         @Volatile var modelReady = true
         @Volatile private var loadedModelId: String? = null
         @Volatile private var unloading = false
@@ -138,10 +139,16 @@ class OrionCortexClientTest {
             if (autoComplete) complete()
             return OrionCortexWire.reply("ACCEPTED").apply { putString("requestId", inferenceId) }
         }
-        fun complete() { callback!!.onChunk(Bundle().apply {
-            putInt("schemaVersion", 1); putString("requestId", inferenceId); putLong("sequence", 0)
-            putString("delta", "fixture"); putBoolean("isFinal", true); putString("finishReason", "SUCCEEDED")
-        }) }
+        fun complete() {
+            repeat(responseChunks) { sequence ->
+                val final = sequence == responseChunks - 1
+                callback!!.onChunk(Bundle().apply {
+                    putInt("schemaVersion", 1); putString("requestId", inferenceId); putLong("sequence", sequence.toLong())
+                    putString("delta", "fixture"); putBoolean("isFinal", final)
+                    if (final) putString("finishReason", "SUCCEEDED")
+                })
+            }
+        }
         override fun cancelInference(requestId: String) { cancelled.add(requestId) }
         override fun getRequestStatus(requestId: String) = OrionCortexWire.reply("OK").apply {
             putString("requestId", requestId); putString("state", if (requestId == loadId) "SUCCEEDED" else "RUNNING")
@@ -171,6 +178,7 @@ class OrionCortexClientTest {
         var callbackOnMain = false
         var beforeProtocol: (() -> Unit)? = null
         var completeInference = true
+        var responseChunks = 1
         var delayModelReadiness = false
         var protocolMajor = 1
         var protocolMinor = 1
@@ -186,6 +194,7 @@ class OrionCortexClientTest {
         override fun bindService(service: Intent, connection: ServiceConnection, flags: Int): Boolean {
             val endpoint = Endpoint().also {
                 it.autoComplete = completeInference; it.modelReady = !delayModelReadiness
+                it.responseChunks = responseChunks
                 it.protocolMajor = protocolMajor; it.protocolMinor = protocolMinor; it.historyCapability = historyCapability
                 it.capabilitiesReply = capabilitiesReply; it.capabilitiesUnavailable = capabilitiesUnavailable
                 it.beforeProtocol = beforeProtocol
@@ -214,12 +223,14 @@ class OrionCortexClientTest {
         val profile = InferenceModelProfile(hash, 100)
         val plan = OrionInferenceResourcePlan(profile, "fixture", 1, 128, 8, 0, 10_000, 20_000, 100, 20, 2)
         val availability = CopyOnWriteArrayList<Boolean>()
-        var denyResources = false
         var denyRestart = false
-        private fun sample() = OrionResourceObservation(clock.mark, profile, 80, 0, true,
+        var batteryPercent = 80
+        var batteryAfterLoad: Int? = null
+        private fun sample() = OrionResourceObservation(clock.mark, profile,
+            batteryAfterLoad?.takeIf { context.endpoints.any { it.loads.get() > 0 } } ?: batteryPercent, 0, true,
             OrionProcessImportance.FOREGROUND, false, OrionMemoryPressure.NONE, 100, 200, 100_000,
             emptyList(), 1, 128, 8)
-        private val governor = OrionMinimumResourceGovernor(clock, { if (denyResources) null else sample() }, listOf(plan), 100, 100)
+        private val governor = OrionMinimumResourceGovernor(clock, ::sample, listOf(plan), 100, 100)
         private val guard = OrionCortexRestartGuard(clock, listOf(plan), 100, 100)
         val client = OrionCortexClient(context, clock, { _, _, _, _ -> governor.evaluate() },
             { guard.evaluate(OrionAiExitHistory(clock.mark, if (denyRestart) listOf(
@@ -229,9 +240,11 @@ class OrionCortexClientTest {
         fun request(id: String = client.newRequestId(), modelId: String = hash,
             deadline: MonotonicDeadline = clock.mark.deadlineAfter(30_000)) = OrionInferenceRequest(id, 1, modelId,
             "test", "context", 8, 0.0, OrionInferencePriority.INTERACTIVE, deadline, id)
-        suspend fun run(request: OrionInferenceRequest = request(), contextTokens: Int = 128, threads: Int = 1) =
+        suspend fun run(request: OrionInferenceRequest = request(), contextTokens: Int = 128, threads: Int = 1,
+            onAdmissionBlocked: (OrionCortexAdmissionBlock) -> Unit = {},
+            onChunks: (List<OrionInferenceChunk>) -> Unit = {}) =
             ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
-                client.runInference(model, descriptor, request, contextTokens, threads) { }
+                client.runInference(model, descriptor, request, contextTokens, threads, null, null, onChunks, onAdmissionBlocked)
             }
         override fun close() {
             clock.releaseDiagnostic.countDown()
@@ -335,10 +348,39 @@ class OrionCortexClientTest {
 
     @Test fun deniedResourcesNeverDispatchHeavyLoad() = runBlocking {
         Fixture().use { fixture ->
-            fixture.denyResources = true
-            assertEquals(OrionInferenceTerminal.FAILED, fixture.run().terminal)
+            fixture.batteryPercent = 2
+            val blocks = mutableListOf<OrionCortexAdmissionBlock>()
+            assertEquals(OrionInferenceTerminal.FAILED, fixture.run(onAdmissionBlocked = blocks::add).terminal)
+            assertEquals(listOf(OrionCortexAdmissionBlock.Resources(OrionResourceBlock.BATTERY)), blocks)
             assertEquals(0, fixture.context.endpoints.sumOf { it.loads.get() })
             assertEquals(0, fixture.context.endpoints.sumOf { it.inferences.get() })
+        }
+    }
+
+    @Test fun batteryBlockAtInferenceOnlyAppliesToThatAttempt() = runBlocking {
+        Fixture().use { fixture ->
+            fixture.batteryAfterLoad = 2
+            val blocks = mutableListOf<OrionCortexAdmissionBlock>()
+            assertEquals(OrionInferenceTerminal.FAILED, fixture.run(onAdmissionBlocked = blocks::add).terminal)
+            val endpoint = fixture.context.endpoints.single()
+            assertEquals(1, endpoint.loads.get())
+            assertEquals(0, endpoint.inferences.get())
+            assertEquals(1, endpoint.unloads.get())
+
+            fixture.batteryAfterLoad = null
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run(onAdmissionBlocked = blocks::add).terminal)
+            assertEquals(listOf(OrionCortexAdmissionBlock.Resources(OrionResourceBlock.BATTERY)), blocks)
+        }
+    }
+
+    @Test fun completeBurstBeforeStartReturnsIsDeliveredInSequence() = runBlocking {
+        Fixture().use { fixture ->
+            fixture.context.responseChunks = 24
+            val chunks = mutableListOf<OrionInferenceChunk>()
+            assertEquals(OrionInferenceTerminal.SUCCEEDED, fixture.run { chunks.addAll(it) }.terminal)
+            assertEquals((0L..23L).toList(), chunks.map { it.sequence })
+            assertEquals("fixture".repeat(24), chunks.joinToString("") { checkNotNull(it.textDelta) })
+            assertEquals(23L, chunks.single { it.isFinal }.sequence)
         }
     }
 
@@ -367,7 +409,9 @@ class OrionCortexClientTest {
         val buffer = OrionCortexUnloadObservationBuffer()
         Fixture(buffer).use { fixture ->
             fixture.denyRestart = true
-            assertEquals(OrionInferenceTerminal.FAILED, fixture.run().terminal)
+            val blocks = mutableListOf<OrionCortexAdmissionBlock>()
+            assertEquals(OrionInferenceTerminal.FAILED, fixture.run(onAdmissionBlocked = blocks::add).terminal)
+            assertEquals(listOf(OrionCortexAdmissionBlock.Restart(OrionRestartBlock.FALLBACK_EXHAUSTED)), blocks)
             assertEquals(OrionCortexUnloadOutcome.NO_ENDPOINT, observedBatch(buffer).observations.single().outcome)
             assertTrue(fixture.context.endpoints.isEmpty())
         }

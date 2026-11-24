@@ -367,12 +367,13 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
         if (model.promptStyle != network.orion.core.orchestrator.chat.OrionChatPromptStyle.PLAIN_TEXT) return null
         val prompt = network.orion.core.orchestrator.chat.OrionChatContext.build(question, emptyList(), model)?.prompt ?: return null
         val output = StringBuilder()
-        val result = adapter.generate(model, prompt, correlationId.toString()) { delta ->
+        val generation = adapter.generate(model, prompt, correlationId.toString()) { delta ->
             require(output.length + delta.length <= 4_096)
             output.append(delta)
         }
-        if (result != network.orion.core.orchestrator.chat.OrionChatTerminal.SUCCEEDED) return null
-        return network.orion.core.orchestrator.chat.OrionStructuredResponse.plainTextMessage(output.toString(), question)?.text
+        return generation.failureMessage
+            ?: network.orion.core.orchestrator.chat.OrionStructuredResponse.plainTextMessage(output.toString(), question)?.text
+            ?: network.orion.core.orchestrator.chat.OrionStructuredResponse.PLAIN_TEXT_FAILURE_MESSAGE
     }
 
     private fun voiceAvailability(): OrionHealthStatus {

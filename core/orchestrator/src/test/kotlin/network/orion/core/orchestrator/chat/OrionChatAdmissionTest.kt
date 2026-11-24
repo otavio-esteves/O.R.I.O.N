@@ -31,7 +31,7 @@ class OrionChatAdmissionTest {
     private class Cortex : OrionChatCortex {
         var configurations = 0
         override suspend fun configuration(): OrionChatModel? { configurations++; return null }
-        override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatTerminal =
+        override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatGeneration =
             error("No generation expected")
     }
     @Test fun sendReturnsAnExplicitAdmissionAndDoesNotDeduplicateDeliberateRequests() = runBlocking {

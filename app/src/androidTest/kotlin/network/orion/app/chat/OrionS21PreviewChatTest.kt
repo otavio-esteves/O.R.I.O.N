@@ -160,7 +160,7 @@ class OrionS21PreviewChatTest {
         val prompt = checkNotNull(OrionChatContext.build(question, history, model)).prompt
         val correlation = UUID.randomUUID()
         val output = StringBuffer()
-        val terminal = adapter.generate(model, prompt, correlation.toString()) { output.append(it) }
+        val terminal = adapter.generate(model, prompt, correlation.toString()) { output.append(it) }.terminal
         val facts = OrionS21CortexPreview.resourceFacts.drain().facts
         val decisions = facts.filterIsInstance<OrionCortexResourceFact.Governor>()
         check(terminal == OrionChatTerminal.SUCCEEDED) {

@@ -215,7 +215,7 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
         val plainText = model.promptStyle == OrionChatPromptStyle.PLAIN_TEXT
         val gate = AtomicBoolean(true); accepting = gate
         val buffer = StringBuilder()
-        val terminal = try {
+        val generation = try {
             cortex.generate(model, context.prompt, input.correlationId.toString()) { delta ->
                 synchronized(buffer) {
                     if (gate.get()) {
@@ -231,20 +231,24 @@ class OrionChatController(private val scope: CoroutineScope, private val tasks: 
             }
         } finally { synchronized(buffer) { gate.set(false) } }
         currentCoroutineContext().ensureActive()
-        if (terminal != OrionChatTerminal.SUCCEEDED) {
-            status(cortex = when (terminal) {
+        val failure = generation.failureMessage
+        if (failure != null) {
+            status(cortex = when (generation.terminal) {
                 OrionChatTerminal.PROCESS_DIED -> "Cortex interrompido"
                 OrionChatTerminal.TIMED_OUT -> "Tempo esgotado"
                 OrionChatTerminal.CANCELLED -> "Cancelado"
-                else -> "Indisponível"
-            }, notice = "Resposta descartada. Nenhuma ferramenta foi executada. Você pode tentar uma nova inferência.", retry = true)
+                else -> if (generation.block == null) "Indisponível" else "Pausado"
+            }, notice = failure, retry = true)
             return
         }
         val raw = synchronized(buffer) { buffer.toString() }
         val response = if (plainText) OrionStructuredResponse.plainTextMessage(raw, input.text)
             else OrionStructuredResponse.parse(raw, input.inputId, input.correlationId)
         if (response == null) {
-            status(cortex = "Resposta inválida", notice = "Saída inválida descartada. Nenhuma ferramenta foi executada.", retry = true); return
+            val notice = if (plainText) OrionStructuredResponse.PLAIN_TEXT_FAILURE_MESSAGE
+                else "O Cortex retornou uma resposta inválida. Tente novamente."
+            status(cortex = "Resposta inválida", notice = notice, retry = true)
+            return
         }
         retryInput = null
         status(cortex = "Sob demanda")

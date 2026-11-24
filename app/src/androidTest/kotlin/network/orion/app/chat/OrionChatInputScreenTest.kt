@@ -49,7 +49,7 @@ class OrionChatInputScreenTest {
             controller = OrionChatController(compose.activity.lifecycleScope, tasks,
                 DeviceInformationGateway { batteryReads++; null }, object : OrionChatCortex {
                     override suspend fun configuration(): OrionChatModel? { configurations++; return null }
-                    override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatTerminal =
+                    override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatGeneration =
                         error("No generation expected")
                 })
             compose.activity.setContent { MaterialTheme { ChatScreen(controller) } }

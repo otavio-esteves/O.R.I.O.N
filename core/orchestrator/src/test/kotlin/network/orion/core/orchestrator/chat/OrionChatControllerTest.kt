@@ -35,6 +35,7 @@ class OrionChatControllerTest {
         var available = true
         var output = """{"type":"message","text":"Olá"}"""
         var terminal = OrionChatTerminal.SUCCEEDED
+        var block: OrionChatBlock? = null
         var promptStyle = OrionChatPromptStyle.STRUCTURED
         var delta: ((String) -> Unit)? = null
         var waiting: CompletableDeferred<Unit>? = null
@@ -44,10 +45,10 @@ class OrionChatControllerTest {
             return if (available) OrionChatModel("fixture", "test", 8192, 128, 2,
                 OrionTokenCounter { it.toByteArray().size }, promptStyle) else null
         }
-        override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatTerminal {
+        override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatGeneration {
             calls++; delta = onDelta; onDelta(output)
             try { waiting?.await() } catch (e: CancellationException) { cancelled = true; throw e }
-            return terminal
+            return OrionChatGeneration(terminal, block)
         }
     }
     private fun controller(scope: CoroutineScope, tasks: Tasks, cortex: Cortex) = OrionChatController(scope, tasks,
@@ -142,6 +143,53 @@ class OrionChatControllerTest {
         cortex.terminal = OrionChatTerminal.SUCCEEDED; chat.retryInference()
         assertEquals(2, cortex.calls); assertNotNull(chat.state.value.turns.last().proposal)
     }
+    @Test fun failedReplyKeepsTheQuestionAndCanBeRetried() = runBlocking {
+        val tasks = Tasks()
+        val cortex = Cortex().apply {
+            output = "Resposta incompleta"
+            terminal = OrionChatTerminal.FAILED
+            promptStyle = OrionChatPromptStyle.PLAIN_TEXT
+        }
+        val chat = controller(this, tasks, cortex)
+        val question = "Qual é o contrário de quente?"
+        chat.send(question)
+
+        assertEquals(question, chat.state.value.turns.single().text)
+        assertEquals("", chat.state.value.draft)
+        assertEquals("O Cortex não conseguiu gerar a resposta. Tente novamente.", chat.state.value.notice)
+        assertTrue(chat.state.value.canRetry)
+
+        cortex.terminal = OrionChatTerminal.SUCCEEDED
+        cortex.output = "Frio."
+        chat.retryInference()
+
+        assertEquals(listOf(question, "Frio."), chat.state.value.turns.map { it.text })
+        assertEquals(2, cortex.calls)
+        assertFalse(chat.state.value.canRetry)
+    }
+
+    @Test fun resourceBlockShowsItsReasonAndClearsAfterAnExplicitRetry() = runBlocking {
+        val cortex = Cortex().apply {
+            terminal = OrionChatTerminal.FAILED
+            block = OrionChatBlock.BATTERY
+            output = ""
+        }
+        val chat = controller(this, Tasks(), cortex)
+        chat.send("Pode me ajudar com uma dúvida?")
+        chat.refresh()
+        assertEquals(OrionChatBlock.BATTERY.message, chat.state.value.notice)
+        assertTrue(chat.state.value.canRetry)
+        assertEquals(1, cortex.calls)
+
+        cortex.terminal = OrionChatTerminal.SUCCEEDED
+        cortex.block = null
+        cortex.output = """{"type":"message","text":"Claro, qual é a dúvida?"}"""
+        chat.retryInference()
+        assertEquals("Claro, qual é a dúvida?", chat.state.value.turns.last().text)
+        assertNull(chat.state.value.notice)
+        assertEquals(2, chat.state.value.turns.size)
+    }
+
     @Test fun taskRowsRemainReadableThroughFastPathAfterCortexDeathWithoutAnotherInference() = runBlocking {
         val tasks = Tasks().apply { rows = listOf(TaskSummary(UUID.randomUUID(), "Comprar pão", TaskState.OPEN, 0, TaskContentState.READABLE)) }
         val cortex = Cortex().apply { terminal = OrionChatTerminal.PROCESS_DIED }

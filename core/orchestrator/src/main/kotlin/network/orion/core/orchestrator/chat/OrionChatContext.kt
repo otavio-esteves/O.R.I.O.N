@@ -11,10 +11,33 @@ class OrionChatModel(val modelId: String, val resourceProfile: String, val maxCo
 }
 enum class OrionChatPromptStyle { STRUCTURED, PLAIN_TEXT }
 enum class OrionChatTerminal { SUCCEEDED, CANCELLED, TIMED_OUT, FAILED, PROCESS_DIED, UNAVAILABLE }
+
+enum class OrionChatBlock(val message: String) {
+    BATTERY("A bateria está muito baixa para o Cortex. Carregue o aparelho e tente novamente."),
+    POWER_SAVER("A economia de energia do Android pausou o Cortex."),
+    THERMAL("O aparelho está quente demais para gerar uma resposta agora."),
+    MEMORY("O Cortex precisa de mais memória disponível para responder."),
+    BACKGROUND("Mantenha o O.R.I.O.N. em primeiro plano durante a resposta."),
+    COOLDOWN("O Cortex está em pausa de proteção. Aguarde um pouco e tente novamente."),
+    FALLBACK_EXHAUSTED("O Cortex suspendeu o modelo local após pressão de memória."),
+    RESOURCES_UNVERIFIED("O Cortex não conseguiu verificar os recursos do aparelho. Tente novamente."),
+}
+
+data class OrionChatGeneration(val terminal: OrionChatTerminal, val block: OrionChatBlock? = null) {
+    val failureMessage: String? get() = when (terminal) {
+        OrionChatTerminal.SUCCEEDED -> null
+        OrionChatTerminal.CANCELLED -> "Inferência cancelada."
+        OrionChatTerminal.TIMED_OUT -> "O Cortex demorou demais para responder. Tente novamente."
+        OrionChatTerminal.PROCESS_DIED -> "O Cortex foi interrompido. Tente novamente."
+        OrionChatTerminal.FAILED -> block?.message ?: "O Cortex não conseguiu gerar a resposta. Tente novamente."
+        OrionChatTerminal.UNAVAILABLE -> "Cortex indisponível. Consulte o diagnóstico."
+    }
+}
+
 interface OrionChatCortex {
     /** Candidate configuration only; a fresh governor/restart decision is still required by generate. */
     suspend fun configuration(): OrionChatModel?
-    suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatTerminal
+    suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatGeneration
 }
 
 class OrionChatMemory(val id: UUID, val version: Long, val content: String) {

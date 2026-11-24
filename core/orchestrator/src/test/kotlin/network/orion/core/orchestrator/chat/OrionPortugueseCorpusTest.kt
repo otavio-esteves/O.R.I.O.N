@@ -64,8 +64,8 @@ class OrionPortugueseCorpusTest(private val case: Case) {
         }
         val cortex = object : OrionChatCortex {
             override suspend fun configuration(): OrionChatModel? { configurations++; return null }
-            override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatTerminal {
-                generations++; return OrionChatTerminal.UNAVAILABLE
+            override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatGeneration {
+                generations++; return OrionChatGeneration(OrionChatTerminal.UNAVAILABLE)
             }
         }
         val chat = OrionChatController(this, tasks, DeviceInformationGateway { battery++; null }, cortex)

@@ -17,6 +17,7 @@ sealed interface OrionChatResponse {
 /** Small closed JSON schema: only objects and strings, no coercion, duplicate members or trailing tokens. */
 object OrionStructuredResponse {
     const val MAX_OUTPUT_BYTES = 16384
+    const val PLAIN_TEXT_FAILURE_MESSAGE = "O Cortex não formulou uma resposta. Tente reformular a pergunta."
     fun parse(raw: String, inputId: UUID, correlationId: UUID): OrionChatResponse? = try {
         require(raw.length <= MAX_OUTPUT_BYTES && raw.toByteArray(Charsets.UTF_8).size <= MAX_OUTPUT_BYTES)
         val reader = Reader(raw)

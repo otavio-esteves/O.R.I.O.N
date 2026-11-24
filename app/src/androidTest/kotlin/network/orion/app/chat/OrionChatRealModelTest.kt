@@ -95,10 +95,10 @@ class OrionChatRealModelTest {
             val backend = object : OrionChatInferenceRuntime {
                 override fun configuration() = qwenChatModel(plan)
                 override fun newRequestId() = client.newRequestId().also { check(requestIds.add(it)) }
-                override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatTerminal =
+                override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatGeneration =
                     kotlinx.coroutines.withContext(Dispatchers.IO) {
                         checkNotNull(importer.openReadOnly(row.modelId)).use { fd ->
-                            client.runInference(row, fd, request, model.maxContextTokens, model.threads) { chunks ->
+                            val status = client.runInference(row, fd, request, model.maxContextTokens, model.threads) { chunks ->
                                 streamed.addAndGet(chunks.count { !it.textDelta.isNullOrEmpty() })
                                 onChunks(chunks)
                                 if (chunks.any { !it.textDelta.isNullOrEmpty() } && pauseNextDelta.compareAndSet(true, false)) {
@@ -113,7 +113,8 @@ class OrionChatRealModelTest {
                                     }
                                     check(target.pid != Process.myPid()); Process.killProcess(target.pid)
                                 }
-                            }.terminal.chatTerminal()
+                            }
+                            OrionChatGeneration(status.terminal.chatTerminal())
                         }
                     }
             }

@@ -16,6 +16,7 @@ import network.orion.ai.api.OrionInferenceLifecycle
 import network.orion.ai.api.OrionInferenceChunk
 import network.orion.ai.api.OrionInferenceRequest
 import network.orion.ai.api.OrionInferenceStatus
+import network.orion.ai.api.OrionInferenceTerminal
 import network.orion.app.resources.OrionAndroidResourceObserver
 import network.orion.app.resources.OrionCortexMemoryTelemetry
 import network.orion.app.resources.OrionCortexResourceFactBuffer
@@ -62,7 +63,7 @@ internal inline fun evaluateCortexPreResourceReadiness(isClosed: () -> Boolean,
 
 internal sealed interface OrionCortexRunResult {
     data class Unavailable(val reason: OrionCortexUnavailable) : OrionCortexRunResult
-    data class Completed(val status: OrionInferenceStatus) : OrionCortexRunResult
+    data class Completed(val status: OrionInferenceStatus, val admissionBlock: OrionCortexAdmissionBlock? = null) : OrionCortexRunResult
 }
 
 /** MAIN technical owner. Empty trusted configuration cannot bind, probe storage or grant inference. */
@@ -390,8 +391,10 @@ internal class OrionCortexRuntimeOwner(
                 if (runtimeCapture != null && selected != null) runtimeCapture.selected(this@OrionCortexRuntimeOwner,
                     selected.sha256, selected.sizeBytes, request.requestId, request.deadline, timing?.maximumObservationAgeMillis,
                     contextTokens, threads, request.maxTokens, originalInventory)
-                OrionCortexRunResult.Completed(ownedClient.runInference(checkNotNull(selected), it, request,
-                    contextTokens, threads, cycle, runtimeCapture, onChunks))
+                var admissionBlock: OrionCortexAdmissionBlock? = null
+                val status = ownedClient.runInference(checkNotNull(selected), it, request, contextTokens, threads,
+                    cycle, runtimeCapture, onChunks) { block -> admissionBlock = block }
+                OrionCortexRunResult.Completed(status, admissionBlock.takeIf { status.terminal == OrionInferenceTerminal.FAILED })
             }
         } catch (stopped: PreparationStopped) {
             val invocation = cycleObservations.isolatedCycle(cycle) { if (cycle == null) null else OrionCortexCycleInvocation() }

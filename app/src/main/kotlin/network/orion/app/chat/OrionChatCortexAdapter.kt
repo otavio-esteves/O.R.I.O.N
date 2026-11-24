@@ -1,12 +1,15 @@
 package network.orion.app.chat
 
 import network.orion.ai.api.*
+import network.orion.app.ai.OrionCortexAdmissionBlock
 import network.orion.app.ai.OrionCortexRuntimeOwner
 import network.orion.app.ai.OrionCortexRunResult
 import network.orion.app.ai.S21_CORTEX_PREVIEW_TIER
 import network.orion.core.context.OrionTokenCounter
 import network.orion.core.orchestrator.chat.*
 import network.orion.core.resources.OrionInferenceResourcePlan
+import network.orion.core.resources.OrionResourceBlock
+import network.orion.core.resources.OrionRestartBlock
 import network.orion.core.time.OrionClock
 
 /** Internal technical port: test fixtures may use the existing client without configuring product profiles. */
@@ -14,7 +17,7 @@ internal interface OrionChatInferenceRuntime {
     fun configuration(): OrionChatModel?
     suspend fun awaitReadyForGeneration() = Unit
     fun newRequestId(): String
-    suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatTerminal
+    suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatGeneration
 }
 
 /** The single pinned Qwen2 byte-BPE vocabulary has at most one token per UTF-8 byte, plus BOS/EOS.
@@ -34,24 +37,22 @@ internal class OrionOwnedChatRuntime(private val owner: OrionCortexRuntimeOwner,
     override fun configuration() = owner.chatResourcePlan()?.let(::qwenChatModel)
     override suspend fun awaitReadyForGeneration() = owner.awaitPreviewExitCooldown()
     override fun newRequestId() = owner.newRequestId()
-    override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatTerminal =
-        when (val result = owner.run(model.modelId, request, model.maxContextTokens, model.threads, onChunks).also(observeResult)) {
-            is OrionCortexRunResult.Unavailable -> OrionChatTerminal.UNAVAILABLE
-            is OrionCortexRunResult.Completed -> result.status.terminal.chatTerminal()
-        }
+    override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatGeneration =
+        owner.run(model.modelId, request, model.maxContextTokens, model.threads, onChunks).also(observeResult).chatGeneration()
 }
 
 /** Keeps all load/inference authorization and cancellation in the existing MAIN Cortex owner/client. */
 internal class OrionChatCortexAdapter(private val clock: OrionClock,
     private val runtime: suspend () -> OrionChatInferenceRuntime?) : OrionChatCortex {
     override suspend fun configuration() = runtime()?.configuration()
-    override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatTerminal {
-        val selected = runtime() ?: return OrionChatTerminal.UNAVAILABLE
+    override suspend fun generate(model: OrionChatModel, prompt: String, correlationId: String, onDelta: (String) -> Unit): OrionChatGeneration {
+        val unavailable = OrionChatGeneration(OrionChatTerminal.UNAVAILABLE)
+        val selected = runtime() ?: return unavailable
         selected.awaitReadyForGeneration()
-        val current = selected.configuration() ?: return OrionChatTerminal.UNAVAILABLE
+        val current = selected.configuration() ?: return unavailable
         if (current.modelId != model.modelId || current.resourceProfile != model.resourceProfile ||
             current.maxContextTokens != model.maxContextTokens || current.reservedOutputTokens != model.reservedOutputTokens ||
-            current.threads != model.threads || current.promptStyle != model.promptStyle) return OrionChatTerminal.UNAVAILABLE
+            current.threads != model.threads || current.promptStyle != model.promptStyle) return unavailable
         val request = OrionInferenceRequest(selected.newRequestId(), 1, model.modelId, prompt, "", model.reservedOutputTokens,
             0.0, OrionInferencePriority.INTERACTIVE, clock.monotonicNow().deadlineAfter(120_000), correlationId)
         return selected.run(request, model) { chunks -> chunks.forEach { chunk ->
@@ -60,6 +61,28 @@ internal class OrionChatCortexAdapter(private val clock: OrionClock,
         } }
     }
 }
+
+internal fun OrionCortexRunResult.chatGeneration(): OrionChatGeneration = when (this) {
+    is OrionCortexRunResult.Unavailable -> OrionChatGeneration(OrionChatTerminal.UNAVAILABLE)
+    is OrionCortexRunResult.Completed -> OrionChatGeneration(status.terminal.chatTerminal(), when (val block = admissionBlock) {
+        is OrionCortexAdmissionBlock.Resources -> when (block.reason) {
+            OrionResourceBlock.BATTERY -> OrionChatBlock.BATTERY
+            OrionResourceBlock.POWER_SAVER -> OrionChatBlock.POWER_SAVER
+            OrionResourceBlock.THERMAL -> OrionChatBlock.THERMAL
+            OrionResourceBlock.MEMORY_PRESSURE, OrionResourceBlock.MEMORY_BUDGET -> OrionChatBlock.MEMORY
+            OrionResourceBlock.BACKGROUND -> OrionChatBlock.BACKGROUND
+            OrionResourceBlock.MEMORY_EXIT, OrionResourceBlock.RESOURCE_EXIT -> OrionChatBlock.COOLDOWN
+            else -> OrionChatBlock.RESOURCES_UNVERIFIED
+        }
+        is OrionCortexAdmissionBlock.Restart -> when (block.reason) {
+            OrionRestartBlock.COOLDOWN -> OrionChatBlock.COOLDOWN
+            OrionRestartBlock.FALLBACK_EXHAUSTED -> OrionChatBlock.FALLBACK_EXHAUSTED
+            else -> OrionChatBlock.RESOURCES_UNVERIFIED
+        }
+        null -> null
+    })
+}
+
 internal fun OrionInferenceTerminal?.chatTerminal(): OrionChatTerminal = when (this) {
     OrionInferenceTerminal.SUCCEEDED -> OrionChatTerminal.SUCCEEDED
     OrionInferenceTerminal.CANCELLED -> OrionChatTerminal.CANCELLED

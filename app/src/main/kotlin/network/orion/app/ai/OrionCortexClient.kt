@@ -29,7 +29,9 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import network.orion.ai.api.*
+import network.orion.core.resources.OrionResourceBlock
 import network.orion.core.resources.OrionResourceDecision
+import network.orion.core.resources.OrionRestartBlock
 import network.orion.core.resources.OrionRestartDecision
 import network.orion.core.time.OrionClock
 import network.orion.core.time.MonotonicDeadlineStatus
@@ -38,6 +40,14 @@ import network.orion.core.ipc.IpcProtocolNegotiation
 import network.orion.data.database.ModelRegistryEntity
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+
+internal sealed interface OrionCortexAdmissionBlock {
+    data class Resources(val reason: OrionResourceBlock) : OrionCortexAdmissionBlock
+    data class Restart(val reason: OrionRestartBlock) : OrionCortexAdmissionBlock
+}
+
+private class OrionCortexAdmissionDenied(val block: OrionCortexAdmissionBlock) :
+    IllegalStateException("Cortex admission blocked.")
 
 /** No construction/wiring in production until real profiles and complete fresh telemetry exist. */
 internal class OrionCortexClient(
@@ -232,6 +242,7 @@ internal class OrionCortexClient(
         cycle: OrionCortexCycleToken? = null, phase: Int = CYCLE_BEFORE_LOAD): network.orion.core.resources.OrionInferenceResourcePlan {
         val scope = enterCycleCallback(cycle, CYCLE_RESTART, phase)
         val decision = try { restart() } finally { leaveCycleCallback(scope) }
+        decision.block?.let { throw OrionCortexAdmissionDenied(OrionCortexAdmissionBlock.Restart(it)) }
         check(decision.eligibleForResourceEvaluation) { "Cortex restart guard blocked." }
         return checkNotNull(decision.candidatePlan).also { candidate ->
             check(candidate.model.modelId == id && context in 1..candidate.maxContext &&
@@ -262,6 +273,7 @@ internal class OrionCortexClient(
             if (runtimeResource != null) runtimeResource.resourceThread = null
             leaveCycleCallback(resourceScope)
         }
+        decision.block?.let { throw OrionCortexAdmissionDenied(OrionCortexAdmissionBlock.Resources(it)) }
         check(decision.allowed && decision.plan?.model == candidate.model) { "Cortex resource policy blocked." }
         val plan = checkNotNull(decision.plan)
         check(context <= plan.maxContext && threads <= plan.maxThreads && tokens <= plan.maxTokens)
@@ -281,7 +293,8 @@ internal class OrionCortexClient(
 
     suspend fun runInference(model: ModelRegistryEntity, descriptor: ParcelFileDescriptor,
         request: OrionInferenceRequest, contextTokens: Int, threads: Int, cycle: OrionCortexCycleToken?,
-        runtimeCapture: OrionCortexRuntimeCaptureSession?, onChunks: (List<OrionInferenceChunk>) -> Unit): OrionInferenceStatus {
+        runtimeCapture: OrionCortexRuntimeCaptureSession?, onChunks: (List<OrionInferenceChunk>) -> Unit,
+        onAdmissionBlocked: (OrionCortexAdmissionBlock) -> Unit = {}): OrionInferenceStatus {
         check(!closed)
         validateOrionInferenceRequest(request, contextTokens, threads)
         require(request.modelId == model.modelId)
@@ -324,10 +337,11 @@ internal class OrionCortexClient(
                         val remaining = request.deadline.expiresElapsedRealtimeMillis - clock.monotonicNow().elapsedRealtimeMillis
                         if (remaining <= 0 || !loadModel(model, descriptor, contextTokens, threads, minOf(remaining, 120_000), cycle))
                             lifecycle.run { if (status().terminal == null) failTransport() else status() }
-                        else infer(request, contextTokens, threads, onChunks, cycle)
+                        else infer(request, contextTokens, threads, onChunks, cycle, onAdmissionBlocked)
                     } catch (cancelled: CancellationException) {
                         lifecycle.cancel(); throw cancelled
-                    } catch (_: Exception) {
+                    } catch (failure: Exception) {
+                        if (failure is OrionCortexAdmissionDenied) onAdmissionBlocked(failure.block)
                         lifecycle.failTransport()
                     } finally {
                         withContext(NonCancellable) { runCatching { unload(cycle, invocationFrame) } }
@@ -423,14 +437,16 @@ internal class OrionCortexClient(
 
     /** Receives structured text only; this client never creates or invokes a Skill. */
     private suspend fun infer(request: OrionInferenceRequest, contextTokens: Int, threads: Int,
-        onChunks: (List<OrionInferenceChunk>) -> Unit, cycle: OrionCortexCycleToken? = null): OrionInferenceStatus = operation.withLock {
+        onChunks: (List<OrionInferenceChunk>) -> Unit, cycle: OrionCortexCycleToken?,
+        onAdmissionBlocked: (OrionCortexAdmissionBlock) -> Unit): OrionInferenceStatus = operation.withLock {
         val model = checkNotNull(loaded) { "Cortex model is not loaded." }
         require(request.modelId == model.modelId && contextTokens == loadedContext && threads == loadedThreads)
         val service = withTimeout(10_000) { acquire() }
         val lifecycle = checkNotNull(active)
         if (lifecycle.status().terminal != null) return@withLock lifecycle.status()
         val transportId = issueTransportRequestId(service)
-        val callbacks = Channel<Bundle>(16)
+        // Callbacks can arrive before startInference returns. Leave room for the S21 preview's 96 pieces and terminal.
+        val callbacks = Channel<Bundle>(128)
         val content = (request.context + "\n" + request.prompt).toByteArray(Charsets.UTF_8)
         val input = try {
             require(content.size in 1..OrionCortexWire.MAX_INPUT_BYTES)
@@ -505,7 +521,8 @@ internal class OrionCortexClient(
             lifecycle.cancel(); runCatching { service.cancelInference(transportId) }; throw cancelled
         } catch (_: android.os.RemoteException) {
             lifecycle.processDied(); lostConnection(); lifecycle.status()
-        } catch (_: Exception) {
+        } catch (failure: Exception) {
+            if (failure is OrionCortexAdmissionDenied) onAdmissionBlocked(failure.block)
             lifecycle.failTransport(); runCatching { service.cancelInference(transportId) }; lifecycle.status()
         } finally {
             content.fill(0)

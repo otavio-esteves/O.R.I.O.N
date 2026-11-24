@@ -32,6 +32,7 @@ import network.orion.ai.api.OrionInferenceChunk
 import network.orion.ai.api.OrionInferenceRequest
 import network.orion.ai.api.OrionInferenceStatus
 import network.orion.core.orchestrator.chat.OrionChatContext
+import network.orion.core.orchestrator.chat.OrionChatGeneration
 import network.orion.core.orchestrator.chat.OrionChatModel
 import network.orion.core.orchestrator.chat.OrionChatResponse
 import network.orion.core.orchestrator.chat.OrionChatTerminal
@@ -147,11 +148,11 @@ class OrionS21CortexSmokeTest {
                             override fun configuration() = model
                             override fun newRequestId() = client.newRequestId()
                             override suspend fun run(request: OrionInferenceRequest, model: OrionChatModel,
-                                onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatTerminal =
+                                onChunks: (List<OrionInferenceChunk>) -> Unit): OrionChatGeneration =
                                 checkNotNull(importer.openReadOnly(row.modelId)).use { fd ->
                                     val status = client.runInference(row, fd, request, model.maxContextTokens, model.threads, onChunks)
                                     inference = status
-                                    status.terminal.chatTerminal()
+                                    OrionChatGeneration(status.terminal.chatTerminal())
                                 }
                         }
                     }
@@ -159,7 +160,7 @@ class OrionS21CortexSmokeTest {
                     val correlation = UUID.randomUUID()
                     val prompt = checkNotNull(OrionChatContext.build("Diga apenas olá.", emptyList(), model)).prompt
                     val output = StringBuffer()
-                    val terminal = adapter.generate(model, prompt, correlation.toString()) { output.append(it) }
+                    val terminal = adapter.generate(model, prompt, correlation.toString()) { output.append(it) }.terminal
                     check(terminal == OrionChatTerminal.SUCCEEDED) {
                         "Terminal=$terminal, failure=${inference?.failure}, restart=$restartBlock, " +
                             "resource=$resourceBlock, battery=${observation?.batteryPercent}, permits=$permits, " +
