@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.RemoteException
+import android.view.ViewTreeObserver
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -17,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -25,11 +27,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import network.orion.app.ai.OrionS21CortexPreview
+import network.orion.app.reminders.formatReminderTime
+import network.orion.core.commands.reminders.CreateReminderResult
 import network.orion.core.ipc.OrionIpcProtocol
+import network.orion.core.orchestrator.reminders.ReminderGateway
 import network.orion.voice.ipc.IOrionPushToTalk
 import network.orion.voice.ipc.IOrionPushToTalkCallback
 import network.orion.voice.service.OrionVoiceControlService
@@ -41,9 +47,12 @@ internal fun OrionPushToTalkScreen(
     lifecycle: Lifecycle,
     transcriptPreview: OrionVoiceTranscriptPreview,
     voiceHealth: (Boolean) -> Unit,
+    reminders: ReminderGateway,
     openTasks: () -> Unit,
+    openReminders: () -> Unit,
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val scope = rememberCoroutineScope()
     var state by remember { mutableStateOf<OrionVoiceSessionState?>(null) }
     var reply by remember { mutableStateOf<String?>(null) }
@@ -51,20 +60,43 @@ internal fun OrionPushToTalkScreen(
     var modelPresent by remember { mutableStateOf(OrionVoiceModel.present(context)) }
     val modelBundled = remember(context) { OrionVoiceModel.bundled(context) }
     var importing by remember { mutableStateOf(false) }
+    var reviewingReminder by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     val cortexNotice by OrionS21CortexPreview.notice.collectAsState()
-    val controller = remember(context, transcriptPreview) { OrionPushToTalkController(context, transcriptPreview) { next, text, review ->
-        state = next
-        reply = text ?: reply
-        confirm = review || confirm
-        if (next in setOf(OrionVoiceSessionState.MODEL_UNAVAILABLE, OrionVoiceSessionState.MICROPHONE_UNAVAILABLE,
+    val controller = remember(context, view, lifecycle, transcriptPreview) {
+        OrionPushToTalkController(context, transcriptPreview, {
+            lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && view.isShown && view.hasWindowFocus()
+        }) { next, text, review ->
+            state = next
+            reply = text ?: reply
+            confirm = review || confirm
+            if (next in setOf(OrionVoiceSessionState.MODEL_UNAVAILABLE, OrionVoiceSessionState.MICROPHONE_UNAVAILABLE,
                 OrionVoiceSessionState.CORE_UNAVAILABLE, OrionVoiceSessionState.FAILED)) voiceHealth(true)
-        if (next == OrionVoiceSessionState.SUCCEEDED) voiceHealth(false)
-    } }
+            if (next == OrionVoiceSessionState.SUCCEEDED) voiceHealth(false)
+        }
+    }
     val transcript by controller.transcript.collectAsState()
+    val conversation by controller.conversation.collectAsState()
+    val spokenReminder by controller.reminder.collectAsState()
+    val reminder = remember(state, spokenReminder, reminders) {
+        if (state != OrionVoiceSessionState.SUCCEEDED) null else spokenReminder?.let {
+            val id = UUID.randomUUID()
+            reminders.prepareCreate(id, it.title, it.afterMinutes, id, UUID.randomUUID())
+        }
+    }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         voiceHealth(false)
-        message = if (granted) "Microfone autorizado. Toque em Falar." else "Autorize o microfone para usar a voz."
+        message = if (granted) "Microfone autorizado. Toque em Falar ou Iniciar conversa." else "Autorize o microfone para usar a voz."
+    }
+    fun startVoice(conversing: Boolean) {
+        message = null
+        if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            permission.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+        reply = null
+        confirm = false
+        controller.begin(conversing)
     }
     fun installModel(install: suspend () -> Boolean) {
         if (importing) return
@@ -84,20 +116,34 @@ internal fun OrionPushToTalkScreen(
     val modelPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) installModel { OrionVoiceModel.install(context.applicationContext, uri) }
     }
-    DisposableEffect(lifecycle, controller) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
-                controller.close()
-                state = null
-                reply = null
-                confirm = false
-            }
+    DisposableEffect(lifecycle, view, controller) {
+        fun leaveVoiceScreen() {
+            controller.close()
+            state = null
+            reply = null
+            confirm = false
         }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE && controller.conversation.value)
+                leaveVoiceScreen()
+        }
+        val windowObserver = ViewTreeObserver.OnWindowFocusChangeListener { focused ->
+            if (!focused && controller.conversation.value) leaveVoiceScreen()
+        }
+        val tree = view.viewTreeObserver
+        tree.addOnWindowFocusChangeListener(windowObserver)
         lifecycle.addObserver(observer)
         onDispose {
             lifecycle.removeObserver(observer)
+            if (tree.isAlive) tree.removeOnWindowFocusChangeListener(windowObserver)
+            else view.viewTreeObserver.removeOnWindowFocusChangeListener(windowObserver)
             controller.close()
         }
+    }
+    if (conversation) DisposableEffect(view) {
+        val previous = view.keepScreenOn
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = previous }
     }
     val busy = state?.terminal == false
     val recording = state == OrionVoiceSessionState.LISTENING
@@ -124,32 +170,37 @@ internal fun OrionPushToTalkScreen(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (modelPresent) {
                     Text("Processamento no dispositivo", style = typography.labelMedium, color = colors.tertiary)
-                    Button(
+                    if (!conversation) {
+                        Button(
+                            onClick = { if (recording) controller.finishCapture() else startVoice(conversing = false) },
+                            enabled = (!busy || recording) && !importing && !reviewingReminder,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("orion_voice_talk"),
+                            shape = MaterialTheme.shapes.small,
+                        ) { Text(when {
+                            recording -> "Concluir fala"
+                            state == OrionVoiceSessionState.CONNECTING -> "Preparando"
+                            busy -> "Processando"
+                            else -> "Falar"
+                        }) }
+                        if (busy) TextButton(onClick = {
+                            controller.close()
+                            state = OrionVoiceSessionState.CANCELLED
+                        }) { Text("Cancelar") }
+                    }
+                    OutlinedButton(
                         onClick = {
-                            message = null
-                            if (recording) {
-                                controller.finishCapture()
-                            } else if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                                permission.launch(Manifest.permission.RECORD_AUDIO)
-                            } else {
-                                reply = null
-                                confirm = false
-                                controller.begin()
-                            }
+                            if (conversation) {
+                                controller.close()
+                                state = OrionVoiceSessionState.CANCELLED
+                            } else startVoice(conversing = true)
                         },
-                        enabled = (!busy || recording) && !importing,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("orion_voice_talk"),
+                        enabled = conversation || !busy && !importing && !reviewingReminder,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("orion_voice_conversation"),
                         shape = MaterialTheme.shapes.small,
-                    ) { Text(when {
-                        recording -> "Concluir fala"
-                        state == OrionVoiceSessionState.CONNECTING -> "Preparando"
-                        busy -> "Processando"
-                        else -> "Falar"
-                    }) }
-                    if (busy) TextButton(onClick = {
-                        controller.close()
-                        state = OrionVoiceSessionState.CANCELLED
-                    }) { Text("Cancelar") }
+                    ) { Text(if (conversation) "Encerrar conversa" else "Iniciar conversa") }
+                    if (conversation && recording) {
+                        TextButton(onClick = controller::finishCapture) { Text("Concluir fala") }
+                    }
                 } else {
                     Text("Modelo de voz", style = typography.titleMedium)
                     Text(
@@ -169,7 +220,7 @@ internal fun OrionPushToTalkScreen(
                     ) { Text(if (importing) "Verificando modelo" else if (modelBundled) "Instalar modelo local" else "Selecionar modelo local") }
                 }
                 val status = message ?: cortexNotice.takeIf { state == OrionVoiceSessionState.WAITING_FOR_CORE }
-                    ?: state?.let(::voiceStatus)
+                    ?: state?.let { voiceStatus(it, conversation) }
                 if (status != null) Text(
                     status, Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     color = colors.onSurfaceVariant, style = typography.bodyMedium,
@@ -188,6 +239,30 @@ internal fun OrionPushToTalkScreen(
             }
         }
         if (confirm) OutlinedButton(onClick = openTasks, shape = MaterialTheme.shapes.small) { Text("Revisar em Tarefas") }
+        if (reminder != null) {
+            OutlinedCard(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(reminder.title, style = typography.titleMedium)
+                    Text(formatReminderTime(reminder.scheduledAt, reminder.zoneId), style = typography.bodyMedium)
+                    TextButton(enabled = !reviewingReminder, onClick = {
+                        reviewingReminder = true
+                        scope.launch {
+                            try {
+                                when (reminders.create(reminder)) {
+                                    CreateReminderResult.QUEUED -> openReminders()
+                                    CreateReminderResult.REJECTED -> message = "Revise o pedido e tente novamente."
+                                    CreateReminderResult.UNAVAILABLE -> message = "O lembrete está indisponível agora."
+                                }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (_: Exception) {
+                                message = "Abra Lembretes para verificar o estado do pedido."
+                            } finally { reviewingReminder = false }
+                        }
+                    }) { Text("Revisar em Lembretes") }
+                }
+            }
+        }
         if (modelPresent && !busy) {
             TextButton(onClick = { modelPicker.launch(arrayOf("*/*")) }, enabled = !importing) {
                 Text("Trocar arquivo do modelo", color = colors.onSurfaceVariant)
@@ -196,9 +271,10 @@ internal fun OrionPushToTalkScreen(
     }
 }
 
-private fun voiceStatus(state: OrionVoiceSessionState) = when (state) {
+private fun voiceStatus(state: OrionVoiceSessionState, conversation: Boolean) = when (state) {
     OrionVoiceSessionState.CONNECTING -> "Aguarde o microfone ficar pronto para falar."
-    OrionVoiceSessionState.LISTENING -> "Ouvindo. Diga, por exemplo, “bateria” ou “criar tarefa estudar”."
+    OrionVoiceSessionState.LISTENING -> if (conversation) "Ouvindo. Fale com o O.R.I.O.N."
+        else "Ouvindo. Diga, por exemplo, “bateria” ou “criar tarefa estudar”."
     OrionVoiceSessionState.TRANSCRIBING -> "Transcrevendo no dispositivo."
     OrionVoiceSessionState.WAITING_FOR_CORE -> "Buscando a resposta."
     OrionVoiceSessionState.SPEAKING -> "Respondendo."
@@ -212,24 +288,35 @@ private fun voiceStatus(state: OrionVoiceSessionState) = when (state) {
     OrionVoiceSessionState.FAILED -> "Sessão de voz interrompida."
 }
 
-/** An Activity owns exactly one foreground control-plane binding. */
-private class OrionPushToTalkController(
+/** Each interactive turn uses the existing foreground control-plane binding. */
+internal class OrionPushToTalkController(
     context: Context,
     private val transcriptPreview: OrionVoiceTranscriptPreview,
+    private val inForeground: () -> Boolean,
     private val report: (OrionVoiceSessionState, String?, Boolean) -> Unit,
 ) {
     private val app = context.applicationContext
     private val handler = Handler(Looper.getMainLooper())
     private val mutableTranscript = MutableStateFlow<String?>(null)
     val transcript = mutableTranscript.asStateFlow()
+    private val mutableReminder = MutableStateFlow<OrionSpokenReminder?>(null)
+    val reminder = mutableReminder.asStateFlow()
+    private val mutableConversation = MutableStateFlow(false)
+    val conversation = mutableConversation.asStateFlow()
     private var active: Session? = null
 
-    fun begin() {
-        if (active != null) return
+    fun begin(conversing: Boolean = false) {
+        if (active != null || conversing && !inForeground()) return
+        mutableConversation.value = conversing
+        beginTurn()
+    }
+
+    private fun beginTurn() {
         val session = Session(UUID.randomUUID())
         active = session
         mutableTranscript.value = null
-        transcriptPreview.watch(session.sessionId, mutableTranscript)
+        mutableReminder.value = null
+        transcriptPreview.watch(session.sessionId, mutableTranscript, mutableReminder)
         report(OrionVoiceSessionState.CONNECTING, null, false)
         session.bound = try {
             app.bindService(Intent(app, OrionVoiceControlService::class.java), session, Context.BIND_AUTO_CREATE)
@@ -245,8 +332,10 @@ private class OrionPushToTalkController(
     }
 
     fun close() {
+        mutableConversation.value = false
         active?.release()
         mutableTranscript.value = null
+        mutableReminder.value = null
     }
 
     private inner class Session(val sessionId: UUID) : ServiceConnection {
@@ -259,8 +348,16 @@ private class OrionPushToTalkController(
                 handler.post {
                     if (this@Session !== active || sessionId != id || (text?.length ?: 0) > 4_096) return@post
                     val value = OrionVoiceSessionState.entries.firstOrNull { it.name == state } ?: return@post
+                    if (!value.terminal) {
+                        report(value, text, requiresConfirmation)
+                        return@post
+                    }
+                    release()
+                    val nextTurn = mutableConversation.value && value == OrionVoiceSessionState.SUCCEEDED &&
+                        !requiresConfirmation && mutableReminder.value == null && inForeground()
+                    mutableConversation.value = nextTurn
                     report(value, text, requiresConfirmation)
-                    if (value.terminal) release()
+                    if (nextTurn) beginTurn()
                 }
             }
         }
@@ -278,8 +375,9 @@ private class OrionPushToTalkController(
         override fun onNullBinding(name: ComponentName) = fail()
         fun fail() {
             if (active !== this) return
-            report(OrionVoiceSessionState.FAILED, null, false)
             release()
+            mutableConversation.value = false
+            report(OrionVoiceSessionState.FAILED, null, false)
         }
         fun release() {
             if (active !== this) return

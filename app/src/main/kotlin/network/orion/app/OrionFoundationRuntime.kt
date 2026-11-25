@@ -529,7 +529,8 @@ class OrionFoundationRuntime internal constructor(context: Context) : RecoveryCo
                     { app.getSystemService(android.os.BatteryManager::class.java)
                         ?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)?.takeIf { it in 0..100 } },
                     db.tasks()::openVoiceTaskCount, kernel::prepareVoiceTask,
-                    conversationScope = scope.takeIf { OrionS21CortexPreview.enabled }, answerQuestion = ::answerVoiceQuestion)
+                    conversationScope = scope.takeIf { OrionS21CortexPreview.enabled }, answerQuestion = ::answerVoiceQuestion,
+                    transcriptPreview = voiceTranscriptPreview)
                 reminderKernel = OrionReminderKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,
                     reminderAdmissions, { health.value.core.readiness }, { taskStorageReady })
                 timerKernel = OrionTimerKernel(db, OrionFieldEncryption(keys), clock, taskStartupBarrier,

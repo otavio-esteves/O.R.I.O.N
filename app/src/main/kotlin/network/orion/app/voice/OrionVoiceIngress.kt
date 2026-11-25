@@ -34,6 +34,7 @@ internal class OrionVoiceIngress(
     private val prepareTask: (network.orion.core.commands.tasks.ValidatedCreateTask) -> Boolean,
     private val conversationScope: CoroutineScope? = null,
     private val answerQuestion: suspend (String, UUID) -> String? = { _, _ -> null },
+    private val transcriptPreview: OrionVoiceTranscriptPreview? = null,
 ) {
     private val router = OrionIntentRouter()
     private val results = LinkedHashMap<UUID, List<VoiceCoreResponse>>()
@@ -73,7 +74,8 @@ internal class OrionVoiceIngress(
         } finally { bytes.fill(0) }
         return when (outcome) {
             DurableIngressOutcome.QUEUED -> if (barrier.isOpen() && readiness().isStartupBarrierOpen) {
-                if (conversationScope != null && question == null && router.route(OrionRoutingInput(
+                if (conversationScope != null && question == null && spokenReminder(request.sessionId, request.text) == null &&
+                    router.route(OrionRoutingInput(
                         request.text, request.requestId, request.correlationId, OrionRoutingSource.VOICE_FINAL, true,
                     )) is OrionIntentRoute.CognitiveCandidate) {
                     question = LiveQuestion(request.requestId, request.correlationId)
@@ -166,11 +168,17 @@ internal class OrionVoiceIngress(
             payload.sensitivity != Sensitivity.SENSITIVE || payload.ingressId != payload.idempotencyKey)
             return LocalIngressDisposition.REJECTED
         val bytes = payload.copyContent() ?: return LocalIngressDisposition.REJECTED
-        val input = try { decode(bytes, payload) }
+        val decoded = try { decode(bytes, payload) }
             catch (_: IllegalArgumentException) { return LocalIngressDisposition.REJECTED }
             catch (_: IOException) { return LocalIngressDisposition.REJECTED }
             finally { bytes.fill(0) }
+        val input = decoded.routing
         val id = input.inputId
+        val reminder = spokenReminder(decoded.sessionId, input.text)
+        if (reminder != null && transcriptPreview?.publishReminder(decoded.sessionId, reminder) == true) {
+            remember(id, success(id, "Confira o lembrete na tela.", false))
+            return LocalIngressDisposition.CONSUMED
+        }
         val result = when (val route = router.route(input)) {
             is OrionIntentRoute.BatteryQuery -> battery()?.let { "Bateria em $it por cento." } ?: "Bateria indisponível."
             is OrionIntentRoute.TaskList -> "Você tem ${taskCount()} tarefas abertas."
@@ -198,6 +206,9 @@ internal class OrionVoiceIngress(
         return LocalIngressDisposition.CONSUMED
     }
 
+    private fun spokenReminder(sessionId: UUID, text: String): OrionSpokenReminder? =
+        if (transcriptPreview?.watchesReminders(sessionId) == true) OrionSpokenReminder.parse(text) else null
+
     private fun encode(request: VoiceUtteranceRequest): ByteArray = ByteArrayOutputStream().also { buffer ->
         DataOutputStream(buffer).use {
             it.writeUTF(request.sessionId.toString())
@@ -209,16 +220,18 @@ internal class OrionVoiceIngress(
         }
     }.toByteArray()
 
-    private fun decode(bytes: ByteArray, payload: LocalIngressPayload): OrionRoutingInput =
+    private data class DecodedVoiceInput(val sessionId: UUID, val routing: OrionRoutingInput)
+
+    private fun decode(bytes: ByteArray, payload: LocalIngressPayload): DecodedVoiceInput =
         DataInputStream(ByteArrayInputStream(bytes)).use {
-            UUID.fromString(it.readUTF())
+            val sessionId = UUID.fromString(it.readUTF())
             it.readUTF()
             val captured = Instant.ofEpochMilli(it.readLong())
             require(it.readInt() in 0..100)
             val correlation = UUID.fromString(it.readUTF())
             val text = it.readUTF()
             require(it.available() == 0 && captured <= Instant.ofEpochMilli(payload.receivedAt).plusSeconds(5))
-            OrionRoutingInput(text, payload.ingressId, correlation, OrionRoutingSource.VOICE_FINAL, true)
+            DecodedVoiceInput(sessionId, OrionRoutingInput(text, payload.ingressId, correlation, OrionRoutingSource.VOICE_FINAL, true))
         }
 
     private fun remember(id: UUID, response: List<VoiceCoreResponse>) {

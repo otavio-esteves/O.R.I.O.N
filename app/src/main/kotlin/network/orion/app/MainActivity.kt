@@ -170,8 +170,10 @@ class MainActivity : ComponentActivity() {
                                 "Dispositivo" -> DeviceScreen(runtime.deviceGateway, report.lastRecovery)
                                 "Atividade" -> ActivityScreen(runtime.activityGateway, report.lastRecovery)
                                 "Voz" -> network.orion.app.voice.OrionPushToTalkScreen(
-                                    lifecycle, runtime.voiceTranscriptPreview, runtime::refreshVoiceHealth,
-                                ) { destination = "Tarefas" }
+                                    lifecycle, runtime.voiceTranscriptPreview, runtime::refreshVoiceHealth, reminders,
+                                    openTasks = { destination = "Tarefas" },
+                                    openReminders = { destination = "Lembretes" },
+                                )
                                 "Chat" -> {
                                     val modelSetup: (@Composable () -> Unit)? = if (network.orion.app.ai.OrionS21CortexPreview.enabled) {
                                         { network.orion.app.ai.OrionCortexModelSetup(runtime) }
