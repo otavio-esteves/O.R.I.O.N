@@ -51,10 +51,21 @@ class OrionVoiceSessionService : Service() {
         }
     }
 
+    private class Terminal(val state: OrionVoiceSessionState, val text: String?, val confirmation: Boolean)
+
     private inner class Session(val id: UUID, private val callback: IOrionPushToTalkCallback) : IBinder.DeathRecipient {
+        private var terminal: Terminal? = null
         val capture = OrionVoiceCapture(this@OrionVoiceSessionService, scope, id, { true }, ::report)
 
         private fun report(state: OrionVoiceSessionState, text: String?, confirmation: Boolean) {
+            if (state.terminal) {
+                terminal = Terminal(state, text, confirmation)
+                return
+            }
+            forward(state, text, confirmation)
+        }
+
+        private fun forward(state: OrionVoiceSessionState, text: String?, confirmation: Boolean) {
             try { callback.onState(id.toString(), state.name, text, confirmation) }
             catch (_: RemoteException) { capture.cancel() }
         }
@@ -65,7 +76,10 @@ class OrionVoiceSessionService : Service() {
 
         fun complete() {
             try { callback.asBinder().unlinkToDeath(this, 0) } catch (_: NoSuchElementException) { }
-            if (active === this) active = null
+            if (active !== this) return
+            active = null
+            // A completed capture has released the recorder, decoder and Core binding.
+            terminal?.let { forward(it.state, it.text, it.confirmation) }
         }
     }
 

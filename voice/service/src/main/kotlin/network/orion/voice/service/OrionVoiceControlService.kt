@@ -35,8 +35,8 @@ class OrionVoiceControlService : Service() {
                 handler.post {
                     if (active !== this@Forwarding || sessionId != id) return@post
                     val decoded = OrionVoiceSessionState.entries.firstOrNull { it.name == state } ?: return@post
-                    report(decoded, text, requiresConfirmation)
                     if (decoded.terminal) release()
+                    report(decoded, text, requiresConfirmation)
                 }
             }
         }
