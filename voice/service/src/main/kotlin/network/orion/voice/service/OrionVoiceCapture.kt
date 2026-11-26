@@ -29,6 +29,7 @@ import network.orion.core.ipc.OrionVoiceSource
 import network.orion.core.ipc.OrionVoiceTerminalState
 import network.orion.core.ipc.VoiceUtteranceRequest
 import network.orion.core.time.AndroidOrionClock
+import network.orion.voice.ipc.ORION_VOICE_REPLY_TIMEOUT_MILLIS
 import network.orion.voice.ipc.OrionBoundVoiceCoreClient
 import network.orion.voice.ipc.OrionVoiceAdmission
 import network.orion.voice.ipc.VoiceCoreClient
@@ -139,7 +140,7 @@ internal class OrionVoiceCapture(
             val request = VoiceUtteranceRequest(IpcSchemaVersion(1), requestId, id, text, true,
                 "pt-BR", capturedAt, OrionVoiceSource.PUSH_TO_TALK, 0, UUID.randomUUID())
             // Includes the foreground preview's exit cooldown and the full Cortex request deadline.
-            val reply = withTimeoutOrNull(190_000) { submitAndWait(core, request) }
+            val reply = withTimeoutOrNull(ORION_VOICE_REPLY_TIMEOUT_MILLIS) { submitAndWait(core, request) }
                 ?: return report(OrionVoiceSessionState.CORE_UNAVAILABLE)
             requireCaptureAuthority()
             if (reply.text != null) {

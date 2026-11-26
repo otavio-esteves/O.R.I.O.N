@@ -2,13 +2,18 @@ package network.orion.app.voice
 
 import java.io.*
 import network.orion.app.tasks.OrionTaskTransactionBlocked
+import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import network.orion.core.health.CoreReadiness
 import network.orion.core.ingress.*
 import network.orion.core.ipc.*
@@ -19,9 +24,10 @@ import network.orion.core.skills.metadata.tasks.OrionCreateTaskDescriptor
 import network.orion.core.time.WallClock
 import network.orion.data.database.*
 import network.orion.data.repository.*
+import network.orion.voice.ipc.ORION_VOICE_REPLY_TIMEOUT_MILLIS
 import network.orion.voice.ipc.OrionVoiceAdmission
 
-/** All voice text is scoped to encrypted MAIN ingress. Only final requests reach routing. */
+/** MAIN owns durable task admission and bounded, in-memory replies to read-only voice turns. */
 internal class OrionVoiceIngress(
     private val db: OrionDatabase,
     crypto: OrionFieldEncryption,
@@ -35,12 +41,21 @@ internal class OrionVoiceIngress(
     private val conversationScope: CoroutineScope? = null,
     private val answerQuestion: suspend (String, UUID) -> String? = { _, _ -> null },
     private val transcriptPreview: OrionVoiceTranscriptPreview? = null,
+    private val timeSource: TimeSource = TimeSource.Monotonic,
 ) {
     private val router = OrionIntentRouter()
     private val results = LinkedHashMap<UUID, List<VoiceCoreResponse>>()
+    private val readTurns = LinkedHashMap<UUID, ReadTurn>()
     private var processingId: UUID? = null
-    private class LiveQuestion(val id: UUID, val correlationId: UUID) {
-        var prompt: String? = null
+
+    private class ReadWork(val request: VoiceUtteranceRequest, val route: OrionIntentRoute,
+        val reminder: OrionSpokenReminder?, val allowInference: Boolean)
+
+    private class ReadTurn(val fingerprint: ByteArray, val acceptedAt: TimeMark, var work: ReadWork?) {
+        var reply: List<VoiceCoreResponse>? = null
+    }
+
+    private class LiveQuestion(val id: UUID, val turn: ReadTurn) {
         var job: Job? = null
     }
     private var question: LiveQuestion? = null
@@ -62,26 +77,42 @@ internal class OrionVoiceIngress(
     private val coordinator = DurableIngressCoordinator(queue, barrier, readiness, storageAvailable)
 
     @Synchronized fun submit(request: VoiceUtteranceRequest): OrionVoiceAdmission {
+        val now = clock.wallNow()
         if (!request.isFinalTranscript || request.source != OrionVoiceSource.PUSH_TO_TALK ||
             request.text.length > OrionIntentRouter.MAX_INPUT_UTF8_BYTES ||
-            request.capturedAt.isAfter(clock.wallNow().plusSeconds(5)) ||
-            request.capturedAt.isBefore(clock.wallNow().minusSeconds(90))) return OrionVoiceAdmission.REJECTED_INVALID
+            request.capturedAt.isAfter(now.plusSeconds(5)) ||
+            request.capturedAt.isBefore(now.minusMillis(QUEUE_TIMEOUT_MILLIS))) return OrionVoiceAdmission.REJECTED_INVALID
+        if (!storageReadable()) return OrionVoiceAdmission.CORE_UNAVAILABLE
+        expireReadTurns()
         val bytes = encode(request)
-        val outcome = try {
-            coordinator.submit(DurableIngressRequest(request.requestId, SCOPE, request.requestId, SOURCE, TYPE, 1,
-                Sensitivity.SENSITIVE, false, null, bytes, 90_000, Duration.ofDays(1).toMillis(),
-                correlationId = request.correlationId))
+        return try {
+            val id = request.requestId
+            readTurns[id]?.let { previous ->
+                return if (previous.fingerprint.contentEquals(fingerprint(bytes))) OrionVoiceAdmission.DUPLICATE_REQUEST
+                    else OrionVoiceAdmission.REJECTED_INVALID
+            }
+            val route = router.route(OrionRoutingInput(request.text, id, request.correlationId, OrionRoutingSource.VOICE_FINAL, true))
+            // Previously persisted voice turns keep the original replay and conflict semantics after upgrade.
+            if (route is OrionIntentRoute.TaskCreation || db.ingress().findByKey(SCOPE, id.toString()) != null)
+                return submitDurable(request, bytes)
+            if (route is OrionIntentRoute.Rejected || route is OrionIntentRoute.AwaitingFinalInput)
+                return OrionVoiceAdmission.REJECTED_INVALID
+            if (readTurns.size >= MAX_READ_TURNS) return OrionVoiceAdmission.CORE_UNAVAILABLE
+
+            val ready = readyForReads()
+            val work = ReadWork(request, route, spokenReminder(request.sessionId, request.text), allowInference = ready)
+            readTurns[id] = ReadTurn(fingerprint(bytes), timeSource.markNow(), work)
+            if (ready) OrionVoiceAdmission.ACCEPTED else OrionVoiceAdmission.QUEUED_DURING_RECOVERY
         } finally { bytes.fill(0) }
+    }
+
+    private fun submitDurable(request: VoiceUtteranceRequest, bytes: ByteArray): OrionVoiceAdmission {
+        val outcome = coordinator.submit(DurableIngressRequest(request.requestId, SCOPE, request.requestId, SOURCE, TYPE, 1,
+            Sensitivity.SENSITIVE, false, null, bytes, QUEUE_TIMEOUT_MILLIS, Duration.ofDays(1).toMillis(),
+            correlationId = request.correlationId))
         return when (outcome) {
-            DurableIngressOutcome.QUEUED -> if (barrier.isOpen() && readiness().isStartupBarrierOpen) {
-                if (conversationScope != null && question == null && spokenReminder(request.sessionId, request.text) == null &&
-                    router.route(OrionRoutingInput(
-                        request.text, request.requestId, request.correlationId, OrionRoutingSource.VOICE_FINAL, true,
-                    )) is OrionIntentRoute.CognitiveCandidate) {
-                    question = LiveQuestion(request.requestId, request.correlationId)
-                }
-                OrionVoiceAdmission.ACCEPTED
-            } else OrionVoiceAdmission.QUEUED_DURING_RECOVERY
+            DurableIngressOutcome.QUEUED -> if (readyForReads()) OrionVoiceAdmission.ACCEPTED
+                else OrionVoiceAdmission.QUEUED_DURING_RECOVERY
             DurableIngressOutcome.DEDUP -> OrionVoiceAdmission.DUPLICATE_REQUEST
             DurableIngressOutcome.IDEMPOTENCY_CONFLICT, DurableIngressOutcome.INGRESS_ID_CONFLICT -> OrionVoiceAdmission.REJECTED_INVALID
             else -> OrionVoiceAdmission.CORE_UNAVAILABLE
@@ -90,57 +121,83 @@ internal class OrionVoiceIngress(
 
     @Synchronized fun drain() {
         coordinator.drain(25)
-        val live = question ?: return
-        // The transaction only stages a live read. Cortex starts after the consumed receipt commits.
-        val status = db.ingress().findByKey(SCOPE, live.id.toString())?.status
-        if (status != DurableIngressStatus.QUEUED && status != DurableIngressStatus.CONSUMED) {
-            question = null
-            return
+        expireReadTurns()
+        for ((id, turn) in readTurns) {
+            val work = turn.work ?: continue
+            val live = barrier.whileOpen {
+                if (!readyForReads() || !storageReadable()) return@whileOpen null
+                if (work.allowInference && work.reminder == null && work.route is OrionIntentRoute.CognitiveCandidate &&
+                    conversationScope != null && question == null) {
+                    turn.work = null
+                    LiveQuestion(id, turn).also { question = it }
+                } else {
+                    turn.reply = try {
+                        checkNotNull(replyToRead(id, work.route, work.request.sessionId, work.reminder))
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: RuntimeException) {
+                        listOf(terminal(id, OrionVoiceTerminalState.FAILED, error = OrionVoiceErrorCode.EXECUTION_FAILED))
+                    }
+                    turn.work = null
+                    null
+                }
+            }
+            if (live != null) launchQuestion(live, work.request)
         }
-        val prompt = live.prompt ?: return
-        if (status != DurableIngressStatus.CONSUMED || live.job != null) return
-        live.prompt = null
+    }
+
+    private fun launchQuestion(live: LiveQuestion, request: VoiceUtteranceRequest) {
         live.job = checkNotNull(conversationScope).launch {
+            val remaining = ORION_VOICE_REPLY_TIMEOUT_MILLIS - live.turn.acceptedAt.elapsedNow().inWholeMilliseconds
             var answer: String? = null
-            try { answer = answerQuestion(prompt, live.correlationId) }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { }
-            finally { complete(live, answer) }
+            var state = OrionVoiceTerminalState.SUCCEEDED
+            try {
+                answer = withTimeout(remaining) { answerQuestion(request.text, request.correlationId) }
+            } catch (_: TimeoutCancellationException) {
+                state = OrionVoiceTerminalState.TIMED_OUT
+            } catch (cancelled: CancellationException) {
+                state = OrionVoiceTerminalState.CANCELLED
+                throw cancelled
+            } catch (_: Exception) {
+                // The local inference port has no authority to change the request or run a Skill.
+            } finally {
+                complete(live, state, answer)
+            }
         }
     }
 
     @Synchronized fun closeConversation() {
-        val live = question ?: return
-        question = null
-        live.job?.cancel()
+        for ((id, turn) in readTurns) {
+            if (turn.reply == null) stopRead(id, turn, OrionVoiceTerminalState.CANCELLED)
+        }
     }
 
-    @Synchronized private fun complete(live: LiveQuestion, answer: String?) {
+    @Synchronized private fun complete(live: LiveQuestion, state: OrionVoiceTerminalState, answer: String?) {
         if (question !== live) return
         question = null
-        remember(live.id, success(live.id, answer ?: "O Cortex está temporariamente indisponível. Tente novamente.", false))
+        live.turn.reply = if (state == OrionVoiceTerminalState.SUCCEEDED)
+            success(live.id, answer ?: "O Cortex está temporariamente indisponível. Tente novamente.", false)
+        else listOf(terminal(live.id, state))
     }
 
     @Synchronized fun cancel(id: UUID): Boolean {
-        val row = db.ingress().findByKey(SCOPE, id.toString()) ?: return false
-        val live = question?.takeIf { it.id == id }
-        if (row.status == DurableIngressStatus.CONSUMED && live != null) {
-            question = null
-            live.job?.cancel()
-            remember(id, listOf(terminal(id, OrionVoiceTerminalState.CANCELLED)))
+        expireReadTurns()
+        readTurns[id]?.let { turn ->
+            if (turn.reply != null) return false
+            stopRead(id, turn, OrionVoiceTerminalState.CANCELLED)
             return true
         }
+        val row = db.ingress().findByKey(SCOPE, id.toString()) ?: return false
         if (row.status != DurableIngressStatus.QUEUED) return false
-        val cancelled = db.ingress().cancelQueuedVoiceRequest(row.ingressId, row.version, clock.wallNow().toEpochMilli()) == 1
-        if (cancelled && live != null) question = null
-        return cancelled
+        return db.ingress().cancelQueuedVoiceRequest(row.ingressId, row.version, clock.wallNow().toEpochMilli()) == 1
     }
 
     @Synchronized fun responses(id: UUID): List<VoiceCoreResponse> {
+        expireReadTurns()
+        readTurns[id]?.let { return it.reply ?: pending(id) }
         val row = db.ingress().findByKey(SCOPE, id.toString()) ?: return emptyList()
         return when (row.status) {
-            DurableIngressStatus.CONSUMED -> if (question?.id == id) pending(id) else
-                results[id] ?: recoverResponse(id, row.correlationId)
+            DurableIngressStatus.CONSUMED -> results[id] ?: recoverResponse(id, row.correlationId)
             DurableIngressStatus.REJECTED, DurableIngressStatus.FAILED -> listOf(
                 if (row.lastErrorCode == "VOICE_CANCELLED") terminal(id, OrionVoiceTerminalState.CANCELLED)
                 else terminal(id, OrionVoiceTerminalState.FAILED, error = OrionVoiceErrorCode.INVALID_REQUEST),
@@ -148,6 +205,30 @@ internal class OrionVoiceIngress(
             DurableIngressStatus.EXPIRED -> listOf(terminal(id, OrionVoiceTerminalState.TIMED_OUT))
             else -> pending(id)
         }
+    }
+
+    private fun storageReadable() = coordinator.admit(IngressClass.READ_ONLY_SAFE) == IngressAdmission.READ_ALLOWED
+
+    private fun readyForReads() = barrier.isOpen() && readiness().isStartupBarrierOpen
+
+    private fun expireReadTurns() {
+        for ((id, turn) in readTurns) {
+            val timeout = if (turn.work != null) QUEUE_TIMEOUT_MILLIS else ORION_VOICE_REPLY_TIMEOUT_MILLIS
+            if (turn.reply == null && turn.acceptedAt.elapsedNow().inWholeMilliseconds >= timeout) {
+                stopRead(id, turn, OrionVoiceTerminalState.TIMED_OUT)
+            }
+        }
+        readTurns.entries.removeAll { (_, turn) ->
+            turn.acceptedAt.elapsedNow().inWholeMilliseconds >= ORION_VOICE_REPLY_TIMEOUT_MILLIS + 30_000
+        }
+    }
+
+    private fun stopRead(id: UUID, turn: ReadTurn, state: OrionVoiceTerminalState) {
+        turn.work = null
+        turn.reply = listOf(terminal(id, state))
+        val live = question?.takeIf { it.id == id } ?: return
+        question = null
+        live.job?.cancel()
     }
 
     private fun pending(id: UUID) = listOf(VoiceCoreResponse(SCHEMA, id, 0, OrionVoiceResponseKind.STATUS, null, false, null, null))
@@ -175,35 +256,31 @@ internal class OrionVoiceIngress(
         val input = decoded.routing
         val id = input.inputId
         val reminder = spokenReminder(decoded.sessionId, input.text)
-        if (reminder != null && transcriptPreview?.publishReminder(decoded.sessionId, reminder) == true) {
-            remember(id, success(id, "Confira o lembrete na tela.", false))
-            return LocalIngressDisposition.CONSUMED
+        val route = router.route(input)
+        val reply = if (route is OrionIntentRoute.TaskCreation && reminder == null) {
+            val prepared = prepareTask(route.intent.arguments)
+            success(id, if (prepared) TASK_REVIEW_TEXT else "Abra o O.R.I.O.N. e tente novamente.", prepared)
+        } else {
+            replyToRead(id, route, decoded.sessionId, reminder) ?: return LocalIngressDisposition.REJECTED
         }
-        val result = when (val route = router.route(input)) {
+        remember(id, reply)
+        return LocalIngressDisposition.CONSUMED
+    }
+
+    private fun replyToRead(id: UUID, route: OrionIntentRoute, sessionId: UUID, reminder: OrionSpokenReminder?): List<VoiceCoreResponse>? {
+        val text = if (reminder != null) {
+            if (transcriptPreview?.publishReminder(sessionId, reminder) == true) "Confira o lembrete na tela."
+            else "Abra Voz e repita o pedido de lembrete."
+        } else when (route) {
             is OrionIntentRoute.BatteryQuery -> battery()?.let { "Bateria em $it por cento." } ?: "Bateria indisponível."
             is OrionIntentRoute.TaskList -> "Você tem ${taskCount()} tarefas abertas."
-            is OrionIntentRoute.TaskCreation -> {
-                val prepared = prepareTask(route.intent.arguments)
-                if (prepared) {
-                    remember(id, success(id, TASK_REVIEW_TEXT, true))
-                    return LocalIngressDisposition.CONSUMED
-                }
-                "Abra o O.R.I.O.N. e tente novamente."
-            }
             is OrionIntentRoute.Clarification -> "Repita o pedido com o título da tarefa."
-            is OrionIntentRoute.CognitiveCandidate -> {
-                val live = question?.takeIf { it.id == id }
-                if (live != null) {
-                    live.prompt = input.text
-                    return LocalIngressDisposition.CONSUMED
-                }
-                if (conversationScope == null) "Use voz para criar ou listar tarefas e consultar a bateria."
+            is OrionIntentRoute.CognitiveCandidate -> if (conversationScope == null)
+                "Use voz para criar ou listar tarefas e consultar a bateria."
                 else "Repita a pergunta para o Cortex responder."
-            }
-            else -> return LocalIngressDisposition.REJECTED
+            else -> return null
         }
-        remember(id, success(id, result, false))
-        return LocalIngressDisposition.CONSUMED
+        return success(id, text, false)
     }
 
     private fun spokenReminder(sessionId: UUID, text: String): OrionSpokenReminder? =
@@ -219,6 +296,8 @@ internal class OrionVoiceIngress(
             it.writeUTF(request.text)
         }
     }.toByteArray()
+
+    private fun fingerprint(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
 
     private data class DecodedVoiceInput(val sessionId: UUID, val routing: OrionRoutingInput)
 
@@ -253,6 +332,8 @@ internal class OrionVoiceIngress(
         private const val SCOPE = "orion_voice_v1"
         private const val SOURCE = "VOICE_SESSION"
         private const val TYPE = "FinalUtterance"
+        private const val QUEUE_TIMEOUT_MILLIS = 90_000L
+        private const val MAX_READ_TURNS = 64
         private const val TASK_REVIEW_TEXT = "Revise e confirme o pedido na tela Tarefas."
     }
 }

@@ -25,9 +25,11 @@ a tela ou colocar o app em segundo plano encerra a sessão.
 
 O Core roteia a consulta de bateria, a contagem de tarefas abertas e a proposta
 de criação de tarefa. A revisão na tela Tarefas usa a confirmação exata existente.
-O ingresso da transcrição final é criptografado, usa o ID estável do pedido
-e só consome após a Startup Barrier. O protocolo privado usa sequências por
-pedido e uma resposta terminal. As respostas em trânsito têm retenção efêmera.
+O ingresso de criação de tarefa é criptografado e usa o ID estável do pedido.
+Consultas e propostas de lembrete ficam em uma fila limitada em memória. O Core
+processa os dois caminhos após a Startup Barrier. O protocolo privado usa
+sequências por pedido e uma resposta terminal. A assinatura tem prazo alinhado
+ao limite do turno, incluindo a pausa de proteção do Cortex.
 
 ## Gate e evidência
 
@@ -40,7 +42,7 @@ A aprovação definitiva de modelo e parâmetros depende dessas medições.
 
 | Verificação | Evidência de software |
 | --- | --- |
-| IPC e processos | A suíte Android `f9` cobre versão, topologia privada, callbacks, admissão durante recovery e preparação real de tarefa. |
+| IPC e processos | A suíte Android `f9` cobre versão, topologia privada, callbacks, admissão durante recovery, preparação real de tarefa e conversa em primeiro plano. |
 | Retomada do Core | `verify-voice-process-recovery.py` mata MAIN com `SIGKILL`, confirma que `:voice_session` continua vivo e verifica o bind e a conclusão de uma consulta após a recuperação. O script também mata cada processo de voz e verifica que os outros sobrevivem. |
 | Core independente | A suíte de chat sem modelo verifica o uso por texto com os processos de voz desligados. |
 | VAD e STT | O teste JVM cobre a seleção de fala no PCM. No emulador API 35 x86_64, o teste instrumentado reconheceu a palavra `bateria` numa frase sintética em 12,7 s de decodificação. |

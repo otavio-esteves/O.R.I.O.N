@@ -8,11 +8,14 @@ import java.util.UUID
 import android.os.IBinder
 import android.os.Bundle
 import android.os.RemoteException
+import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -116,12 +119,17 @@ class OrionBoundVoiceCoreClient(context: Context) : VoiceCoreClient {
             }
         }
         val death = IBinder.DeathRecipient { close() }
+        val deadline = launch {
+            delay(ORION_VOICE_CALLBACK_TIMEOUT_MILLIS)
+            close(TimeoutException("Core voice response timed out."))
+        }
         try {
             endpoint.asBinder().linkToDeath(death, 0)
             if (!endpoint.registerVoiceCallback(protocolInfo.protocolMajor, requestId.toString(), callback)) close()
         } catch (_: RemoteException) { close() }
           catch (_: SecurityException) { close() }
         awaitClose {
+            deadline.cancel()
             try { endpoint.unregisterVoiceCallback(callback) } catch (_: RemoteException) { }
             try { endpoint.asBinder().unlinkToDeath(death, 0) } catch (_: NoSuchElementException) { }
         }

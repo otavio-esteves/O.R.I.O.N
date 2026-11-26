@@ -114,11 +114,13 @@ class OrionForegroundConversationTest {
             assertEquals(OrionVoiceAdmission.QUEUED_DURING_RECOVERY, ingress.submit(request(id, true)))
             ingress.drain()
             assertNull(output.value)
+            assertNull(db.ingress().find(id.toString()))
             readiness = CoreReadiness.DEGRADED_SAFE
             assertTrue(barrier.releaseAfterRecovery(ticket, readiness))
             ingress.drain()
             assertEquals("ler", output.value?.title)
             assertEquals(10L, output.value?.afterMinutes)
+            assertNull(db.ingress().find(id.toString()))
             assertNull(db.records().reminder(id.toString()))
             assertNull(db.actions().findByKey("reminder.create", id.toString()))
 

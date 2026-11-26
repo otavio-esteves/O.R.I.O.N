@@ -8,6 +8,10 @@ import network.orion.core.ipc.VoiceUtteranceRequest
 import network.orion.core.ipc.OrionIpcProtocol
 import network.orion.core.ipc.ProtocolInfo
 
+/** Upper bound for a voice turn, including the local Cortex cooldown and generation. */
+const val ORION_VOICE_REPLY_TIMEOUT_MILLIS = 190_000L
+const val ORION_VOICE_CALLBACK_TIMEOUT_MILLIS = ORION_VOICE_REPLY_TIMEOUT_MILLIS + 1_000
+
 enum class VoiceCoreConnectionState { UNAVAILABLE, CONNECTED }
 
 /**
@@ -21,6 +25,7 @@ interface VoiceCoreClient {
     suspend fun submitUtterance(request: VoiceUtteranceRequest): OrionVoiceAdmission = OrionVoiceAdmission.CORE_UNAVAILABLE
     suspend fun status(requestId: UUID, afterSequence: Long = -1): VoiceCoreResponse? = null
     suspend fun cancel(requestId: UUID): Boolean = false
+    /** Completes on a terminal response or disconnect. A transport deadline fails the collection. */
     fun responses(requestId: UUID): Flow<VoiceCoreResponse> = emptyFlow()
     suspend fun healthCheck(): Boolean = false
     suspend fun disconnect()

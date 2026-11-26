@@ -20,8 +20,11 @@ class OrionCoreGatewayService : Service() {
     private val core get() = (application as OrionApplication).mainRuntime
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val callbacks = RemoteCallbackList<IOrionVoiceCallback>()
-    private class Subscriber(val id: UUID, var lastSequence: Long = -1) {
-        val registeredAt = TimeSource.Monotonic.markNow()
+    internal class Subscriber(val id: UUID, timeSource: TimeSource = TimeSource.Monotonic) {
+        var lastSequence = -1L
+        private val registeredAt = timeSource.markNow()
+
+        fun expired() = registeredAt.elapsedNow().inWholeMilliseconds >= ORION_VOICE_CALLBACK_TIMEOUT_MILLIS
     }
     private val pump = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
 
@@ -64,10 +67,11 @@ class OrionCoreGatewayService : Service() {
             if (!compatible(protocolMajor)) return OrionVoiceAdmission.PROTOCOL_MISMATCH.name
             val decoded = OrionVoiceWire.readRequest(request) ?: return OrionVoiceAdmission.REJECTED_INVALID.name
             val runtime = core
-            runtime?.voiceTranscriptPreview?.publish(decoded)
             val result = runtime?.voiceIngress?.submit(decoded) ?: OrionVoiceAdmission.CORE_UNAVAILABLE
-            if (result in setOf(OrionVoiceAdmission.ACCEPTED, OrionVoiceAdmission.QUEUED_DURING_RECOVERY))
+            if (result == OrionVoiceAdmission.ACCEPTED || result == OrionVoiceAdmission.QUEUED_DURING_RECOVERY) {
+                runtime?.voiceTranscriptPreview?.publish(decoded)
                 pump.trySend(Unit)
+            }
             return result.name
         }
 
@@ -110,16 +114,12 @@ class OrionCoreGatewayService : Service() {
     }
 
     private fun publishCallbacks(ingress: OrionVoiceIngress?) {
-        val finished = mutableListOf<IOrionVoiceCallback>()
+        val finished = mutableSetOf<IOrionVoiceCallback>()
         val count = callbacks.beginBroadcast()
         try {
             repeat(count) { index ->
                 val callback = callbacks.getBroadcastItem(index)
                 val owner = callbacks.getBroadcastCookie(index) as Subscriber
-                if (owner.registeredAt.elapsedNow().inWholeMilliseconds > 15_000) {
-                    finished += callback
-                    return@repeat
-                }
                 val responses: List<VoiceCoreResponse> = ingress?.responses(owner.id).orEmpty()
                 for (response in responses.filter { it.sequence > owner.lastSequence }) {
                     try {
@@ -131,6 +131,7 @@ class OrionCoreGatewayService : Service() {
                     owner.lastSequence = response.sequence
                     if (response.terminalState != null) finished += callback
                 }
+                if (owner.expired()) finished += callback
             }
         } finally { callbacks.finishBroadcast() }
         finished.forEach(callbacks::unregister)

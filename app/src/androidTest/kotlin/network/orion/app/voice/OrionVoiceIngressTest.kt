@@ -7,6 +7,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Instant
 import java.util.UUID
 import javax.crypto.spec.SecretKeySpec
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TestTimeSource
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -31,7 +33,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class OrionVoiceIngressTest {
-    @Test fun liveCognitiveRequestRunsAfterCommitAndCancellationPreventsAReply() = runBlocking {
+    @Test fun liveCognitiveRequestStaysInMemoryAndCancellationPreventsAReply() = runBlocking {
         val app = ApplicationProvider.getApplicationContext<Context>()
         val at = Instant.parse("2026-11-21T12:00:00Z")
         val clock = WallClock { at }
@@ -48,21 +50,23 @@ class OrionVoiceIngressTest {
         val finish = CompletableDeferred<String>()
         val id = UUID.randomUUID()
         val trace = UUID.randomUUID()
+        val elapsed = TestTimeSource()
         val ingress = OrionVoiceIngress(db, crypto, clock, barrier, { ready }, { true }, { 50 }, { 0 },
             { error("A question must not prepare a task.") }, conversationScope = this,
             answerQuestion = { _, correlation ->
                 check(correlation == trace)
-                val row = checkNotNull(db.ingress().find(id.toString()))
-                check(row.status == DurableIngressStatus.CONSUMED && row.payloadEnvelope.isEmpty())
+                check(db.ingress().count() == 0)
                 started.complete(Unit)
                 finish.await()
-            })
+            }, timeSource = elapsed)
         try {
             val request = VoiceUtteranceRequest(IpcSchemaVersion(1), id, UUID.randomUUID(), "Tudo bem?", true,
                 "pt-BR", at, OrionVoiceSource.PUSH_TO_TALK, 0, trace)
             assertEquals(OrionVoiceAdmission.ACCEPTED, ingress.submit(request))
+            assertFalse(started.isCompleted)
             ingress.drain()
             withTimeout(5_000) { started.await() }
+            elapsed += 16.seconds
             assertEquals(OrionVoiceAdmission.DUPLICATE_REQUEST, ingress.submit(request))
             assertEquals(OrionVoiceResponseKind.STATUS, ingress.responses(id).single().kind)
             assertTrue(ingress.cancel(id))
@@ -72,6 +76,56 @@ class OrionVoiceIngressTest {
             ingress.closeConversation()
             db.close()
         }
+    }
+
+    @Test fun readOnlyVoiceWorkWaitsInMemoryAndExpiresWithoutReplayingAfterRecovery() {
+        val app = ApplicationProvider.getApplicationContext<Context>()
+        val at = Instant.parse("2026-11-21T12:00:00Z")
+        val elapsed = TestTimeSource()
+        val barrier = StartupBarrier()
+        val ticket = barrier.beginRecovery()
+        var readiness = CoreReadiness.RECOVERING
+        var queries = 0
+        val crypto = OrionFieldEncryption(object : FieldKeyProvider {
+            override fun currentKey() = error("An ephemeral read must not request a key.")
+            override fun keyForVersion(version: Int) = error("An ephemeral read must not decrypt anything.")
+        })
+        val db = Room.inMemoryDatabaseBuilder(app, OrionDatabase::class.java).build()
+        try {
+            fun ingress() = OrionVoiceIngress(db, crypto, WallClock { at }, barrier, { readiness }, { true },
+                { ++queries; 50 }, { 2 }, { error("A query must not prepare an action.") }, timeSource = elapsed)
+            val live = ingress()
+            fun request(text: String = "bateria", id: UUID = UUID.randomUUID()) = VoiceUtteranceRequest(
+                IpcSchemaVersion(1), id, UUID.randomUUID(), text, true, "pt-BR", at,
+                OrionVoiceSource.PUSH_TO_TALK, 0, UUID.randomUUID(),
+            )
+            val expired = request()
+            assertEquals(OrionVoiceAdmission.QUEUED_DURING_RECOVERY, live.submit(expired))
+            live.drain()
+            assertEquals(0, queries)
+            assertEquals(OrionVoiceResponseKind.STATUS, live.responses(expired.requestId).single().kind)
+            elapsed += 91.seconds
+            assertEquals(OrionVoiceTerminalState.TIMED_OUT, live.responses(expired.requestId).single().terminalState)
+
+            val accepted = request()
+            assertEquals(OrionVoiceAdmission.QUEUED_DURING_RECOVERY, live.submit(accepted))
+            assertEquals(OrionVoiceAdmission.DUPLICATE_REQUEST, live.submit(accepted))
+            assertEquals(OrionVoiceAdmission.REJECTED_INVALID, live.submit(request("listar tarefas", accepted.requestId)))
+            readiness = CoreReadiness.DEGRADED_SAFE
+            assertTrue(barrier.releaseAfterRecovery(ticket, readiness))
+            repeat(2) { live.drain() }
+            assertEquals(1, queries)
+            assertEquals("Bateria em 50 por cento.", live.responses(accepted.requestId).first().textDelta)
+            assertEquals(OrionVoiceTerminalState.SUCCEEDED, live.responses(accepted.requestId).last().terminalState)
+            assertEquals(0, db.ingress().count())
+            assertTrue(ingress().responses(accepted.requestId).isEmpty())
+
+            repeat(62) { assertEquals(OrionVoiceAdmission.ACCEPTED, live.submit(request())) }
+            assertEquals(OrionVoiceAdmission.CORE_UNAVAILABLE, live.submit(request()))
+            assertEquals(0, db.ingress().count())
+            elapsed += 221.seconds
+            assertEquals(OrionVoiceAdmission.ACCEPTED, live.submit(request()))
+        } finally { db.close() }
     }
 
     @Test fun partialNeverEnqueuesAndRecoveryProcessesFinalOnlyOnce() {
@@ -164,20 +218,20 @@ class OrionVoiceIngressTest {
                     OrionVoiceSource.PUSH_TO_TALK, 0, trace)))
                 return requestId
             }
-            val rejectedId = submitText("criar tarefa: " + "x".repeat(OrionCreateTaskPreparer.MAX_TITLE_UTF8_BYTES + 1))
-            restarted.drain()
-            assertEquals(DurableIngressStatus.REJECTED, db.ingress().find(rejectedId.toString())?.status)
-            assertTrue(checkNotNull(db.ingress().find(rejectedId.toString())).payloadEnvelope.isEmpty())
-            val expiredId = submitText("bateria")
+            val rejectedId = UUID.randomUUID()
+            val tooLong = "criar tarefa: " + "x".repeat(OrionCreateTaskPreparer.MAX_TITLE_UTF8_BYTES + 1)
+            assertEquals(OrionVoiceAdmission.REJECTED_INVALID, restarted.submit(VoiceUtteranceRequest(
+                IpcSchemaVersion(1), rejectedId, session, tooLong, true, "pt-BR", at,
+                OrionVoiceSource.PUSH_TO_TALK, 0, trace)))
+            assertNull(db.ingress().find(rejectedId.toString()))
+            val expiredId = submitText("criar tarefa expirar")
             at = at.plusSeconds(91)
             restarted.drain()
             assertEquals(OrionVoiceTerminalState.TIMED_OUT, restarted.responses(expiredId).single().terminalState)
             assertTrue(checkNotNull(db.ingress().find(expiredId.toString())).payloadEnvelope.isEmpty())
             val queryId = submitText("bateria")
             restarted.drain()
-            val forgottenQuery = createIngress().responses(queryId)
-            assertTrue(forgottenQuery.first().textDelta?.contains("indisponível") == true)
-            assertFalse(forgottenQuery.last().requiresConfirmation)
+            assertTrue(createIngress().responses(queryId).isEmpty())
             assertEquals(1, proposals)
         } finally { db.close() }
     }

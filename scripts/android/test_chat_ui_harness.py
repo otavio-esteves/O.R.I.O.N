@@ -106,6 +106,11 @@ class ChatUiProtocolTest(unittest.TestCase):
                 missing = transcript(sorted(expected)[:-1], expected=expected)
                 self.assertFalse(parse_instrumentation(missing, 0, expected).successful)
 
+    def test_ci_requires_the_persistence_scheduler_and_foreground_voice_regressions(self):
+        self.assertIn('network.orion.app.TransactionCorePersistenceTest', F8_SELECTED)
+        self.assertIn('network.orion.app.scheduling.OrionSchedulingCoordinatorTest', F8_SELECTED)
+        self.assertIn('network.orion.app.voice.OrionForegroundConversationTest', F9_SELECTED)
+
     def test_ci_explicitly_builds_hybrid_probe_and_executes_model_free_suite(self):
         workflow = (Path(__file__).resolve().parents[2] / '.github/workflows/ci.yml').read_text()
         self.assertIn('-PorionHybridChatQualification=true', workflow)
