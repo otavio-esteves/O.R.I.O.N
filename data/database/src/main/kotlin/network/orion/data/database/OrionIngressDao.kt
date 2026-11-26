@@ -17,6 +17,13 @@ abstract class OrionIngressDao {
     @Query("SELECT count(*) FROM orion_ingress_envelopes")
     abstract fun count(): Int
 
+    @Query("SELECT count(*) FROM orion_ingress_envelopes WHERE $REMINDER_DUE_FILTER")
+    protected abstract fun reminderDueRows(): Int
+
+    @Query("""SELECT count(*) - min($REMINDER_DUE_RESERVED_ROWS,
+        (SELECT count(*) FROM orion_ingress_envelopes WHERE $REMINDER_DUE_FILTER)) FROM orion_ingress_envelopes""")
+    abstract fun generalCapacityUsed(): Int
+
     @Query("SELECT * FROM orion_ingress_envelopes WHERE status = 'QUEUED' ORDER BY priority DESC, receivedAt, ingressId LIMIT :limit")
     protected abstract fun queryQueued(limit: Int): List<IngressEnvelopeEntity>
 
@@ -66,8 +73,12 @@ abstract class OrionIngressDao {
         if (find(envelope.ingressId) != null) return IngressRegistration.INGRESS_ID_CONFLICT
         val revocation = envelope.idempotencyScope == "sentinel" && envelope.source == "orion_sentinel_settings" &&
             envelope.commandType == "RESET_PERSONALIZATION" && envelope.priority == 100
-        val capacity = if (revocation) MAX_STORED_ROWS + 1 else MAX_STORED_ROWS
-        if (count() >= capacity || revocation && hasQueuedPersonalizationRevocation())
+        val dueReminder = envelope.idempotencyScope == REMINDER_DUE_SCOPE && envelope.source == REMINDER_DUE_SOURCE &&
+            envelope.commandType == REMINDER_DUE_TYPE && envelope.schemaVersion == 1
+        val usesReminderReserve = dueReminder && reminderDueRows() < REMINDER_DUE_RESERVED_ROWS
+        val generalCapacity = if (revocation) MAX_STORED_ROWS + 1 else MAX_STORED_ROWS
+        if ((!usesReminderReserve && generalCapacityUsed() >= generalCapacity) ||
+            (revocation && hasQueuedPersonalizationRevocation()))
             return IngressRegistration.CAPACITY_EXCEEDED
         insert(envelope)
         return IngressRegistration.INSERTED
@@ -112,6 +123,14 @@ abstract class OrionIngressDao {
     }
 
     companion object {
+        /** General receipts, plus a separately reserved slot for personalization revocation. */
         const val MAX_STORED_ROWS = 10_000
+        // Keep headroom for several scheduler drain pages, even with a full pre-upgrade queue.
+        private const val REMINDER_DUE_RESERVED_ROWS = 512
+        const val REMINDER_DUE_SCOPE = "reminder.delivery.due"
+        const val REMINDER_DUE_SOURCE = "ANDROID_SCHEDULER"
+        const val REMINDER_DUE_TYPE = "REMINDER_DUE"
+        private const val REMINDER_DUE_FILTER = "idempotencyScope = '$REMINDER_DUE_SCOPE' " +
+            "AND source = '$REMINDER_DUE_SOURCE' AND commandType = '$REMINDER_DUE_TYPE' AND schemaVersion = 1"
     }
 }

@@ -45,8 +45,8 @@ fun DiagnosticsScreen(report: OrionHealthReport, databaseSchemaVersion: Int?, ta
         taskQueues?.let { q ->
             Text("Ingressos na fila: ${q.queuedIngress}")
             q.ingressCapacity?.let { capacity ->
-                Text("Ingressos armazenados: ${capacity.stored} de ${capacity.limit}")
-                if (capacity.saturated) Text("Novos pedidos bloqueados. Limite de armazenamento de ingressos atingido.")
+                Text("Ingressos da fila geral: ${capacity.stored} de ${capacity.limit}")
+                if (capacity.saturated) Text("Capacidade da fila geral atingida. Novos pedidos dessa fila estão bloqueados.")
             }
             Text("Aguardando confirmação: ${q.pendingConfirmation}")
             Text("Ações em execução: ${q.runningActions}")

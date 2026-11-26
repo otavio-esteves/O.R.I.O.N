@@ -42,9 +42,9 @@ class OrionDiagnosticsObservationAndroidTest {
                     TaskQueueDiagnostics(0, 0, 0, 0, 0, 0, capacity.value), onRetry = {})
             }
         }
-        val explanation = "Novos pedidos bloqueados. Limite de armazenamento de ingressos atingido."
+        val explanation = "Capacidade da fila geral atingida. Novos pedidos dessa fila estão bloqueados."
         compose.onNodeWithText("Ingressos na fila: 0").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Ingressos armazenados: 10000 de 10000").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Ingressos da fila geral: 10000 de 10000").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(explanation).performScrollTo().assertIsDisplayed()
         compose.runOnIdle { capacity.value = OrionIngressCapacity(9_999, 10_000) }
         compose.onNodeWithText(explanation).assertDoesNotExist()

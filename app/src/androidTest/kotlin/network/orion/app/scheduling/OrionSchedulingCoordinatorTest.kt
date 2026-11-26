@@ -161,6 +161,40 @@ class OrionSchedulingCoordinatorTest {
         assertEquals(1, invocations)
     }
 
+    @Test fun authorizedAlarmHasCapacityWhenRetainedVoiceReceiptsFillTheGeneralQueue() = runBlocking {
+        val preview = enable()
+        val limit = OrionIngressDao.MAX_STORED_ROWS
+        db.openHelper.writableDatabase.execSQL("""
+            WITH RECURSIVE fixture(n) AS (VALUES(1) UNION ALL SELECT n + 1 FROM fixture WHERE n < $limit)
+            INSERT INTO orion_ingress_envelopes (ingressId, idempotencyScope, idempotencyKey, canonicalPayloadHash,
+                schemaVersion, commandType, source, priority, correlationId, payloadSensitivity, payloadEnvelope, receivedAt,
+                expiresAt, idempotencyRetainUntil, status, version, updatedAt, attemptCount)
+            SELECT printf('voice-%d',n), 'orion_voice_v1', printf('key-%d',n), 'fixture', 1, 'FinalUtterance',
+                'VOICE_SESSION', 0, 'fixture', 'SENSITIVE', X'', 1, 2, 3, 'CONSUMED', 2, 2, 1
+            FROM fixture LIMIT (SELECT $limit - count(*) FROM orion_ingress_envelopes)
+        """.trimIndent())
+        assertEquals(limit, db.ingress().count())
+        wall = preview.scheduledAt
+        val ticket = barrier.beginRecovery()
+        readiness = CoreReadiness.RECOVERING
+
+        assertEquals(DurableIngressOutcome.QUEUED, coordinator.acceptAlarm(preview.reminderId, preview.generation))
+        assertEquals(DurableIngressOutcome.DEDUP, coordinator.acceptAlarm(preview.reminderId, preview.generation))
+        assertEquals(limit + 1, db.ingress().count())
+        assertEquals(limit, db.ingress().generalCapacityUsed())
+        assertEquals(ReminderDeliveryOutcome.UNAVAILABLE, coordinator.deliverAcceptedAlarm(preview.reminderId, preview.generation))
+        assertEquals(0, invocations)
+
+        readiness = CoreReadiness.DEGRADED_SAFE
+        assertTrue(barrier.releaseAfterRecovery(ticket, readiness))
+        repeat(2) {
+            assertEquals(ReminderDeliveryOutcome.POSTED, coordinator.deliverAcceptedAlarm(preview.reminderId, preview.generation))
+        }
+        assertEquals(DurableIngressStatus.CONSUMED, dueReceipt(preview)?.status)
+        assertEquals(ReminderStatus.FIRED, db.reminders().find(preview.reminderId.toString())?.status)
+        assertEquals(1, invocations)
+    }
+
     @Test fun revokedPermissionLeavesConsumedFactAndPendingActionSafeForLaterGrant() = runBlocking {
         val preview = enable(); wall = preview.scheduledAt
         permission = false

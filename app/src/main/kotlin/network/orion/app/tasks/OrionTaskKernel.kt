@@ -153,20 +153,14 @@ internal class OrionTaskKernel(private val db: OrionDatabase, encryption: OrionF
 
     fun diagnostics(): network.orion.core.health.TaskQueueDiagnostics {
         fun count(sql: String) = db.openHelper.readableDatabase.query(sql).use { it.moveToFirst(); it.getInt(0) }
-        val (stored, queued) = db.openHelper.readableDatabase.query(
-            "SELECT count(*), count(CASE WHEN status = 'QUEUED' THEN 1 END) FROM orion_ingress_envelopes",
-        ).use { cursor ->
-            check(cursor.moveToFirst())
-            cursor.getInt(0) to cursor.getInt(1)
-        }
         return network.orion.core.health.TaskQueueDiagnostics(
-            queued,
+            count("SELECT count(*) FROM orion_ingress_envelopes WHERE status = 'QUEUED'"),
             count("SELECT count(*) FROM orion_action_requests WHERE status = 'NEEDS_CONFIRMATION'"),
             count("SELECT count(*) FROM orion_action_requests WHERE status = 'RUNNING'"),
             count("SELECT count(*) FROM orion_action_requests WHERE status = 'UNKNOWN'"),
             count("SELECT count(*) FROM orion_action_requests WHERE status IN ('MANUAL_REVIEW', 'CONFIRMED')"),
             count("SELECT count(*) FROM orion_domain_event_outbox WHERE status != 'DELIVERED'"),
-            OrionIngressCapacity(stored, OrionIngressDao.MAX_STORED_ROWS))
+            OrionIngressCapacity(db.ingress().generalCapacityUsed(), OrionIngressDao.MAX_STORED_ROWS))
     }
 
     fun recoverActions() {

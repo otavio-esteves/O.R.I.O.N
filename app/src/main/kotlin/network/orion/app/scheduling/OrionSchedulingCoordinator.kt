@@ -230,9 +230,9 @@ internal class OrionSchedulingCoordinator(
         arrayOf(clock.wallNow().toEpochMilli())).use { it.moveToFirst(); it.getInt(0) != 0 }
 
     companion object {
-        const val DUE_SCOPE = "reminder.delivery.due"
-        const val DUE_SOURCE = "ANDROID_SCHEDULER"
-        const val DUE_TYPE = "REMINDER_DUE"
+        const val DUE_SCOPE = OrionIngressDao.REMINDER_DUE_SCOPE
+        const val DUE_SOURCE = OrionIngressDao.REMINDER_DUE_SOURCE
+        const val DUE_TYPE = OrionIngressDao.REMINDER_DUE_TYPE
         private const val PAGE_SIZE = 50
         private const val MAX_PAGES = 4
     }
