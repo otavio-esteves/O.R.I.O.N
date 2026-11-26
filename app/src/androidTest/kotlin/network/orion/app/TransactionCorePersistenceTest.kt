@@ -2,7 +2,9 @@ package network.orion.app
 
 import android.content.ContentValues
 import android.content.Context
+import android.content.ContextWrapper
 import android.database.sqlite.SQLiteConstraintException
+import android.database.sqlite.SQLiteDatabaseCorruptException
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.testing.MigrationTestHelper
@@ -10,6 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import java.io.RandomAccessFile
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.Callable
@@ -44,6 +47,31 @@ class TransactionCorePersistenceTest {
         database.close()
         context.deleteDatabase(name)
         context.deleteDatabase(upgradeName)
+    }
+
+    @Test fun corruptPrimaryDatabaseIsPreservedAndCannotReopenAsEmpty() {
+        val isolated = object : ContextWrapper(context) {
+            override fun getApplicationContext(): Context = this
+            override fun getDatabasePath(name: String) = context.getDatabasePath(upgradeName)
+        }
+        val primary = OrionDatabaseFactory.open(isolated)
+        try {
+            val task = task()
+            primary.tasks().createWithEvent(task, event(task.taskId))
+        } finally { primary.close() }
+        val file = context.getDatabasePath(upgradeName)
+        RandomAccessFile(file, "rw").use { bytes ->
+            bytes.writeByte('X'.code)
+            bytes.fd.sync()
+        }
+        val damaged = file.readBytes()
+
+        repeat(2) {
+            assertThrows(SQLiteDatabaseCorruptException::class.java) {
+                OrionDatabaseFactory.open(isolated).close()
+            }
+            assertArrayEquals(damaged, file.readBytes())
+        }
     }
 
     @Test fun migrationTwoToThreePreservesPendingAndUnknownActionsAndValidatesAllTables() {
@@ -283,15 +311,17 @@ class TransactionCorePersistenceTest {
     @Test fun inferredMemoryCannotBeCreatedConfirmedAndClaimsShareAtomicCommit() {
         val id = uuid()
         val memory = MemoryEntity(id, byteArrayOf(1), Sensitivity.SECRET, MemoryOrigin.LLM_INFERRED,
-            0.3, true, 100, 100)
+            0.3, true, 100, 100, status = MemoryStatus.CANDIDATE)
         assertThrows(IllegalArgumentException::class.java) {
             database.records().createMemoryWithClaimsAndEvent(memory, emptyList(), event(id, "MEMORY_CREATED"))
         }
         assertNull(database.records().memory(id))
+        assertEquals(0, database.events().count())
         val claim = MemoryClaimEntity(uuid(), id, byteArrayOf(2), Sensitivity.SECRET,
-            MemoryOrigin.LLM_INFERRED, 0.3, false, validFrom = 100)
+            MemoryOrigin.LLM_INFERRED, 0.3, false, status = MemoryStatus.CANDIDATE, validFrom = 100)
         database.records().createMemoryWithClaimsAndEvent(memory.copy(userConfirmed = false), listOf(claim), event(id, "MEMORY_CREATED"))
         assertEquals(1, database.records().claims(id).size)
+        assertEquals(1, database.events().count())
         assertFalse(database.records().memory(id)!!.userConfirmed)
     }
 

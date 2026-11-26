@@ -2,6 +2,7 @@ package network.orion.data.database
 
 import android.app.Application
 import android.content.Context
+import android.database.sqlite.SQLiteDatabaseCorruptException
 import android.os.UserManager
 import androidx.room.Dao
 import androidx.room.Database
@@ -11,6 +12,8 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import network.orion.core.common.process.MainProcessStoragePolicy
 import network.orion.core.common.process.OrionProcessRole
 
@@ -71,6 +74,7 @@ object OrionDatabaseFactory {
             context.isDeviceProtectedStorage,
         )
         return Room.databaseBuilder(app, OrionDatabase::class.java, "orion.db")
+            .openHelperFactory(OrionPreservingOpenHelperFactory)
             .addMigrations(*OrionDatabaseMigrations.ALL)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
@@ -97,5 +101,35 @@ object OrionDatabaseFactory {
                     throw failure
                 }
             }
+    }
+}
+
+private object OrionPreservingOpenHelperFactory : SupportSQLiteOpenHelper.Factory {
+    override fun create(configuration: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper {
+        val room = configuration.callback
+        val callback = object : SupportSQLiteOpenHelper.Callback(room.version) {
+            override fun onConfigure(db: SupportSQLiteDatabase) = room.onConfigure(db)
+            override fun onCreate(db: SupportSQLiteDatabase) = room.onCreate(db)
+            override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) =
+                room.onUpgrade(db, oldVersion, newVersion)
+
+            override fun onDowngrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) =
+                room.onDowngrade(db, oldVersion, newVersion)
+
+            override fun onOpen(db: SupportSQLiteDatabase) = room.onOpen(db)
+
+            override fun onCorruption(db: SupportSQLiteDatabase) {
+                // The default callback deletes the database. Propagate the failure so the Core stays gated.
+                throw SQLiteDatabaseCorruptException("O.R.I.O.N. database is corrupt.")
+            }
+        }
+        return FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(configuration.context)
+                .name(configuration.name)
+                .callback(callback)
+                .noBackupDirectory(configuration.useNoBackupDirectory)
+                .allowDataLossOnRecovery(false)
+                .build(),
+        )
     }
 }
