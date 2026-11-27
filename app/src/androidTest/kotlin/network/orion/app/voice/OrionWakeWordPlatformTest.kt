@@ -78,12 +78,13 @@ class OrionWakeWordPlatformTest {
         val bootReceivers = mapOf(
             Intent.ACTION_BOOT_COMPLETED to setOf(reconciliation, "androidx.work.impl.background.systemalarm.RescheduleReceiver"),
             Intent.ACTION_LOCKED_BOOT_COMPLETED to emptySet(),
-            Intent.ACTION_USER_UNLOCKED to setOf(reconciliation),
+            Intent.ACTION_USER_UNLOCKED to emptySet(),
         )
         for ((action, allowed) in bootReceivers) {
             val receivers = manager.queryBroadcastReceivers(Intent(action).setPackage(app.packageName), componentFlags)
                 .map { it.activityInfo.name }.toSet()
             assertTrue("$action reaches unexpected components ${receivers - allowed}", allowed.containsAll(receivers))
+            if (action == Intent.ACTION_BOOT_COMPLETED) assertTrue(reconciliation in receivers)
         }
     }
 }

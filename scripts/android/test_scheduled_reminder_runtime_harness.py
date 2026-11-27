@@ -108,6 +108,15 @@ class ScheduledRuntimeContractTest(unittest.TestCase):
             "network.orion/network.orion.app.MainActivity",
         ], RECORDER.allowed_return_command())
 
+    def test_reboot_activity_check_requires_a_readable_dump_and_matches_the_exact_package(self):
+        header = "ACTIVITY MANAGER ACTIVITIES (dumpsys activity activities)\n"
+        self.assertFalse(RECORDER.orion_activity_present(
+            header + "* Hist #0: ActivityRecord{123 u0 network.orion.test/.TestActivity t3}"))
+        self.assertTrue(RECORDER.orion_activity_present(
+            header + "* Hist #1: ActivityRecord{456 u0 network.orion/.MainActivity t4}"))
+        with self.assertRaises(RuntimeError):
+            RECORDER.orion_activity_present("Can't find service: activity")
+
     def test_background_cleanup_restores_effective_level_after_the_appop(self):
         calls = []
         def adb(*command, **kwargs):

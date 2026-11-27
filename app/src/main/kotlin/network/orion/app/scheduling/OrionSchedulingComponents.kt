@@ -6,9 +6,11 @@ import android.content.Intent
 import android.os.UserManager
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import androidx.work.await
 import java.util.UUID
 import kotlinx.coroutines.*
 import network.orion.app.OrionApplication
+import network.orion.app.OrionFoundationRuntime
 import network.orion.scheduler.alarms.AndroidOrionAlarmBackend
 import network.orion.core.observability.OrionMaintenanceOrigin
 import network.orion.scheduler.workers.OrionMaintenanceScheduler
@@ -35,21 +37,46 @@ class OrionReminderAlarmReceiver : BroadcastReceiver() {
     }
 }
 
-/** No Direct Boot receiver: personal storage stays credential-protected. */
+/** Android delivers BOOT_COMPLETED after the user has unlocked credential storage. */
 class OrionReconciliationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action !in ACTIONS || context.getSystemService(UserManager::class.java)?.isUserUnlocked != true) return
         val runtime = (context.applicationContext as? OrionApplication)?.mainRuntime ?: return
+        val startupEvent = intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try { withTimeout(8_000) { runtime.requestReconciliation(rebuildAlarmArtifacts = true) } }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { /* Startup recovery and the durable heartbeat remain independent triggers. */ }
+            try {
+                withTimeout(8_000) {
+                    if (startupEvent) persistStartupReconciliation(context, runtime)
+                    runtime.requestReconciliation(rebuildAlarmArtifacts = true)
+                }
+            } catch (_: TimeoutCancellationException) {
+                // The durable worker or Core startup can finish after the broadcast returns.
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                runtime.recordMaintenanceFailure()
+            }
             finally { pending.finish() }
         }
     }
+
+    private suspend fun persistStartupReconciliation(context: Context, runtime: OrionFoundationRuntime) {
+        // Commit a durable trigger before waiting for Room recovery. The worker enters through the same barrier.
+        try {
+            val scheduled = withTimeoutOrNull(2_000) {
+                OrionMaintenanceScheduler(context, OrionMaintenanceWorker::class.java).requestReconciliation().await()
+            }
+            if (scheduled == null) runtime.recordMaintenanceFailure()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            runtime.recordMaintenanceFailure()
+        }
+    }
+
     companion object {
-        private val ACTIONS = setOf(Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_USER_UNLOCKED,
+        private val ACTIONS = setOf(Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED, Intent.ACTION_MY_PACKAGE_REPLACED,
             "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED")
     }
