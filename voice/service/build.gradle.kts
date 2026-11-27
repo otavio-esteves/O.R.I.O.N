@@ -73,6 +73,7 @@ dependencies {
     }
     api(project(":voice:ipc"))
     implementation(project(":core:time"))
+    implementation(libs.androidx.core)
     implementation(libs.coroutines.android)
     testImplementation(libs.junit4)
     androidTestImplementation(libs.androidx.test.runner)
