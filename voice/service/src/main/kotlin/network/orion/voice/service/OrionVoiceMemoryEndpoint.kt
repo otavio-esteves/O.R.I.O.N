@@ -5,9 +5,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Build
 import android.os.Debug
 import android.os.Process
+import androidx.core.content.ContextCompat
 import java.io.Closeable
 import java.security.SecureRandom
 import java.util.concurrent.ArrayBlockingQueue
@@ -68,11 +68,9 @@ object OrionVoiceMemoryEndpoint {
         val permission = "${app.packageName}.permission.ORION_VOICE_TELEMETRY"
         val filter = IntentFilter(OrionVoiceResources.MEMORY_ACTION)
         try {
-            if (Build.VERSION.SDK_INT >= 33) {
-                app.registerReceiver(receiver, filter, permission, null, Context.RECEIVER_NOT_EXPORTED)
-            } else {
-                app.registerReceiver(receiver, filter, permission, null)
-            }
+            ContextCompat.registerReceiver(
+                app, receiver, filter, permission, null, ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
             lease = acquired
         } catch (_: RuntimeException) {
             acquired.close()
