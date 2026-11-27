@@ -43,7 +43,7 @@ internal class OrionVoiceCapture(
     private val mayCapture: () -> Boolean,
     private val observe: (OrionVoiceSessionState, String?, Boolean) -> Unit,
 ) {
-    private val operation = operationIds.incrementAndGet()
+    private val operation = nextOperationId()
     private val requestId = UUID.randomUUID()
     private val finishRequested = AtomicBoolean()
     private val decoding = AtomicBoolean()
@@ -211,8 +211,10 @@ internal class OrionVoiceCapture(
         return null
     }
 
-    private companion object {
-        val operationIds = AtomicLong()
-        val captureLock = Mutex()
+    companion object {
+        private val operationIds = AtomicLong()
+        private val captureLock = Mutex()
+
+        fun nextOperationId(): Long = operationIds.incrementAndGet()
     }
 }

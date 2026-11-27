@@ -5,7 +5,7 @@ import java.util.IllformedLocaleException
 import java.util.Locale
 import java.util.UUID
 
-enum class OrionVoiceSource { PUSH_TO_TALK }
+enum class OrionVoiceSource { PUSH_TO_TALK, AMBIENT_QUALIFICATION }
 
 /** Text is untrusted input and must stay out of diagnostics. */
 class VoiceUtteranceRequest(
@@ -34,7 +34,7 @@ class VoiceUtteranceRequest(
         require(priority in 0..100)
     }
 
-    val eligibleForCommandAdmission: Boolean get() = isFinalTranscript
+    val eligibleForCommandAdmission: Boolean get() = source == OrionVoiceSource.PUSH_TO_TALK && isFinalTranscript
 
     override fun toString() = "VoiceUtteranceRequest(<redacted>)"
 }

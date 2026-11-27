@@ -13,9 +13,15 @@ class OrionVoiceInteractionService : VoiceInteractionService() {
         super.onReady()
         try {
             setDisabledShowContext(VoiceInteractionSession.SHOW_WITH_ASSIST or VoiceInteractionSession.SHOW_WITH_SCREENSHOT)
+            OrionAmbientCaptureQualificationService.startIfPackaged(this)
         } catch (_: SecurityException) {
             // The framework may have switched assistants while readiness was being delivered.
         }
+    }
+
+    override fun onShutdown() {
+        OrionAmbientCaptureQualificationService.stopIfPackaged(this)
+        super.onShutdown()
     }
 }
 
