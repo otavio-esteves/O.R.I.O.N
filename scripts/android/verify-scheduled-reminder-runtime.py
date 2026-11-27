@@ -190,6 +190,12 @@ def matching_notification_keys(output, action_id):
     return sorted(matches)
 
 
+def orion_activity_present(output):
+    if "ACTIVITY MANAGER ACTIVITIES" not in output:
+        raise RuntimeError("Android activity state could not be observed.")
+    return bool(re.search(r"ActivityRecord\{[^\r\n}]*\bu\d+\s+" + re.escape(PACKAGE) + r"/", output))
+
+
 def instrumentation_passed(output):
     return bool(re.search(r"OK \(1 test\)", output)) and not any(
         marker in output for marker in ("FAILURES!!!", "INSTRUMENTATION_FAILED", "Process crashed"))
@@ -440,7 +446,10 @@ def main():
                 raise RuntimeError("Notification was not observed while deep Doze remained active.")
             report["checks"]["real_exact_notification_observed_in_deep_idle"] = "PASS"
         if args.scenario == "reboot":
+            if orion_activity_present(adb("shell", "dumpsys", "activity", "activities", timeout=10)):
+                raise RuntimeError("O.R.I.O.N. had an Activity during the autonomous reboot check.")
             report["checks"]["automatic_main_start_after_reboot"] = "PASS"
+            report["checks"]["no_orion_activity_before_verification"] = "PASS"
         # Allow the bounded registration proof and Room completion to finish before
         # instrumentation potentially replaces the process; never drive maintenance.
         time.sleep(2)

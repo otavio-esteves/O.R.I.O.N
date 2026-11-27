@@ -3,6 +3,7 @@ package network.orion.app.scheduling
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.ComponentName
+import android.database.sqlite.SQLiteDatabaseLockedException
 import android.os.Bundle
 import android.os.Build
 import android.os.Process
@@ -65,7 +66,7 @@ class OrionScheduledReminderRuntimeTest {
         val runtime = checkNotNull(app.mainRuntime)
         withTimeout(30_000) { runtime.health.first { it.core.readiness.isStartupBarrierOpen } }
         withTimeout(30_000) { while (!runtime.taskStartupBarrier.isOpen() || runtime.reminderDelivery == null) delay(10) }
-        val db = OrionDatabaseFactory.open(app)
+        val db = openFixtureDatabase()
         try {
             if (mode == "cleanup") {
                 cleanupSoakRuntimeReminder(app, db, fixture)
@@ -255,6 +256,18 @@ class OrionScheduledReminderRuntimeTest {
                 }
             }
         } finally { db.close() }
+    }
+
+    private suspend fun openFixtureDatabase(): OrionDatabase {
+        // Instrumentation opens a second handle while MAIN can still be writing startup maintenance.
+        repeat(5) {
+            try {
+                return OrionDatabaseFactory.open(app)
+            } catch (_: SQLiteDatabaseLockedException) {
+                delay(200)
+            }
+        }
+        return OrionDatabaseFactory.open(app)
     }
 
     private fun cleanup(db: OrionDatabase, fixture: UUID, reminderId: UUID, actionId: UUID, generation: Long, requestCode: Int) {

@@ -332,9 +332,18 @@ Run builds sequentially when sharing the Gradle user cache across containers.
 
 ## Scheduled reminder system validation
 
+After the initial launch and setup, Android restarts the Core in the background
+after the first device unlock following a reboot. The Core restores maintenance
+and alarms for confirmed reminders from local storage without opening the app's
+screen. Enable notifications for reminder delivery. Android may defer background
+work or boot broadcasts when battery settings restrict the app. After Force Stop,
+Android requires an explicit permitted interaction before automatic recovery resumes.
+
 The F4 recorder observes a real Android notification before verification starts the
-app again. Use a dedicated target because these scenarios change its lifecycle,
-clock, timezone or power restrictions and temporarily grant test access:
+app again. For `reboot`, it also verifies a new boot and checks that no O.R.I.O.N.
+activity is present before verification. Use a dedicated target because these
+scenarios change its lifecycle, clock, timezone or power restrictions and
+temporarily grant test access:
 
 ```bash
 python3 scripts/android/verify-scheduled-reminder-runtime.py \

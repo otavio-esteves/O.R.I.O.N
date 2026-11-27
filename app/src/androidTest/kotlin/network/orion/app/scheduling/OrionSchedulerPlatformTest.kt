@@ -96,6 +96,7 @@ class OrionSchedulerPlatformTest {
         }
         val info = manager.getPackageInfo(app.packageName,
             PackageManager.GET_PROVIDERS or PackageManager.GET_RECEIVERS or PackageManager.GET_META_DATA or PackageManager.GET_PERMISSIONS)
+        assertTrue(info.requestedPermissions.orEmpty().contains("android.permission.RECEIVE_BOOT_COMPLETED"))
         assertTrue(info.requestedPermissions.orEmpty().contains("android.permission.SCHEDULE_EXACT_ALARM"))
         assertFalse(info.requestedPermissions.orEmpty().contains("android.permission.USE_EXACT_ALARM"))
         info.providers.orEmpty().forEach {
