@@ -69,12 +69,23 @@ abstract class OrionReminderScheduleDao {
     /** Caller commits confirmation and binding together in its admitted MAIN writer transaction. */
     @Transaction
     open fun bindDelivery(id: String, expectedVersion: Long, generation: Long, deliveryActionId: String, at: Long): ActionMutation {
+        return bindAuthorizedDelivery(id, expectedVersion, generation, deliveryActionId, at, DELIVERY_SKILL)
+    }
+
+    /** Ambient commitments have one immutable generation and a distinct policy-issued authorization. */
+    @Transaction
+    open fun bindAmbientDelivery(id: String, deliveryActionId: String, at: Long): ActionMutation =
+        bindAuthorizedDelivery(id, 0, 1, deliveryActionId, at, AMBIENT_DELIVERY_SKILL)
+
+    private fun bindAuthorizedDelivery(id: String, expectedVersion: Long, generation: Long, deliveryActionId: String,
+        at: Long, skill: String): ActionMutation {
         validateBinding(id, expectedVersion, generation, deliveryActionId)
         val row = find(id) ?: return ActionMutation.NOT_FOUND
         if (row.version != expectedVersion || row.status != ReminderStatus.PENDING ||
             row.fireGeneration == Long.MAX_VALUE || generation != row.fireGeneration + 1) return ActionMutation.CONFLICT
         val owner = action(deliveryActionId) ?: return ActionMutation.CONFLICT
-        if (owner.skill != DELIVERY_SKILL || owner.status != ActionStatus.CONFIRMED) return ActionMutation.CONFLICT
+        if (owner.skill != skill || owner.status != ActionStatus.CONFIRMED ||
+            (skill == AMBIENT_DELIVERY_SKILL && owner.requiresConfirmation)) return ActionMutation.CONFLICT
         ensureEventCapacity()
         if (bind(id, expectedVersion, row.fireGeneration, generation, deliveryActionId, at) != 1) return ActionMutation.CONFLICT
         insertEvent(event(row, "REMINDER_DELIVERY_CONFIRMED", at, owner.correlationId))
@@ -109,7 +120,7 @@ abstract class OrionReminderScheduleDao {
         val row = matching(id, expectedVersion, generation, deliveryActionId) ?: return conflictOrMissing(id)
         require(local.toInstant(offset).toEpochMilli() == row.scheduledAt) { "Resolved civil time must match the bound instant." }
         val owner = action(deliveryActionId) ?: return ActionMutation.CONFLICT
-        if (owner.skill != DELIVERY_SKILL || owner.status != ActionStatus.CONFIRMED) return ActionMutation.CONFLICT
+        if (owner.skill !in DELIVERY_SKILLS || owner.status != ActionStatus.CONFIRMED) return ActionMutation.CONFLICT
         ensureEventCapacity()
         if (schedule(id, expectedVersion, generation, deliveryActionId, precision, method, requestCode, at,
                 localDateTime, offsetSeconds, resolutionDecision) != 1) return ActionMutation.CONFLICT
@@ -129,7 +140,7 @@ abstract class OrionReminderScheduleDao {
         validateBinding(id, expectedVersion, generation, deliveryActionId)
         val row = matching(id, expectedVersion, generation, deliveryActionId) ?: return conflictOrMissing(id)
         val owner = action(deliveryActionId) ?: return ActionMutation.CONFLICT
-        if (owner.skill != DELIVERY_SKILL || owner.status != ActionStatus.CONFIRMED ||
+        if (owner.skill !in DELIVERY_SKILLS || owner.status != ActionStatus.CONFIRMED ||
             row.lastScheduledGeneration != generation || row.precision == ReminderPrecision.UNSCHEDULED ||
             row.scheduleMethod == ReminderScheduleMethod.UNSCHEDULED) return ActionMutation.CONFLICT
         if (row.registrationConfirmed) return ActionMutation.APPLIED
@@ -202,5 +213,9 @@ abstract class OrionReminderScheduleDao {
     @Query("UPDATE orion_reminders SET registrationConfirmed = 0 WHERE reminderId = :id AND fireGeneration = :generation")
     abstract fun invalidateRegistrationObservation(id: String, generation: Long): Int
 
-    companion object { const val DELIVERY_SKILL = "reminder.deliver" }
+    companion object {
+        const val DELIVERY_SKILL = "reminder.deliver"
+        private const val AMBIENT_DELIVERY_SKILL = "reminder.ambient.speak"
+        private val DELIVERY_SKILLS = setOf(DELIVERY_SKILL, AMBIENT_DELIVERY_SKILL)
+    }
 }

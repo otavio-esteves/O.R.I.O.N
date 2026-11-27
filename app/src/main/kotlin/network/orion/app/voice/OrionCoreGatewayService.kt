@@ -7,12 +7,18 @@ import android.os.Bundle
 import android.os.Process
 import android.os.RemoteCallbackList
 import android.os.RemoteException
+import android.util.Log
+import java.time.ZoneId
 import java.util.UUID
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 import network.orion.app.OrionApplication
+import network.orion.app.BuildConfig
 import network.orion.core.ipc.OrionIpcProtocol
+import network.orion.core.ipc.OrionVoiceSource
 import network.orion.core.ipc.VoiceCoreResponse
+import network.orion.core.ipc.VoiceUtteranceRequest
+import network.orion.core.time.AndroidOrionClock
 import network.orion.voice.ipc.*
 
 /** Private versioned transport. The MAIN runtime owns the durable, encrypted admission. */
@@ -66,6 +72,7 @@ class OrionCoreGatewayService : Service() {
             enforceAppCaller()
             if (!compatible(protocolMajor)) return OrionVoiceAdmission.PROTOCOL_MISMATCH.name
             val decoded = OrionVoiceWire.readRequest(request) ?: return OrionVoiceAdmission.REJECTED_INVALID.name
+            if (decoded.source == OrionVoiceSource.AMBIENT_QUALIFICATION) return qualifyObservation(decoded).name
             val runtime = core
             val result = runtime?.voiceIngress?.submit(decoded) ?: OrionVoiceAdmission.CORE_UNAVAILABLE
             if (result == OrionVoiceAdmission.ACCEPTED || result == OrionVoiceAdmission.QUEUED_DURING_RECOVERY) {
@@ -111,6 +118,18 @@ class OrionCoreGatewayService : Service() {
             enforceAppCaller()
             return compatible(protocolMajor) && core?.health?.value?.core?.readiness?.isStartupBarrierOpen == true
         }
+    }
+
+    private fun qualifyObservation(request: VoiceUtteranceRequest): OrionVoiceAdmission {
+        if (!BuildConfig.ORION_AMBIENT_QUALIFICATION || !request.isFinalTranscript || request.locale != "pt-BR")
+            return OrionVoiceAdmission.REJECTED_INVALID
+        val now = AndroidOrionClock(contentResolver).wallNow()
+        if (request.capturedAt < now.minusSeconds(45) || request.capturedAt > now.plusSeconds(5))
+            return OrionVoiceAdmission.REJECTED_INVALID
+        if (OrionAmbientCommitment.parse(request.text, request.capturedAt, ZoneId.systemDefault()) == null)
+            return OrionVoiceAdmission.REJECTED_INVALID
+        Log.i("orion_ambient_probe", "COMMITMENT_RECOGNIZED")
+        return OrionVoiceAdmission.ACCEPTED
     }
 
     private fun publishCallbacks(ingress: OrionVoiceIngress?) {

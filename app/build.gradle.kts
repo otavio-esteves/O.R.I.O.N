@@ -83,6 +83,7 @@ val bundledVoiceModel = voiceModelFile?.let { model ->
 }
 
 val neuralVoiceAar = providers.gradleProperty("orionNeuralVoiceAar").orNull?.let { rootProject.file(it) }
+val ambientSpeakerAar = providers.gradleProperty("orionAmbientSpeakerAar").orNull?.let { rootProject.file(it) }
 val neuralVoiceModel = providers.gradleProperty("orionNeuralVoiceModel").orNull?.let { file(it) }
 check((neuralVoiceAar == null) == (neuralVoiceModel == null) && (neuralVoiceAar == null || s21PreviewEnabled)) {
     "Neural voice requires both pinned inputs and the S21 preview."
@@ -193,10 +194,15 @@ android {
         buildConfigField("boolean", "ORION_CORTEX_RUNTIME_CAPTURE", "false")
         buildConfigField("boolean", "ORION_CORTEX_INSTRUMENTED_WORKLOAD", "false")
         buildConfigField("boolean", "ORION_S21_CORTEX_PREVIEW", "false")
+        buildConfigField("boolean", "ORION_AMBIENT_QUALIFICATION", "false")
     }
 
     buildTypes {
-        debug { ndk { abiFilters += setOf("arm64-v8a", "x86_64") } }
+        debug {
+            ndk { abiFilters += setOf("arm64-v8a", "x86_64") }
+            buildConfigField("boolean", "ORION_AMBIENT_QUALIFICATION",
+                providers.gradleProperty("orionAmbientQualification").map(String::toBoolean).orElse(false).get().toString())
+        }
         if (s21PreviewEnabled) {
             create("s21CortexPreview") {
                 initWith(getByName("debug"))
@@ -415,6 +421,7 @@ dependencies {
     debugImplementation(libs.serialization.test.runtime)
     if (s21PreviewEnabled) add("s21CortexPreviewImplementation", libs.serialization.test.runtime)
     if (neuralVoiceAar != null) add("s21CortexPreviewImplementation", files(neuralVoiceAar))
+    if (ambientSpeakerAar != null) add("debugImplementation", files(ambientSpeakerAar))
     implementation(project(":voice:ipc"))
     implementation(project(":voice:service"))
     testImplementation(libs.junit4)
