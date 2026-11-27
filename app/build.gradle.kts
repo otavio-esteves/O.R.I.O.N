@@ -251,7 +251,9 @@ android {
         buildConfig = true
     }
 
+    val sharedAndroidTestSources = "src/sharedAndroidTest/kotlin"
     sourceSets.getByName("androidTest").assets.directories.add("$rootDir/data/database/schemas")
+    sourceSets.getByName("androidTest").kotlin.directories.add(sharedAndroidTestSources)
     if (s21CortexSmokeEnabled) testBuildType = "s21CortexLab"
     if (s21PreviewEnabled) testBuildType = "s21CortexPreview"
     if (qualificationEnabled) {
@@ -266,7 +268,10 @@ android {
         sourceSets.getByName("androidTest").java.directories.clear()
         sourceSets.getByName("androidTest").kotlin.directories.clear()
         sourceSets.getByName("androidTest").java.setSrcDirs(emptyList<String>())
-        sourceSets.getByName("androidTest").kotlin.setSrcDirs(listOf("src/androidTest/kotlin/network/orion/app/chat"))
+        sourceSets.getByName("androidTest").kotlin.setSrcDirs(listOf(
+            "src/androidTest/kotlin/network/orion/app/chat",
+            sharedAndroidTestSources,
+        ))
     }
     if (physicalBaselineEnabled) {
         sourceSets.getByName("qualificationRelease").kotlin.directories.add("src/physicalBaselineTarget/kotlin")
